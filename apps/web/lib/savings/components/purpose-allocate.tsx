@@ -222,7 +222,7 @@ export function PurposeAllocate({
             {currencies.length > 1 && <ChevronDown className="size-3" aria-hidden />}
           </button>
         </div>
-        <div className="mt-1.5 flex items-baseline gap-1.5 sm:mt-2">
+        <div className="mt-2 flex items-baseline gap-1.5">
           <span className="text-[20px] font-bold leading-none text-text opacity-50 sm:text-[22px]">
             {currency === 'USD' ? 'U$D' : '$'}
           </span>
@@ -243,7 +243,7 @@ export function PurposeAllocate({
           para qué— y que entran juntos. Los propósitos son pocos por
           naturaleza, así que caben como chips. */}
       {fixedPurpose == null && (
-        <div className="mt-2.5 sm:mt-3">
+        <div className="mt-4">
           {/* La puerta para crear va a la DERECHA del rótulo, igual que en el
               formulario de guardar y que en la página: al final de los chips
               caía sola en su fila cuando la última estaba llena. */}
@@ -287,7 +287,7 @@ export function PurposeAllocate({
           {/* Mismos chips compactos y mismo techo que en guardar: con diez
               propósitos, la lista completa empujaba el resumen y el CTA fuera de
               la pantalla. El elegido entra siempre entre los visibles. */}
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {shownPurposes.map((option) => (
               <button
                 key={option.id}
@@ -330,7 +330,7 @@ export function PurposeAllocate({
         </div>
       )}
 
-      <div className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-2.5 text-[13.5px] sm:py-3">
+      <div className="mt-4 rounded-xl border border-border-soft bg-card px-4 py-3 text-[13.5px]">
         <p className="flex justify-between py-0.5 text-text-muted">
           <span>
             {allocating
@@ -362,7 +362,7 @@ export function PurposeAllocate({
       {/* Lo que hace falta decir en voz alta: esta operación no toca ningún
           total. Sin la frase, alguien que ve dos números moverse en la pantalla
           anterior supone que algo se gastó. */}
-      <p className="mt-2 px-1 text-[12.5px] leading-snug text-text-soft sm:mt-3">
+      <p className="mt-3.5 px-1 text-[12.5px] leading-snug text-text-soft">
         {t('purposes.allocate_note')}
       </p>
 
@@ -370,7 +370,7 @@ export function PurposeAllocate({
           tope viaja con él. Misma razón que en el formulario de guardar — cuánto
           mide esta pantalla lo decide cuántos propósitos tiene el usuario, así
           que no hay presupuesto de píxeles que aguante. */}
-      <div className="sticky bottom-0 z-10 -mx-5 mt-3 bg-page px-5 pb-4 pt-2.5 sm:mt-4 sm:pb-6">
+      <div className="sticky bottom-0 z-10 -mx-5 mt-4 bg-page px-5 pb-4 pt-3 sm:pb-6">
         {(limitError ?? error) && (
           <p className="mb-2 text-[13px] font-semibold text-negative">{limitError ?? error}</p>
         )}

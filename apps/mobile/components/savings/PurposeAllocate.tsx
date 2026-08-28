@@ -185,7 +185,7 @@ export const PurposeAllocate = ({
           el rótulo más chico, el chip en otro fondo y la calculadora al lado del
           número en vez de abajo del chip— y eso ponía la misma pregunta con dos
           caras distintas en dos vistas del MISMO sheet. */}
-      <View className="mt-2.5 rounded-2xl border border-border bg-card px-4 pb-3 pt-3">
+      <View className="mt-3 rounded-2xl border border-border bg-card px-4 pb-3 pt-3">
         <View className="relative">
           <Text className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-wider text-text-soft">
             {t('savings.amount_label')}
@@ -209,7 +209,7 @@ export const PurposeAllocate = ({
             </Pressable>
             <MoneyCalculator seed={amount} onResult={setAmount} />
           </View>
-          <View className="min-h-[54px] flex-row items-center justify-center">
+          <View className="min-h-[46px] flex-row items-center justify-center">
             <Text className="pl-1 text-[27px] font-bold text-text">
               {CURRENCY_SYMBOL[currency]}
             </Text>
@@ -231,7 +231,7 @@ export const PurposeAllocate = ({
           nada. Los propósitos son pocos por naturaleza, así que caben como
           chips. */}
       {fixedPurpose == null && (
-        <View className="mt-2.5">
+        <View className="mt-4">
           {/* La puerta para crear va a la DERECHA del rótulo, igual que en el
               formulario de guardar, que en la página y que en web: al final de
               los chips caía sola en su fila cuando la última estaba llena, y ahí
@@ -281,7 +281,7 @@ export const PurposeAllocate = ({
           </View>
           {/* Mismo techo que en guardar: con diez propósitos, la lista completa
               empujaba el resumen y el CTA fuera de la pantalla. */}
-          <View className="mt-1.5 flex-row flex-wrap gap-1.5">
+          <View className="mt-2.5 flex-row flex-wrap gap-1.5">
             {shownPurposes.map((option) => (
               <Pressable
                 key={option.id}
@@ -333,7 +333,7 @@ export const PurposeAllocate = ({
         </View>
       )}
 
-      <View className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-2.5">
+      <View className="mt-4 rounded-xl border border-border-soft bg-card px-4 py-3">
         <View className="flex-row justify-between py-0.5">
           <Text className="text-[13.5px] text-text-muted">
             {allocating
@@ -364,7 +364,7 @@ export const PurposeAllocate = ({
 
       {/* Decirlo en voz alta: esta operación no toca ningún total. Sin la frase,
           ver dos números moverse hace suponer que algo se gastó. */}
-      <Text className="mt-2 px-1 text-[12.5px] leading-snug text-text-soft">
+      <Text className="mt-3.5 px-1 text-[12.5px] leading-snug text-text-soft">
         {t('savings.purposes.allocate_note')}
       </Text>
 
@@ -372,7 +372,7 @@ export const PurposeAllocate = ({
         <Text className="mt-3 text-[13px] font-semibold text-negative">{limitError ?? error}</Text>
       )}
 
-      <View className="mt-3">
+      <View className="mt-4">
         <Button
           title={t(allocating ? 'savings.purposes.allocate' : 'savings.purposes.unallocate')}
           onPress={submit}

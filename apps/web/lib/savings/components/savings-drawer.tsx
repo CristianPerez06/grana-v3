@@ -1132,7 +1132,7 @@ const SavingsForm = ({
             {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
           </button>
         </div>
-        <div className="mt-1.5 flex items-baseline gap-1.5 sm:mt-2">
+        <div className="mt-2 flex items-baseline gap-1.5">
           <span className="text-[20px] font-bold leading-none text-text opacity-50 sm:text-[22px]">
             {currency === 'USD' ? 'U$D' : '$'}
           </span>
@@ -1164,7 +1164,7 @@ const SavingsForm = ({
           que el resto —lleva al máximo— pero se muestra siempre que haya algo,
           porque es el atajo que más se usa y su número no es adivinable. */}
       {limit > 0 && (
-        <div className="mt-2.5 flex flex-wrap gap-2 sm:mt-3">
+        <div className="mt-3 flex flex-wrap gap-2">
           {AMOUNT_STEPS[currency]
             .filter((step) => value + step <= limit)
             .map((step) => (
@@ -1195,7 +1195,7 @@ const SavingsForm = ({
 
           Sin recuadro se alinea además con el rótulo «Para qué» de abajo, que
           tampoco lo tiene: los dos son controles, no contenido. */}
-      <div className="mt-2.5 flex items-center gap-3 px-1 sm:mt-3">
+      <div className="mt-4 flex items-center gap-3 px-1">
         <DatePicker
           value={date}
           onChange={setDate}
@@ -1261,7 +1261,7 @@ const SavingsForm = ({
           Al guardar la fila se muestra igual aunque no haya ni un propósito:
           ahí vive el «+», que es de dónde sale el primero. */}
       {(mode === 'save' ? !lockedPurpose : canPickOrigin) && (
-        <div className="mt-2.5 sm:mt-3">
+        <div className="mt-4">
           {/* La puerta para crear va a la DERECHA del rótulo, no al final de los
               chips: ahí caía sola en una fila propia cuando los chips llenaban
               la última, y un «+» suelto en su renglón se lee como un chip más
@@ -1312,7 +1312,7 @@ const SavingsForm = ({
               )}
             </div>
           </div>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {shownOptions.map((option) => {
               const id = option?.id ?? null
               return (
@@ -1340,7 +1340,7 @@ const SavingsForm = ({
         </div>
       )}
 
-      <div className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-2.5 text-[13.5px] sm:py-3">
+      <div className="mt-4 rounded-xl border border-border-soft bg-card px-4 py-3 text-[13.5px]">
         <p className="flex justify-between py-0.5 text-text-muted">
           <span>
             {mode === 'save'
@@ -1384,7 +1384,7 @@ const SavingsForm = ({
 
       {/* The copy never suggests a transfer happened. Grana does not invent a
           financial fact to represent an intention. */}
-      <p className="mt-2 px-1 text-[12.5px] leading-snug text-text-muted sm:mt-2.5">
+      <p className="mt-3.5 px-1 text-[12.5px] leading-snug text-text-muted">
         {mode === 'save' ? t('save_note') : t('release_note')}
       </p>
 
@@ -1401,7 +1401,7 @@ const SavingsForm = ({
 
           Los `-mx-5 px-5` estiran el fondo hasta los bordes del panel, para que
           lo que pasa por abajo no se lea a través. */}
-      <div className="sticky bottom-0 z-10 -mx-5 mt-3 bg-page px-5 pb-4 pt-2.5 sm:mt-4 sm:pb-6">
+      <div className="sticky bottom-0 z-10 -mx-5 mt-4 bg-page px-5 pb-4 pt-3 sm:pb-6">
         {(limitError ?? error) && (
           <p role="alert" className="mb-2 px-1 text-[13px] font-semibold text-negative">
             {limitError ?? error}

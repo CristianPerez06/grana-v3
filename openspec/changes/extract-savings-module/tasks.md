@@ -411,6 +411,31 @@ definición.
   lo dice con todas las letras— y nativo nunca lo recibió. La card pasa de 133px a
   90px; web, de 98 a 90. Las dos quedan en la misma altura.
 
+  **Sexta — el ritmo vertical de los tres formularios.** El recorte se había pasado de rosca: entraban
+  sin scroll pero se leían amontonados.
+
+  ```
+  ### Devolver aire vertical a los tres sheets, sin volver al layout alto
+  - Web mobile:   apps/web/lib/savings/components/savings-drawer.tsx
+                  apps/web/lib/savings/components/purpose-allocate.tsx
+  - Nativo:       apps/mobile/components/savings/SavingsDrawer.tsx
+                  apps/mobile/components/savings/PurposeAllocate.tsx
+  - Cambio:       ritmo de DOS pasos entre bloques — 16px donde el ojo separa
+                  temas (atajos→fecha, fecha→«Para qué», chips→resumen,
+                  helper→CTA), 10-12px donde dos cosas son una sola (rótulo→chips,
+                  monto→atajos). El resumen respira adentro (py-3), y el aire sale
+                  de micro-altura y no de pegar bloques: la caja del número baja
+                  de 54 a 46, que para una cifra de 27px sigue holgada.
+  - Divergencia:  ninguna. Los mismos valores en las dos superficies; en web se
+                  cayeron los `sm:` que ya no aportaban nada.
+  - Runtime:      requiere `expo start -c`.
+  - Cierra:       casos 6, 7 y 8 (la parte de ritmo; el scroll ya estaba cerrado).
+  ```
+
+  Medido: el formulario pasa de 544px a 578. Contra el cuerpo útil de cada teléfono —el 90% de la
+  pantalla menos el agarradero, el colchón y los insets— quedan **+105px en un iPhone 16 Pro** y
+  **+14px en un Android de 360×740**. En un SE de 320×568 no entra ni entraba: ahí scrollea 117px.
+
 - [x] 6.14 **Comparativa web ↔ nativa, superficie por superficie** (E27): **nueve divergencias**, tres
   graves —lo tipeado se perdía en el desvío, el detalle de un propósito tenía botón y enlace
   invertidos, y el tope negaba sin ofrecer la salida—. Las nueve corregidas. La comparación mecánica

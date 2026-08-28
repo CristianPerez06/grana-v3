@@ -783,7 +783,7 @@ const SavingsForm = ({
           pantalla es entera y el monto puede ocupar lo que quiera; acá es una
           sheet topeada al 90% donde cada bloque le come el lugar al CTA. Mismas
           medidas que web, que ya había hecho este mismo recorte. */}
-      <View className="mt-2.5 rounded-2xl border border-border bg-card px-4 pb-3 pt-3">
+      <View className="mt-3 rounded-2xl border border-border bg-card px-4 pb-3 pt-3">
         <View className="relative">
           <Text className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-wider text-text-soft">
             {t('savings.amount_label')}
@@ -801,7 +801,7 @@ const SavingsForm = ({
             </Pressable>
             <MoneyCalculator seed={amount} onResult={setAmount} />
           </View>
-          <View className="min-h-[54px] flex-row items-center justify-center">
+          <View className="min-h-[46px] flex-row items-center justify-center">
             <Text className="pl-1 text-[27px] font-bold text-text">
               {CURRENCY_SYMBOL[currency]}
             </Text>
@@ -830,7 +830,7 @@ const SavingsForm = ({
           siempre que haya algo, porque es el que más se usa y su número no es
           adivinable. */}
       {limit > 0 && (
-        <View className="mt-2.5 flex-row flex-wrap gap-2">
+        <View className="mt-3 flex-row flex-wrap gap-2">
           {AMOUNT_STEPS[currency]
             .filter((step) => value + step <= limit)
             .map((step) => (
@@ -867,7 +867,7 @@ const SavingsForm = ({
           era un doble marco, y dejaba la fecha en un cuerpo que no es el de
           ninguna otra pantalla. Pedir una fecha dos veces en la app no puede
           verse de dos formas. */}
-      <View className="mt-2.5 flex-row items-center gap-3 px-1">
+      <View className="mt-4 flex-row items-center gap-3 px-1">
         <DateField bare value={date} onChange={setDate} />
         <View className="ml-auto flex-row items-center gap-1.5">
           {[
@@ -911,7 +911,7 @@ const SavingsForm = ({
       {/* Al volver a usar, un chip solo no es una elección. Al guardar la fila
           va igual aunque no haya ningún propósito: ahí vive el «+». */}
       {(mode === 'save' ? !lockedPurpose : canPickOrigin) && (
-        <View className="mt-2.5">
+        <View className="mt-4">
           {/* El control de overflow vive en la fila del RÓTULO, no entre los
               chips: al final de una fila que envuelve, queda huérfano en su
               propio renglón cuando la última fila está llena, y ahí no se lee
@@ -974,7 +974,7 @@ const SavingsForm = ({
             )}
             </View>
           </View>
-          <View className="mt-1.5 flex-row flex-wrap gap-1.5">
+          <View className="mt-2.5 flex-row flex-wrap gap-1.5">
             {shownOptions.map((option) => {
               const id = option?.id ?? null
               return (
@@ -1011,7 +1011,7 @@ const SavingsForm = ({
       {/* El resumen, con las mismas medidas que web: `border-soft`, radio 12,
           `px-4 py-3` y cuerpo 13.5. Con `p-4`, radio 16 y 14px pesaba como el
           héroe del monto, que es el bloque que sí manda acá. */}
-      <View className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-2.5">
+      <View className="mt-4 rounded-xl border border-border-soft bg-card px-4 py-3">
         <View className="flex-row justify-between py-0.5">
           <Text className="text-[13.5px] text-text-muted">
             {mode === 'save'
@@ -1051,7 +1051,7 @@ const SavingsForm = ({
       </View>
 
       {/* The copy never suggests a transfer happened. */}
-      <Text className="mt-2 px-1 text-[12.5px] leading-snug text-text-muted">
+      <Text className="mt-3.5 px-1 text-[12.5px] leading-snug text-text-muted">
         {mode === 'save' ? t('savings.save_note') : t('savings.release_note')}
       </Text>
 
@@ -1065,7 +1065,7 @@ const SavingsForm = ({
           se lee antes de confirmar, y es donde un cero de más todavía se puede
           cachar. Vuelve al verbo mientras no hay monto: «Guardar $ 0» sería un
           botón que anuncia una operación que no existe. */}
-      <View className="mt-3">
+      <View className="mt-4">
         <Button
           title={
             value > 0
