@@ -19,7 +19,7 @@ import {
   releaseAvailability,
   createPurpose,
 } from '../../lib/savings/mutations'
-import { BottomSheet } from '../ui/BottomSheet'
+import { BottomSheet, useSheetBodyMaxHeight } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
 import { DateField } from '../ui/DateField'
 import { MoneyAmountInput } from '../ui/MoneyAmountInput'
@@ -153,6 +153,10 @@ export const SavingsDrawer = ({
 }) => {
   const t = useT()
   const queryClient = useQueryClient()
+  // El cuerpo se topea con lo que queda de pantalla, no con un número fijo: con
+  // 560px el CTA de «Guardar», «Volver a usar» y «Destinar» quedaba abajo del
+  // pliegue en teléfonos altos y directamente recortado en los chicos.
+  const bodyMaxHeight = useSheetBodyMaxHeight()
   const [stack, setStack] = useState<SheetView[]>([initialView])
   /**
    * El borrador del formulario: monto, fecha y moneda.
@@ -309,7 +313,7 @@ export const SavingsDrawer = ({
     <BottomSheet visible={visible} onClose={onClose} ariaLabel={t('savings.title')}>
       {/* FormSheetBody because the form has a text input: an RN Modal renders in
           its own native window, so the keyboard context has to be mounted here. */}
-      <FormSheetBody contentClassName="px-4 pb-2 pt-1" maxHeight={560}>
+      <FormSheetBody contentClassName="px-4 pb-2 pt-1" maxHeight={bodyMaxHeight}>
         {view.kind === 'form' && (
           <SavingsForm
             mode={view.mode}
@@ -839,11 +843,19 @@ const SavingsForm = ({
         </View>
       )}
 
-      <View className="mt-3 flex-row items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
-        <View className="min-w-0 flex-1">
-          <DateField value={date} onChange={setDate} />
-        </View>
-        <View className="flex-row items-center gap-1.5">
+      {/* La fecha, SIN recuadro propio — el mismo cambio que ya tenía web y que
+          acá había quedado sin espejar. Con borde y fondo era una card más, del
+          mismo peso que el monto y el resumen, pero de una sola línea: se leía
+          como una card a medio hacer. Y su alto es lo que empujaba el CTA fuera
+          de la pantalla.
+
+          El disparador va `bare` por lo mismo: la pastilla adentro de la card
+          era un doble marco, y dejaba la fecha en un cuerpo que no es el de
+          ninguna otra pantalla. Pedir una fecha dos veces en la app no puede
+          verse de dos formas. */}
+      <View className="mt-3 flex-row items-center gap-3 px-1">
+        <DateField bare value={date} onChange={setDate} />
+        <View className="ml-auto flex-row items-center gap-1.5">
           {[
             { label: t('transactions.form.date_today'), value: formatDateISO(getTodayAR()) },
             { label: t('transactions.form.date_yesterday'), value: yesterdayISO() },
@@ -851,14 +863,19 @@ const SavingsForm = ({
             <Pressable
               key={option.value}
               accessibilityRole="button"
+              accessibilityState={{ selected: date === option.value }}
               onPress={() => setDate(option.value)}
-              className={`rounded-lg px-2.5 py-1.5 ${
-                date === option.value ? 'bg-navy' : 'border border-border'
+              /* Seleccionado en emerald suave y no en navy sólido, igual que
+                 web: el navy es la superficie del total y el color del CTA, y
+                 acá pintaba de negro el control MENOS importante del
+                 formulario — el ojo caía en «Hoy» antes que en el monto. */
+              className={`rounded-lg border px-2.5 py-1.5 ${
+                date === option.value ? 'border-emerald-deep bg-emerald-deep/5' : 'border-border'
               }`}
             >
               <Text
-                className={`text-[11px] font-bold ${
-                  date === option.value ? 'text-white' : 'text-text-muted'
+                className={`text-xs font-bold ${
+                  date === option.value ? 'text-text' : 'text-text-muted'
                 }`}
               >
                 {option.label}
@@ -886,7 +903,11 @@ const SavingsForm = ({
               propio renglón cuando la última fila está llena, y ahí no se lee
               como acción sino como algo cortado. */}
           <View className="flex-row items-center justify-between gap-3">
-            <Text className="shrink text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
+            {/* El MISMO rótulo que el del monto —11px, `font-bold`,
+                `tracking-wider`— y no uno propio: dos eyebrows de distinto
+                cuerpo en el mismo formulario se leen como dos jerarquías, y acá
+                son la misma. Es además el que usa web. */}
+            <Text className="shrink text-[11px] font-bold uppercase tracking-wider text-text-soft">
               {mode === 'save' ? t('savings.purposes.label') : t('savings.purposes.source_label')}
             </Text>
             <View className="shrink-0 flex-row items-center gap-3">
@@ -936,20 +957,30 @@ const SavingsForm = ({
             )}
             </View>
           </View>
-          <View className="mt-2 flex-row flex-wrap gap-2">
+          <View className="mt-2 flex-row flex-wrap gap-1.5">
             {shownOptions.map((option) => {
               const id = option?.id ?? null
               return (
                 <Pressable
                   key={id ?? 'none'}
                   accessibilityRole="button"
+                  accessibilityState={{ selected: purposeId === id }}
                   onPress={() => onSetPurpose(id)}
-                  className={`min-h-[44px] flex-row items-center gap-2 rounded-full border px-3.5 ${
-                    purposeId === id ? 'border-positive bg-border-soft' : 'border-border bg-card'
+                  /* Elegido en emerald, como en web y como los chips de fecha de
+                     arriba. El relleno gris de antes no decía «este», decía
+                     «deshabilitado»: es el mismo tono con el que la app pinta lo
+                     que no se puede tocar.
+
+                     Los 44px son de alto REAL y no de pseudo-elemento —en nativo
+                     no hay `::after`—, y es la única diferencia con web acá. */
+                  className={`min-h-[44px] flex-row items-center gap-1.5 rounded-full border px-3 ${
+                    purposeId === id
+                      ? 'border-emerald-deep bg-emerald-deep/5'
+                      : 'border-border-soft bg-card'
                   }`}
                 >
                   <Text className="text-[15px]">{option?.icon ?? '🫙'}</Text>
-                  <Text className="text-[13.5px] font-semibold text-text">
+                  <Text className="text-[13px] font-semibold text-text">
                     {option?.name ?? t('savings.purposes.none')}
                   </Text>
                 </Pressable>
@@ -959,9 +990,12 @@ const SavingsForm = ({
         </View>
       )}
 
-      <View className="mt-3 rounded-2xl border border-border bg-card p-4">
-        <View className="flex-row justify-between py-1">
-          <Text className="text-[14px] text-text-muted">
+      {/* El resumen, con las mismas medidas que web: `border-soft`, radio 12,
+          `px-4 py-3` y cuerpo 13.5. Con `p-4`, radio 16 y 14px pesaba como el
+          héroe del monto, que es el bloque que sí manda acá. */}
+      <View className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-3">
+        <View className="flex-row justify-between py-0.5">
+          <Text className="text-[13.5px] text-text-muted">
             {mode === 'save'
               ? t('savings.available_now')
               : purpose != null
@@ -970,18 +1004,18 @@ const SavingsForm = ({
                   ? t('savings.saved_total')
                   : t('savings.purposes.unassigned_available')}
           </Text>
-          <Text className="text-[14px] font-semibold text-text">{money(limit, currency)}</Text>
+          <Text className="text-[13.5px] font-semibold text-text">{money(limit, currency)}</Text>
         </View>
-        <View className="flex-row justify-between py-1">
-          <Text className="text-[14px] text-text-muted">
+        <View className="flex-row justify-between py-0.5">
+          <Text className="text-[13.5px] text-text-muted">
             {mode === 'save' ? t('savings.you_will_save') : t('savings.you_will_release')}
           </Text>
-          <Text className="text-[14px] font-semibold text-positive">
+          <Text className="text-[13.5px] font-semibold text-positive">
             {`${value > 0 ? '−' : ''}${money(value, currency)}`}
           </Text>
         </View>
-        <View className="mt-1.5 flex-row justify-between border-t border-border-soft pt-2.5">
-          <Text className="text-[14px] text-text-muted">
+        <View className="mt-1.5 flex-row justify-between border-t border-border-soft pt-2">
+          <Text className="text-[13.5px] text-text-muted">
             {mode === 'save'
               ? t('savings.left_to_spend')
               : purpose != null
@@ -999,7 +1033,7 @@ const SavingsForm = ({
       </View>
 
       {/* The copy never suggests a transfer happened. */}
-      <Text className="mt-3 px-1 text-[13px] leading-snug text-text-muted">
+      <Text className="mt-2.5 px-1 text-[12.5px] leading-snug text-text-muted">
         {mode === 'save' ? t('savings.save_note') : t('savings.release_note')}
       </Text>
 
@@ -1009,9 +1043,21 @@ const SavingsForm = ({
         </Text>
       )}
 
+      {/* El CTA dice el MONTO, no solo el verbo — como en web. Es lo último que
+          se lee antes de confirmar, y es donde un cero de más todavía se puede
+          cachar. Vuelve al verbo mientras no hay monto: «Guardar $ 0» sería un
+          botón que anuncia una operación que no existe. */}
       <View className="mt-4">
         <Button
-          title={mode === 'save' ? t('savings.save') : t('savings.release')}
+          title={
+            value > 0
+              ? t(mode === 'save' ? 'savings.save_amount' : 'savings.release_amount', {
+                  amount: money(value, currency),
+                })
+              : mode === 'save'
+                ? t('savings.save')
+                : t('savings.release')
+          }
           onPress={submit}
           loading={busy}
           disabled={busy || value <= 0 || overLimit}

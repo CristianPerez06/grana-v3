@@ -179,12 +179,16 @@ const BarAction = ({
   <Pressable
     onPress={onPress}
     accessibilityRole="button"
-    className={`min-h-[44px] flex-1 flex-row items-center justify-center gap-1.5 px-2 ${
+    className={`min-h-[44px] flex-1 flex-row items-center justify-center gap-1 px-0 ${
       divided ? 'border-l border-border-soft' : ''
     }`}
   >
     <Icon size={16} strokeWidth={2.5} color="#0B1A2B" />
-    <Text className="text-[12px] font-extrabold text-text" numberOfLines={1}>
+    {/* Mismas medidas que web, y por el mismo cálculo: en 360px la celda mide
+        109 y «Volver a usar» a 12px con `gap-1.5 px-2` necesita 126. Acá no
+        envolvía —`numberOfLines` lo impide— sino que se truncaba con puntos
+        suspensivos, que es la misma falla contada de otra manera. */}
+    <Text className="text-[11.5px] font-extrabold text-text" numberOfLines={1}>
       {label}
     </Text>
   </Pressable>

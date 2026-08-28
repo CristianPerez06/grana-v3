@@ -2130,7 +2130,7 @@
       "created_body": "Ya está en tu lista, todavía sin plata. ¿Le destinás algo ahora?",
       "unallocate_note": "Quitar el destino devuelve la plata a «Sin destino»: sigue guardada. Para poder gastarla, usá «Volver a usar».",
       "breakdown_title": "En qué está repartido",
-      "none_explainer": "Sigue guardado: falta decir para qué.",
+      "none_explainer": "Falta decir para qué.",
       "label": "Para qué",
       "none": "Sin destino",
       "choose": "¿Para qué?",

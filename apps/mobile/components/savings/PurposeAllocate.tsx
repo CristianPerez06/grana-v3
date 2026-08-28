@@ -145,41 +145,49 @@ export const PurposeAllocate = ({
         </Text>
       )}
 
-      <View className="mt-4 rounded-2xl border border-border bg-card p-4">
-        <View className="flex-row items-start justify-between">
-          <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
+      {/* EL héroe de monto de la app: el mismo de «Guardar» y el del alta de
+          movimientos. Acá era el mismo bloque con otras medidas —30px contra 34,
+          el rótulo más chico, el chip en otro fondo y la calculadora al lado del
+          número en vez de abajo del chip— y eso ponía la misma pregunta con dos
+          caras distintas en dos vistas del MISMO sheet. */}
+      <View className="mt-4 rounded-2xl border border-border bg-card px-4 pb-4 pt-3.5">
+        <View className="relative">
+          <Text className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-wider text-text-soft">
             {t('savings.amount_label')}
           </Text>
           {/* La moneda se elige acá: cambiarla cambia el piso, porque lo que
               hay sin destino en pesos no es lo que hay sin destino en dólares. */}
-          <Pressable
-            accessibilityRole="button"
-            disabled={currencies.length < 2}
-            onPress={() =>
-              setCurrency(
-                currencies[(currencies.indexOf(currency) + 1) % currencies.length] ?? currency,
-              )
-            }
-            className="flex-row items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1"
-          >
-            <Text className="text-[11px] font-bold text-text">{currency}</Text>
-            {currencies.length > 1 && <ChevronDown size={11} color={colors.textMuted} />}
-          </Pressable>
-        </View>
-        <View className="mt-2 min-h-[56px] flex-row items-center justify-center">
-          <Text className="pl-1 text-[30px] font-bold text-text">
-            {CURRENCY_SYMBOL[currency]}
-          </Text>
-          <MoneyAmountInput
-            bare
-            value={amount}
-            onChangeText={setAmount}
-            placeholder="0"
-            autoFocus
-            style={{ width: amountInputWidth, paddingVertical: 0 }}
-            className="ml-1 text-[30px] font-bold text-text"
-          />
-          <MoneyCalculator seed={amount} onResult={setAmount} />
+          <View className="absolute right-0 top-0 items-end gap-1.5">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('savings.currency_label')}
+              disabled={currencies.length < 2}
+              onPress={() =>
+                setCurrency(
+                  currencies[(currencies.indexOf(currency) + 1) % currencies.length] ?? currency,
+                )
+              }
+              className="flex-row items-center gap-1 rounded-lg border border-border bg-border-soft px-2.5 py-1"
+            >
+              <Text className="text-xs font-bold text-text">{currency}</Text>
+              {currencies.length > 1 && <ChevronDown size={12} color={colors.text} />}
+            </Pressable>
+            <MoneyCalculator seed={amount} onResult={setAmount} />
+          </View>
+          <View className="min-h-[72px] flex-row items-center justify-center">
+            <Text className="pl-1 text-[34px] font-bold text-text">
+              {CURRENCY_SYMBOL[currency]}
+            </Text>
+            <MoneyAmountInput
+              bare
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="0"
+              autoFocus
+              style={{ width: amountInputWidth, paddingVertical: 0 }}
+              className="ml-1 text-[34px] font-bold text-text"
+            />
+          </View>
         </View>
       </View>
 
@@ -189,23 +197,24 @@ export const PurposeAllocate = ({
           chips. */}
       {fixedPurpose == null && (
         <View className="mt-3">
-          <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
+          <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
             {t('savings.purposes.pick_inline')}
           </Text>
-          <View className="mt-2 flex-row flex-wrap gap-2">
+          <View className="mt-2 flex-row flex-wrap gap-1.5">
             {purposes.map((option) => (
               <Pressable
                 key={option.id}
                 accessibilityRole="button"
                 onPress={() => setChosen(option)}
-                className={`min-h-[44px] flex-row items-center gap-2 rounded-full border px-3.5 ${
+                accessibilityState={{ selected: chosen?.id === option.id }}
+                className={`min-h-[44px] flex-row items-center gap-1.5 rounded-full border px-3 ${
                   chosen?.id === option.id
-                    ? 'border-positive bg-border-soft'
-                    : 'border-border bg-card'
+                    ? 'border-emerald-deep bg-emerald-deep/5'
+                    : 'border-border-soft bg-card'
                 }`}
               >
                 <Text className="text-[15px]">{option.icon ?? '🫙'}</Text>
-                <Text className="text-[13.5px] font-semibold text-text">{option.name}</Text>
+                <Text className="text-[13px] font-semibold text-text">{option.name}</Text>
               </Pressable>
             ))}
             {suggestions.map((seed) => (
@@ -222,12 +231,12 @@ export const PurposeAllocate = ({
                     setCreating(false)
                   }
                 }}
-                className={`min-h-[44px] flex-row items-center gap-2 rounded-full border border-dashed border-border px-3.5 ${
+                className={`min-h-[44px] flex-row items-center gap-1.5 rounded-full border border-dashed border-border px-3 ${
                   creating ? 'opacity-50' : ''
                 }`}
               >
                 <Text className="text-[15px]">{seed.icon}</Text>
-                <Text className="text-[13.5px] font-semibold text-text-muted">
+                <Text className="text-[13px] font-semibold text-text-muted">
                   {t(`savings.purposes.seeds.${seed.key}`)}
                 </Text>
               </Pressable>
@@ -235,9 +244,9 @@ export const PurposeAllocate = ({
             <Pressable
               accessibilityRole="button"
               onPress={onCreateCustom}
-              className="min-h-[44px] flex-row items-center justify-center gap-1.5 rounded-full border border-dashed border-border px-3.5"
+              className="min-h-[44px] flex-row items-center justify-center gap-1.5 rounded-full border border-dashed border-border px-3"
             >
-              <Text className="text-[13.5px] font-bold text-positive">
+              <Text className="text-[13px] font-bold text-positive">
                 + {t('savings.purposes.create_inline')}
               </Text>
             </Pressable>
@@ -245,25 +254,25 @@ export const PurposeAllocate = ({
         </View>
       )}
 
-      <View className="mt-3 rounded-2xl border border-border bg-card p-4">
+      <View className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-3">
         <View className="flex-row justify-between py-1">
-          <Text className="text-[14px] text-text-muted">
+          <Text className="text-[13.5px] text-text-muted">
             {allocating
               ? t('savings.purposes.unassigned_available')
               : t('savings.purposes.allocated_in', { purpose: purpose?.name ?? '' })}
           </Text>
-          <Text className="text-[14px] font-semibold text-text">{money(available)}</Text>
+          <Text className="text-[13.5px] font-semibold text-text">{money(available)}</Text>
         </View>
         <View className="flex-row justify-between py-1">
-          <Text className="text-[14px] text-text-muted">
+          <Text className="text-[13.5px] text-text-muted">
             {t(allocating ? 'savings.purposes.will_allocate' : 'savings.purposes.will_unallocate')}
           </Text>
-          <Text className="text-[14px] font-semibold text-positive">
+          <Text className="text-[13.5px] font-semibold text-positive">
             {`${value > 0 ? '−' : ''}${money(value)}`}
           </Text>
         </View>
         <View className="mt-1.5 flex-row justify-between border-t border-border-soft pt-2.5">
-          <Text className="text-[14px] text-text-muted">
+          <Text className="text-[13.5px] text-text-muted">
             {t(allocating ? 'savings.purposes.left_unassigned' : 'savings.purposes.stays_allocated')}
           </Text>
           <Text

@@ -271,11 +271,16 @@ const BarAction = ({
   divided?: boolean
   onClick: () => void
 }) => (
+  // Tres celdas de un grid de 3 en un teléfono de 360px miden 109px cada una, y
+  // «Volver a usar» a 12px con `gap-2 px-2` necesita 126: envolvía en dos líneas
+  // y desalineaba la barra entera. A 11.5px con `gap-1 px-0` necesita 104 y
+  // entra con margen. `sm:` recupera el aire donde sobra ancho, y el
+  // `whitespace-nowrap` es la garantía: si algún día no entra, se ve.
   <button
     type="button"
     onClick={onClick}
     className={cn(
-      'relative flex min-h-[38px] items-center justify-center gap-2 px-2 text-[12px] font-extrabold tracking-[-0.01em] text-text transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[\'\'] hover:bg-surface-sunken sm:min-h-[42px] sm:text-[13px]',
+      'relative flex min-h-[38px] items-center justify-center gap-1 whitespace-nowrap px-0 text-[11.5px] font-extrabold tracking-[-0.01em] text-text transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[\'\'] hover:bg-surface-sunken sm:min-h-[42px] sm:gap-2 sm:px-2 sm:text-[13px]',
       divided && 'border-l border-border-soft',
     )}
   >
