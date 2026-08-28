@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Pressable, Text, useWindowDimensions, View } from 'react-native'
 import { ChevronDown, Plus } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { formatForDisplay, parseMoneyInput } from '@grana/validation'
 import {
+  fitChipCount,
   MODULE_CURRENCIES,
   moduleGroupCurrency,
   PURPOSE_SEEDS,
@@ -26,6 +27,7 @@ import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { FormSheetBody } from '../layout/FormSheetBody'
 import { SheetBackHeader } from './SheetBackHeader'
+import { CHIP_SLOP, TAP_SLOP } from './tap-slop'
 import { PurposePicker } from './PurposePicker'
 import { PurposeForm } from './PurposeForm'
 import { PurposeDelete } from './PurposeDelete'
@@ -546,6 +548,7 @@ const SavingsForm = ({
   onDone: () => Promise<void>
 }) => {
   const t = useT()
+  const { width: windowWidth } = useWindowDimensions()
   const [showAllPurposes, setShowAllPurposes] = useState(false)
 
   // Nada de estado local acá: lo tipeado vive en el drawer, que no se desmonta
@@ -574,17 +577,19 @@ const SavingsForm = ({
   const unassignedIsTotal = purposes.length === 0
 
   /**
-   * Cuántos propósitos se muestran antes de plegar el resto.
+   * DOS FILAS de chips, y no un número fijo de chips.
    *
-   * SEIS. Se probó con ocho y el efecto fue que con diez propósitos no se
-   * plegaba ninguno: el control desaparecía, y con él la única señal de que la
-   * lista sigue. Un techo tan alto que nunca se alcanza no es un techo.
+   * Eran seis, y seis no sabe nada del ancho: con «Emergencia», «Meta de ahorro»
+   * y «Fondo de emergencia» los mismos seis ocupaban cuatro filas y empujaban el
+   * resumen y el CTA fuera de la pantalla. Acá el alto es el recurso escaso, así
+   * que lo que se topea es el alto.
    *
-   * Uno de tolerancia: esconder un solo chip detrás de un control que ocupa casi
-   * lo mismo no es esconder nada.
+   * El ancho sale de la ventana REAL —menos el `px-4` del cuerpo del sheet—, que
+   * en nativo sí se conoce antes de dibujar. Web usa el del teléfono más angosto
+   * porque ahí medir obliga a dibujar primero.
    */
-  const PURPOSE_CHIP_LIMIT = 6
-  const PURPOSE_CHIP_SLACK = 1
+  const chipRowWidth = windowWidth - 32
+  const PURPOSE_CHIP_ROWS = 2
 
   /**
    * Los orígenes posibles, ORDENADOS POR SALDO.
@@ -621,19 +626,17 @@ const SavingsForm = ({
    * que se esconde al plegar deja la pantalla diciendo que se va a guardar «sin
    * destino» cuando en realidad va a otro lado.
    */
-  const hasRestOption = purposeOptions.some((o) => o == null)
-  const namedOptions = purposeOptions.filter((o): o is Purpose => o != null)
-  const shownNamed =
-    showAllPurposes || namedOptions.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
-      ? namedOptions
-      : (() => {
-          const head = namedOptions.slice(0, PURPOSE_CHIP_LIMIT)
-          if (purposeId == null || head.some((o) => o.id === purposeId)) return head
-          const chosen = namedOptions.find((o) => o.id === purposeId)
-          return chosen == null ? head : [...head.slice(0, PURPOSE_CHIP_LIMIT - 1), chosen]
-        })()
-  const shownOptions: (Purpose | null)[] = hasRestOption ? [null, ...shownNamed] : shownNamed
-  const hiddenCount = namedOptions.length - shownNamed.length
+  const chipLabel = (option: Purpose | null) => option?.name ?? t('savings.purposes.none')
+  const chipFit = fitChipCount(purposeOptions.map(chipLabel), chipRowWidth, PURPOSE_CHIP_ROWS)
+  const shownOptions: (Purpose | null)[] = showAllPurposes
+    ? purposeOptions
+    : (() => {
+        const head = purposeOptions.slice(0, chipFit)
+        if (head.some((o) => (o?.id ?? null) === purposeId)) return head
+        const chosen = purposeOptions.find((o) => (o?.id ?? null) === purposeId)
+        return chosen === undefined ? head : [...head.slice(0, Math.max(1, chipFit - 1)), chosen]
+      })()
+  const hiddenCount = purposeOptions.length - shownOptions.length
 
   /**
    * ¿Hay otro origen que el usuario pueda elegir, acá y ahora?
@@ -720,7 +723,7 @@ const SavingsForm = ({
               })
             : t('savings.errors.exceeds_unassigned_reserved', { limit: money(limit, currency) })
     : null
-  const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 20 + 2
+  const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 16 + 2
 
   const submit = async () => {
     setError(null)
@@ -776,7 +779,11 @@ const SavingsForm = ({
           min-height. Two surfaces that ask for an amount should not look like two
           different apps — and the chip is what gives this one its currency
           selector. */}
-      <View className="mt-3 rounded-2xl border border-border bg-card px-4 pb-4 pt-3.5">
+      {/* Más compacta que la del alta de movimientos, y a propósito: allá la
+          pantalla es entera y el monto puede ocupar lo que quiera; acá es una
+          sheet topeada al 90% donde cada bloque le come el lugar al CTA. Mismas
+          medidas que web, que ya había hecho este mismo recorte. */}
+      <View className="mt-2.5 rounded-2xl border border-border bg-card px-4 pb-3 pt-3">
         <View className="relative">
           <Text className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-wider text-text-soft">
             {t('savings.amount_label')}
@@ -794,8 +801,8 @@ const SavingsForm = ({
             </Pressable>
             <MoneyCalculator seed={amount} onResult={setAmount} />
           </View>
-          <View className="min-h-[72px] flex-row items-center justify-center">
-            <Text className="pl-1 text-[34px] font-bold text-text">
+          <View className="min-h-[54px] flex-row items-center justify-center">
+            <Text className="pl-1 text-[27px] font-bold text-text">
               {CURRENCY_SYMBOL[currency]}
             </Text>
             <MoneyAmountInput
@@ -805,7 +812,7 @@ const SavingsForm = ({
               placeholder="0"
               autoFocus
               style={{ width: amountInputWidth, paddingVertical: 0 }}
-              className="ml-1 text-[34px] font-bold text-text"
+              className="ml-1 text-[27px] font-bold text-text"
             />
           </View>
         </View>
@@ -823,7 +830,7 @@ const SavingsForm = ({
           siempre que haya algo, porque es el que más se usa y su número no es
           adivinable. */}
       {limit > 0 && (
-        <View className="mt-3 flex-row flex-wrap gap-2">
+        <View className="mt-2.5 flex-row flex-wrap gap-2">
           {AMOUNT_STEPS[currency]
             .filter((step) => value + step <= limit)
             .map((step) => (
@@ -831,7 +838,8 @@ const SavingsForm = ({
                 key={step}
                 accessibilityRole="button"
                 onPress={() => setAmount(String(value + step))}
-                className="min-h-[44px] justify-center rounded-full border border-border-soft bg-card px-3.5"
+                hitSlop={CHIP_SLOP}
+                className="justify-center rounded-full border border-border-soft bg-card px-3.5 py-2"
               >
                 <Text className="text-[13px] font-bold text-text">
                   +{money(step, currency)}
@@ -841,7 +849,8 @@ const SavingsForm = ({
           <Pressable
             accessibilityRole="button"
             onPress={() => setAmount(String(limit))}
-            className="min-h-[44px] justify-center rounded-full border border-border-soft bg-card px-3.5"
+            hitSlop={CHIP_SLOP}
+            className="justify-center rounded-full border border-border-soft bg-card px-3.5 py-2"
           >
             <Text className="text-[13px] font-bold text-text">{t('savings.shortcut_all')}</Text>
           </Pressable>
@@ -858,7 +867,7 @@ const SavingsForm = ({
           era un doble marco, y dejaba la fecha en un cuerpo que no es el de
           ninguna otra pantalla. Pedir una fecha dos veces en la app no puede
           verse de dos formas. */}
-      <View className="mt-3 flex-row items-center gap-3 px-1">
+      <View className="mt-2.5 flex-row items-center gap-3 px-1">
         <DateField bare value={date} onChange={setDate} />
         <View className="ml-auto flex-row items-center gap-1.5">
           {[
@@ -902,7 +911,7 @@ const SavingsForm = ({
       {/* Al volver a usar, un chip solo no es una elección. Al guardar la fila
           va igual aunque no haya ningún propósito: ahí vive el «+». */}
       {(mode === 'save' ? !lockedPurpose : canPickOrigin) && (
-        <View className="mt-3">
+        <View className="mt-2.5">
           {/* El control de overflow vive en la fila del RÓTULO, no entre los
               chips: al final de una fila que envuelve, queda huérfano en su
               propio renglón cuando la última fila está llena, y ahí no se lee
@@ -920,7 +929,8 @@ const SavingsForm = ({
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setShowAllPurposes(true)}
-                className="min-h-[44px] shrink-0 justify-center"
+                hitSlop={TAP_SLOP}
+                className="shrink-0 justify-center"
               >
                 <Text className="text-[12px] font-extrabold text-text-muted">
                   {t('savings.purposes.show_more', { count: String(hiddenCount) })}
@@ -929,11 +939,12 @@ const SavingsForm = ({
             )}
             {/* La vuelta atrás. Desplegar sin poder volver a plegar deja la
                 pantalla más alta para siempre por una mirada de un segundo. */}
-            {showAllPurposes && namedOptions.length > PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK && (
+            {showAllPurposes && purposeOptions.length > chipFit && (
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setShowAllPurposes(false)}
-                className="min-h-[44px] shrink-0 justify-center"
+                hitSlop={TAP_SLOP}
+                className="shrink-0 justify-center"
               >
                 <Text className="text-[12px] font-extrabold text-text-muted">
                   {t('savings.purposes.show_less')}
@@ -952,7 +963,8 @@ const SavingsForm = ({
               <Pressable
                 accessibilityRole="button"
                 onPress={onPickPurpose}
-                className="min-h-[44px] shrink-0 flex-row items-center gap-1"
+                hitSlop={TAP_SLOP}
+                className="shrink-0 flex-row items-center gap-1"
               >
                 <Plus size={13} color={colors.emeraldDeep} strokeWidth={2.5} />
                 <Text className="text-[12px] font-extrabold text-positive">
@@ -962,7 +974,7 @@ const SavingsForm = ({
             )}
             </View>
           </View>
-          <View className="mt-2 flex-row flex-wrap gap-1.5">
+          <View className="mt-1.5 flex-row flex-wrap gap-1.5">
             {shownOptions.map((option) => {
               const id = option?.id ?? null
               return (
@@ -978,7 +990,8 @@ const SavingsForm = ({
 
                      Los 44px son de alto REAL y no de pseudo-elemento —en nativo
                      no hay `::after`—, y es la única diferencia con web acá. */
-                  className={`min-h-[44px] flex-row items-center gap-1.5 rounded-full border px-3 ${
+                  hitSlop={CHIP_SLOP}
+                  className={`flex-row items-center gap-1.5 rounded-full border px-3 py-2 ${
                     purposeId === id
                       ? 'border-emerald-deep bg-emerald-deep/5'
                       : 'border-border-soft bg-card'
@@ -998,7 +1011,7 @@ const SavingsForm = ({
       {/* El resumen, con las mismas medidas que web: `border-soft`, radio 12,
           `px-4 py-3` y cuerpo 13.5. Con `p-4`, radio 16 y 14px pesaba como el
           héroe del monto, que es el bloque que sí manda acá. */}
-      <View className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-3">
+      <View className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-2.5">
         <View className="flex-row justify-between py-0.5">
           <Text className="text-[13.5px] text-text-muted">
             {mode === 'save'
@@ -1038,7 +1051,7 @@ const SavingsForm = ({
       </View>
 
       {/* The copy never suggests a transfer happened. */}
-      <Text className="mt-2.5 px-1 text-[12.5px] leading-snug text-text-muted">
+      <Text className="mt-2 px-1 text-[12.5px] leading-snug text-text-muted">
         {mode === 'save' ? t('savings.save_note') : t('savings.release_note')}
       </Text>
 
@@ -1052,7 +1065,7 @@ const SavingsForm = ({
           se lee antes de confirmar, y es donde un cero de más todavía se puede
           cachar. Vuelve al verbo mientras no hay monto: «Guardar $ 0» sería un
           botón que anuncia una operación que no existe. */}
-      <View className="mt-4">
+      <View className="mt-3">
         <Button
           title={
             value > 0

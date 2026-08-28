@@ -11,6 +11,7 @@ import {
   moduleGroupCurrency,
   MODULE_CURRENCIES,
   PURPOSE_SEEDS,
+  fitChipCount,
   purposeGlyph,
   purposeTint,
   RESERVE_HISTORY_LIMIT,
@@ -24,6 +25,8 @@ import { Calendar, ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 
 import { shortDate } from '@/lib/savings/short-date'
+import { DESKTOP_CHIP_ROW_WIDTH, MOBILE_CHIP_ROW_WIDTH } from '@/lib/savings/chip-row-width'
+import { useIsMobile } from '@/lib/use-is-mobile'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
@@ -400,7 +403,7 @@ export function SavingsDrawer({
 
   return (
     <Drawer open={open} onClose={onClose} ariaLabel={t('title')} widthPx={480}>
-      <div className="flex h-full flex-col overflow-y-auto bg-page px-5 pb-6 pt-5">
+      <div className="flex h-full flex-col overflow-y-auto bg-page px-5 pb-4 pt-3 sm:pb-6 sm:pt-5">
         {view.kind === 'form' && (
           <SavingsForm
             mode={view.mode}
@@ -873,6 +876,10 @@ const SavingsForm = ({
   // con el formulario es exactamente lo que tienen que hacer.
   const [error, setError] = useState<string | null>(null)
   const [showAllPurposes, setShowAllPurposes] = useState(false)
+  // El teléfono no es una versión angosta del drawer: acá el alto es el recurso
+  // escaso, y varias decisiones —cuántas filas de chips, cuánto respira cada
+  // bloque— se toman distinto. Mismo gate que usa el alta de movimientos.
+  const isMobile = useIsMobile()
   const [pending, startTransition] = useTransition()
 
   // La moneda del borrador manda apenas se toca el segmentado; hasta entonces,
@@ -885,19 +892,20 @@ const SavingsForm = ({
   const setDate = (next: string) => onDraftChange({ ...draft, date: next })
 
   /**
-   * Cuántos propósitos se muestran antes de plegar el resto.
+   * Cuántas FILAS de chips se dibujan antes de plegar el resto — y no cuántos
+   * chips.
    *
-   * SEIS, que son dos filas completas de chips en el ancho del drawer. Se probó
-   * con ocho y el efecto fue que con diez propósitos no se plegaba ninguno: el
-   * control desaparecía, y con él la única señal de que la lista sigue. Dos
-   * filas más un «Ver más» en la cabecera es la forma que se buscaba; un techo
-   * tan alto que nunca se alcanza no es un techo.
+   * Eran seis chips fijos, y un número fijo no sabe nada del ancho: con
+   * «Emergencia», «Meta de ahorro» y «Fondo de emergencia» los mismos seis
+   * ocupaban cuatro filas y empujaban el resumen y el CTA fuera de la pantalla.
+   * En un teléfono el alto es el recurso escaso, así que lo que se topea es el
+   * alto.
    *
-   * Uno de tolerancia: esconder un solo chip detrás de un control que ocupa
-   * casi lo mismo no es esconder nada.
+   * DOS filas en el teléfono, tres en el drawer de escritorio, que es más ancho
+   * y no compite por alto. `fitChipCount` decide cuántos entran.
    */
-  const PURPOSE_CHIP_LIMIT = 6
-  const PURPOSE_CHIP_SLACK = 1
+  const chipRowWidth = isMobile ? MOBILE_CHIP_ROW_WIDTH : DESKTOP_CHIP_ROW_WIDTH
+  const chipMaxRows = isMobile ? 2 : 3
 
   /** Cicla entre las monedas que hay para ofrecer, como el resto de la app. */
   const cycleCurrency = () => {
@@ -959,19 +967,17 @@ const SavingsForm = ({
    * que se esconde al plegar deja la pantalla diciendo que se va a guardar «sin
    * destino» cuando en realidad va a otro lado.
    */
-  const hasRestOption = purposeOptions.some((o) => o == null)
-  const namedOptions = purposeOptions.filter((o): o is Purpose => o != null)
-  const shownNamed =
-    showAllPurposes || namedOptions.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
-      ? namedOptions
-      : (() => {
-          const head = namedOptions.slice(0, PURPOSE_CHIP_LIMIT)
-          if (purposeId == null || head.some((o) => o.id === purposeId)) return head
-          const chosen = namedOptions.find((o) => o.id === purposeId)
-          return chosen == null ? head : [...head.slice(0, PURPOSE_CHIP_LIMIT - 1), chosen]
-        })()
-  const shownOptions: (Purpose | null)[] = hasRestOption ? [null, ...shownNamed] : shownNamed
-  const hiddenCount = namedOptions.length - shownNamed.length
+  const chipLabel = (option: Purpose | null) => option?.name ?? t('purposes.none')
+  const chipFit = fitChipCount(purposeOptions.map(chipLabel), chipRowWidth, chipMaxRows)
+  const shownOptions: (Purpose | null)[] = showAllPurposes
+    ? purposeOptions
+    : (() => {
+        const head = purposeOptions.slice(0, chipFit)
+        if (head.some((o) => (o?.id ?? null) === purposeId)) return head
+        const chosen = purposeOptions.find((o) => (o?.id ?? null) === purposeId)
+        return chosen === undefined ? head : [...head.slice(0, Math.max(1, chipFit - 1)), chosen]
+      })()
+  const hiddenCount = purposeOptions.length - shownOptions.length
 
   /**
    * ¿Hay otro origen que el usuario pueda elegir, acá y ahora?
@@ -1099,7 +1105,7 @@ const SavingsForm = ({
           más padding— y eso hacía dos cosas: pedía scroll en un drawer que
           entraba justo, y ponía la misma pregunta con dos caras distintas en dos
           pantallas de la misma app. */}
-      <div className="mt-4 rounded-[16px] border border-border bg-card px-5 py-[18px] transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+      <div className="mt-3 rounded-[16px] border border-border bg-card px-4 py-3 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)] sm:mt-4 sm:px-5 sm:py-[18px]">
         <div className="flex items-start justify-between">
           <label
             htmlFor="savings-amount"
@@ -1126,8 +1132,8 @@ const SavingsForm = ({
             {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
           </button>
         </div>
-        <div className="mt-2 flex items-baseline gap-1.5">
-          <span className="text-[22px] font-bold leading-none text-text opacity-50">
+        <div className="mt-1.5 flex items-baseline gap-1.5 sm:mt-2">
+          <span className="text-[20px] font-bold leading-none text-text opacity-50 sm:text-[22px]">
             {currency === 'USD' ? 'U$D' : '$'}
           </span>
           <MoneyAmountInput
@@ -1136,7 +1142,7 @@ const SavingsForm = ({
             onChange={setAmount}
             placeholder="0"
             autoFocus
-            className="w-full min-w-0 bg-transparent text-[30px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-text outline-none placeholder:text-text-soft/40"
+            className="w-full min-w-0 bg-transparent text-[27px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-text outline-none placeholder:text-text-soft/40 sm:text-[30px]"
           />
           <MoneyCalculatorPopover
             seed={amount}
@@ -1158,7 +1164,7 @@ const SavingsForm = ({
           que el resto —lleva al máximo— pero se muestra siempre que haya algo,
           porque es el atajo que más se usa y su número no es adivinable. */}
       {limit > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-2.5 flex flex-wrap gap-2 sm:mt-3">
           {AMOUNT_STEPS[currency]
             .filter((step) => value + step <= limit)
             .map((step) => (
@@ -1189,7 +1195,7 @@ const SavingsForm = ({
 
           Sin recuadro se alinea además con el rótulo «Para qué» de abajo, que
           tampoco lo tiene: los dos son controles, no contenido. */}
-      <div className="mt-3 flex items-center gap-3 px-1">
+      <div className="mt-2.5 flex items-center gap-3 px-1 sm:mt-3">
         <DatePicker
           value={date}
           onChange={setDate}
@@ -1255,7 +1261,7 @@ const SavingsForm = ({
           Al guardar la fila se muestra igual aunque no haya ni un propósito:
           ahí vive el «+», que es de dónde sale el primero. */}
       {(mode === 'save' ? !lockedPurpose : canPickOrigin) && (
-        <div className="mt-3">
+        <div className="mt-2.5 sm:mt-3">
           {/* La puerta para crear va a la DERECHA del rótulo, no al final de los
               chips: ahí caía sola en una fila propia cuando los chips llenaban
               la última, y un «+» suelto en su renglón se lee como un chip más
@@ -1282,7 +1288,7 @@ const SavingsForm = ({
               )}
               {/* La vuelta atrás. Desplegar sin poder volver a plegar deja la
                   pantalla más alta para siempre por una mirada de un segundo. */}
-              {showAllPurposes && namedOptions.length > PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK && (
+              {showAllPurposes && purposeOptions.length > chipFit && (
                 <button
                   type="button"
                   onClick={() => setShowAllPurposes(false)}
@@ -1306,7 +1312,7 @@ const SavingsForm = ({
               )}
             </div>
           </div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {shownOptions.map((option) => {
               const id = option?.id ?? null
               return (
@@ -1334,7 +1340,7 @@ const SavingsForm = ({
         </div>
       )}
 
-      <div className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-3 text-[13.5px]">
+      <div className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-2.5 text-[13.5px] sm:py-3">
         <p className="flex justify-between py-0.5 text-text-muted">
           <span>
             {mode === 'save'
@@ -1378,7 +1384,7 @@ const SavingsForm = ({
 
       {/* The copy never suggests a transfer happened. Grana does not invent a
           financial fact to represent an intention. */}
-      <p className="mt-2.5 px-1 text-[12.5px] leading-snug text-text-muted">
+      <p className="mt-2 px-1 text-[12.5px] leading-snug text-text-muted sm:mt-2.5">
         {mode === 'save' ? t('save_note') : t('release_note')}
       </p>
 
@@ -1395,7 +1401,7 @@ const SavingsForm = ({
 
           Los `-mx-5 px-5` estiran el fondo hasta los bordes del panel, para que
           lo que pasa por abajo no se lea a través. */}
-      <div className="sticky bottom-0 z-10 -mx-5 -mb-6 mt-4 bg-page px-5 pb-6 pt-3">
+      <div className="sticky bottom-0 z-10 -mx-5 mt-3 bg-page px-5 pb-4 pt-2.5 sm:mt-4 sm:pb-6">
         {(limitError ?? error) && (
           <p role="alert" className="mb-2 px-1 text-[13px] font-semibold text-negative">
             {limitError ?? error}

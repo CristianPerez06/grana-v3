@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
-import { PURPOSE_SEEDS, type Purpose } from '@grana/savings'
+import { PURPOSE_SEEDS, fitChipCount, type Purpose } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
 import { ChevronDown, Plus } from 'lucide-react'
@@ -11,7 +11,9 @@ import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { allocateToPurpose, unallocateFromPurpose } from '@/app/_actions/savings'
 import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/lib/use-is-mobile'
 import { DrawerBackHeader } from './drawer-back-header'
+import { DESKTOP_CHIP_ROW_WIDTH, MOBILE_CHIP_ROW_WIDTH } from '@/lib/savings/chip-row-width'
 
 type Currency = 'ARS' | 'USD'
 
@@ -94,27 +96,34 @@ export function PurposeAllocate({
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [showAllPurposes, setShowAllPurposes] = useState(false)
+  // Mismo gate que el formulario de guardar: en el teléfono el alto es el
+  // recurso escaso y varias medidas se toman distinto.
+  const isMobile = useIsMobile()
   const [pending, startTransition] = useTransition()
 
   // Las sugerencias que el usuario todavía no tiene: ofrecerle crear algo que ya
   // existe lo empuja contra el nombre único con el atajo que existe para
   // ahorrarle trabajo.
-  /** Seis chips —dos filas— antes de plegar, igual que el formulario de guardar. */
-  const PURPOSE_CHIP_LIMIT = 6
-  const PURPOSE_CHIP_SLACK = 1
   // Por saldo descendente y, a igualdad, por nombre: lo que se pliega son los
   // que menos tienen, no los últimos del abecedario.
   const sortedPurposes = [...purposes].sort(
-    (a, b) => allocatedIn(currency, b.id) - allocatedIn(currency, a.id) || a.name.localeCompare(b.name),
+    (a, b) =>
+      allocatedIn(currency, b.id) - allocatedIn(currency, a.id) || a.name.localeCompare(b.name),
   )
-  const shownPurposes =
-    showAllPurposes || sortedPurposes.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
-      ? sortedPurposes
-      : (() => {
-          const head = sortedPurposes.slice(0, PURPOSE_CHIP_LIMIT)
-          if (chosen == null || head.some((p) => p.id === chosen.id)) return head
-          return [...head.slice(0, PURPOSE_CHIP_LIMIT - 1), chosen]
-        })()
+  // Dos filas de chips en el teléfono y tres en el drawer de escritorio, igual
+  // que el formulario de guardar: lo que se topea es el ALTO, no la cantidad.
+  const chipFit = fitChipCount(
+    sortedPurposes.map((p) => p.name),
+    isMobile ? MOBILE_CHIP_ROW_WIDTH : DESKTOP_CHIP_ROW_WIDTH,
+    isMobile ? 2 : 3,
+  )
+  const shownPurposes = showAllPurposes
+    ? sortedPurposes
+    : (() => {
+        const head = sortedPurposes.slice(0, chipFit)
+        if (chosen == null || head.some((p) => p.id === chosen.id)) return head
+        return [...head.slice(0, Math.max(1, chipFit - 1)), chosen]
+      })()
   const hiddenPurposes = sortedPurposes.length - shownPurposes.length
 
   const taken = new Set(purposes.map((p) => p.name.trim().toLowerCase()))
@@ -256,7 +265,7 @@ export function PurposeAllocate({
                   {t('purposes.show_more', { count: hiddenPurposes })}
                 </button>
               )}
-              {showAllPurposes && purposes.length > PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK && (
+              {showAllPurposes && sortedPurposes.length > chipFit && (
                 <button
                   type="button"
                   onClick={() => setShowAllPurposes(false)}

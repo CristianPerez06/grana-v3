@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Pressable, Text, useWindowDimensions, View } from 'react-native'
 import { ChevronDown, Plus } from 'lucide-react-native'
 import { colors } from '../../lib/colors'
-import { PURPOSE_SEEDS, type Purpose } from '@grana/savings'
+import { PURPOSE_SEEDS, fitChipCount, type Purpose } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { formatForDisplay, parseMoneyInput } from '@grana/validation'
@@ -12,6 +12,7 @@ import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { allocateToPurpose, unallocateFromPurpose } from '../../lib/savings/mutations'
 import { SheetBackHeader } from './SheetBackHeader'
+import { CHIP_SLOP, TAP_SLOP } from './tap-slop'
 
 type Currency = 'ARS' | 'USD'
 
@@ -80,10 +81,11 @@ export const PurposeAllocate = ({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [showAllPurposes, setShowAllPurposes] = useState(false)
+  const { width: windowWidth } = useWindowDimensions()
 
-  /** Seis chips —dos filas— antes de plegar, igual que el formulario de guardar. */
-  const PURPOSE_CHIP_LIMIT = 6
-  const PURPOSE_CHIP_SLACK = 1
+  /** Dos filas de chips, igual que el formulario de guardar: se topea el ALTO. */
+  const chipRowWidth = windowWidth - 32
+  const PURPOSE_CHIP_ROWS = 2
   // Por saldo descendente y, a igualdad, por nombre: lo que se pliega son los
   // que menos tienen, no los últimos del abecedario.
   const sortedPurposes = [...purposes].sort(
@@ -95,14 +97,18 @@ export const PurposeAllocate = ({
    * que se esconde al plegar deja la pantalla diciendo que se destina a otro
    * lado del que se eligió.
    */
-  const shownPurposes =
-    showAllPurposes || sortedPurposes.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
-      ? sortedPurposes
-      : (() => {
-          const head = sortedPurposes.slice(0, PURPOSE_CHIP_LIMIT)
-          if (chosen == null || head.some((x) => x.id === chosen.id)) return head
-          return [...head.slice(0, PURPOSE_CHIP_LIMIT - 1), chosen]
-        })()
+  const chipFit = fitChipCount(
+    sortedPurposes.map((x) => x.name),
+    chipRowWidth,
+    PURPOSE_CHIP_ROWS,
+  )
+  const shownPurposes = showAllPurposes
+    ? sortedPurposes
+    : (() => {
+        const head = sortedPurposes.slice(0, chipFit)
+        if (chosen == null || head.some((x) => x.id === chosen.id)) return head
+        return [...head.slice(0, Math.max(1, chipFit - 1)), chosen]
+      })()
   const hiddenPurposes = sortedPurposes.length - shownPurposes.length
 
   const money = (value: number) => (currency === 'USD' ? formatUSD(value) : formatARS(value, true))
@@ -118,7 +124,7 @@ export const PurposeAllocate = ({
   const remainder = available - value
   const overLimit = value > available
   const allocating = direction === 'allocate'
-  const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 18 + 2
+  const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 16 + 2
 
   const limitError = overLimit
     ? allocating
@@ -179,7 +185,7 @@ export const PurposeAllocate = ({
           el rótulo más chico, el chip en otro fondo y la calculadora al lado del
           número en vez de abajo del chip— y eso ponía la misma pregunta con dos
           caras distintas en dos vistas del MISMO sheet. */}
-      <View className="mt-4 rounded-2xl border border-border bg-card px-4 pb-4 pt-3.5">
+      <View className="mt-2.5 rounded-2xl border border-border bg-card px-4 pb-3 pt-3">
         <View className="relative">
           <Text className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-wider text-text-soft">
             {t('savings.amount_label')}
@@ -203,8 +209,8 @@ export const PurposeAllocate = ({
             </Pressable>
             <MoneyCalculator seed={amount} onResult={setAmount} />
           </View>
-          <View className="min-h-[72px] flex-row items-center justify-center">
-            <Text className="pl-1 text-[34px] font-bold text-text">
+          <View className="min-h-[54px] flex-row items-center justify-center">
+            <Text className="pl-1 text-[27px] font-bold text-text">
               {CURRENCY_SYMBOL[currency]}
             </Text>
             <MoneyAmountInput
@@ -214,7 +220,7 @@ export const PurposeAllocate = ({
               placeholder="0"
               autoFocus
               style={{ width: amountInputWidth, paddingVertical: 0 }}
-              className="ml-1 text-[34px] font-bold text-text"
+              className="ml-1 text-[27px] font-bold text-text"
             />
           </View>
         </View>
@@ -225,7 +231,7 @@ export const PurposeAllocate = ({
           nada. Los propósitos son pocos por naturaleza, así que caben como
           chips. */}
       {fixedPurpose == null && (
-        <View className="mt-3">
+        <View className="mt-2.5">
           {/* La puerta para crear va a la DERECHA del rótulo, igual que en el
               formulario de guardar, que en la página y que en web: al final de
               los chips caía sola en su fila cuando la última estaba llena, y ahí
@@ -240,18 +246,20 @@ export const PurposeAllocate = ({
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => setShowAllPurposes(true)}
-                  className="min-h-[44px] shrink-0 justify-center"
+                  hitSlop={TAP_SLOP}
+                  className="shrink-0 justify-center"
                 >
                   <Text className="text-[12px] font-extrabold text-text-muted">
                     {t('savings.purposes.show_more', { count: String(hiddenPurposes) })}
                   </Text>
                 </Pressable>
               )}
-              {showAllPurposes && sortedPurposes.length > PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK && (
+              {showAllPurposes && sortedPurposes.length > chipFit && (
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => setShowAllPurposes(false)}
-                  className="min-h-[44px] shrink-0 justify-center"
+                  hitSlop={TAP_SLOP}
+                  className="shrink-0 justify-center"
                 >
                   <Text className="text-[12px] font-extrabold text-text-muted">
                     {t('savings.purposes.show_less')}
@@ -261,7 +269,8 @@ export const PurposeAllocate = ({
               <Pressable
                 accessibilityRole="button"
                 onPress={onCreateCustom}
-                className="min-h-[44px] shrink-0 flex-row items-center gap-1"
+                hitSlop={TAP_SLOP}
+                className="shrink-0 flex-row items-center gap-1"
               >
                 <Plus size={13} color={colors.emeraldDeep} strokeWidth={2.5} />
                 <Text className="text-[12px] font-extrabold text-positive">
@@ -272,14 +281,15 @@ export const PurposeAllocate = ({
           </View>
           {/* Mismo techo que en guardar: con diez propósitos, la lista completa
               empujaba el resumen y el CTA fuera de la pantalla. */}
-          <View className="mt-2 flex-row flex-wrap gap-1.5">
+          <View className="mt-1.5 flex-row flex-wrap gap-1.5">
             {shownPurposes.map((option) => (
               <Pressable
                 key={option.id}
                 accessibilityRole="button"
                 onPress={() => setChosen(option)}
                 accessibilityState={{ selected: chosen?.id === option.id }}
-                className={`min-h-[44px] flex-row items-center gap-1.5 rounded-full border px-3 ${
+                hitSlop={CHIP_SLOP}
+                className={`flex-row items-center gap-1.5 rounded-full border px-3 py-2 ${
                   chosen?.id === option.id
                     ? 'border-emerald-deep bg-emerald-deep/5'
                     : 'border-border-soft bg-card'
@@ -308,7 +318,8 @@ export const PurposeAllocate = ({
                     setCreating(false)
                   }
                 }}
-                className={`min-h-[44px] flex-row items-center gap-1.5 rounded-full border border-dashed border-border px-3 ${
+                hitSlop={CHIP_SLOP}
+                className={`flex-row items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-2 ${
                   creating ? 'opacity-50' : ''
                 }`}
               >
@@ -322,7 +333,7 @@ export const PurposeAllocate = ({
         </View>
       )}
 
-      <View className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-3">
+      <View className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-2.5">
         <View className="flex-row justify-between py-1">
           <Text className="text-[13.5px] text-text-muted">
             {allocating
@@ -353,7 +364,7 @@ export const PurposeAllocate = ({
 
       {/* Decirlo en voz alta: esta operación no toca ningún total. Sin la frase,
           ver dos números moverse hace suponer que algo se gastó. */}
-      <Text className="mt-3 px-1 text-[12.5px] leading-snug text-text-soft">
+      <Text className="mt-2 px-1 text-[12.5px] leading-snug text-text-soft">
         {t('savings.purposes.allocate_note')}
       </Text>
 
@@ -361,7 +372,7 @@ export const PurposeAllocate = ({
         <Text className="mt-3 text-[13px] font-semibold text-negative">{limitError ?? error}</Text>
       )}
 
-      <View className="mt-4">
+      <View className="mt-3">
         <Button
           title={t(allocating ? 'savings.purposes.allocate' : 'savings.purposes.unallocate')}
           onPress={submit}
