@@ -17,6 +17,16 @@
 > Y el criterio dejó de clasificar **por producto** para clasificar **por comportamiento** (§2.1), que
 > es lo que hace que un mismo FCI pueda ser cuenta en una billetera y posición en un banco.
 >
+> ## ⏸ EN PAUSA — esta fase espera a `docs/exploracion-rendimiento-cuentas.md`
+>
+> **El naming de FCI no se cierra todavía**, y la razón no es de prioridad sino de vocabulario. El caso
+> más común del país —una billetera remunerada que rinde sola y se gasta directo— **no entra en esta
+> capa** y tampoco tenía pantalla ni ticket. Las dos capas producen «plata que apareció sin que la
+> ganaras trabajando», así que si una la llama «Rindió» y la otra «Resultado», el usuario aprende dos
+> palabras para la misma idea. **Y hay una colisión concreta: si la línea de una cuenta remunerada dice
+> «Rindió», el candidato «En rendimiento» para esta sección compite con ella.** Eso no estaba sobre la
+> mesa cuando se comparó A/B/C. Todo lo demás de este documento sigue en pie.
+>
 > **Revisión 3 — la dirección de FCI v1 quedó cerrada sobre el mock, no sobre este texto.** La sección
 > se llama **«En rendimiento»**, que no era ninguno de los tres candidatos que este documento comparó
 > (§5.2c). El resultado de un rescate se dice **«Resultado»**, un rótulo para los dos signos, y el
@@ -348,9 +358,19 @@ descubre roto el peor día.
 ### 3.6 El drift, que esta capa agrava
 
 Las cuentas que rinden solas producen **drift**: el saldo real se aleja del calculado sin que el
-usuario registre nada, y Grana hoy lo lee como «plata movida sin registrar» — una alarma que se
-enciende justo cuando al usuario le fue bien. Ya está abierto en el modelo, y más plata rindiendo es
-más drift. Conviene resolverlo con esta capa, no después.
+usuario registre nada.
+
+> **Corrección.** Una versión anterior de esta sección decía que Grana «hoy lo lee como plata movida sin
+> registrar — una alarma que se enciende justo cuando al usuario le fue bien». **Es falso y no había
+> sido verificado contra el código.** No existe ninguna alarma, ninguna detección y ningún aviso: el
+> saldo calculado queda por debajo del real y **Grana se queda callada**. Lo único que existe es el
+> tipo de movimiento `adjustment` («Ajuste»), que el usuario crea **a mano** cuando ya se dio cuenta
+> solo. El problema no es apagar una alarma molesta: es encender algo que no existe.
+
+Ya estaba abierto en el modelo, y más plata rindiendo es más drift. **Y resultó ser más grande que esta
+capa**: le pasa a cualquiera con una billetera remunerada, que es el caso más común del país y **no
+entra acá** —una cuenta usable para pagar es cuenta, no posición—. Tiene documento propio:
+`docs/exploracion-rendimiento-cuentas.md`, y **va antes que esta fase**.
 
 ---
 

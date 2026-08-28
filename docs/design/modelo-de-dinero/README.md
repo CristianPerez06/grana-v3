@@ -44,6 +44,21 @@ una **cuenta fuera del disponible**.
 - Su pantalla 8 agrupaba Cuentas por tipo. `/accounts` hoy **no muestra ningún total**, así que no
   hay dos números que reconciliar y la fase 1 no necesita tocarla.
 
+## ⏸ El naming de FCI está en pausa
+
+Los dos mocks de 3A (`fase-3a-fci-v1.html` y `fase-3a-naming-final.html`) **siguen vigentes como
+material**, pero **la decisión del nombre no se cierra todavía**. Apareció una capa que no estaba en la
+mesa: el **rendimiento de las cuentas remuneradas** —una billetera que rinde sola y se gasta directo,
+que es el caso más común del país— **no entra en la capa de instrumentos** y tampoco tenía pantalla.
+
+Importa para el naming, no solo para el orden: las dos capas producen *plata que apareció sin que la
+ganaras trabajando*, y **las dos reclaman la palabra «rendimiento»**. Si la línea de una cuenta
+remunerada dice «Rindió», «En rendimiento» para la sección de FCI compite con ella — y el usuario que ve
+«Rindió +$25.000» en una cuenta que **no** está en «En rendimiento» tiene derecho a confundirse. Esa
+colisión no existía cuando se compararon A/B/C.
+
+Ver `docs/exploracion-rendimiento-cuentas.md`. El próximo mock es de esa capa, no de FCI.
+
 ## Decisiones abiertas que los mocks tienen que resolver
 
 ### Cerradas por `fase-3-posiciones.html`
