@@ -530,5 +530,24 @@ mirar— y **aun así eligió mal**. Un ganador solo vale contra lo que estaba s
      de descubrir**.
 3. ✅ **El naming quedó cerrado con las dos capas sobre la mesa**: «Interés acreditado» acá,
    «Plata colocada» para instrumentos. `exploracion-instrumentos.md` **sale de pausa** (§14.1).
+4. ✅ **El flujo definitivo existe**: `docs/design/modelo-de-dinero/interes-acreditado-flujo.html`, diez
+   pantallas con un solo camino y **17 decisiones cerradas**. Agrega dos que esta exploración no tenía:
+
+   - **La confirmación con «Qué va a pasar»** —tres cosas que sí y dos que no, incluido *«no entra en
+     Entró»*—. Es la corrección aplicada del copy del Ajuste (§2.2): en vez de prometer que no crea un
+     ingreso, dice exactamente dónde va a aparecer. Y el **período** sale de la última coincidencia, sin
+     pedir nada: es la segunda razón para guardar esa fecha, más allá del recordatorio.
+   - **El umbral por historial, no por producto.** Una cuenta que ya tuvo interés acreditado se marca al
+     mes; una que nunca tuvo diferencias, a los seis. Grana **nunca dice «esta cuenta rinde»** —no lo
+     sabe—: dice *«acá suele haber intereses»*, que es un hecho de lo que el propio usuario cargó. Es el
+     mismo principio de comportamiento que ordena la capa de instrumentos, aplicado al ritmo.
+
+   Y una decisión de tono que quedó explícita: **cero notificaciones, cero badges, cero puntos rojos.**
+   Toda la escalada vive adentro de la pantalla a la que el usuario ya entró.
+5. **El mes cargado se probó y aguanta**: seis renglones en **cuatro zonas**. El ojo cuenta separadores,
+   no renglones. Donde hay que volver a mirar es en la **tercera** línea financiera —interés, colocación
+   y rescate el mismo mes—, y la salida probable no es sacar líneas sino **plegar la zona**.
+6. **Recién ahora tiene sentido un spec.** Con las 17 decisiones cerradas, lo que falta es forma de
+   datos — y sigue siendo lo último, después del QA visual nativo.
 4. **Aparte y en cualquier momento**, porque no depende de nada de esto: el copy de «Tu banco muestra»
    en el puente del módulo de ahorro (§2.3), que hoy le pone al banco palabras que el banco no dijo.
