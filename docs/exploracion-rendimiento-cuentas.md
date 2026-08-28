@@ -7,10 +7,10 @@
 > Se apoya en `docs/modelo-de-dinero.md` (canónico). Donde este documento lo contradiga, gana el
 > modelo — o hay que corregir el modelo primero, en su propio lugar.
 >
-> **Esta capa va ANTES que FCI.** `docs/exploracion-instrumentos.md` queda en pausa, y no por
-> prioridad de negocio: por dependencia de vocabulario. Si el interés de una cuenta remunerada se
-> llama de una manera, la ganancia de un FCI no puede llamarse de otra sin que el usuario tenga que
-> aprender dos idiomas para la misma idea.
+> **Esta capa va ANTES que FCI**, y no por prioridad de negocio: por dependencia de vocabulario. La
+> pausa de `docs/exploracion-instrumentos.md` **ya se levantó**, y sirvió: dibujar las dos capas juntas
+> cerró el naming de las dos y **cambió el de instrumentos**, que pasó de «En rendimiento» a
+> **«Plata colocada»** (§14.1).
 >
 > **`extract-savings-module` sigue congelado** hasta el QA visual nativo. Nada de acá se implementa
 > antes de eso.
@@ -314,7 +314,25 @@ no fue**. El número más leído de la app pasa a ser un poco falso todos los me
    Para gastar   $ 2.425.000
 ```
 
-**Propuesta: B**, y por tres razones que se sostienen solas:
+**Cerrado: B.** Y la razón de fondo la dio el mock, no este texto: **la card no se mide en líneas, se
+mide en zonas.** La estructura que aguanta es
+
+```
+   Inicial  →  Operativa / consumo  →  Financiera  →  Final
+   Tenías      Entró · Se fué · Guardado   Interés · Colocaste   Para gastar
+```
+
+y las líneas financieras van **bajo un solo par de reglas punteadas**, compartiendo zona. Plana, con una
+regla por línea, la card se parte en cinco zonas y parece dos secciones distintas; agrupada vuelve a
+tener cuatro y una tercera línea financiera entra sin agregar ninguna.
+
+**Y la consecuencia sobre los términos operativos es lo que se estaba buscando:**
+
+- El **interés acreditado no entra en «Entró»**, que vuelve a ser el sueldo.
+- La **salida hacia un FCI no entra en «Se fué»**, que vuelve a ser el consumo.
+- **Las dos explican liquidez** —la identidad cierra igual— **sin contaminar sueldo ni gasto**.
+
+Las tres razones que ya se sostenían solas:
 
 1. **«Entró» vuelve a significar «lo que ganaste»**, que es como se lee igual.
 2. **Es la misma forma que la fase 3 ya decidió** para la plata puesta en instrumentos: una línea de
@@ -361,10 +379,15 @@ Es lo contrario — es Grana admitiendo que tu plata rindió y ella no se enter�
 | El campo | **«Cuánto tenés según tu banco»** | Le pide leer un número, no calcular uno |
 | Diferencia cero | **«Coinciden. No hay nada que ajustar.»** | El caso más común tiene que sentirse bien, no vacío |
 | La pregunta | **«¿De dónde salen estos $25.000?»** | Concreta, con el número adentro |
-| Opción rendimiento | **«Rindió tu cuenta»** | Verbo simple. Lo hizo la cuenta, no el usuario |
+| Opción interés | **«Interés acreditado»** | Nombra el hecho: entró plata a la cuenta. Sobrio, y **no comparte raíz con «rendimiento»** |
 | Opción faltante | **«Me faltó registrar algo»** | Sin culpa. Y ofrece cargarlo |
 | Opción sin causa | **«No sé»** | Literal. Nadie tiene que fingir que sabe |
-| La línea del mes | **«Rindió»** | Una palabra, misma altura que «Guardado» |
+| La línea del mes | **«Interés acreditado»** | Entra en la card sin problema y no se pisa con «Colocaste», el rótulo de la línea de FCI |
+
+> **«Rindió» queda como copy secundario, no como rótulo.** Es más cálido y sirve para explicar —*«tu
+> cuenta rindió sola»*— pero comparte raíz con «rendimiento», y esa palabra la necesita la capa de
+> instrumentos. El rótulo canónico es **«Interés acreditado»**: menos brillante, y no se lleva por
+> delante nada.
 
 ### Lo que no
 
@@ -395,13 +418,16 @@ Es lo contrario — es Grana admitiendo que tu plata rindió y ella no se enter�
 | 6 | **No es `income`** y no entra a la analítica de ingresos ni de gastos | Metería en «cuánto gano» plata que no es sueldo |
 | 7 | **Ningún porcentaje, ninguna tasa, ninguna proyección** | Es la línea que separa registrar de recomendar |
 | 8 | **Por moneda, siempre** | Invariante de todo el proyecto |
+| 9 | **La card del mes usa la versión B**: zona financiera propia, fuera de «Entró» y «Se fué» operativos | Cerrado sobre el mock. La card se mide en **zonas** —Inicial → Operativa → Financiera → Final— y no en líneas |
+| 10 | **El rótulo canónico es «Interés acreditado»**; «Rindió» queda como copy secundario | Nombra el hecho sin usar la raíz de «rendimiento», que necesita la capa de instrumentos |
+| 11 | **Esto es un hábito periódico, no una corrección excepcional** | En una billetera remunerada el drift **vuelve siempre**. En una cuenta que no rinde, la puerta casi no aparece |
 
 ### 12.2 No se deben tomar todavía
 
 | # | Decisión | Por qué espera |
 |---|---|---|
-| A | **Si el rendimiento lleva línea propia en la card del mes** | La identidad cierra igual (§3). Es significado, y necesita pantalla — con el techo de términos a la vista |
-| B | **Cómo se llama la línea** | Depende de A, y de que el vocabulario cierre con el de FCI |
+| A | **Cuántas líneas entran en la zona financiera** antes de que moleste | Dos aguantan. Con tres —interés, colocación y rescate el mismo mes— hay que volver a mirar |
+| B | **Si la zona financiera lleva un rótulo propio** o le alcanza con las reglas punteadas | Un rótulo la hace explícita y le suma altura a una card que ya creció |
 | C | **Subtipo de `adjustment` o campo aparte** | Es forma de datos. Va después de las pantallas, siempre |
 | D | **Si al elegir «me faltó registrar algo» Grana abre el alta de movimiento** | Es lo correcto y es más pantalla. Se ve dibujado |
 | E | **Si se recuerda cargar el rendimiento**, y con qué frecuencia | Un recordatorio mensual ayuda o molesta según cómo se vea |
@@ -445,18 +471,43 @@ No es una carrera de prioridades: es que **una decide vocabulario de la otra**.
 | ¿Cuándo se ve la ganancia? | Cuando el usuario concilia | Al rescatar |
 | ¿A cuánta gente le pasa? | **A casi todos** | A bastantes menos |
 
-Las dos producen **plata que apareció sin que el usuario la ganara trabajando**. Si esta capa la llama
-«Rindió» y FCI la llama «Resultado», el usuario tiene que aprender dos palabras para la misma idea — y
-va a suponer que son cosas distintas, porque tienen nombres distintos.
+Las dos producen **plata que apareció sin que el usuario la ganara trabajando**, y las dos reclamaban la
+palabra «rendimiento». **La pausa sirvió: dibujarlas juntas cerró las dos.**
 
-**Por eso el naming de FCI queda en pausa.** No porque estuviera mal planteado, sino porque se estaba
-eligiendo el nombre de la sección chica **antes** de saber cómo se llama lo que le pasa a la grande.
+### 14.1 La colisión, y cómo se resolvió
 
-Y hay una consecuencia más incómoda que conviene dejar escrita: **la palabra «rendimiento» la reclaman
-las dos capas.** Si acá la línea se llama «Rindió», el candidato «En rendimiento» para la sección de FCI
-pasa a competir con ella — y el usuario que ve «Rindió +$25.000» en una cuenta que **no** está en «En
-rendimiento» tiene todo el derecho a confundirse. **Esa colisión no existía cuando comparamos los tres
-nombres, y es motivo suficiente para no haber cerrado.**
+El mock de esta capa se dibujó primero con **«Rindió»**. Puesto en el resumen del mes quedaba así:
+
+```
+   Rindió              + $ 25.000        ← lo generó una cuenta de Mercado Pago
+   Pusiste a rendir    − $ 100.000       ← salió hacia un FCI
+
+   [ sección ]  En rendimiento           ← donde los $25.000 NO se generaron
+```
+
+Tres problemas en una sola pantalla: dos conjugaciones del mismo verbo pegadas, y una sección cuyo
+nombre invita a suponer que la primera línea sale de ella. **No sale — y el usuario no tiene forma de
+descubrir que se equivocó.**
+
+**Lo que quedó:**
+
+| | Rótulo | Por qué |
+|---|---|---|
+| **Cuenta remunerada** (esta capa) | **«Interés acreditado»** | Nombra el hecho —entró plata a la cuenta— sin usar la raíz de «rendimiento» |
+| **Sección de FCI** (`exploracion-instrumentos.md`) | **«Plata colocada»** | No promete rendimiento, no compite con las cuentas, aguanta FCI, plazo fijo y 3C |
+| **Línea del mes por colocar** | **«Colocaste»** | Sale del nombre de la sección sin esfuerzo |
+| **Rescate positivo de un FCI** | **«Rendimiento cobrado»** | La palabra **volvió a estar libre** al caerse «En rendimiento». Era el único costo visible que tenía |
+
+**«En rendimiento» queda descartado**, y no por perder una comparación: la ganó, los cinco casos. Lo
+tumbó una capa que no estaba sobre la mesa cuando se comparó.
+
+### 14.2 La lección de método
+
+La comparación A/B/C estaba bien hecha —mismos datos, cinco casos, regla de descarte fijada antes de
+mirar— y **aun así eligió mal**. Un ganador solo vale contra lo que estaba sobre la mesa.
+
+> **No cerrar el nombre de una sección mientras haya una capa adyacente sin dibujar.** Lo barato no era
+> comparar mejor: era dibujar la capa de al lado antes de decidir.
 
 ---
 
@@ -477,7 +528,7 @@ nombres, y es motivo suficiente para no haber cerrado.**
      +$25.000» arriba de una sección llamada «En rendimiento» —donde esos $25.000 **no** se
      generaron— no es una molestia de estilo: es un error de categoría que el usuario **no tiene forma
      de descubrir**.
-3. **Recién con ese mock se retoma el naming de FCI**, con las dos capas sobre la mesa y una sola
-   decisión de vocabulario en vez de dos.
+3. ✅ **El naming quedó cerrado con las dos capas sobre la mesa**: «Interés acreditado» acá,
+   «Plata colocada» para instrumentos. `exploracion-instrumentos.md` **sale de pausa** (§14.1).
 4. **Aparte y en cualquier momento**, porque no depende de nada de esto: el copy de «Tu banco muestra»
    en el puente del módulo de ahorro (§2.3), que hoy le pone al banco palabras que el banco no dijo.

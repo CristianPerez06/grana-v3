@@ -228,6 +228,8 @@ ol.chk li em{display:block;font-style:normal;margin-top:5px;color:var(--muted);f
       <li>Que el nombre <b>no prometa ganancia</b>, <b>no suene a broker</b> y <b>no se confunda con «Guardado»</b>.</li>
       <li>Si <b>«En rendimiento»</b> aguanta los cinco casos, se cierra. Si se cae en el <b>negativo</b> o
           en <b>FCI + plazo fijo</b>, se vuelve a <b>«Plata colocada»</b>.</li>
+      <li><b>Desenlace:</b> los aguantó los dos — <b>y perdió igual</b>. Lo tumbó una capa que no estaba
+          en esta comparación. Ganó <b>«Plata colocada»</b>; el porqué está abajo de todo.</li>
       <li><b>«Inversiones» está como control</b>, no como candidato: ya fue descartado como rótulo madre
           porque una caja de ahorro remunerada no es una inversión para nadie.</li>
     </ul>
@@ -644,41 +646,47 @@ ignorar y mirar solo las columnas.</p>
   </tbody>
 </table>
 
-<h2 class="sec">Cómo cae la regla que se fijó de antemano</h2>
+<h2 class="sec">Cómo terminó — y por qué el ganador de esta comparación no gobernó</h2>
 <p class="lead">La regla era: <b>si «En rendimiento» se cae en el negativo o en FCI + plazo fijo, se
-vuelve a «Plata colocada»</b>. Los dos casos ya están mirados.</p>
+vuelve a «Plata colocada»</b>. No se cayó en ninguno de los dos. <b>Igual perdió</b>, y por algo que
+esta comparación no podía ver.</p>
 
 <div class="verdict">
-  <h4>En el negativo no se cae — y por una razón estructural, no de gusto</h4>
-  <p>Las tres columnas del caso 4 <b>salieron idénticas</b>. El encabezado del rescate es el nombre del
-  fondo, no el de la sección, así que <b>el nombre no está en la pantalla donde aparece el número
-  negativo</b>. Y la fila tampoco llegó nunca a mostrar una pérdida: v1 muestra <b>capital puesto, no
-  valor de hoy</b>, que es la simplificación que ya estaba decidida por otros motivos.</p>
-  <p>La contradicción del riesgo 2 existe, pero <b>en la memoria del usuario, no en ningún pixel</b>.
-  Sigue valiendo mirarla con alguien delante; lo que este caso descarta es que sea un problema de
-  diseño de pantalla.</p>
+  <h4>Los dos casos de descarte: los pasó</h4>
+  <p><b>Negativo.</b> Las tres columnas del caso 4 salieron idénticas: el encabezado del rescate es el
+  nombre del fondo, así que el nombre de la sección no está en la pantalla donde aparece el número
+  negativo — y la fila nunca mostró una pérdida, porque v1 muestra capital puesto, no valor de hoy.</p>
+  <p><b>FCI + plazo fijo.</b> Un plazo fijo está rindiendo; el caso 5 se lee sin forzar. Donde «En
+  rendimiento» sí se estiraba era en 3C, que no era la condición.</p>
 </div>
 
 <div class="verdict">
-  <h4>En FCI + plazo fijo tampoco se cae</h4>
-  <p>Un plazo fijo <b>está rindiendo</b>: el caso 5 se lee sin forzar con las dos filas adentro. Donde
-  «En rendimiento» sí se estira es en <b>3C</b> —un CEDEAR en baja no está «en rendimiento»—, y 3C no
-  era la condición. B escala mejor ahí, justamente porque no dice nada del resultado.</p>
+  <h4>Lo que lo tumbó: una capa que no estaba sobre la mesa</h4>
+  <p>Una <b>cuenta remunerada</b> —Mercado Pago, Personal Pay, Naranja X— acredita intereses sola. Esa
+  cuenta <b>no es una posición</b> y <b>no vive en esta sección</b>: podés pagar con esa plata sin
+  rescatar nada, así que es una cuenta y punto. Pero genera una línea en el resumen del mes.</p>
+  <p>Cuando esa línea se dibujó por primera vez decía <b>«Rindió +$25.000»</b> — arriba de una sección
+  llamada <b>«En rendimiento»</b> donde esos $25.000 <b>no se generaron</b>. No es una molestia de
+  estilo: es un error de categoría, y <b>el usuario no tiene forma de descubrir que se equivocó</b>.
+  Está dibujado en <b>conciliacion-saldo-rendimiento.html</b>, sección G.</p>
+  <p><b>Ganó «Plata colocada»</b>: no promete rendimiento, no compite con las cuentas remuneradas, no
+  obliga a llamar «Resultado» a todo —recupera «Rendimiento cobrado» para el rescate positivo, que era
+  el único costo visible de esta comparación, el caso 3— y aguanta FCI, plazo fijo y 3C. Menos
+  brillante, más honesto. La capa de cuentas se quedó con <b>«Interés acreditado»</b>, que no comparte
+  raíz con ninguno.</p>
 </div>
 
 <div class="verdict">
-  <h4>Donde sí pierde, y no era condición de descarte: el caso 3</h4>
-  <p>Es la única diferencia <b>visible</b> entre las tres columnas en toda la comparación.
-  <b>«Rendimiento cobrado +$30.000»</b> dice dos cosas —que hubo ganancia y que ya está en la cuenta—;
-  <b>«Resultado +$30.000»</b> dice una y suena más frío. A lo paga porque el nombre se quedó con la
-  palabra.</p>
-  <p><b>Por la regla fijada, «En rendimiento» sobrevive los dos casos que podían tumbarlo.</b> Lo que
-  queda no es un descarte sino un canje, y es una decisión de producto, no de mock: se cambia
-  <b>«Rendimiento cobrado» por la mejor separación de «Guardado»</b> —el caso 1, donde A es el único
-  que no compite en el mismo plano que la fila de arriba.</p>
+  <h4>La lección de método, que vale más que el nombre</h4>
+  <p>Esta comparación estaba bien hecha: mismos datos, misma estructura, los cinco casos que producto
+  pidió, y una regla de descarte fijada antes de mirar. <b>Y aun así eligió mal</b>, porque un ganador
+  solo vale contra lo que estaba sobre la mesa — y faltaba una capa entera que ningún mock había
+  dibujado todavía.</p>
+  <p><b>La regla que queda:</b> no cerrar el nombre de una sección mientras haya una capa adyacente sin
+  dibujar. Lo barato no era comparar mejor: era <b>dibujar la capa de al lado antes de decidir</b>.</p>
 </div>
 
-<h2 class="sec">Lo que este mock no puede contestar</h2>
+<h2 class="sec">Lo que este mock no puede contestar</h2><h2 class="sec">Lo que este mock no puede contestar</h2>
 <div class="verdict">
   <h4>Ninguna de las cinco filas de arriba se contesta leyendo</h4>
   <p>La comparación pone las tres versiones al lado con los mismos datos, que es lo que evita que la

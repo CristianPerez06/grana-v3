@@ -45,22 +45,52 @@ una **cuenta fuera del disponible**.
 - Su pantalla 8 agrupaba Cuentas por tipo. `/accounts` hoy **no muestra ningún total**, así que no
   hay dos números que reconciliar y la fase 1 no necesita tocarla.
 
-## ⏸ El naming de FCI está en pausa
+## El naming quedó cerrado, y no lo decidió la comparación de naming
 
-Los dos mocks de 3A (`fase-3a-fci-v1.html` y `fase-3a-naming-final.html`) **siguen vigentes como
-material**, pero **la decisión del nombre no se cierra todavía**. Apareció una capa que no estaba en la
-mesa: el **rendimiento de las cuentas remuneradas** —una billetera que rinde sola y se gasta directo,
-que es el caso más común del país— **no entra en la capa de instrumentos** y tampoco tenía pantalla.
+**La sección de instrumentos se llama «Plata colocada».** «En rendimiento» estuvo elegido y se cayó.
 
-Importa para el naming, no solo para el orden: las dos capas producen *plata que apareció sin que la
-ganaras trabajando*, y **las dos reclaman la palabra «rendimiento»**. Si la línea de una cuenta
-remunerada dice «Rindió», «En rendimiento» para la sección de FCI compite con ella — y el usuario que ve
-«Rindió +$25.000» en una cuenta que **no** está en «En rendimiento» tiene derecho a confundirse. Esa
-colisión no existía cuando se compararon A/B/C.
+No lo tumbó ninguna de las condiciones que se le habían fijado —pasó el rescate negativo y pasó FCI +
+plazo fijo, los dos en `fase-3a-naming-final.html`—. Lo tumbó **una capa que no estaba dibujada**: una
+cuenta remunerada acredita intereses sola, **no es posición y no vive en esa sección**, pero genera una
+línea del mes. Dibujada por primera vez decía «Rindió +$25.000», arriba de una sección llamada «En
+rendimiento» donde esos $25.000 no se generaron. Error de categoría, y **sin forma de que el usuario
+lo descubra** (`conciliacion-saldo-rendimiento.html`, sección G).
 
-Ver `docs/exploracion-rendimiento-cuentas.md` y el mock `conciliacion-saldo-rendimiento.html`, que **dibuja la colisión en una sola pantalla**: una card del mes que dice «Rindió +$25.000» arriba de una sección llamada «En rendimiento», donde esos $25.000 **no** se generaron. Las tres salidas —que ceda la sección, que ceda la línea, o que cedan las dos— quedan planteadas y ninguna elegida. Lo que sí queda decidido es que **el nombre de la sección de FCI no se elige solo**.
+**El vocabulario quedó repartido así:**
 
-## Decisiones abiertas que los mocks tienen que resolver
+| Hecho | Rótulo |
+|---|---|
+| Una cuenta remunerada acreditó intereses | **Interés acreditado** |
+| Plata que salió hacia un instrumento | **Colocaste** |
+| La sección donde vive esa plata | **Plata colocada** |
+| Un rescate positivo y líquido | **Rendimiento cobrado** |
+| Un rescate negativo | **Resultado −$X** |
+
+Ninguna raíz compartida entre las dos capas. Y «Rendimiento cobrado» **volvió**, porque la palabra
+quedó libre al caerse el nombre que se la llevaba — era el único costo visible que tenía.
+
+> **La lección de método.** La comparación A/B/C estaba bien hecha —mismos datos, cinco casos, regla de
+> descarte fijada antes de mirar— y **aun así eligió mal**: un ganador solo vale contra lo que estaba
+> sobre la mesa. **No cerrar el nombre de una sección mientras haya una capa adyacente sin dibujar.**
+
+## La card del mes se mide en zonas, no en líneas
+
+Segunda decisión cerrada sobre el mock (`conciliacion-saldo-rendimiento.html`, pantallas 12 y 14):
+
+```
+   Inicial  →  Operativa / consumo  →  Financiera  →  Final
+   Tenías      Entró · Se fué · Guardado   Interés acreditado · Colocaste   Para gastar
+```
+
+Las líneas financieras van **bajo un solo par de reglas punteadas**, compartiendo zona, y **fuera de
+«Entró» y «Se fué» operativos**. Plana —una regla por línea— la card se parte en cinco zonas y parecen
+dos secciones distintas; agrupada vuelve a cuatro, y una tercera línea financiera entra sin agregar
+ninguna. **El techo dejó de ser el número de líneas.**
+
+Lo que se gana no es contable —la identidad cerraba de las dos formas— sino de significado: **«Entró»
+vuelve a ser el sueldo y «Se fué» el consumo.**
+
+## Decisiones abiertas que los mocks tienen que resolver## Decisiones abiertas que los mocks tienen que resolver
 
 ### Cerradas por `fase-3-posiciones.html`
 
@@ -81,21 +111,15 @@ es el **selector de destino**, que ya existía y gana filas.
 
 ### Cerradas por `fase-3a-fci-v1.html`
 
-**El nombre — sigue abierto a propósito, con la comparación final ya hecha.** La hipótesis es
-**«En rendimiento»** (`fase-3a-fci-v1.html`), y `fase-3a-naming-final.html` la somete a los cinco casos
-que producto fijó, con la regla de descarte puesta de antemano: *si se cae en el negativo o en FCI +
-plazo fijo, se vuelve a «Plata colocada»*. **No se cae en ninguno de los dos** —en el negativo el
-nombre ni siquiera está en la pantalla, y un plazo fijo está rindiendo—, así que lo que queda es un
-canje, no un descarte: se pierde «Rendimiento cobrado» en el rescate positivo y se gana la mejor
-separación de «Guardado». Esa última decisión es de producto. Descartados:
+**~~El nombre.~~ Cerrado en «Plata colocada»**, por lo de arriba. Descartados:
 *Invertido* mete la palabra que el propio modelo deja afuera para comprar dólares, *Inmovilizado* suena
-a embargo, *Inversiones* no puede ser rótulo madre de una caja de ahorro remunerada. *Plata colocada* y
-*Puesto a trabajar* quedan como alternativas vivas.
+a embargo, *Inversiones* no puede ser rótulo madre de una caja de ahorro remunerada, y *En rendimiento*
+se lleva por delante la capa de cuentas. *Puesto a trabajar* queda como alternativa.
 
-El nombre elegido **se paga en dos lugares y los dos están dibujados**: es un estado, así que no regala
-el verbo del mes —«Pusiste a rendir», y las alternativas están en la pantalla 15—, y ocupa la palabra
-*rendimiento*, que por eso ya no puede rotular el resultado de un rescate: ese dice **«Resultado»**, un
-solo rótulo para los dos signos.
+**Lo que sigue costando, y se aceptó:** «Guardado» y «Plata colocada» son los dos participios de *«dejé
+la plata en algún lado»*. Esa alerta —la de siempre para este nombre— **no se resolvió**: se pagó, a
+cambio de no contaminar el vocabulario de las cuentas remuneradas. Es lo que hay que mirar en la
+pantalla 2 de `fase-3a-fci-v1.html`.
 
 **~~El rescate parcial.~~ Cerrado, y por simplificación explícita.** Reduce el capital registrado y
 **no inventa un resultado parcial**: el resultado se reconoce al cerrar la posición, o antes si lo

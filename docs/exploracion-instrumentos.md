@@ -17,15 +17,18 @@
 > Y el criterio dejó de clasificar **por producto** para clasificar **por comportamiento** (§2.1), que
 > es lo que hace que un mismo FCI pueda ser cuenta en una billetera y posición en un banco.
 >
-> ## ⏸ EN PAUSA — esta fase espera a `docs/exploracion-rendimiento-cuentas.md`
+> ## ▶ Sale de pausa — con el nombre cambiado
 >
-> **El naming de FCI no se cierra todavía**, y la razón no es de prioridad sino de vocabulario. El caso
-> más común del país —una billetera remunerada que rinde sola y se gasta directo— **no entra en esta
-> capa** y tampoco tenía pantalla ni ticket. Las dos capas producen «plata que apareció sin que la
-> ganaras trabajando», así que si una la llama «Rindió» y la otra «Resultado», el usuario aprende dos
-> palabras para la misma idea. **Y hay una colisión concreta: si la línea de una cuenta remunerada dice
-> «Rindió», el candidato «En rendimiento» para esta sección compite con ella.** Eso no estaba sobre la
-> mesa cuando se comparó A/B/C. Todo lo demás de este documento sigue en pie.
+> **La sección se llama «Plata colocada».** «En rendimiento» estuvo elegido y se cayó: una **cuenta
+> remunerada** —que no es posición y no vive acá— genera una línea del mes que decía «Rindió», arriba de
+> una sección llamada «En rendimiento» donde esa plata **no se generó**. Error de categoría, y el
+> usuario no tiene forma de descubrirlo. Está dibujado en
+> `docs/design/modelo-de-dinero/conciliacion-saldo-rendimiento.html`, sección G.
+>
+> **Las dos capas quedaron repartidas sin pisarse:** la cuenta dice **«Interés acreditado»**, la sección
+> dice **«Plata colocada»**, el mes dice **«Colocaste»**, y el rescate positivo recupera
+> **«Rendimiento cobrado»** — la palabra volvió a estar libre, que era el único costo visible que tenía
+> el nombre descartado.
 >
 > **Revisión 3 — la dirección de FCI v1 quedó cerrada sobre el mock, no sobre este texto.** La sección
 > se llama **«En rendimiento»**, que no era ninguno de los tres candidatos que este documento comparó
@@ -70,17 +73,19 @@ Firmados por producto. No se vuelven a discutir por texto.
    inventa rendimiento parcial, y usa copy honesto —**«pusiste»**, no «tenés»— mientras el valor
    actual no esté confirmado.
 
-6. **La sección se llama «En rendimiento»**, provisoriamente y sobre el mock, no sobre esta tabla
-   (§5.2c). «Plata colocada» y «Puesto a trabajar» quedan como alternativas vivas.
-7. **El resultado de un rescate se dice «Resultado +$X / −$X»**, un solo rótulo para los dos signos.
-   Nada de «Ganaste» ni «Perdiste» — y tampoco «Rendimiento cobrado», que era el candidato preciso
-   para el positivo líquido hasta que la sección se quedó con esa palabra.
+6. **La sección se llama «Plata colocada»**, y el verbo del mes es **«Colocaste»**. «En rendimiento»
+   estuvo elegido y se cayó por colisión con la capa de cuentas remuneradas (§5.2d); «Puesto a
+   trabajar» queda como alternativa.
+7. **El rescate positivo y líquido dice «Rendimiento cobrado»**; el negativo, **«Resultado −$X»**. Nada
+   de «Ganaste» ni «Perdiste». La palabra «rendimiento» quedó libre acá porque la capa de cuentas usa
+   **«Interés acreditado»** y no comparte raíz.
 8. **El «pusiste» nunca va solo.** Donde aparece el capital lo acompañan *«Valor no actualizado
    automáticamente»* y la fecha de la última actualización manual. Es lo que evita que el número
    choque contra lo que el usuario ve en la app del banco.
 
 **Todo lo de arriba está dibujado en `docs/design/modelo-de-dinero/fase-3a-fci-v1.html`**, diecisiete
-pantallas. Lo que sigue sin cerrarse es el **verbo del mes** (§5.2c) y todo lo listado en §9.2.
+pantallas. El **verbo del mes** también quedó cerrado —«Colocaste», que sale del nombre sin esfuerzo—.
+Lo que sigue abierto es lo listado en §9.2.
 
 ---
 
@@ -432,7 +437,7 @@ Grana no es. La cuenta podrá tener un **atajo contextual**; no es su casa.
 
 ### 5.2 El nombre de la sección
 
-> **Superado por §5.2c.** La recomendación de esta sección —«Puesto a trabajar»— **no es la decisión
+> **Superado por §5.2c y §5.2d.** La recomendación de esta sección —«Puesto a trabajar»— **no es la decisión
 > vigente**. Se conserva porque es el razonamiento que llevó a poner el naming en pantalla, que es lo
 > que después destapó una cuarta opción que ninguna tabla iba a encontrar.
 
@@ -517,6 +522,38 @@ de la plata**. Son dos preguntas distintas y por eso no se pisan.
 El tercero es el único que puede tumbarlo, y **no se contesta leyendo**: se contesta mirando a alguien
 rescatar en rojo. Si se cae, «Plata colocada» está a un rename de distancia y sin costo de modelo — el
 nombre de la sección nunca fue un tipo interno (§5.3).
+
+### 5.2d Se cayó — y no por ninguno de esos tres
+
+**«En rendimiento» quedó descartado.** No lo tumbó el negativo, ni el plazo fijo, ni el costo de perder
+«Rendimiento cobrado». Los tres se miraron en `fase-3a-naming-final.html` y **los tres los pasó**.
+
+Lo tumbó **una capa que no estaba sobre la mesa**: una **cuenta remunerada** —Mercado Pago, Personal
+Pay, Naranja X— acredita intereses sola. Esa cuenta **no es posición y no vive en esta sección**, pero
+genera una línea en el resumen del mes. Dibujada por primera vez decía **«Rindió +$25.000»**, arriba de
+una sección llamada «En rendimiento» donde esos $25.000 **no se generaron**.
+
+No es una molestia de estilo: **es un error de categoría, y el usuario no tiene forma de descubrir que
+se equivocó.** Está dibujado en `conciliacion-saldo-rendimiento.html`, sección G.
+
+**Gana «Plata colocada»**, que era la segunda de §5.2 y vuelve por razones distintas de las de entonces:
+
+| | |
+|---|---|
+| No promete rendimiento | Es su mejor propiedad, y la que la hace convivir con un rescate negativo sin contradecirse |
+| No compite con las cuentas remuneradas | «Interés acreditado» y «Plata colocada» no comparten raíz |
+| No obliga a llamar «Resultado» a todo | **Recupera «Rendimiento cobrado»** para el rescate positivo — el único costo visible que tenía el nombre descartado |
+| Aguanta FCI, plazo fijo **y 3C** | Un CEDEAR en baja sigue siendo plata colocada; «en rendimiento» no |
+| Regala el verbo | «Colocaste», sin inventar nada |
+
+**Lo que sigue costando, y hay que mirarlo igual:** «Guardado» y «Plata colocada» son los dos
+participios de *«dejé la plata en algún lado»* (§5.2). Esa alerta nunca se resolvió — se aceptó, a
+cambio de no llevarse por delante la capa de cuentas.
+
+> **La lección de método.** La comparación A/B/C estaba bien hecha: mismos datos, cinco casos, regla de
+> descarte fijada antes de mirar. **Y aun así eligió mal**, porque un ganador solo vale contra lo que
+> estaba sobre la mesa. **No cerrar el nombre de una sección mientras haya una capa adyacente sin
+> dibujar.**
 
 ### 5.3 Nombre de sección ≠ tipos internos
 
@@ -859,8 +896,8 @@ dibujar los tres estados aunque se implemente uno.**
 | # | Pregunta | Por qué esperar |
 |---|---|---|
 | A | **¿El techo del reparto pasa a «guardado + colocado», y el propósito distingue las dos partes?** | Es la pregunta central de la fase 4. Necesita pantalla |
-| B | **El nombre definitivo de la sección** | Provisoriamente **«En rendimiento»** (§5.2c). Lo único que puede tumbarlo es que un rescate en rojo lo haga leer como promesa incumplida, y eso se mira, no se argumenta |
-| C | **El verbo del mes** | El nombre elegido es un estado y no regala uno. **«Pusiste a rendir»** es la propuesta; «A rendimiento» y «Colocaste» están dibujadas al lado (pantalla 15). El *resultado* ya no es parte de esta pregunta: no lleva línea propia en la card |
+| B | ~~**El nombre definitivo de la sección**~~ | **Cerrado: «Plata colocada»** (§5.2d). Lo que queda a validar es su alerta conocida —que se confunda con «Guardado»—, que se mira en la pantalla 2 del mock |
+| C | ~~**El verbo del mes**~~ | **Cerrado: «Colocaste»**, que sale del nombre sin esfuerzo. Y la línea vive en la **zona financiera** de la card —fuera de «Se fué» operativo— junto a «Interés acreditado» |
 | D | **Si la corrección por duplicación la hace la app** (ajuste automático) **o se le pide al usuario** | UX vs. no inventar. Se ve en la pantalla del alta A |
 | E | **Si el custodio es obligatorio u opcional** en el alta | Depende de si el corte por ubicación entra en 3A |
 | F | **Qué hace Grana con el drift** de las cuentas que rinden solas | Ya abierto en el modelo; esta capa lo agrava |
@@ -898,17 +935,17 @@ Las que solo se contestan dibujando, agrupadas por pantalla.
 
 **La card del mes**
 
-- ¿**«Pusiste a rendir»** funciona como rótulo de línea? Es el más largo de la card y el nombre de la
-  sección no lo regala: hay que elegirlo, no derivarlo.
+- ¿**«Colocaste»** y **«Interés acreditado»** se leen como dos cosas distintas, una arriba de la otra en
+  la zona financiera? Es lo que reemplazó a la colisión de «Rindió» / «Pusiste a rendir».
 - ¿Qué pasa en un mes con suscripción **y** rescate? ¿Dos líneas, o una neta? *(Una neta escondería
   que hubo dos actos; dos líneas alargan la card.)* El mock v1 propone **dos**.
 
 **El nombre**
 
-- ¿**«En rendimiento»** aguanta una posición que dio negativo? Es lo único que lo tumba, y se ve en la
-  pantalla 12 del mock v1, no en una tabla.
-- ¿Se distingue de «Guardado» leyéndolos seguidos? La apuesta es que sí porque no compiten en el mismo
-  plano —uno nombra un acto tuyo, el otro un estado de la plata—, pero es una apuesta.
+- ~~¿«En rendimiento» aguanta una posición que dio negativo?~~ **Ya no aplica: el nombre se cayó** (§5.2d).
+  «Plata colocada» no dice nada del signo, así que un rescate en rojo no lo contradice.
+- ¿**«Plata colocada»** se distingue de «Guardado» leyéndolos seguidos? Son los dos participios de «dejé
+  la plata en algún lado», y esa alerta **no se resolvió: se aceptó**. Es lo que hay que mirar.
 
 ---
 

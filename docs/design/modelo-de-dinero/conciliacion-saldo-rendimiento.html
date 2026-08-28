@@ -255,7 +255,8 @@ ol.chk li em{display:block;font-style:normal;margin-top:5px;color:var(--muted);f
   <div class="warn">
     <b>Qué NO es esto.</b> No es código de producción, no propone schema ni tablas, no hay SQL ni
     migraciones, y no toca <b>extract-savings-module</b>, congelado hasta el QA visual nativo. El naming
-    de FCI queda <b>en pausa</b>, y la pantalla 16 explica por qué este mock lo empeoró a propósito.
+    de FCI <b>cambió por culpa de este mock</b>: la sección se llama «Plata colocada» y no «En
+    rendimiento». La sección G cuenta por qué.
   </div>
 </div></div>
 
@@ -263,7 +264,11 @@ ol.chk li em{display:block;font-style:normal;margin-top:5px;color:var(--muted);f
 
 <h2 class="sec">A · La puerta</h2>
 <p class="lead">Tiene que estar donde el usuario ya está mirando —comparando Grana contra la app de su
-banco— y no puede pesar más que eso. La gran mayoría de las cuentas <b>no</b> tienen diferencia nunca.</p>
+billetera— y no puede pesar más que eso. <b>Para una cuenta remunerada esto no es una corrección
+excepcional: es un hábito periódico.</b> Mercado Pago, Personal Pay, Naranja X y Ualá acreditan
+intereses todos los días, así que el drift no es un accidente que se arregla una vez — <b>vuelve
+siempre</b>. Para una cuenta que no rinde, en cambio, la diferencia es rara y la puerta no debería
+molestar.</p>
 
 <div class="grid">
 
@@ -352,6 +357,10 @@ banco— y no puede pesar más que eso. La gran mayoría de las cuentas <b>no</b
     <div class="note ok"><b>La fecha hace el trabajo del recordatorio</b> sin ser uno. «Coincidieron el
       2 de julio» le dice a quien mira que hace dos meses que nadie compara — y no manda ninguna
       notificación, que es lo que la volvería molesta.</div>
+    <div class="note ok"><b>Y en una cuenta que rinde tiene que doler un poco más que en una que no.</b>
+      El drift por intereses es permanente, así que dos meses sin conciliar es mucho; en una caja de
+      ahorro común, dos meses no es nada. <b>La misma fila, distinto umbral</b> — y eso Grana lo sabe,
+      porque sabe cuántas veces esa cuenta terminó en «Interés acreditado».</div>
     <div class="note warn"><b>A validar:</b> ¿la fila se ve, o se pierde entre el hero y Movimientos?
       Es el riesgo real de una puerta discreta: que sea tan discreta que no exista.</div>
   </div>
@@ -439,8 +448,8 @@ respuesta probable ya marcada, para que la mayoría confirme en vez de elegir.</
       <div class="dh"><div><div class="k">Diferencia · +$ 25.000</div><h6>¿De dónde salen?</h6></div><div class="x">←</div></div>
       <div class="cause">
         <div class="cz on"><span class="rd"></span><div class="cg">
-          <div class="ct">Rindió tu cuenta<span class="sug">Sugerido</span></div>
-          <div class="cd">La cuenta generó esa plata sola. No la ganaste ni te la transfirieron.</div>
+          <div class="ct">Interés acreditado<span class="sug">Sugerido</span></div>
+          <div class="cd">La cuenta te acreditó esa plata sola. No la ganaste ni te la transfirieron.</div>
         </div></div>
         <div class="cz"><span class="rd"></span><div class="cg">
           <div class="ct">Me faltó registrar algo</div>
@@ -452,7 +461,7 @@ respuesta probable ya marcada, para que la mayoría confirme en vez de elegir.</
         </div></div>
       </div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
-        Lo marcamos como rendimiento porque <b style="color:var(--text)">subió</b> el saldo de una
+        Lo marcamos como interés porque <b style="color:var(--text)">subió</b> el saldo de una
         cuenta que rinde. Cambialo si no fue eso.
       </div>
       <div class="cta">Confirmar</div>
@@ -461,8 +470,9 @@ respuesta probable ya marcada, para que la mayoría confirme en vez de elegir.</
       salió la marca; recomendado sería Grana opinando sobre la plata del usuario.</div>
     <div class="note"><b>Y la razón está escrita abajo</b>, en una línea: «porque subió el saldo de una
       cuenta que rinde». Una preselección sin motivo es una imposición disfrazada.</div>
-    <div class="note warn"><b>A validar:</b> ¿«Rindió tu cuenta» se entiende sin saber qué es una cuenta
-      remunerada? Es el copy del que depende toda la capa.</div>
+    <div class="note warn"><b>A validar:</b> ¿«Interés acreditado» se entiende, o es más frío de lo necesario? «Rindió tu
+      cuenta» es más cálido y queda vivo como <b>copy secundario</b> — pero comparte raíz con
+      «rendimiento», y por eso no es el rótulo canónico.</div>
   </div>
 
   <div class="step">
@@ -489,7 +499,7 @@ respuesta probable ya marcada, para que la mayoría confirme en vez de elegir.</
       </div>
       <div class="cta">Confirmar</div>
     </div></div>
-    <div class="note ok"><b>«Rindió» no aparece.</b> Una cuenta no rinde en negativo, y ofrecer una
+    <div class="note ok"><b>«Interés acreditado» no aparece.</b> Una cuenta no acredita intereses en negativo, y ofrecer una
       opción imposible es ruido. Quedan dos, no tres.</div>
     <div class="note no"><b>Lo que este mock se niega a hacer:</b> registrar la diferencia negativa como
       gasto y meterla en «En qué se fue». Inventaría una categoría, ensuciaría la analítica y afirmaría
@@ -574,7 +584,7 @@ respuesta probable ya marcada, para que la mayoría confirme en vez de elegir.</
     <div class="phone"><div class="scr">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);padding:2px 4px">31 de agosto</div>
       <div class="mv">
-        <div class="it"><span class="av" style="background:#EAF1F6">↑</span><span class="tx">Rindió tu cuenta<em>Mercado Pago · 1 al 31 de agosto</em></span><span class="n neu">+$ 25.000</span></div>
+        <div class="it"><span class="av" style="background:#EAF1F6">↑</span><span class="tx">Interés acreditado<em>Mercado Pago · 1 al 31 de agosto</em></span><span class="n neu">+$ 25.000</span></div>
         <div class="it"><span class="av">🍽</span><span class="tx">Almuerzo<em>Comida · Mercado Pago</em></span><span class="n">−$ 18.400</span></div>
         <div class="it"><span class="av" style="background:#EAF1F6">⇄</span><span class="tx">Transferencia<em>Galicia → Mercado Pago</em></span><span class="n neu">$ 900.000</span></div>
       </div>
@@ -596,7 +606,7 @@ respuesta probable ya marcada, para que la mayoría confirme en vez de elegir.</
     <div class="step-head"><div class="step-num">11</div><div>
       <h3>El mes · versión A</h3>
       <p class="sub">Adentro de «Entró». Cero pantalla nueva.</p>
-      <span class="tag t-mod">Opción A</span>
+      <span class="tag t-no">Descartada</span>
     </div></div>
     <div class="phone"><div class="scr">
       <div class="month">
@@ -624,7 +634,7 @@ respuesta probable ya marcada, para que la mayoría confirme en vez de elegir.</
     <div class="step-head"><div class="step-num">12</div><div>
       <h3>El mes · versión B</h3>
       <p class="sub">Término propio, con la misma gramática que la fase 3.</p>
-      <span class="tag t-new">Opción B</span>
+      <span class="tag t-new">✓ Elegida</span>
     </div></div>
     <div class="phone"><div class="scr">
       <div class="month">
@@ -633,7 +643,7 @@ respuesta probable ya marcada, para que la mayoría confirme en vez de elegir.</
         <div class="l"><span>Entró</span><span>+$ 2.000.000,00</span></div>
         <div class="l"><span>Se fué</span><span>−$ 800.000,00</span></div>
         <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
-        <div class="l fin"><span>Rindió</span><span>+$ 25.000,00</span></div>
+        <div class="l fin"><span>Interés acreditado</span><span>+$ 25.000,00</span></div>
         <div class="l tot"><span>Para gastar</span><span>$ 2.225.000,00</span></div>
       </div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
@@ -641,12 +651,14 @@ respuesta probable ya marcada, para que la mayoría confirme en vez de elegir.</
         regla punteada es todo el peso que se le da: sin ícono, sin color de alerta, sin sección nueva.
       </div>
     </div></div>
-    <div class="note ok"><b>Propuesta: B</b>, por tres razones. «Entró» recupera su significado; es la
-      <b>misma forma</b> que la fase 3 ya eligió para la plata colocada, así que hay una sola gramática
-      para los dos casos; y <b>la línea aparece solo cuando pasó algo</b> — quien nunca concilia no la
-      ve nunca.</div>
-    <div class="note warn"><b>El argumento en contra es real y está en la pantalla 13:</b> son cinco
-      términos en una card que ya tenía cuatro, y falta la de FCI.</div>
+    <div class="note ok"><b>Cerrada: gana B.</b> «Entró» y «Se fué» vuelven a ser <b>operativos</b> —sueldo
+      y consumo— y lo financiero se cuenta aparte. Las dos explican liquidez sin contaminar la lectura
+      de cuánto ganás y cuánto gastás.</div>
+    <div class="note ok"><b>Y la card no se mide en líneas, se mide en zonas.</b> La estructura que
+      aguanta es <b>Inicial → Operativa → Financiera → Final</b>: cuatro zonas, con las líneas que hagan
+      falta adentro de cada una. La pantalla 14 es la que lo demuestra.</div>
+    <div class="note"><b>La línea aparece solo cuando pasó algo.</b> Un mes sin conciliar no la muestra,
+      y la zona financiera entera desaparece si no hubo ni interés ni colocación.</div>
   </div>
 
 </div>
@@ -670,19 +682,19 @@ volver a la A.</p>
         <div class="l"><span>Entró</span><span>+$ 2.000.000,00</span></div>
         <div class="l"><span>Se fué</span><span>−$ 800.000,00</span></div>
         <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
-        <div class="l fin"><span>Rindió</span><span>+$ 25.000,00</span></div>
-        <div class="l fin"><span>Pusiste a rendir</span><span>−$ 100.000,00</span></div>
+        <div class="l fin"><span>Interés acreditado</span><span>+$ 25.000,00</span></div>
+        <div class="l fin"><span>Colocaste</span><span>−$ 100.000,00</span></div>
         <div class="l tot"><span>Para gastar</span><span>$ 2.125.000,00</span></div>
       </div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
         <b style="color:var(--text)">Dos reglas punteadas seguidas parecen dos secciones</b> cuando en
-        realidad son dos hechos del mismo tipo. Y «Rindió» arriba de «Pusiste a rendir» pone las dos
-        formas del verbo pegadas, que es donde la colisión de vocabulario se vuelve visible.
+        realidad son dos hechos del mismo tipo — <b style="color:var(--text)">y el problema no es la
+        cantidad de líneas sino la cantidad de zonas</b>.
       </div>
     </div></div>
-    <div class="note no"><b>Acá se ve el problema, y no es solo el largo.</b> Seis líneas todavía se
-      leen; lo que se rompe es la <b>jerarquía</b>: cuatro términos de consumo y dos financieros, con
-      dos reglas que dicen «acá empieza otra cosa» dos veces seguidas.</div>
+    <div class="note no"><b>Acá se ve el problema, y no es el largo.</b> Seis líneas todavía se leen; lo
+      que se rompe es la <b>jerarquía</b>: dos reglas que dicen «acá empieza otra cosa» dos veces
+      seguidas parten la card en cinco zonas cuando los dos hechos pertenecen a la misma.</div>
   </div>
 
   <div class="step">
@@ -698,8 +710,8 @@ volver a la A.</p>
         <div class="l"><span>Entró</span><span>+$ 2.000.000,00</span></div>
         <div class="l"><span>Se fué</span><span>−$ 800.000,00</span></div>
         <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
-        <div class="l fin g1"><span>Rindió</span><span>+$ 25.000,00</span></div>
-        <div class="l fin g2"><span>Pusiste a rendir</span><span>−$ 100.000,00</span></div>
+        <div class="l fin g1"><span>Interés acreditado</span><span>+$ 25.000,00</span></div>
+        <div class="l fin g2"><span>Colocaste</span><span>−$ 100.000,00</span></div>
         <div class="l tot"><span>Para gastar</span><span>$ 2.125.000,00</span></div>
       </div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
@@ -711,9 +723,10 @@ volver a la A.</p>
     <div class="note ok"><b>Aguanta.</b> Y escala: una tercera línea financiera entra en el mismo grupo
       sin agregar una zona. El techo deja de ser el número de líneas y pasa a ser el número de
       <b>zonas</b>, que sigue siendo cuatro.</div>
-    <div class="note warn"><b>Lo que este arreglo NO resuelve</b> es la colisión de palabras: «Rindió»
-      y «Pusiste a rendir», una arriba de la otra, siguen siendo dos cosas distintas dichas con el mismo
-      verbo. Eso es la sección G.</div>
+    <div class="note ok"><b>Y el vocabulario dejó de pisarse.</b> «Interés acreditado» y «Colocaste» no
+      comparten raíz: uno nombra plata que <b>llegó sola a una cuenta</b>, el otro plata que <b>saliste
+      a colocar</b>. Con «Rindió» y «Pusiste a rendir» —los rótulos que este mock tenía antes— eran dos
+      conjugaciones del mismo verbo, una arriba de la otra. La sección G cuenta por qué se cambiaron.</div>
   </div>
 
 </div>
@@ -785,12 +798,13 @@ esta capa viene a resolver.</p>
 
 </div>
 
-<h2 class="sec">G · Lo que este mock le hizo al naming de FCI</h2>
-<p class="lead">Lo empeoró, y a propósito: era la única forma de ver la colisión antes de cerrar un nombre.</p>
+<h2 class="sec">G · La colisión, y cómo se resolvió</h2>
+<p class="lead">Este mock se dibujó primero con «Rindió» y «Pusiste a rendir». Puestos uno arriba del
+otro, rompieron el naming de FCI — y ese hallazgo es lo que cerró dos decisiones de una vez.</p>
 
 <div class="ab">
   <div>
-    <div class="abh"><span class="bg">!</span><h4>La colisión, en una pantalla</h4></div>
+    <div class="abh"><span class="bg" style="background:var(--terracotta)">✕</span><h4>Como estaba: dos veces la misma raíz</h4></div>
     <div class="phone"><div class="scr">
       <div class="month">
         <div class="k">Resumen del mes · agosto</div>
@@ -798,34 +812,70 @@ esta capa viene a resolver.</p>
         <div class="l off"><span>Entró</span><span>+$ 2.000.000,00</span></div>
         <div class="l off"><span>Se fué</span><span>−$ 800.000,00</span></div>
         <div class="l off"><span>Guardado</span><span>−$ 200.000,00</span></div>
-        <div class="l fin g1"><span>Rindió</span><span>+$ 25.000,00</span></div>
-        <div class="l fin g2"><span>Pusiste a rendir</span><span>−$ 100.000,00</span></div>
+        <div class="l fin g1" style="color:var(--terracotta)"><span style="color:var(--terracotta)!important">Rindió</span><span style="color:var(--terracotta)!important">+$ 25.000,00</span></div>
+        <div class="l fin g2"><span style="color:var(--terracotta)!important">Pusiste a rendir</span><span style="color:var(--terracotta)!important">−$ 100.000,00</span></div>
         <div class="l off"><span>Para gastar</span><span>$ 2.125.000,00</span></div>
       </div>
       <div class="blk" style="margin-top:11px">
-        <div class="bh"><h5>En rendimiento</h5><span class="add">+ Agregar</span></div>
+        <div class="bh"><h5 style="color:var(--terracotta)">En rendimiento</h5><span class="add">+ Agregar</span></div>
         <div class="row"><span class="ic g">📄</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 350.000</b></span><span class="chev">›</span></div>
       </div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
         Los <b style="color:var(--text)">$25.000 que «Rindieron»</b> los generó una cuenta de Mercado
         Pago que <b style="color:var(--text)">NO está</b> en la sección llamada «En rendimiento».
+        <b style="color:var(--text)">Y el usuario no tiene forma de descubrir que se equivocó.</b>
       </div>
     </div></div>
   </div>
   <div>
-    <div class="abh b"><span class="bg">?</span><h4>Por qué esto no se veía antes</h4></div>
-    <div class="note no"><b>La comparación A/B/C no tenía esta capa sobre la mesa.</b> «En rendimiento»
-      ganaba los cinco casos porque se lo comparaba contra «Plata colocada» e «Inversiones» — y ninguno
-      de los tres convivía con una línea del mes que dijera «Rindió».</div>
-    <div class="note warn"><b>El problema no es estético, es de categoría.</b> Un usuario que ve «Rindió
-      +$25.000» y una sección llamada «En rendimiento» va a suponer que la línea sale de la sección. No
-      sale: sale de una cuenta común. <b>Y no tiene forma de descubrir que se equivocó.</b></div>
-    <div class="note"><b>Las salidas posibles</b>, ninguna decidida acá:
-      <br>· <b>La sección cede la palabra</b> → vuelve «Plata colocada», y «Rindió» queda para las cuentas.
-      <br>· <b>La línea cede la palabra</b> → la cuenta dice «Intereses» o «Acreditado», y la sección se queda con «En rendimiento».
-      <br>· <b>Las dos ceden</b> → un par nuevo, pensado junto y no una después de la otra.</div>
-    <div class="note ok"><b>Lo que sí queda decidido:</b> el nombre de la sección de FCI <b>no se elige
-      solo</b>. Se elige con este par sobre la mesa, o se vuelve a elegir en tres meses.</div>
+    <div class="abh b"><span class="bg" style="background:var(--emerald-deep)">✓</span><h4>Como queda: dos hechos, dos palabras</h4></div>
+    <div class="phone"><div class="scr">
+      <div class="month">
+        <div class="k">Resumen del mes · agosto</div>
+        <div class="l off"><span>Tenías</span><span>$ 1.200.000,00</span></div>
+        <div class="l off"><span>Entró</span><span>+$ 2.000.000,00</span></div>
+        <div class="l off"><span>Se fué</span><span>−$ 800.000,00</span></div>
+        <div class="l off"><span>Guardado</span><span>−$ 200.000,00</span></div>
+        <div class="l fin g1"><span>Interés acreditado</span><span>+$ 25.000,00</span></div>
+        <div class="l fin g2"><span>Colocaste</span><span>−$ 100.000,00</span></div>
+        <div class="l off"><span>Para gastar</span><span>$ 2.125.000,00</span></div>
+      </div>
+      <div class="blk" style="margin-top:11px">
+        <div class="bh"><h5>Plata colocada</h5><span class="add">+ Agregar</span></div>
+        <div class="row"><span class="ic g">📄</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 350.000</b></span><span class="chev">›</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">Ninguna palabra se repite.</b> El interés llegó solo a una cuenta;
+        la colocación salió de una cuenta hacia «Plata colocada». Nada invita a confundirlas.
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<div class="grid" style="margin-top:26px">
+  <div class="step">
+    <div class="note ok"><b>Decisión 1 · «Interés acreditado» es el rótulo canónico</b> de esta capa.
+      Nombra el hecho —entró plata a la cuenta— sin usar la raíz de «rendimiento», que es lo que
+      contaminaba. <b>«Rindió» queda vivo como copy secundario</b>: es más cálido y sirve para explicar,
+      pero no para rotular.</div>
+    <div class="note ok"><b>Decisión 2 · «En rendimiento» se cae para FCI</b>, y vuelve
+      <b>«Plata colocada»</b> como candidato principal. No promete rendimiento, no compite con las
+      cuentas remuneradas, no obliga a llamar «Resultado» a todo, y aguanta FCI y plazo fijo. Menos
+      brillante, más honesto.</div>
+    <div class="note"><b>Y la palabra «rendimiento» vuelve a estar libre adentro de FCI:</b> con la
+      sección llamada «Plata colocada», el rescate positivo puede volver a decir <b>«Rendimiento
+      cobrado»</b> en vez de «Resultado». Era el único costo visible que tenía el nombre descartado.</div>
+  </div>
+  <div class="step">
+    <div class="note warn"><b>Lo que hay que seguir mirando:</b> «Interés acreditado» en la cuenta y
+      «Rendimiento cobrado» en el detalle de un FCI son dos palabras distintas para dos hechos
+      distintos. <b>Es correcto</b> —el interés lo acredita la cuenta, el rendimiento se cobra al
+      rescatar— pero conviene verificar en pantalla que se lean como distintos <b>a propósito</b> y no
+      como dos nombres para lo mismo.</div>
+    <div class="note"><b>La lección de método, que es la que se repite:</b> la comparación A/B/C dio
+      ganador a «En rendimiento» en los cinco casos, y estaba bien hecha. Lo que le faltaba era una
+      capa que todavía no existía en ningún mock. <b>Un ganador solo vale contra lo que estaba sobre la
+      mesa</b>, y por eso conviene no cerrar un nombre mientras haya una capa adyacente sin dibujar.</div>
   </div>
 </div>
 
@@ -837,12 +887,14 @@ esta capa viene a resolver.</p>
     <em>Pantalla 3. Una puerta discreta que nadie encuentra es igual a no tenerla — y es el riesgo
     principal de todo el diseño.</em></li>
   <li><b>¿Alguien va a cargar el saldo real más de una vez?</b>
-    <em>Si es una novedad que se usa el primer mes y nunca más, el drift vuelve igual y toda la capa
-    fue decorativa.</em></li>
+    <em>La apuesta es que sí, porque en una billetera remunerada el drift <b>vuelve siempre</b>. Si aun
+    así se usa una vez y nunca más, la puerta pasiva no alcanza y hay que discutir un recordatorio
+    activo — que es lo que este mock evitó a propósito.</em></li>
   <li><b>¿Se entiende que «Grana calculó» sale de sus propios movimientos?</b>
     <em>Pantalla 4. Si el usuario cree que Grana consultó algo, la app promete una conexión que no tiene.</em></li>
-  <li><b>¿«Rindió tu cuenta» se entiende sin saber qué es una cuenta remunerada?</b>
-    <em>Pantalla 6. Es el copy del que depende la capa entera.</em></li>
+  <li><b>¿«Interés acreditado» se entiende, o quedó demasiado frío?</b>
+    <em>Pantalla 6. Es el rótulo canónico y del que depende la capa entera. «Rindió tu cuenta» es la
+    alternativa cálida, descartada como rótulo por compartir raíz con «rendimiento».</em></li>
   <li><b>¿La sugerencia por signo se siente ayuda o imposición?</b>
     <em>Y si el usuario la cambia seguido, la heurística está mal y hay que sacarla.</em></li>
   <li><b>¿«No sé» se elige tanto que las otras dos no sirven?</b>
@@ -851,12 +903,14 @@ esta capa viene a resolver.</p>
     <em>Pantalla 8. Es la única rama que mejora los datos en vez de taparlos.</em></li>
   <li><b>¿El caso cero se siente bien o se siente perdido?</b>
     <em>Pantalla 9. Es el resultado más frecuente y no crea nada.</em></li>
-  <li><b>Versión A o B del mes.</b>
-    <em>Pantallas 11 y 12. La identidad cierra en las dos: se decide por significado, no por aritmética.</em></li>
-  <li><b>¿La card aguanta seis líneas agrupadas?</b>
-    <em>Pantalla 14. Si no, la versión B se cae y hay que volver a la A.</em></li>
-  <li><b>¿«Rindió» y «En rendimiento» se pisan?</b>
-    <em>Sección G. Si se pisan —y este mock dice que sí— el naming de FCI no se puede cerrar solo.</em></li>
+  <li><b>~~Versión A o B del mes.~~ Cerrada: gana B.</b>
+    <em>Lo financiero sale de «Entró» y «Se fué» operativos y se cuenta en su propia zona. La card se
+    mide en <b>zonas</b>, no en líneas: Inicial → Operativa → Financiera → Final.</em></li>
+  <li><b>¿Cuántas líneas entran en la zona financiera antes de que moleste?</b>
+    <em>Pantalla 14. Dos aguantan. Con tres —interés, colocación y rescate en el mismo mes— hay que
+    volver a mirar.</em></li>
+  <li><b>~~¿«Rindió» y «En rendimiento» se pisan?~~ Sí, y por eso los dos cambiaron.</b>
+    <em>Sección G. Quedó «Interés acreditado» para la cuenta y «Plata colocada» para la sección de FCI.</em></li>
   <li><b>¿Parece que Grana te está ofreciendo invertir?</b>
     <em>Si una pantalla de acá se confunde con una billetera vendiendo su cuenta remunerada, está mal
     escrita. Es lo único que tumba la capa entera.</em></li>
