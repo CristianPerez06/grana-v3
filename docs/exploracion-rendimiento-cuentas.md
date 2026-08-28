@@ -350,12 +350,44 @@ reembolsos recibidos y ajustes positivos. Entró plata líquida a una cuenta usa
 **La distinción vive en cuatro lugares, ninguno de ellos la card principal:** Movimientos, el **desglose
 de «Entró»**, la pantalla de conciliación, y la analítica si después hace falta.
 
-> **Y el desglose no lo inventan los intereses: lo justifican.** Hoy «Entró» ya mezcla sueldo, reembolsos
-> y ajustes **sin que nadie pueda abrirlo**. La pantalla que faltaba ya faltaba.
+### 9.1.1 «Entró» pasa a ser explorable
 
-**Lo único que puede salir mal** es que el desglose no se descubra. Una línea de la card que se toca no
-anuncia que se toca — y si nadie la toca, el interés queda invisible, que es peor que la línea
-descartada.
+Es el hallazgo de fondo, y **no lo traen los intereses: lo justifican**. Hoy «Entró» ya mezcla ingresos,
+reintegros y ajustes positivos **sin que el usuario tenga forma de abrir ese número**. La solución no es
+abrir una excepción para los intereses: es **hacer que «Entró» sea explorable**.
+
+- La card de Inicio se mantiene simple y muestra el **total agregado**.
+- Al tocar «Entró» se abre un **desglose por subtipo**: ingresos operativos, interés acreditado,
+  reintegros recibidos, ajustes positivos, y los que ya existan —liquidaciones a favor, la pierna
+  destino de un cambio de moneda, una transferencia entrada desde afuera—.
+- **Solo aparecen las filas con monto.** Son siete posibles y casi nunca más de dos.
+- Ese desglose es **el lugar donde se entiende qué compone «Entró»**, sin llenar la card principal. Y es
+  donde escala cada excepción futura: una fila más acá, nunca una línea más allá.
+
+> **El desglose no inventa un idioma.** «Ingresos», «Reintegros», «Ajustes», «Transferencias», «Cambios
+> de moneda» son los tipos de movimiento que la app **ya nombra** en Movimientos. Lo único nuevo de esta
+> capa es **«Interés acreditado»**.
+
+### 9.1.2 El riesgo, y su techo
+
+**Si nadie percibe que «Entró» se puede tocar, el interés queda invisible** — y eso es peor que la línea
+propia que se descartó, porque la línea al menos se veía. **Es lo único de esta decisión que puede salir
+mal.**
+
+Hay que probar una **señal mínima**. Las tres dibujadas (pantalla 7c):
+
+| Señal | Veredicto |
+|---|---|
+| **Chevron después del monto** | **Propuesta.** Reusa el signo que el usuario ya aprendió en Propósitos y Cuentas, y no ocupa altura |
+| Monto con subrayado punteado | Más sutil, pero **no existe en ningún otro lado de la app**: un signo nuevo para una sola pantalla |
+| «Ver detalle» debajo | **Descartada.** Es la más visible y la única que **agrega un renglón** — justo lo que la decisión vino a evitar |
+
+**Y el arreglo tiene techo puesto de antemano: nada que densifique Inicio.** Ni renglón extra, ni tooltip
+la primera vez, ni destacar «Entró» cuando tiene más de un subtipo. Si con un chevron no alcanza, la
+conversación vuelve a la decisión — no a la señal.
+
+El criterio de éxito tampoco es que el usuario lo encuentre buscándolo: es que **lo toque sin que nadie
+le diga**.
 
 ### 9.2 Lo que decía la versión B, y por qué no alcanzó
 
@@ -446,7 +478,9 @@ Es lo contrario — es Grana admitiendo que tu plata rindió y ella no se enter�
 | 7 | **Ningún porcentaje, ninguna tasa, ninguna proyección** | Es la línea que separa registrar de recomendar |
 | 8 | **Por moneda, siempre** | Invariante de todo el proyecto |
 | 9 | **La card del mes usa la versión A**: el interés **entra en «Entró»** y no hay línea nueva en Inicio | Inicio no explica subtipos. Una línea para intereses obliga a una por cada excepción futura |
-| 9b | **La distinción vive en el desglose de «Entró»**, en Movimientos y en la conciliación | El desglose ya hacía falta: «Entró» mezcla sueldo, reembolsos y ajustes sin que nadie pueda abrirlo |
+| 9b | **«Entró» pasa a ser explorable**: total agregado en la card, desglose por subtipo al tocarlo | El desglose ya hacía falta: «Entró» mezcla ingresos, reintegros y ajustes sin que nadie pueda abrirlo |
+| 9c | El desglose usa **los tipos de movimiento que ya existen** + «Interés acreditado» | No inventa un idioma: usa el que la app ya habla en Movimientos |
+| 9d | La señal es un **chevron después del monto**, y nada que densifique Inicio | Reusa un signo ya aprendido. Cero altura nueva |
 | 10 | **El rótulo canónico es «Interés acreditado»**; «Rindió» queda como copy secundario | Nombra el hecho sin usar la raíz de «rendimiento», que necesita la capa de instrumentos |
 | 11 | **Esto es un hábito periódico, no una corrección excepcional** | En una billetera remunerada el drift **vuelve siempre**. En una cuenta que no rinde, la puerta casi no aparece |
 
@@ -454,7 +488,7 @@ Es lo contrario — es Grana admitiendo que tu plata rindió y ella no se enter�
 
 | # | Decisión | Por qué espera |
 |---|---|---|
-| A | **Cómo se descubre el desglose de «Entró»** | Es lo único de la decisión A que puede salir mal: si nadie toca la línea, el interés queda invisible |
+| A | **Si el chevron alcanza como señal** | Es lo único de la decisión A que puede salir mal, y se prueba mirando a alguien que nunca lo vio: el criterio es que lo toque **sin que nadie le diga** |
 | B | **Si la línea de FCI sigue teniendo lugar propio** en la card | Es de la otra capa. El motivo documentado allá —que «Se fué» se propaga a la analítica— **resultó falso**; ver el apéndice del mock |
 | C | **Subtipo de `adjustment` o campo aparte** | Es forma de datos. Va después de las pantallas, siempre |
 | D | **Si al elegir «me faltó registrar algo» Grana abre el alta de movimiento** | Es lo correcto y es más pantalla. Se ve dibujado |

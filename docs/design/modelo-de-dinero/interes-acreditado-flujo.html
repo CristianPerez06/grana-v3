@@ -543,33 +543,95 @@ ingreso ni un gasto», dice <b>exactamente</b> dónde va a aparecer.</p>
   <div class="step">
     <div class="step-head"><div class="step-num">7b</div><div>
       <h3>El desglose de «Entró»</h3>
-      <p class="sub">Donde sí se explica. Se abre tocando la línea.</p>
+      <p class="sub">Donde sí se explica. Y el vocabulario ya existe: son los <b>tipos de movimiento</b>
+        que Grana ya usa.</p>
       <span class="tag t-new">Nuevo</span>
     </div></div>
     <div class="phone"><div class="scr">
       <div class="dh"><div><div class="k">Agosto</div><h6>Qué entró</h6></div><div class="x">✕</div></div>
       <div class="c">
-        <div class="fld"><span class="sq">💼</span><div class="gr"><div class="v" style="font-weight:800">Sueldo</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">1 movimiento</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 2.000.000</span></div>
+        <div class="fld"><span class="sq">💼</span><div class="gr"><div class="v" style="font-weight:800">Ingresos</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">Sueldo · 1 movimiento</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 2.000.000</span></div>
         <div class="fld"><span class="sq">↑</span><div class="gr"><div class="v" style="font-weight:800">Interés acreditado</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">Mercado Pago · 1 movimiento</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 25.000</span></div>
+        <div class="fld"><span class="sq">↩</span><div class="gr"><div class="v" style="font-weight:800">Reintegros</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">2 movimientos</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 34.200</span></div>
+        <div class="fld"><span class="sq">⚖</span><div class="gr"><div class="v" style="font-weight:800">Ajustes</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">Efectivo · 1 movimiento</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 5.000</span></div>
       </div>
       <div class="c calc">
-        <div class="rule em"><span>Entró</span><span>$ 2.025.000,00</span></div>
+        <div class="rule em"><span>Entró</span><span>$ 2.064.200,00</span></div>
       </div>
       <div class="cta ghost">Ver los movimientos</div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
-        Acá también aterrizan los <b style="color:var(--text)">reembolsos recibidos</b> y los
-        <b style="color:var(--text)">ajustes positivos</b>, que hoy ya están adentro de «Entró» y no se
-        ven en ningún lado.
+        <b style="color:var(--text)">Solo aparecen las filas con monto.</b> Un mes con sueldo y nada más
+        muestra una sola — y la pantalla sigue valiendo la pena porque contesta «¿y esto qué es?» cuando
+        aparece la segunda.
       </div>
     </div></div>
     <div class="note ok"><b>Esta pantalla es la contrapartida de la decisión.</b> Si «Entró» agrupa, tiene
       que haber dónde desagrupar — y no es una función nueva que traen los intereses, sino la que ya
-      faltaba: <b>hoy «Entró» mezcla sueldo, reembolsos y ajustes sin que nadie pueda abrirlo</b>.</div>
+      faltaba: <b>hoy «Entró» mezcla ingresos, reintegros y ajustes sin que nadie pueda abrirlo</b>.</div>
+    <div class="note ok"><b>Y el vocabulario ya está escrito.</b> «Ingresos», «Reintegros», «Ajustes»,
+      «Transferencias», «Cambios de moneda» son los <b>tipos de movimiento que la app ya nombra</b> en
+      Movimientos. <b>Lo único nuevo de esta capa es «Interés acreditado»</b> — el desglose no inventa un
+      idioma, usa el que hay.</div>
+    <div class="note"><b>Qué puede aparecer acá, en total:</b> ingresos, interés acreditado, reintegros
+      recibidos, ajustes positivos, liquidaciones a favor, la pierna destino de un cambio de moneda, y una
+      transferencia que entró desde afuera. Son <b>siete filas posibles y casi nunca más de dos</b>.</div>
     <div class="note ok"><b>Y es donde escala cada excepción futura</b> sin tocar Inicio. Un reintegro, un
       rescate, lo que venga: suma una fila acá, no una línea allá. <b>Ese es el valor real de la
       decisión</b> — no ahorrar una línea hoy, sino no tener que discutirla nunca más.</div>
     <div class="note warn"><b>A validar:</b> ¿se descubre? Una línea de la card que se toca no anuncia que
       se toca. Un chevron chico al lado del monto puede alcanzar, y hay que dibujarlo al especificar.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">7c</div><div>
+      <h3>Cómo se anuncia que «Entró» se toca</h3>
+      <p class="sub">El riesgo de la decisión, en tres señales. Ninguna puede densificar Inicio.</p>
+      <span class="tag t-warn">A validar</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="copyset">
+        <div class="copyopt win">
+          <div class="lb">1 · Chevron después del monto</div>
+          <div class="month" style="box-shadow:none;border:0;padding:2px 0">
+            <div class="l"><span>Tenías</span><span>$ 1.200.000,00</span></div>
+            <div class="l"><span>Entró</span><span>+$ 2.025.000,00 <span style="color:#C4CBD4;font-weight:700">›</span></span></div>
+            <div class="l"><span>Se fué</span><span>−$ 805.433,66</span></div>
+          </div>
+          <div class="vd">Es el mismo signo que ya usan las filas de propósitos y de cuentas: en Grana un
+            chevron significa «esto se abre». <b>Cero altura nueva</b>, y solo lo lleva la línea que se abre.</div>
+        </div>
+        <div class="copyopt">
+          <div class="lb">2 · Monto subrayado punteado</div>
+          <div class="month" style="box-shadow:none;border:0;padding:2px 0">
+            <div class="l"><span>Tenías</span><span>$ 1.200.000,00</span></div>
+            <div class="l"><span>Entró</span><span style="border-bottom:1px dashed #B6BFCA;padding-bottom:1px">+$ 2.025.000,00</span></div>
+            <div class="l"><span>Se fué</span><span>−$ 805.433,66</span></div>
+          </div>
+          <div class="vd">Más sutil todavía, pero <b>no existe en ningún otro lado de la app</b>: habría que
+            enseñar un signo nuevo para una sola pantalla.</div>
+        </div>
+        <div class="copyopt">
+          <div class="lb">3 · «Ver detalle» debajo</div>
+          <div class="month" style="box-shadow:none;border:0;padding:2px 0">
+            <div class="l"><span>Tenías</span><span>$ 1.200.000,00</span></div>
+            <div class="l"><span>Entró</span><span>+$ 2.025.000,00</span></div>
+            <div style="text-align:right;font-size:11.5px;font-weight:800;color:var(--emerald-deep);padding-bottom:4px">Ver detalle</div>
+            <div class="l"><span>Se fué</span><span>−$ 805.433,66</span></div>
+          </div>
+          <div class="vd"><b>Descartada.</b> Es el más visible y el único que <b>agrega un renglón</b> — que
+            es exactamente lo que la decisión de arriba vino a evitar.</div>
+        </div>
+      </div>
+    </div></div>
+    <div class="note ok"><b>Propuesta: la 1.</b> Reusa un signo que el usuario ya aprendió en Propósitos y
+      en Cuentas, no ocupa altura, y deja las otras dos líneas exactamente como están hoy.</div>
+    <div class="note warn"><b>Y el riesgo se acepta con los ojos abiertos:</b> un chevron chico se puede
+      no ver. Si nadie toca «Entró», <b>el interés queda invisible</b> — y eso es peor que la línea que se
+      descartó, porque la línea al menos se veía. <b>Es lo único de esta decisión que puede salir
+      mal.</b></div>
+    <div class="note"><b>Lo que NO se va a hacer para arreglarlo:</b> agrandar la señal hasta que se vea,
+      poner un tooltip la primera vez, o destacar «Entró» cuando tiene más de un subtipo. Las tres
+      densifican Inicio, que es el costo que esta decisión existe para no pagar.</div>
   </div>
 
 </div>
@@ -784,7 +846,9 @@ siempre — y esa es toda la validación que esta fase necesita.</p>
     <tr><td>11</td><td>Rótulo canónico <b>«Interés acreditado»</b></td><td>Nombra el hecho sin usar la raíz de «rendimiento», que la necesita la capa de instrumentos</td></tr>
     <tr><td>12</td><td>En Movimientos: <b>período en vez de fecha</b>, avatar neutro, fuera de la analítica</td><td>Se comporta como transferencia y cambio de moneda. No es una excepción nueva</td></tr>
     <tr><td>13</td><td>Card del mes: el interés <b>entra en «Entró»</b>. <b>Ninguna línea nueva</b> en Inicio</td><td>Inicio no explica subtipos. Una línea para intereses obliga a una por cada excepción futura, y la card se vuelve una tabla de conciliación</td></tr>
-    <tr><td>13b</td><td>La distinción vive en el <b>desglose de «Entró»</b>, en Movimientos y en la conciliación</td><td>Y el desglose ya hacía falta: hoy «Entró» mezcla sueldo, reembolsos y ajustes sin que nadie pueda abrirlo</td></tr>
+    <tr><td>13b</td><td><b>«Entró» pasa a ser explorable.</b> Muestra el total agregado; al tocarlo se abre el desglose por subtipo</td><td>Y no es una función que traigan los intereses: hoy «Entró» ya mezcla ingresos, reintegros y ajustes <b>sin que nadie pueda abrirlo</b>. Los intereses no la inventan, la justifican</td></tr>
+    <tr><td>13c</td><td>El desglose usa <b>los tipos de movimiento que ya existen</b> —Ingresos, Reintegros, Ajustes, Transferencias, Cambios— más «Interés acreditado»</td><td>El desglose no inventa un idioma: usa el que la app ya habla en Movimientos. Solo aparecen las filas con monto</td></tr>
+    <tr><td>13d</td><td>La señal es un <b>chevron después del monto</b>, y nada más</td><td>Reusa el signo que el usuario ya aprendió en Propósitos y Cuentas. Cero altura nueva. Inicio no se densifica</td></tr>
     <tr><td>14</td><td>Diferencia cero <b>guarda la fecha</b> y no crea movimiento</td><td>Alimenta la puerta y el período siguiente. Una revisión sin hallazgos igual sirvió</td></tr>
     <tr><td>15</td><td>El <b>umbral depende del historial</b> de esa cuenta, no del producto</td><td>Grana no dice «esta cuenta rinde»: dice «acá suele haber intereses», que es un hecho</td></tr>
     <tr><td>16</td><td><b>Cero notificaciones, cero badges.</b> La escalada vive en la pantalla</td><td>Una app que persigue al usuario con tareas administrativas se desinstala</td></tr>
@@ -798,9 +862,14 @@ siempre — y esa es toda la validación que esta fase necesita.</p>
     <div class="note warn"><b>Los umbrales exactos</b> (1 / 3 / 6 meses son una propuesta). Y qué pasa
       cuando un umbral se cumple y el usuario no actúa: la fila cálida encendida seis meses deja de
       significar algo.</div>
-    <div class="note warn"><b>Cómo se descubre el desglose de «Entró».</b> Una línea de la card que se
-      toca no anuncia que se toca. Es lo único de esta decisión que puede salir mal: si nadie la toca, el
-      interés queda invisible.</div>
+    <div class="note no"><b>El riesgo principal de toda la decisión: que nadie perciba que «Entró» se
+      toca.</b> Si no se percibe, el interés queda <b>invisible</b> — y eso es peor que la línea propia
+      que se descartó, porque la línea al menos se veía. Hay que probar la señal mínima (pantalla 7c) con
+      alguien que nunca la vio, y el criterio de éxito no es que la encuentre buscándola: es que
+      <b>la toque sin que nadie le diga</b>.</div>
+    <div class="note warn"><b>Y el arreglo tiene un techo puesto de antemano:</b> nada que densifique
+      Inicio. Ni renglón extra, ni tooltip, ni destacar «Entró» cuando tiene más de un subtipo. Si con un
+      chevron no alcanza, la conversación vuelve a la decisión — no a la señal.</div>
     <div class="note warn"><b>Si el bloque «Qué va a pasar» abruma.</b> Cinco líneas es mucho para una
       confirmación — quizá se muestre entero la primera vez y plegado después.</div>
   </div>

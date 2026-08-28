@@ -381,9 +381,16 @@ existe y no toca el ledger.
    conciliación**. Inicio no explica subtipos: abrir una línea para intereses obliga a abrirla para cada
    excepción financiera, y la card se vuelve una tabla de conciliación.
 
-   La contrapartida es que **«Entró» tiene que poder abrirse**, cosa que hoy no puede — y no por los
-   intereses: ya mezcla sueldo, reembolsos y ajustes sin que nadie pueda desagruparlos. Dibujado en
-   `docs/design/modelo-de-dinero/interes-acreditado-flujo.html`, pantallas 7 y 7b.
+   La contrapartida es que **«Entró» pasa a ser explorable**: total agregado en la card, y al tocarlo un
+   **desglose por subtipo** —ingresos, interés acreditado, reintegros, ajustes positivos y los que ya
+   existan—. No es una función que traigan los intereses: hoy «Entró» ya mezcla todo eso **sin que nadie
+   pueda abrirlo**. El desglose reusa los tipos de movimiento que la app ya nombra; lo único nuevo es
+   «Interés acreditado». Dibujado en `docs/design/modelo-de-dinero/interes-acreditado-flujo.html`,
+   pantallas 7, 7b y 7c.
+
+   **El riesgo asumido:** si nadie percibe que «Entró» se toca, el interés queda invisible. La señal
+   propuesta es un **chevron después del monto** y el techo está puesto de antemano — nada que densifique
+   Inicio.
 
    **Si la colocación hacia un instrumento lleva línea propia sigue abierto**, y es de la fase 3A. El
    motivo que la sostenía —que meterla en «Se fué» contamina la tira de ritmo y «En qué se fue»— **es
