@@ -17,7 +17,7 @@ Lo que queda abierto es de **cuatro** clases, y ninguna es implementación pendi
 
 | clase | tareas | por qué sigue abierta |
 |---|---|---|
-| **QA visual nativo** | 2.9 · 6.5 · 6.13 | Bloqueado por acceso a la máquina del tech lead (issue #58). **El módulo nativo nunca se ejecutó** |
+| **QA visual nativo** | 2.9 · 6.5 · 6.13 · 6.15 | **Corriendo.** Nueve hallazgos hasta acá, todos corregidos (6.15) |
 | **Diferido a monetización** | 4b.1–4b.4 | Apagar el módulo solo tiene sentido con sistema de planes, que no existe (E10) |
 | **Backlog no bloqueante** | 4c.12 · 6.7b | Anotado para no perderlo; no frena nada |
 | **Compuertas** | 7.1 · 7.2 | No archivar hasta el QA visual nativo; la fase 3A viene después |
@@ -311,6 +311,34 @@ definición.
   tira siguiendo la moneda del último ingreso, el nombre con espacio de más, y una **sección C** de
   30 checks para el módulo nativo —la ruta, la entrada del menú, la card oscura, el desglose, el pie
   y la regresión— con el aviso de que es código que corre por primera vez
+- [ ] 6.15 **Hallazgos del QA visual nativo, corregidos sobre la marcha.** El QA está corriendo (6.5)
+  y lo que fue apareciendo se arregló y se volvió a mirar. Nueve hasta acá, en tres tandas:
+
+  **Primera** — el `+` de crear propósito había quedado al final de los chips en nativo, donde caía
+  huérfano en su propio renglón, en vez de al lado del rótulo como en web; y el monto tipeado se
+  comía el primer dígito y metía una coma sola al borrar, porque nativo tenía su propio
+  `remapDecimalDot` en vez del criterio compartido. El criterio pasó a
+  `@grana/validation/money-input-format` como `resolveTypedMoneyText`, con **11 tests** — puestos en
+  `apps/web/lib/__tests__` y no en el paquete, porque `pnpm test` no corre lo que vive en `packages/`.
+
+  **Segunda** — «Volver a usar» partía la barra de acciones del total: en 360px la celda de un grid de
+  tres mide 109px, y el rótulo a 12px con `gap-2 px-2` necesita 126. En web envolvía en dos filas; en
+  nativo, con `numberOfLines={1}`, se truncaba con puntos suspensivos, que es la misma falla contada
+  de otra manera. A 11.5px con `gap-1 px-0` necesita 104 y entra con margen; `sm:` recupera el aire
+  donde sobra ancho. Y el explicativo de «Sin destino» perdió el «Sigue guardado:» que lo partía en
+  dos renglones: lo que decía ya lo dice el bloque que lo contiene.
+
+  **Tercera** — el CTA de «Guardar» / «Volver a usar» / «Destinar» quedaba abajo del pliegue.
+  `FormSheetBody` recibía un tope fijo de 560px contra un panel topeado al 90% de la pantalla: en un
+  teléfono alto sobraban ~100px que nadie usaba, y en un SE de 568 el contenido pasaba el 90% y el
+  `overflow-hidden` del panel se lo comía — el botón no quedaba «hay que scrollear» sino
+  **inalcanzable**. El tope ahora lo reparte `useSheetBodyMaxHeight()`, que vive en `BottomSheet` al
+  lado de las constantes que lo componen. Con él salieron tres divergencias más que el QA ya venía
+  señalando: la fecha nunca había recibido el cambio que web sí tenía —iba con recuadro propio y con
+  el disparador en pastilla adentro de una card que ya tiene borde—, «Destinar» pedía el monto con
+  otras medidas que «Guardar» siendo dos vistas del MISMO sheet, y el resumen, los chips y los
+  rótulos del formulario estaban cada uno un punto arriba de lo que usa web.
+
 - [x] 6.14 **Comparativa web ↔ nativa, superficie por superficie** (E27): **nueve divergencias**, tres
   graves —lo tipeado se perdía en el desvío, el detalle de un propósito tenía botón y enlace
   invertidos, y el tope negaba sin ofrecer la salida—. Las nueve corregidas. La comparación mecánica
