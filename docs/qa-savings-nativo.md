@@ -8,6 +8,30 @@
 > vuelve a `openspec/changes/extract-savings-module/tasks.md`; **7.1 dice que no se archiva hasta que
 > esto pase**.
 
+## Por dónde va (28-ago-2026)
+
+Once hallazgos hasta acá, **todos corregidos y pusheados** — el detalle de cada uno está en la tarea
+**6.15** de `tasks.md`. Salieron de los casos **2, 3, 6, 7 y 8**. Lo que sigue, en este orden:
+
+| Orden | Casos | Por qué ahí |
+|---|---|---|
+| **1º** | **6 · 7 · 8** (re-pasada) | Los tres cambiaron entero en el último push: el alto del sheet, la fecha, el héroe del monto de «Destinar», los chips, el resumen, el CTA y los mensajes. Es la regla del propio doc: se arregla, se vuelve a correr |
+| **2º** | **11 · 12** | Nunca corrieron y son **lo que el último push más pudo mover**: 11 depende del alto del sheet, que se rehizo; 12, de los chips, que cambiaron de medida, de espacio y de color |
+| **3º** | **9 · 10** | Nunca corrieron, y los dos tienen un antecedente feo en 6.14 — el monto tipeado que se perdía, y el botón/enlace invertidos |
+| **4º** | **1 · 4 · 5** | Nunca corrieron. Riesgo 2 (los divisores) vive en el 4 |
+| **5º** | **13 · 14** | Navegación. Es lo único que no depende de nada de lo anterior |
+
+Tres cosas puntuales para mirar de cerca en la primera tanda, porque son lo que cambió y **no se puede
+verificar sin correr la app**:
+
+- **El CTA sin scrollear**, en «Guardar», «Volver a usar» y «Destinar». El tope del cuerpo dejó de ser
+  un número fijo (560px) y ahora lo reparte `useSheetBodyMaxHeight()`. En un teléfono alto tiene que
+  entrar sin tocar nada; en uno chico el sheet **no puede pasar del 90% de la pantalla**.
+- **El chip elegido**, de fecha y de propósito: `bg-emerald-deep/5` es el relleno **más suave de toda
+  la app** (el que le sigue es `/10`). Si no se distingue del no elegido, hay que subirlo.
+- **«Destinar» y «Guardar» pidiendo el monto igual**: mismo cuerpo (34px), mismo chip de moneda y la
+  calculadora **abajo del chip**, no al lado del número.
+
 ## Antes de empezar
 
 - [ ] Datos con **plata en ARS y en USD** — buena parte de los riesgos solo aparecen con las dos.
