@@ -32,6 +32,41 @@ Modelarla como posición **rompería el disponible del caso más común del paí
 
 ---
 
+## La regla de producto que gobierna esta capa
+
+> ## **Grana ofrece conciliación, pero no persigue conciliación.**
+
+Hay gente que va a usar Grana principalmente para **ver en qué gasta, registrar gastos, controlar
+tarjetas y cuotas y entender el mes** — sin ninguna necesidad de que cada cuenta cierre exactamente
+contra el banco. **Eso está bien, y la app tiene que funcionar igual de bien para esa persona.**
+
+Entonces la conciliación no se diseña como obligación ni como deuda visible. Es una **herramienta
+disponible**, y su presencia depende de lo que la cuenta y el historial justifiquen — nunca de que Grana
+opine que el usuario está atrasado.
+
+**Lo que la regla prohíbe, escrito antes para que nada entre después como «una mejora chica»:**
+
+| ✕ | |
+|---|---|
+| **En Inicio, nada** | Ni banner, ni card, ni línea, en ningún estado y para ningún usuario |
+| **Ninguna alerta global** | Nada que se vea sin haber entrado a una cuenta |
+| **Ningún contador** | «2 cuentas sin conciliar» convierte una herramienta en una lista de tareas, y una lista de tareas en una deuda |
+| **Ningún badge rojo, punto ni ícono de advertencia** | El rojo significa «algo se rompió», y acá no se rompió nada |
+| **Ningún tono de corrección** | Ni «tenés que», ni «pendiente», ni «desactualizado». **La palabra «conciliar» tampoco se le dice al usuario**: es vocabulario de este documento, no de la app |
+| **Ninguna notificación, mail ni recordatorio programado** | |
+
+**Lo único que sí:** dentro del detalle de una cuenta, una línea de texto o una card con fecha según la
+marca y el historial. **Ese es el techo completo**, y la escalada máxima de toda la función.
+
+> **La prueba para cualquier cosa que se proponga agregar después.** Si se ve sin haber entrado a una
+> cuenta, no va. Si suena a que el usuario está atrasado, no va. Si se puede contar, no va.
+
+**Y esta regla ya corrigió algo que estaba dibujado:** el estado periódico marcaba una fila de la lista
+de Cuentas en color cálido. Se ve **sin entrar** a la cuenta, así que es lo más cerca de una alerta
+global que tenía la capa. **Pasó a texto neutro**; el énfasis vive adentro del detalle.
+
+---
+
 ## 0. La pregunta, en una línea
 
 **Mercado Pago te acredita intereses todos los días. ¿Dónde los ve el usuario en Grana, y cómo entran
@@ -483,6 +518,10 @@ Es lo contrario — es Grana admitiendo que tu plata rindió y ella no se enter�
 | 9d | La señal es un **chevron después del monto**, y nada que densifique Inicio | Reusa un signo ya aprendido. Cero altura nueva |
 | 10 | **El rótulo canónico es «Interés acreditado»**; «Rindió» queda como copy secundario | Nombra el hecho sin usar la raíz de «rendimiento», que necesita la capa de instrumentos |
 | 11 | **Esto es un hábito periódico, no una corrección excepcional** | En una billetera remunerada el drift **vuelve siempre**. En una cuenta que no rinde, la puerta casi no aparece |
+| 12 | **Grana ofrece conciliación, pero no persigue conciliación** | Regla que gobierna la capa entera, arriba de todo. El usuario puede ignorarla para siempre y la app funciona igual |
+| 13 | **Una marca opcional por cuenta** —«esta cuenta puede acreditar intereses»— decide la presencia de la puerta | Preferencia de comportamiento, no un tipo nuevo. Apagada por defecto. Dibujada en `docs/design/modelo-de-dinero/marca-cuenta-intereses.html` |
+| 14 | **Conciliar nunca queda prohibido** en una cuenta sin marcar | Cualquier cuenta puede no coincidir por un movimiento faltante o un error de carga. Lo que cambia es el volumen, no la capacidad |
+| 15 | Una cuenta **con historial de intereses** se trata como candidata aunque nadie la haya marcado — **pero un «apagada a mano» gana sobre el historial** | Se infiere sobre el silencio, nunca sobre un no. Un interruptor que se ignora no es un interruptor |
 
 ### 12.2 No se deben tomar todavía
 

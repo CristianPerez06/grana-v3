@@ -729,7 +729,7 @@ rinde, y ninguno puede tratarse como un caso menor.</p>
       <div style="font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);padding:2px 4px">Cuentas bancarias</div>
       <div class="state">
         <span class="ic">MP</span>
-        <span class="nm">Mercado Pago<em class="warm">Sin revisar hace 2 meses · acá suele haber intereses</em></span>
+        <span class="nm">Mercado Pago<em>Sin revisar hace 2 meses · acá suele haber intereses</em></span>
         <span class="am">$ 1.200.000</span>
       </div>
       <div class="state">
@@ -743,9 +743,9 @@ rinde, y ninguno puede tratarse como un caso menor.</p>
         <span class="am">$ 80.000</span>
       </div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
-        Solo la primera lleva color. <b style="color:var(--text)">Es la única donde el atraso significa
-        algo</b>: ya tuvo intereses antes, así que dos meses sin revisar son dos meses de plata que
-        Grana no está contando.
+        <b style="color:var(--text)">Las tres en el mismo tono.</b> Solo cambia lo que dice el subtítulo:
+        la primera nombra su atraso porque ahí significa algo —ya tuvo intereses—, las otras dos solo
+        informan. <b style="color:var(--text)">Ninguna llama la atención.</b>
       </div>
     </div></div>
     <div class="note ok"><b>El umbral lo decide el historial, no el producto.</b> Grana nunca dice «esta
@@ -754,6 +754,10 @@ rinde, y ninguno puede tratarse como un caso menor.</p>
     <div class="note ok"><b>Y por eso el umbral debe ser más corto en una cuenta con historial.</b> El
       drift por intereses es permanente y mensual; el de una caja de ahorro común es un accidente raro.
       Tratarlas igual molesta a la mitad y abandona a la otra.</div>
+    <div class="note warn"><b>Corregido: en la lista no hay color.</b> Una versión anterior marcaba la
+      primera fila en tono cálido. Es lo más cerca de una alerta global que tenía la capa —<b>se ve sin
+      entrar a la cuenta</b>— y contradice la regla de producto: <b>Grana ofrece conciliación, pero no la
+      persigue</b>. El énfasis vive adentro del detalle; acá solo cambia el texto.</div>
     <div class="note no"><b>Lo que este flujo NO hace:</b> notificaciones push, badges en el tab de
       Cuentas, puntos rojos, ni bloquear nada. <b>Toda la escalada vive adentro de la pantalla</b> a la
       que el usuario ya entró. Una app de finanzas que persigue al usuario para que haga tareas
@@ -851,7 +855,7 @@ siempre — y esa es toda la validación que esta fase necesita.</p>
     <tr><td>13d</td><td>La señal es un <b>chevron después del monto</b>, y nada más</td><td>Reusa el signo que el usuario ya aprendió en Propósitos y Cuentas. Cero altura nueva. Inicio no se densifica</td></tr>
     <tr><td>14</td><td>Diferencia cero <b>guarda la fecha</b> y no crea movimiento</td><td>Alimenta la puerta y el período siguiente. Una revisión sin hallazgos igual sirvió</td></tr>
     <tr><td>15</td><td>El <b>umbral depende del historial</b> de esa cuenta, no del producto</td><td>Grana no dice «esta cuenta rinde»: dice «acá suele haber intereses», que es un hecho</td></tr>
-    <tr><td>16</td><td><b>Cero notificaciones, cero badges.</b> La escalada vive en la pantalla</td><td>Una app que persigue al usuario con tareas administrativas se desinstala</td></tr>
+    <tr><td>16</td><td><b>Grana ofrece conciliación, pero no persigue conciliación</b></td><td>Regla de producto que gobierna la capa. Hay gente que va a usar Grana sin que ninguna cuenta cierre contra el banco, y la app tiene que funcionar igual: sin banners en Inicio, sin alertas globales, sin contador de cuentas sin revisar, sin badges, sin tono de atraso. <b>El usuario puede ignorarla para siempre.</b> Ver <code style="font-family:inherit;font-weight:700">marca-cuenta-intereses.html</code></td></tr>
     <tr><td>17</td><td>Bimoneda: <b>una moneda por vez</b></td><td>Invariante de todo el proyecto. Nunca una diferencia sola para las dos</td></tr>
   </tbody>
 </table>
