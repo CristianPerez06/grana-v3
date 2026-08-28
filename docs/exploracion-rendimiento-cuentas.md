@@ -314,8 +314,12 @@ no fue**. El número más leído de la app pasa a ser un poco falso todos los me
    Para gastar   $ 2.425.000
 ```
 
-**Cerrado: B.** Y la razón de fondo la dio el mock, no este texto: **la card no se mide en líneas, se
-mide en zonas.** La estructura que aguanta es
+> **⚠ Esta sección quedó dada vuelta.** Se cerró en **B** y después se revirtió a **A** al mirar el mock
+> terminado. El razonamiento de abajo se conserva porque es el que llevó ahí; **la decisión vigente es la
+> A**, y está en §9.1.
+
+**Lo que se había cerrado (y ya no rige): B.** La razón era que **la card no se mide en líneas, se mide
+en zonas**, con la estructura
 
 ```
    Inicial  →  Operativa / consumo  →  Financiera  →  Final
@@ -326,13 +330,36 @@ y las líneas financieras van **bajo un solo par de reglas punteadas**, comparti
 regla por línea, la card se parte en cinco zonas y parece dos secciones distintas; agrupada vuelve a
 tener cuatro y una tercera línea financiera entra sin agregar ninguna.
 
-**Y la consecuencia sobre los términos operativos es lo que se estaba buscando:**
+### 9.1 La decisión vigente: A — el interés entra en «Entró»
 
-- El **interés acreditado no entra en «Entró»**, que vuelve a ser el sueldo.
-- La **salida hacia un FCI no entra en «Se fué»**, que vuelve a ser el consumo.
-- **Las dos explican liquidez** —la identidad cierra igual— **sin contaminar sueldo ni gasto**.
+**Inicio no tiene que explicar subtipos.** Es el argumento que dio vuelta la decisión, y no es sobre
+esta línea sino sobre **todas las que vendrían después**: si se abre una para intereses, hay que abrirla
+para cada excepción financiera, y la card principal se convierte en una tabla de conciliación.
 
-Las tres razones que ya se sostenían solas:
+Y es coherente con lo que «Entró» ya significa: **liquidez, no sueldo** (§3). Hoy ya tiene adentro
+reembolsos recibidos y ajustes positivos. Entró plata líquida a una cuenta usable — entonces entra en
+«Entró», como todo lo demás que hace eso.
+
+```
+   Sueldo                +$ 2.000.000
+   Interés acreditado       +$ 25.000
+   ────────────────────────────────────
+   En Inicio se ve:   Entró +$ 2.025.000
+```
+
+**La distinción vive en cuatro lugares, ninguno de ellos la card principal:** Movimientos, el **desglose
+de «Entró»**, la pantalla de conciliación, y la analítica si después hace falta.
+
+> **Y el desglose no lo inventan los intereses: lo justifican.** Hoy «Entró» ya mezcla sueldo, reembolsos
+> y ajustes **sin que nadie pueda abrirlo**. La pantalla que faltaba ya faltaba.
+
+**Lo único que puede salir mal** es que el desglose no se descubra. Una línea de la card que se toca no
+anuncia que se toca — y si nadie la toca, el interés queda invisible, que es peor que la línea
+descartada.
+
+### 9.2 Lo que decía la versión B, y por qué no alcanzó
+
+Las tres razones que se sostenían solas:
 
 1. **«Entró» vuelve a significar «lo que ganaste»**, que es como se lee igual.
 2. **Es la misma forma que la fase 3 ya decidió** para la plata puesta en instrumentos: una línea de
@@ -418,7 +445,8 @@ Es lo contrario — es Grana admitiendo que tu plata rindió y ella no se enter�
 | 6 | **No es `income`** y no entra a la analítica de ingresos ni de gastos | Metería en «cuánto gano» plata que no es sueldo |
 | 7 | **Ningún porcentaje, ninguna tasa, ninguna proyección** | Es la línea que separa registrar de recomendar |
 | 8 | **Por moneda, siempre** | Invariante de todo el proyecto |
-| 9 | **La card del mes usa la versión B**: zona financiera propia, fuera de «Entró» y «Se fué» operativos | Cerrado sobre el mock. La card se mide en **zonas** —Inicial → Operativa → Financiera → Final— y no en líneas |
+| 9 | **La card del mes usa la versión A**: el interés **entra en «Entró»** y no hay línea nueva en Inicio | Inicio no explica subtipos. Una línea para intereses obliga a una por cada excepción futura |
+| 9b | **La distinción vive en el desglose de «Entró»**, en Movimientos y en la conciliación | El desglose ya hacía falta: «Entró» mezcla sueldo, reembolsos y ajustes sin que nadie pueda abrirlo |
 | 10 | **El rótulo canónico es «Interés acreditado»**; «Rindió» queda como copy secundario | Nombra el hecho sin usar la raíz de «rendimiento», que necesita la capa de instrumentos |
 | 11 | **Esto es un hábito periódico, no una corrección excepcional** | En una billetera remunerada el drift **vuelve siempre**. En una cuenta que no rinde, la puerta casi no aparece |
 
@@ -426,8 +454,8 @@ Es lo contrario — es Grana admitiendo que tu plata rindió y ella no se enter�
 
 | # | Decisión | Por qué espera |
 |---|---|---|
-| A | **Cuántas líneas entran en la zona financiera** antes de que moleste | Dos aguantan. Con tres —interés, colocación y rescate el mismo mes— hay que volver a mirar |
-| B | **Si la zona financiera lleva un rótulo propio** o le alcanza con las reglas punteadas | Un rótulo la hace explícita y le suma altura a una card que ya creció |
+| A | **Cómo se descubre el desglose de «Entró»** | Es lo único de la decisión A que puede salir mal: si nadie toca la línea, el interés queda invisible |
+| B | **Si la línea de FCI sigue teniendo lugar propio** en la card | Es de la otra capa. El motivo documentado allá —que «Se fué» se propaga a la analítica— **resultó falso**; ver el apéndice del mock |
 | C | **Subtipo de `adjustment` o campo aparte** | Es forma de datos. Va después de las pantallas, siempre |
 | D | **Si al elegir «me faltó registrar algo» Grana abre el alta de movimiento** | Es lo correcto y es más pantalla. Se ve dibujado |
 | E | **Si se recuerda cargar el rendimiento**, y con qué frecuencia | Un recordatorio mensual ayuda o molesta según cómo se vea |
@@ -544,9 +572,11 @@ mirar— y **aun así eligió mal**. Un ganador solo vale contra lo que estaba s
 
    Y una decisión de tono que quedó explícita: **cero notificaciones, cero badges, cero puntos rojos.**
    Toda la escalada vive adentro de la pantalla a la que el usuario ya entró.
-5. **El mes cargado se probó y aguanta**: seis renglones en **cuatro zonas**. El ojo cuenta separadores,
-   no renglones. Donde hay que volver a mirar es en la **tercera** línea financiera —interés, colocación
-   y rescate el mismo mes—, y la salida probable no es sacar líneas sino **plegar la zona**.
+5. **La card del mes se dio vuelta al mirarla terminada**: el interés **entra en «Entró»** y Inicio no
+   gana ninguna línea (§9.1). El problema nunca fue que la card aguantara una línea más — era que abrir
+   una para intereses obliga a abrirla para cada excepción futura. **Con la decisión A, la card no puede
+   crecer por este lado nunca.** La contrapartida es la pantalla 7b, el desglose de «Entró», que deja de
+   ser opcional.
 6. **Recién ahora tiene sentido un spec.** Con las 17 decisiones cerradas, lo que falta es forma de
    datos — y sigue siendo lo último, después del QA visual nativo.
 4. **Aparte y en cualquier momento**, porque no depende de nada de esto: el copy de «Tu banco muestra»

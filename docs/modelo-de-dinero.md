@@ -374,17 +374,24 @@ existe y no toca el ledger.
 3. **Prorrateo entre repartos** cuando una posición compartida cambia de valor o sufre un retiro parcial. Es de fase 3, pero conviene no cerrar la puerta antes.
 4. **Tratamiento del fondo de emergencia** como propósito con reglas propias (tamaño derivable del gasto mensual; liquidez por encima de rendimiento).
 5. **Qué hace Grana con el drift** de las cuentas que rinden solas. **Hoy no pasa nada**: no hay ninguna alarma ni ninguna detección — el saldo calculado simplemente queda por debajo del real y la diferencia se acumula sin que nada la nombre. Lo único disponible es el **Ajuste manual**, que el usuario tiene que crear después de darse cuenta solo, y que cae en «Entró» al lado del sueldo. Explorado en `docs/exploracion-rendimiento-cuentas.md`, que es la capa que viene antes de instrumentos.
-6. **La card del mes gana una zona financiera.** Dirección tomada en exploración y **todavía no
-   construida**: la card deja de medirse en líneas y pasa a medirse en **zonas** —`Inicial → Operativa /
-   consumo → Financiera → Final`—. El **interés acreditado** de una cuenta remunerada y la **colocación**
-   hacia un instrumento van juntos en la zona financiera, bajo un solo par de reglas punteadas, **fuera
-   de «Entró» y «Se fué» operativos**. Las dos explican liquidez y la identidad cierra igual; lo que se
-   gana es que «Entró» vuelva a significar el sueldo y «Se fué» el consumo. Dibujado en
-   `docs/design/modelo-de-dinero/conciliacion-saldo-rendimiento.html`, pantallas 12 y 14.
+6. **La card del mes NO gana líneas nuevas, y el desglose de «Entró» sí hace falta.** Dirección tomada
+   en exploración y **todavía no construida**: el **interés acreditado** de una cuenta remunerada entra
+   dentro de **«Entró»** —que ya es liquidez y no sueldo: hoy tiene adentro reembolsos y ajustes
+   positivos— y la distinción vive en **Movimientos, el desglose de «Entró» y la pantalla de
+   conciliación**. Inicio no explica subtipos: abrir una línea para intereses obliga a abrirla para cada
+   excepción financiera, y la card se vuelve una tabla de conciliación.
 
-   Y el vocabulario quedó repartido para que las dos capas no se pisen: la cuenta dice **«Interés
-   acreditado»**, el instrumento **«Colocaste»**, la sección de instrumentos **«Plata colocada»**, y el
-   rescate positivo **«Rendimiento cobrado»**.
+   La contrapartida es que **«Entró» tiene que poder abrirse**, cosa que hoy no puede — y no por los
+   intereses: ya mezcla sueldo, reembolsos y ajustes sin que nadie pueda desagruparlos. Dibujado en
+   `docs/design/modelo-de-dinero/interes-acreditado-flujo.html`, pantallas 7 y 7b.
+
+   **Si la colocación hacia un instrumento lleva línea propia sigue abierto**, y es de la fase 3A. El
+   motivo que la sostenía —que meterla en «Se fué» contamina la tira de ritmo y «En qué se fue»— **es
+   falso**: `seFue` lo consume únicamente la card del balance; la analítica de gastos se calcula sobre
+   gastos propios, por otro camino.
+
+   Vocabulario repartido: la cuenta dice **«Interés acreditado»**, la sección de instrumentos **«Plata
+   colocada»**, y el rescate positivo **«Rendimiento cobrado»**.
 
 7. **El interés y el rescate no son ingresos.** Cuando vence un plazo fijo y vuelven $730.000 sobre un capital de $700.000, lo que toca la cuenta es un hecho — pero registrarlo como `income` metería $730.000 en "Entró" y en la tira de ritmo, plata que nunca fue sueldo. El capital que vuelve es la contrapartida del que salió; la ganancia es la **realización de una valuación**, no un ingreso. Es el agujero que grana-v2 dejó anotado (la ganancia invisible del rescate) y hay que cerrarlo **en la fase 3**, cuando aparece la primera posición que vence, no en la 5.
 8. **Una cuenta remunerada no es una posición**, aunque rinda. Esa plata está disponible: se puede gastar mañana sin rescatar nada. Modelarla como posición rompería el disponible del caso **más común del país**. Es una cuenta con rendimiento, y qué hacer con ese rendimiento es el punto 5 — explorado en `docs/exploracion-rendimiento-cuentas.md`.

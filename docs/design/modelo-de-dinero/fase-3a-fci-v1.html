@@ -692,13 +692,22 @@ algo.</p>
       </div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
         <b style="color:var(--text)">Si los $100.000 entraran en «Se fué»</b>, la card diría que
-        gastaste $305.433 en un mes en que gastaste $205.433 — y ese número alimenta la tira de ritmo,
-        la comparación con el mes pasado y «En qué se fue».
-        <b style="color:var(--text)">El error no queda ahí: se propaga.</b>
+        gastaste $305.433 en un mes en que gastaste $205.433.
+        <b style="color:var(--text)">Y ahí termina:</b> «Se fué» lo lee solo esta card — la tira de
+        ritmo, el promedio y «En qué se fue» se calculan sobre gastos propios, por otro camino.
       </div>
     </div></div>
     <div class="note ok"><b>La regla punteada es todo el peso que se le da.</b> Separa el flujo
       financiero del consumo sin abrir una sección, sin ícono y sin color de alerta.</div>
+    <div class="note no"><b>Corrección — este mock decía que el error «se propaga», y es falso.</b>
+      Verificado en el código: <code style="font-family:inherit;font-weight:700">seFue</code> lo consume
+      <b>únicamente la card del balance</b>, en web y en nativa. Nada más lo lee. Al caso de esta línea
+      le queda un argumento de <b>significado</b> —«Se fué» se lee como <i>lo que gasté</i>, y una
+      colocación no se gastó— y no de contaminación.</div>
+    <div class="note warn"><b>Y eso deja la decisión abierta de nuevo.</b> La capa de cuentas resolvió su
+      caso gemelo al revés: el interés <b>entra</b> en «Entró» y se explica en un desglose, porque Inicio
+      no explica subtipos. Si esa regla se aplica también acá, esta línea no va.
+      Ver <code style="font-family:inherit;font-weight:700">interes-acreditado-flujo.html</code>, apéndice.</div>
     <div class="note ok"><b>El rótulo sale del nombre sin esfuerzo:</b> «Colocaste» con «Plata colocada».
       Era una de las ventajas de este nombre y se ve acá — «En rendimiento» es un estado y no se conjuga,
       así que obligaba a inventar un verbo.</div>

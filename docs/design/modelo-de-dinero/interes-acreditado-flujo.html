@@ -277,7 +277,7 @@ ol.chk li em{display:block;font-style:normal;margin-top:5px;color:var(--muted);f
       <li><b>La cuenta sigue entera en «Para gastar»</b>, porque se puede usar directo.</li>
       <li><b>La puerta nace de la diferencia de saldo</b>, nunca de «invertir».</li>
       <li><b>El rótulo canónico es «Interés acreditado».</b> «Rindió» solo como copy de apoyo.</li>
-      <li><b>Card del mes, versión B:</b> zona financiera separada de «Entró» y «Se fué» operativos.</li>
+      <li><b>Card del mes, versión A:</b> el interés <b>entra en «Entró»</b>. Inicio no explica subtipos — la distinción vive en el desglose, en Movimientos y en la conciliación.</li>
     </ul>
   </div>
   <div class="warn">
@@ -508,30 +508,68 @@ ingreso ni un gasto», dice <b>exactamente</b> dónde va a aparecer.</p>
   <div class="step">
     <div class="step-head"><div class="step-num">7</div><div>
       <h3>En la card del mes</h3>
-      <p class="sub">Zona financiera propia. «Entró» vuelve a ser el sueldo.</p>
-      <span class="tag t-new">Versión B</span>
+      <p class="sub">Adentro de «Entró». Inicio no gana ninguna línea.</p>
+      <span class="tag t-new">Versión A</span>
     </div></div>
     <div class="phone"><div class="scr">
       <div class="month">
         <div class="k">Resumen del mes · agosto</div>
         <div class="l"><span>Tenías</span><span>$ 1.200.000,00</span></div>
-        <div class="l"><span>Entró</span><span>+$ 2.000.000,00</span></div>
+        <div class="l"><span>Entró</span><span>+$ 2.025.000,00</span></div>
         <div class="l"><span>Se fué</span><span>−$ 805.433,66</span></div>
         <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
-        <div class="l fin"><span>Interés acreditado</span><span>+$ 25.000,00</span></div>
         <div class="l tot"><span>Para gastar</span><span>$ 2.219.566,34</span></div>
       </div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
-        Si los $25.000 entraran en «Entró», la card diría que ganaste <b style="color:var(--text)">$2.025.000</b>
-        en un mes en que ganaste $2.000.000 — y ese número es el que el usuario lee como su sueldo.
+        Los $25.000 están adentro de los $2.025.000.
+        <b style="color:var(--text)">Inicio no gana ninguna línea</b>, y no la va a ganar tampoco con la
+        próxima excepción financiera — que es exactamente el motivo.
       </div>
     </div></div>
-    <div class="note ok"><b>La regla punteada es todo el peso que se le da.</b> Sin ícono, sin color de
-      alerta, sin sección nueva. Y la línea <b>solo aparece cuando pasó algo</b>: un mes sin conciliar no
-      la muestra, y la zona entera desaparece.</div>
-    <div class="note"><b>La card sigue cerrando a ojo:</b> 1.200.000 + 2.000.000 − 805.433,66 − 200.000
-      + 25.000 = <b>2.219.566,34</b>. Es la propiedad que la hace auditable, y no se pierde por agregar
-      la zona.</div>
+    <div class="note ok"><b>La card se queda en cuatro líneas, para siempre.</b> Ese es el punto: si se
+      abre una línea para intereses, después hay que abrirla para cada excepción financiera, y la card de
+      Inicio se convierte en una tabla de conciliación. <b>Inicio no tiene que explicar subtipos.</b></div>
+    <div class="note ok"><b>Y es coherente con lo que «Entró» ya significa:</b> liquidez, no sueldo.
+      Ya tiene adentro reembolsos y ajustes positivos, por diseño. Entró plata líquida a una cuenta
+      usable — entonces entra en «Entró», como todo lo demás que hace eso.</div>
+    <div class="note"><b>Sigue cerrando a ojo:</b> 1.200.000 + 2.025.000 − 805.433,66 − 200.000 =
+      <b>2.219.566,34</b>. El mismo número que con la línea aparte: lo que cambia es dónde se lee, no
+      cuánto da.</div>
+    <div class="note warn"><b>Lo que esto le exige al desglose:</b> «Entró» pasa a ser un número que
+      mezcla cosas distintas, así que <b>tiene que haber dónde abrirlo</b>. Es la pantalla 7b, y deja de
+      ser opcional.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">7b</div><div>
+      <h3>El desglose de «Entró»</h3>
+      <p class="sub">Donde sí se explica. Se abre tocando la línea.</p>
+      <span class="tag t-new">Nuevo</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Agosto</div><h6>Qué entró</h6></div><div class="x">✕</div></div>
+      <div class="c">
+        <div class="fld"><span class="sq">💼</span><div class="gr"><div class="v" style="font-weight:800">Sueldo</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">1 movimiento</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 2.000.000</span></div>
+        <div class="fld"><span class="sq">↑</span><div class="gr"><div class="v" style="font-weight:800">Interés acreditado</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">Mercado Pago · 1 movimiento</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 25.000</span></div>
+      </div>
+      <div class="c calc">
+        <div class="rule em"><span>Entró</span><span>$ 2.025.000,00</span></div>
+      </div>
+      <div class="cta ghost">Ver los movimientos</div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        Acá también aterrizan los <b style="color:var(--text)">reembolsos recibidos</b> y los
+        <b style="color:var(--text)">ajustes positivos</b>, que hoy ya están adentro de «Entró» y no se
+        ven en ningún lado.
+      </div>
+    </div></div>
+    <div class="note ok"><b>Esta pantalla es la contrapartida de la decisión.</b> Si «Entró» agrupa, tiene
+      que haber dónde desagrupar — y no es una función nueva que traen los intereses, sino la que ya
+      faltaba: <b>hoy «Entró» mezcla sueldo, reembolsos y ajustes sin que nadie pueda abrirlo</b>.</div>
+    <div class="note ok"><b>Y es donde escala cada excepción futura</b> sin tocar Inicio. Un reintegro, un
+      rescate, lo que venga: suma una fila acá, no una línea allá. <b>Ese es el valor real de la
+      decisión</b> — no ahorrar una línea hoy, sino no tener que discutirla nunca más.</div>
+    <div class="note warn"><b>A validar:</b> ¿se descubre? Una línea de la card que se toca no anuncia que
+      se toca. Un chevron chico al lado del monto puede alcanzar, y hay que dibujarlo al especificar.</div>
   </div>
 
 </div>
@@ -683,53 +721,47 @@ rinde, y ninguno puede tratarse como un caso menor.</p>
   </div>
 
 </div>
-<h2 class="sec">F · El mes cargado</h2>
-<p class="lead">Sueldo, gastos, guardado, interés acreditado y una salida futura hacia «Plata colocada».
-Todo junto, para ver si la card se vuelve una tabla.</p>
+<h2 class="sec">F · El mes, con el interés adentro</h2>
+<p class="lead">Sueldo, gastos, guardado e interés acreditado. <b>Cuatro líneas</b>, las mismas de
+siempre — y esa es toda la validación que esta fase necesita.</p>
 
 <div class="ab">
   <div>
-    <div class="abh"><span class="bg">✓</span><h4>Las cuatro zonas se sostienen</h4></div>
+    <div class="abh"><span class="bg">✓</span><h4>Inicio no cambia</h4></div>
     <div class="phone"><div class="scr">
       <div class="month">
         <div class="k">Resumen del mes · agosto</div>
         <div class="l"><span>Tenías</span><span>$ 1.200.000,00</span></div>
-        <div class="l"><span>Entró</span><span>+$ 2.000.000,00</span></div>
+        <div class="l"><span>Entró</span><span>+$ 2.025.000,00</span></div>
         <div class="l"><span>Se fué</span><span>−$ 805.433,66</span></div>
         <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
-        <div class="l fin g1"><span>Interés acreditado</span><span>+$ 25.000,00</span></div>
-        <div class="l fin g2"><span>Colocaste</span><span>−$ 100.000,00</span></div>
-        <div class="l tot"><span>Para gastar</span><span>$ 2.119.566,34</span></div>
+        <div class="l tot"><span>Para gastar</span><span>$ 2.219.566,34</span></div>
       </div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
-        Seis renglones, <b style="color:var(--text)">cuatro zonas</b>: lo que traías, lo que se movió en
-        tu día a día, lo financiero, y el total. Las dos líneas financieras comparten
-        <b style="color:var(--text)">un solo par de reglas</b>.
+        Los $25.000 de interés están adentro de los <b style="color:var(--text)">$2.025.000</b>.
+        <b style="color:var(--text)">Ninguna línea nueva</b>, ni ahora ni cuando aparezca la próxima
+        excepción financiera. Se ven tocando «Entró» (pantalla 7b).
       </div>
       <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
-        Y sigue cerrando a ojo: 1.200.000 + 2.000.000 − 805.433,66 − 200.000 + 25.000 − 100.000 =
-        <b style="color:var(--text)">2.119.566,34</b>.
+        Cierra a ojo: 1.200.000 + 2.025.000 − 805.433,66 − 200.000 =
+        <b style="color:var(--text)">2.219.566,34</b>.
       </div>
     </div></div>
   </div>
   <div>
-    <div class="abh b"><span class="bg">?</span><h4>Qué aprendimos mirándola</h4></div>
-    <div class="note ok"><b>No se volvió una tabla, y la razón es medible:</b> el ojo cuenta
-      <b>separadores</b>, no renglones. Cuatro zonas con seis líneas se lee más rápido que cinco zonas
-      con cinco, que era la versión con una regla por línea.</div>
-    <div class="note ok"><b>Y este es el mes cargado, no el típico.</b> El mes normal de la mayoría tiene
-      <b>cero</b> líneas financieras y la zona entera no existe. El de alguien que concilia una vez por
-      mes tiene una. Dos es ya un mes movido.</div>
-    <div class="note warn"><b>Dónde se rompe:</b> una <b>tercera</b> línea financiera —interés,
-      colocación y rescate en el mismo mes— lleva la card a siete renglones. Ahí hay que mirar de nuevo,
-      y la salida probable no es sacar líneas sino <b>plegar la zona</b>: «Movimientos financieros
-      −$75.000 ›» que se despliega.</div>
-    <div class="note"><b>El vocabulario tampoco se pisa</b>, que era el problema que tumbó «En
-      rendimiento»: «Interés acreditado» y «Colocaste» no comparten raíz. Uno nombra plata que
-      <b>llegó sola a una cuenta</b>; el otro, plata que <b>saliste a colocar</b>.</div>
-    <div class="note no"><b>Lo que sigue sin resolverse</b> y no es de esta capa: «Guardado» y «Plata
-      colocada» son los dos participios de <i>«dejé la plata en algún lado»</i>. Se aceptó al elegir el
-      nombre, y se mira en el mock de FCI.</div>
+    <div class="abh b"><span class="bg">✓</span><h4>Por qué esto cierra la pregunta</h4></div>
+    <div class="note ok"><b>El problema no era que la card aguantara una línea más.</b> Era que abrir una
+      para intereses obliga a abrir una para cada excepción que venga, y ahí Inicio se convierte en una
+      tabla de conciliación. <b>Con esta decisión la card no puede crecer por este lado, nunca.</b></div>
+    <div class="note ok"><b>Y es coherente con lo que «Entró» ya es:</b> liquidez, no sueldo. Hoy ya tiene
+      adentro reembolsos recibidos y ajustes positivos, sin que nadie pueda abrirlos. Entró plata líquida
+      a una cuenta usable — entonces entra en «Entró», como todo lo demás que hace eso.</div>
+    <div class="note ok"><b>Lo que la decisión mueve, no elimina:</b> la explicación pasa al desglose, que
+      además <b>ya hacía falta</b> por los reembolsos y los ajustes. Los intereses no lo inventan: lo
+      justifican.</div>
+    <div class="note warn"><b>Lo único que queda a validar</b> es que el desglose <b>se descubra</b>
+      (pantalla 7b). Si nadie toca «Entró», el interés queda invisible — y eso sería peor que la línea que
+      se descartó.</div>
   </div>
 </div>
 
@@ -751,7 +783,8 @@ Todo junto, para ver si la card se vuelve una tabla.</p>
     <tr><td>10</td><td>El <b>período</b> sale de la última coincidencia</td><td>Convierte un número suelto en un hecho fechado, sin pedir nada</td></tr>
     <tr><td>11</td><td>Rótulo canónico <b>«Interés acreditado»</b></td><td>Nombra el hecho sin usar la raíz de «rendimiento», que la necesita la capa de instrumentos</td></tr>
     <tr><td>12</td><td>En Movimientos: <b>período en vez de fecha</b>, avatar neutro, fuera de la analítica</td><td>Se comporta como transferencia y cambio de moneda. No es una excepción nueva</td></tr>
-    <tr><td>13</td><td>Card del mes: <b>zona financiera</b>, fuera de «Entró» y «Se fué» operativos</td><td>La identidad cierra igual; lo que se gana es que «Entró» siga significando el sueldo</td></tr>
+    <tr><td>13</td><td>Card del mes: el interés <b>entra en «Entró»</b>. <b>Ninguna línea nueva</b> en Inicio</td><td>Inicio no explica subtipos. Una línea para intereses obliga a una por cada excepción futura, y la card se vuelve una tabla de conciliación</td></tr>
+    <tr><td>13b</td><td>La distinción vive en el <b>desglose de «Entró»</b>, en Movimientos y en la conciliación</td><td>Y el desglose ya hacía falta: hoy «Entró» mezcla sueldo, reembolsos y ajustes sin que nadie pueda abrirlo</td></tr>
     <tr><td>14</td><td>Diferencia cero <b>guarda la fecha</b> y no crea movimiento</td><td>Alimenta la puerta y el período siguiente. Una revisión sin hallazgos igual sirvió</td></tr>
     <tr><td>15</td><td>El <b>umbral depende del historial</b> de esa cuenta, no del producto</td><td>Grana no dice «esta cuenta rinde»: dice «acá suele haber intereses», que es un hecho</td></tr>
     <tr><td>16</td><td><b>Cero notificaciones, cero badges.</b> La escalada vive en la pantalla</td><td>Una app que persigue al usuario con tareas administrativas se desinstala</td></tr>
@@ -765,8 +798,9 @@ Todo junto, para ver si la card se vuelve una tabla.</p>
     <div class="note warn"><b>Los umbrales exactos</b> (1 / 3 / 6 meses son una propuesta). Y qué pasa
       cuando un umbral se cumple y el usuario no actúa: la fila cálida encendida seis meses deja de
       significar algo.</div>
-    <div class="note warn"><b>Si la zona financiera se pliega</b> a partir de la tercera línea, y con qué
-      rótulo. La card del mes cargado aguanta dos; tres hay que mirarlo.</div>
+    <div class="note warn"><b>Cómo se descubre el desglose de «Entró».</b> Una línea de la card que se
+      toca no anuncia que se toca. Es lo único de esta decisión que puede salir mal: si nadie la toca, el
+      interés queda invisible.</div>
     <div class="note warn"><b>Si el bloque «Qué va a pasar» abruma.</b> Cinco líneas es mucho para una
       confirmación — quizá se muestre entero la primera vez y plegado después.</div>
   </div>
@@ -780,6 +814,42 @@ Todo junto, para ver si la card se vuelve una tabla.</p>
       diecisiete decisiones cerradas, el spec ya tiene de dónde agarrarse.</div>
     <div class="note ok"><b>Y nada se construye</b> antes del QA visual nativo de
       <b>extract-savings-module</b>, que sigue siendo la compuerta vigente.</div>
+  </div>
+</div>
+
+
+<h2 class="sec" style="margin-top:64px;padding-top:30px;border-top:2px dashed var(--border)">Apéndice · Futuro: cuando exista «Plata colocada»</h2>
+<p class="lead"><b>Nada de acá gobierna esta fase.</b> Es una nota para cuando se retome FCI —una capa
+distinta, con plata que <b>sale</b> de las cuentas y deja de estar disponible—. Se guarda acá porque
+salió mientras se revisaba esta decisión, no porque forme parte de ella.</p>
+
+<div class="grid">
+  <div class="step">
+    <div class="note warn"><b>La pregunta que abre la decisión de arriba.</b> Si Inicio no explica
+      subtipos para los intereses, ¿los explicaría para una colocación? El mock de FCI le da línea propia
+      —«Colocaste»— y esa decisión fue tomada <b>antes</b> que ésta.</div>
+    <div class="note no"><b>Y el motivo que la sostiene es falso.</b> El mock de FCI dice que meterla en
+      «Se fué» diría que gastaste $100.000 que no gastaste, <b>y que ese número se propaga</b> a la tira
+      de ritmo, al promedio y a «En qué se fue». Verificado en el código: <b>no se propaga</b>. «Se fué»
+      (<code style="font-family:inherit;font-weight:700">seFue</code>) lo consume <b>únicamente la card
+      del balance</b>, en web y en nativa; la tira de ritmo y «En qué se fue» se calculan sobre gastos
+      propios, por otro camino. <b>Lo escribí yo y estaba mal.</b></div>
+    <div class="note"><b>Con la evidencia corregida</b>, al caso de FCI le queda un argumento de
+      significado y no de contaminación: «Se fué» se lee como <i>lo que gasté</i>, y una colocación no se
+      gastó — sigue siendo tuya, en otro lado. Que es <b>la simetría exacta</b> de lo que se acaba de
+      decidir para «Entró», donde el significado cedió ante la simplicidad de Inicio.</div>
+  </div>
+  <div class="step">
+    <div class="note ok"><b>Si se aplicara la misma regla</b>, la card quedaría en cuatro líneas para
+      siempre y la colocación se explicaría en un desglose de «Se fué», gemelo del de «Entró». Es la
+      opción coherente, y es la que este apéndice deja anotada.</div>
+    <div class="note warn"><b>Pero no se decide acá</b>, y hay una razón: una colocación <b>saca plata
+      del disponible</b> y un interés <b>la trae</b>. Los dos casos se parecen en la forma y no
+      necesariamente en el peso — que algo salga de «Para gastar» puede merecer más visibilidad que algo
+      que entra. Eso se mira con la capa de FCI delante, no con ésta.</div>
+    <div class="note no"><b>Lo que este apéndice NO hace:</b> cambiar el mock de FCI, reabrir su naming,
+      ni meter «Colocaste» en el flujo de arriba. La corrección del dato falso sí se aplica allá, porque
+      es un hecho verificable y no una decisión.</div>
   </div>
 </div>
 
