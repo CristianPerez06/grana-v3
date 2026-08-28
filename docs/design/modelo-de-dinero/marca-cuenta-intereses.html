@@ -237,6 +237,11 @@ ol.chk li em{display:block;font-style:normal;margin-top:5px;color:var(--muted);f
 .bx .why{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.45}
 </style>
 <style>
+.big{text-align:center;padding:15px 14px 13px}
+.big .lb{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.big .n{margin-top:6px;font-size:33px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1;color:var(--emerald-deep)}
+.big .sb{margin-top:5px;font-size:12.5px;color:var(--muted);font-weight:600}
+.state{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--border-soft);border-radius:15px;padding:12px 13px}
 .tog{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;border-top:1px solid var(--border-soft)}
 .tog .gr{flex:1;min-width:0}
 .tog .t{font-size:14px;font-weight:700}
@@ -487,7 +492,7 @@ acaba de demostrar, cargando el dato, que esa cuenta hace esto.</p>
   <div class="step">
     <div class="step-head"><div class="step-num">7</div><div>
       <h3>Al confirmar el primer «Interés acreditado»</h3>
-      <p class="sub">Una fila más en la confirmación, ya marcada. No una pantalla nueva.</p>
+      <p class="sub">Una fila más en la confirmación, <b>apagada</b>. No una pantalla nueva.</p>
       <span class="tag t-new">Sugerencia</span>
     </div></div>
     <div class="phone"><div class="scr">
@@ -500,23 +505,32 @@ acaba de demostrar, cargando el dato, que esa cuenta hace esto.</p>
       <div class="c">
         <div class="tog" style="border-top:0">
           <div class="gr">
-            <div class="t">Marcar que esta cuenta puede acreditar intereses</div>
-            <div class="h">Te vamos a recordar revisar el saldo cada tanto. Podés apagarlo cuando quieras.</div>
+            <div class="t">¿Querés tener este control más a mano en esta cuenta?</div>
+            <div class="h">Como ya cargaste intereses acá, puede servirte revisar el saldo de vez en cuando.</div>
           </div>
-          <span class="sw on"></span>
+          <span class="sw"></span>
         </div>
       </div>
       <div class="cta">Confirmar</div>
     </div></div>
-    <div class="note ok"><b>No es un diálogo aparte ni un «¿querés…?» después de guardar.</b> Es una fila
-      dentro de la confirmación que ya existía, <b>preprendida</b> y apagable con un tap. Cero pantallas
-      nuevas y cero interrupciones.</div>
-    <div class="note ok"><b>Y sugiere sin imponer</b> en el sentido estricto: viene marcada porque el
-      usuario acaba de dar la evidencia, pero apagarla es un tap y no pide confirmación ni explica nada.</div>
-    <div class="note"><b>Aparece una sola vez</b> —solo con el primer interés de esa cuenta—. Si el
-      usuario la apagó y después carga otro interés, <b>no se vuelve a ofrecer</b>: ya contestó.</div>
-    <div class="note warn"><b>A validar:</b> ¿una fila con switch adentro de una confirmación se lee, o
-      se confirma en automático sin verla? Es el riesgo de todo lo que viene preprendido.</div>
+    <div class="note ok"><b>Viene APAGADA, y es la decisión importante de esta pantalla.</b> Una marca de
+      comportamiento es una <b>preferencia</b>: si viniera prendida, alguien podría confirmar el interés
+      de hoy y activar sin notarlo algo que cambia cómo se ve esa cuenta de acá en adelante.
+      <b>La operación principal es registrar el interés</b>; todo lo que la acompañe es opcional y
+      explícito.</div>
+    <div class="note ok"><b>El copy pregunta en vez de afirmar.</b> «¿Querés tener este control más a
+      mano?» habla de <b>lo que el usuario gana</b> —tener algo a mano— y no de configurar una propiedad
+      de la cuenta. El helper da el motivo con un hecho verificable: <b>«como ya cargaste intereses acá»</b>,
+      que es algo que hizo él, no algo que Grana dedujo.</div>
+    <div class="note ok"><b>Y no insiste.</b> Si no la prende, la sugerencia <b>no vuelve en el próximo
+      interés</b>. Como máximo puede reaparecer después de varias conciliaciones —cuando el hábito ya se
+      demostró y la marca le ahorraría algo real—, y nunca en la siguiente.</div>
+    <div class="note"><b>Sigue sin ser una pantalla nueva:</b> es una fila dentro de la confirmación que
+      ya existía. Cero interrupciones, cero diálogos, cero «¿querés…?» después de guardar.</div>
+    <div class="note warn"><b>Lo que se paga:</b> apagada por defecto <b>adopta menos</b>. Mucha gente va a
+      pasar de largo y su cuenta va a quedar sin marcar — funcionando igual, porque el historial de
+      intereses ya la trata como candidata (pantalla 6). <b>La marca es un atajo, no un requisito</b>, y
+      por eso el costo es aceptable.</div>
   </div>
 
   <div class="step">
@@ -653,8 +667,9 @@ Escritas antes, para que ninguna entre después como «una mejora chica».</p>
     <tr><td>7</td><td>Apagada = <b>línea de texto</b>. Prendida = <b>card con fecha</b></td><td>«Hace 2 meses» solo es información si el saldo se mueve solo</td></tr>
     <tr><td>8</td><td>Una cuenta con <b>historial de intereses</b> se trata como candidata aunque nadie la haya marcado</td><td>Un interés cargado es un hecho; una marca sin prender puede ser solo que nadie entró a Editar</td></tr>
     <tr><td>9</td><td><b>Pero un «apagada a mano» gana sobre el historial</b></td><td>Un interruptor que se ignora cuando el sistema opina distinto no es un interruptor</td></tr>
-    <tr><td>10</td><td>La sugerencia es una <b>fila preprendida dentro de la confirmación</b> del primer interés</td><td>Cero pantallas nuevas, cero interrupciones. Y el usuario acaba de dar la evidencia</td></tr>
-    <tr><td>11</td><td>Se ofrece <b>una sola vez</b> por cuenta</td><td>Si la apagó, ya contestó</td></tr>
+    <tr><td>10</td><td>La sugerencia es una fila dentro de la confirmación del primer interés, y <b>viene APAGADA</b></td><td>Una preferencia se elige, no se hereda de un default conveniente. Prendida, alguien confirmaría el interés de hoy y activaría sin notarlo algo que cambia el comportamiento futuro</td></tr>
+    <tr><td>11</td><td><b>No insiste.</b> Si no la prende, no vuelve en el próximo interés</td><td>Como máximo reaparece después de varias conciliaciones, cuando el hábito ya se demostró. Nunca en la siguiente</td></tr>
+    <tr><td>11b</td><td>Copy: <b>«¿Querés tener este control más a mano en esta cuenta?»</b></td><td>Pregunta en vez de afirmar, y habla de lo que el usuario gana. El helper da el motivo con un hecho que hizo él: «como ya cargaste intereses acá»</td></tr>
     <tr><td>12</td><td>Copy: <b>«puede acreditar intereses»</b>, no «genera intereses»</td><td>«Genera» afirma algo sobre el producto; «puede acreditar» describe una posibilidad que el usuario confirma</td></tr>
     <tr><td>13</td><td>El helper <b>cambia entre apagada y prendida</b></td><td>Una explica por qué prenderla, la otra qué gana</td></tr>
     <tr><td>14</td><td>Techo de escalada: <b>una card en el detalle de una cuenta</b></td><td>Nunca banners, badges, tareas pendientes ni notificaciones</td></tr>
@@ -670,8 +685,13 @@ Escritas antes, para que ninguna entre después como «una mejora chica».</p>
       que mi efectivo rinde», la alternativa es mostrarla solo en
       <code style="font-family:inherit;font-weight:700">bank</code> y aceptar perder a quien cargó su
       billetera como efectivo.</div>
-    <div class="note warn"><b>Si la fila preprendida de la pantalla 7 se lee</b>, o si se confirma en
-      automático sin verla. Es el riesgo de todo lo que viene marcado de fábrica.</div>
+    <div class="note warn"><b>Cuántas conciliaciones son «varias»</b> antes de volver a ofrecer la marca.
+      Tres es una propuesta razonable —ya es un hábito y no una casualidad— pero es un número sin probar.
+      Y si al reaparecer molesta, la respuesta correcta es <b>no volver a ofrecerla nunca</b>, no bajar el
+      número.</div>
+    <div class="note warn"><b>Cuánta adopción cuesta el default apagado.</b> Es el precio conocido de la
+      decisión y se paga a propósito: la cuenta sin marcar sigue funcionando, porque el historial de
+      intereses ya la trata como candidata. <b>La marca es un atajo, no un requisito.</b></div>
     <div class="note warn"><b>Si alguien prende la marca sin entender qué gana.</b> El helper dice «vas a
       poder revisar el saldo desde el detalle», que es poco — y agrandarlo empieza a explicar la función
       entera dentro de un formulario.</div>

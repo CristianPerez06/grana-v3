@@ -61,6 +61,11 @@ marca y el historial. **Ese es el techo completo**, y la escalada máxima de tod
 > **La prueba para cualquier cosa que se proponga agregar después.** Si se ve sin haber entrado a una
 > cuenta, no va. Si suena a que el usuario está atrasado, no va. Si se puede contar, no va.
 
+**Esta regla quedó como regla 15 del modelo canónico** (`docs/modelo-de-dinero.md` §4), junto a «Grana
+describe hechos, no recomienda instrumentos» y «lo que Grana no puede saber, lo declara». Y arrastró una
+regla 16 que es su consecuencia directa: **una preferencia de comportamiento se elige, no se hereda de un
+default conveniente.**
+
 **Y esta regla ya corrigió algo que estaba dibujado:** el estado periódico marcaba una fila de la lista
 de Cuentas en color cálido. Se ve **sin entrar** a la cuenta, así que es lo más cerca de una alerta
 global que tenía la capa. **Pasó a texto neutro**; el énfasis vive adentro del detalle.
@@ -522,6 +527,8 @@ Es lo contrario — es Grana admitiendo que tu plata rindió y ella no se enter�
 | 13 | **Una marca opcional por cuenta** —«esta cuenta puede acreditar intereses»— decide la presencia de la puerta | Preferencia de comportamiento, no un tipo nuevo. Apagada por defecto. Dibujada en `docs/design/modelo-de-dinero/marca-cuenta-intereses.html` |
 | 14 | **Conciliar nunca queda prohibido** en una cuenta sin marcar | Cualquier cuenta puede no coincidir por un movimiento faltante o un error de carga. Lo que cambia es el volumen, no la capacidad |
 | 15 | Una cuenta **con historial de intereses** se trata como candidata aunque nadie la haya marcado — **pero un «apagada a mano» gana sobre el historial** | Se infiere sobre el silencio, nunca sobre un no. Un interruptor que se ignora no es un interruptor |
+| 16 | La sugerencia de marcar la cuenta **viene APAGADA** dentro de la confirmación del primer interés | Una preferencia de comportamiento se elige, no se hereda de un default conveniente: prendida, alguien confirmaría la operación de hoy y activaría sin notarlo algo que cambia el futuro. **La operación principal es registrar el interés** |
+| 17 | **No insiste**: si no la prende, no vuelve en el próximo interés | Como máximo reaparece después de varias conciliaciones, cuando el hábito ya se demostró |
 
 ### 12.2 No se deben tomar todavía
 

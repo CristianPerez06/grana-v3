@@ -221,6 +221,14 @@ de cuándo y en cuántos actos se guardó. De ahí salen tres cosas:
 12. **El propósito se reparte por monto, no se le cuelga a una fila.** La plata guardada es fungible: no existe "la reserva de Japón", existe cuánto de lo guardado está repartido a Japón (§3).
 13. **Lo que sobra tiene nombre pero no entidad.** «Sin destino» es `guardado − lo repartido`: se deriva, no se persiste, y no se puede editar ni borrar como si fuera un propósito.
 14. **El invariante del reparto vive en la base, y dispara desde las dos tablas.** Se rompe repartiendo de más y también volviendo a usar plata ya repartida; una defensa que solo mire una de las dos operaciones no es una defensa.
+15. **Grana ofrece conciliación, pero no persigue conciliación.** Hay gente que va a usar Grana para ver en qué gasta, registrar gastos, controlar tarjetas y entender el mes **sin que ninguna cuenta cierre exactamente contra el banco**, y la app tiene que funcionar igual de bien para esa persona. Conciliar es una **herramienta disponible**, nunca una deuda visible: se puede ignorar para siempre. La regla se aplica con tres pruebas, y cualquier propuesta que falle una no va:
+
+    - **si se ve sin haber entrado a una cuenta, no va** — nada en Inicio, ninguna alerta global;
+    - **si suena a que el usuario está atrasado, no va** — ni «pendiente», ni «desactualizado», ni tono de corrección;
+    - **si se puede contar, no va** — un «2 cuentas sin conciliar» convierte una herramienta en una lista de tareas, y una lista de tareas en una deuda.
+
+    La presencia máxima que la función alcanza es **una card dentro del detalle de una cuenta**. Explorado en `docs/exploracion-rendimiento-cuentas.md` y dibujado en `docs/design/modelo-de-dinero/marca-cuenta-intereses.html`.
+16. **Una preferencia de comportamiento se elige, no se hereda de un default conveniente.** Grana puede sugerir prender una marca cuando el usuario ya dio la evidencia —cargó un interés en esa cuenta—, pero la sugerencia **viene apagada**: si viniera prendida dentro de una confirmación, alguien podría confirmar la operación de hoy y activar sin notarlo algo que cambia el comportamiento futuro. **La operación principal es la operación principal**; todo lo que la acompañe es opcional y explícito.
 
 ---
 
