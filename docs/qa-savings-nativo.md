@@ -32,6 +32,69 @@ verificar sin correr la app**:
 - **«Destinar» y «Guardar» pidiendo el monto igual**: mismo cuerpo (34px), mismo chip de moneda y la
   calculadora **abajo del chip**, no al lado del número.
 
+## Definition of Done de un fix mobile
+
+Un arreglo de Ahorro en mobile **no está terminado cuando se ve bien en una superficie**. Las
+superficies son dos —web en viewport de teléfono y la app nativa— y la regla global vive en la
+política Web ↔ Mobile de `AGENTS.md`. Esto de acá es su forma operativa para este change: qué hay que
+poder responder antes de dar un fix por cerrado.
+
+El registro va en la tarea **6.15** de `tasks.md`, con este bloque:
+
+```
+### <qué se arregló>
+- Web mobile:   <archivo / componente>
+- Nativo:       <archivo / componente>
+- Cambio:       <qué se aplicó, EN LAS DOS>
+- Divergencia:  <ninguna | cuál y por qué la impone la plataforma>
+- Runtime:      <no requiere | requiere `expo start -c` | requiere rebuild>
+- Cierra:       <caso N del QA>
+```
+
+Las seis líneas son obligatorias, y cuatro de ellas existen por un error que ya cometimos:
+
+| Línea | Qué evita |
+|---|---|
+| **Web mobile** y **Nativo**, los dos nombrados | Que el fix entre en un archivo y falte el otro. Pasó con «Destinar»: el recorte de altura entró en `savings-drawer` y no en `purpose-allocate`, y el formulario siguió pidiendo scroll |
+| **Cambio**, descrito una vez para las dos | Que «lo mismo» sean en realidad dos cosas parecidas. Pasó con el techo de chips: web plegaba a las seis y nativo dibujaba los diez |
+| **Divergencia**, explícita | Que una diferencia por descuido se lea después como decisión. Solo valen las que impone la plataforma —`hitSlop` por `::after`, el picker del sistema, el gesto de cierre—, y van con su motivo |
+| **Runtime** | Que un fix correcto se reporte como roto porque la app corría otro bundle |
+| **Cierra** | Que el mismo síntoma se reporte tres veces sin que nadie sepa si ya se atacó |
+
+## Protocolo de versión y runtime
+
+Antes de reportar «en nativo no cambió nada», y antes de que yo conteste «será la caché». En orden,
+y se corta en el primer paso que falle:
+
+1. **Hash local**, en la máquina donde corre Expo:
+   ```
+   git log --oneline -1
+   ```
+   Si no es el commit del fix, el checkout no lo tiene. `git pull` y de nuevo.
+
+2. **El código viejo no existe**, por `grep` y no por memoria — buscando el string que YA NO debería
+   estar (la clase que se sacó, la clave de i18n vieja, el componente que se movió). Ejemplo real:
+   ```
+   grep -c create_inline apps/mobile/components/savings/*.tsx   # tiene que dar 0
+   ```
+   Si aparece, hay cambios locales sin commitear pisando el fix.
+
+3. **El repo está bien y la app igual no cambia** → es runtime. Frenar Expo y arrancar limpio:
+   ```
+   npx expo start -c
+   ```
+   `watchFolders` hace que Metro mire `packages/`, pero el transformer cache se indexa por archivo y
+   un cambio fuera de `apps/mobile` es justo el caso que se pierde. Una `r` recarga la app y **no**
+   limpia esa caché: por eso se ve un estado mezclado, con la mitad de un commit aplicada.
+
+4. **Sigue igual** → borrar la app del simulador y reinstalarla.
+
+5. **Es un dev build de EAS o TestFlight** → el JS viene embebido en el binario y **ningún** cambio
+   aparece hasta reconstruir. No hay caché que limpiar; hay que volver a buildear.
+
+La señal que separa un caso del otro: un problema de implementación deja ver **algunos** cambios y
+otros no. **Cero** cambios sobre varios commits distintos es runtime, no código.
+
 ## Antes de empezar
 
 - [ ] Datos con **plata en ARS y en USD** — buena parte de los riesgos solo aparecen con las dos.
@@ -195,7 +258,8 @@ No son checks de pixel, son de sensación — y son la mitad del valor de mirar 
 
 1. **Todo en verde** → marcar 6.5, 6.13 y 2.9 en `tasks.md`, cerrar la sección C del issue #58, y recién
    ahí queda habilitado 7.1 (archivar el change).
-2. **Algo roto** → anotarlo en `tasks.md` con el caso de esta lista, arreglar, y **volver a correr el
-   caso** más los dos que lo rodean.
+2. **Algo roto** → anotarlo en `tasks.md` con el caso de esta lista, arreglar **en las dos superficies**
+   con el bloque de la «Definition of Done» de arriba, y **volver a correr el caso** más los dos que
+   lo rodean.
 3. **Algo que solo varía por nativo** → anotarlo como aceptado, con el motivo. Ya hay un precedente:
    `date_label`, aceptada porque en nativo el selector de fecha lo rotula el sistema operativo.

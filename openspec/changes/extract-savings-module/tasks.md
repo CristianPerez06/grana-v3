@@ -311,6 +311,16 @@ definición.
   tira siguiendo la moneda del último ingreso, el nombre con espacio de más, y una **sección C** de
   30 checks para el módulo nativo —la ruta, la entrada del menú, la card oscura, el desglose, el pie
   y la regresión— con el aviso de que es código que corre por primera vez
+- [ ] 6.16 **Definition of Done de un fix mobile, y el protocolo de runtime.** Viven en
+  `docs/qa-savings-nativo.md`. Un arreglo de Ahorro no está cerrado hasta que quedan registradas seis
+  líneas: el componente web-mobile, el nativo, qué cambio se aplicó **en las dos**, la divergencia de
+  plataforma si la hay y por qué, si hace falta limpiar caché o rebuildear, y qué caso del QA cierra.
+  El bloque va acá abajo, en 6.15. Cuatro de esas líneas existen por errores que ya cometimos: el
+  recorte de «Destinar» que entró en un archivo y no en el otro, el techo de chips que era distinto
+  en cada superficie, y dos vueltas enteras reportando como roto un fix que estaba bien pero corría
+  contra un bundle viejo. Y el protocolo que separa un caso del otro —hash, `grep` del código viejo,
+  `expo start -c`, reinstalar, rebuild— con su señal: un problema de implementación deja ver algunos
+  cambios y otros no; cero cambios sobre varios commits es runtime
 - [ ] 6.15 **Hallazgos del QA visual nativo, corregidos sobre la marcha.** El QA está corriendo (6.5)
   y lo que fue apareciendo se arregló y se volvió a mirar. Nueve hasta acá, en tres tandas:
 
@@ -352,6 +362,31 @@ definición.
   De paso cerró un bug: `exceeds_purpose_reserved` interpolaba `{purpose}`, pero por el camino del
   servidor `t()` recibe solo `limit` — el mensaje mostraba **«{purpose}» literal en pantalla**. Sin
   ese parámetro, no puede volver a pasar.
+
+  **Cuarta bis — «Destinar», con el bloque de 6.16 ya aplicado.** Es el primer fix registrado con la
+  checklist, y el que la motivó:
+
+  ```
+  ### El CTA de «Destinar» quedaba abajo del pliegue
+  - Web mobile:   apps/web/lib/savings/components/purpose-allocate.tsx
+  - Nativo:       apps/mobile/components/savings/PurposeAllocate.tsx
+  - Cambio:       card de monto a 27px con padding 12; bloques a mt-2.5; rótulo
+                  pegado a sus chips; resumen py-2.5 con filas py-0.5; techo de
+                  DOS FILAS de chips vía `fitChipCount`; zócalo sin el `-mb-6`
+                  que encogía el contenido por debajo de su bloque contenedor.
+  - Divergencia:  los 44px táctiles. Web los saca de un `::after` que no ocupa
+                  lugar; nativo no tiene pseudo-elementos y los sacaba de
+                  `min-h-[44px]`, o sea alto real. Pasan a `hitSlop`, que es el
+                  equivalente nativo. El de los chips es solo vertical: uno
+                  horizontal los solaparía entre sí.
+  - Runtime:      requiere `expo start -c` — el cambio toca `packages/savings`.
+  - Cierra:       caso 8.
+  ```
+
+  El fix salió PARTIDO: el recorte había entrado en `savings-drawer` —«Guardar» y «Volver a usar»— y
+  no en `purpose-allocate`, así que «Destinar» siguió pidiendo scroll en las dos superficies mientras
+  los otros dos ya entraban. Es exactamente lo que el corolario de la política Web ↔ Mobile nombra
+  como señal, y la razón de que la checklist pida los dos archivos nombrados y no uno.
 
 - [x] 6.14 **Comparativa web ↔ nativa, superficie por superficie** (E27): **nueve divergencias**, tres
   graves —lo tipeado se perdía en el desvío, el detalle de un propósito tenía botón y enlace
