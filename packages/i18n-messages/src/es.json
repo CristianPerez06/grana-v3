@@ -2096,14 +2096,14 @@
     "saved_in": "Tenés guardado en {purpose}",
     "stays_saved": "Queda guardado",
     "stays_in": "Queda en {purpose}",
-    "save_note": "No se mueve de tus cuentas: deja de contar como disponible.",
-    "release_note": "No se mueve de tus cuentas: vuelve a contar como disponible.",
+    "save_note": "Sigue en tus cuentas: ya no está para gastar.",
+    "release_note": "Sigue en tus cuentas: vuelve a estar para gastar.",
     "errors": {
-      "exceeds_available": "No podés guardar más de lo que tenés disponible: {limit}.",
-      "exceeds_reserved": "No podés volver a usar más de lo que tenés guardado: {limit}.",
-      "exceeds_unassigned_reserved": "No podés volver a usar más de lo que tenés sin destino: {limit}.",
+      "exceeds_available": "No podés guardar más de {limit}.",
+      "exceeds_reserved": "No podés volver a usar más de {limit}.",
+      "exceeds_unassigned_reserved": "No podés volver a usar más de {limit}.",
       "exceeds_unassigned_reserved_pick": "Sin destino tiene {limit}. Para volver a usar más, elegí un propósito.",
-      "exceeds_purpose_reserved": "No podés volver a usar más de lo que tenés guardado en {purpose}: {limit}.",
+      "exceeds_purpose_reserved": "No podés volver a usar más de {limit}.",
       "generic": "No pudimos registrar el cambio. Probá de nuevo.",
       "duplicate": "Esa operación ya estaba registrada."
     },
@@ -2158,8 +2158,8 @@
       "errors": {
         "duplicate": "Ya tenés un propósito llamado «{name}».",
         "generic": "No pudimos guardar el propósito. Probá de nuevo.",
-        "exceeds_unassigned": "No podés destinar más de lo que tenés sin destino: {limit}.",
-        "exceeds_allocated": "No podés quitar más de lo que tenés destinado a {purpose}: {limit}."
+        "exceeds_unassigned": "No podés destinar más de {limit}.",
+        "exceeds_allocated": "No podés quitar más de {limit}."
       },
       "allocate": "Destinar",
       "unallocate": "Quitar destino",

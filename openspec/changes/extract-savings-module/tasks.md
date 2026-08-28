@@ -17,7 +17,7 @@ Lo que queda abierto es de **cuatro** clases, y ninguna es implementación pendi
 
 | clase | tareas | por qué sigue abierta |
 |---|---|---|
-| **QA visual nativo** | 2.9 · 6.5 · 6.13 · 6.15 | **Corriendo.** Nueve hallazgos hasta acá, todos corregidos (6.15) |
+| **QA visual nativo** | 2.9 · 6.5 · 6.13 · 6.15 | **Corriendo.** Once hallazgos hasta acá, todos corregidos (6.15) |
 | **Diferido a monetización** | 4b.1–4b.4 | Apagar el módulo solo tiene sentido con sistema de planes, que no existe (E10) |
 | **Backlog no bloqueante** | 4c.12 · 6.7b | Anotado para no perderlo; no frena nada |
 | **Compuertas** | 7.1 · 7.2 | No archivar hasta el QA visual nativo; la fase 3A viene después |
@@ -338,6 +338,20 @@ definición.
   el disparador en pastilla adentro de una card que ya tiene borde—, «Destinar» pedía el monto con
   otras medidas que «Guardar» siendo dos vistas del MISMO sheet, y el resumen, los chips y los
   rótulos del formulario estaban cada uno un punto arriba de lo que usa web.
+
+  **Cuarta** — el pie del formulario y los mensajes de tope entraban en dos renglones. Los dos se
+  acortaron **midiendo contra la métrica real de Plus Jakarta Sans**, no a ojo: el pie pasa a «Sigue
+  en tus cuentas: ya no está para gastar» / «…vuelve a estar para gastar», que además usa la palabra
+  de la card de saldo —«para gastar»— y no «disponible»; y los topes pasan a **verbo + monto** («No
+  podés destinar más de $ 41.635»), porque cuál es el bolsillo lo dicen el chip elegido y la fila del
+  resumen justo arriba. Entran en una fila de 320 a 390px, con montos de ocho cifras en las dos
+  monedas. La única excepción, a propósito: `exceeds_unassigned_reserved_pick`, que además del tope
+  **nombra la salida** («elegí un propósito») — es lo único que dice dos cosas, y por eso ocupa dos
+  renglones.
+
+  De paso cerró un bug: `exceeds_purpose_reserved` interpolaba `{purpose}`, pero por el camino del
+  servidor `t()` recibe solo `limit` — el mensaje mostraba **«{purpose}» literal en pantalla**. Sin
+  ese parámetro, no puede volver a pasar.
 
 - [x] 6.14 **Comparativa web ↔ nativa, superficie por superficie** (E27): **nueve divergencias**, tres
   graves —lo tipeado se perdía en el desvío, el detalle de un propósito tenía botón y enlace

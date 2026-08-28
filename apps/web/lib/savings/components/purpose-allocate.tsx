@@ -136,10 +136,7 @@ export function PurposeAllocate({
   const limitError = overLimit
     ? allocating
       ? t('purposes.errors.exceeds_unassigned', { limit: money(available) })
-      : t('purposes.errors.exceeds_allocated', {
-          limit: money(available),
-          purpose: purpose?.name ?? '',
-        })
+      : t('purposes.errors.exceeds_allocated', { limit: money(available) })
     : null
 
   const submit = () => {

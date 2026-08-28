@@ -694,14 +694,18 @@ const SavingsForm = ({
   const overLimit = value > limit
   // El mismo mensaje que devolvería el servidor, con el mismo número: un botón
   // deshabilitado sin explicación no deja avanzar y tampoco dice por qué.
+  //
+  // VERBO + TOPE, y nada más: en un teléfono angosto la versión larga —«más de lo
+  // que tenés guardado en Vacaciones»— eran dos y hasta tres renglones de rojo
+  // debajo del formulario. Qué bolsillo es lo dice la pantalla: el chip elegido y
+  // la fila del resumen, justo arriba. Y el nombre del propósito ya no se
+  // interpola: por el camino del servidor llega solo `limit`, así que el mensaje
+  // largo mostraba «{purpose}» tal cual, en pantalla.
   const limitError = overLimit
     ? mode === 'save'
       ? t('savings.errors.exceeds_available', { limit: money(limit, currency) })
       : purpose != null
-        ? t('savings.errors.exceeds_purpose_reserved', {
-            limit: money(limit, currency),
-            purpose: purpose.name,
-          })
+        ? t('savings.errors.exceeds_purpose_reserved', { limit: money(limit, currency) })
         : unassignedIsTotal
           ? t('savings.errors.exceeds_reserved', { limit: money(limit, currency) })
           : // Con otro origen a mano, el mensaje NO se queda en negar: dice el

@@ -2096,14 +2096,14 @@
     "saved_in": "Saved in {purpose}",
     "stays_saved": "Stays set aside",
     "stays_in": "Stays in {purpose}",
-    "save_note": "It does not leave your accounts: it stops counting as spendable.",
-    "release_note": "It does not leave your accounts: it counts as spendable again.",
+    "save_note": "Still in your accounts: it stops counting as spendable.",
+    "release_note": "Still in your accounts: it counts as spendable again.",
     "errors": {
-      "exceeds_available": "You can't set aside more than you have available: {limit}.",
-      "exceeds_reserved": "You can't make available more than you have set aside: {limit}.",
-      "exceeds_unassigned_reserved": "You can't make available more than you have unassigned: {limit}.",
+      "exceeds_available": "You can't set aside more than {limit}.",
+      "exceeds_reserved": "You can't make available more than {limit}.",
+      "exceeds_unassigned_reserved": "You can't make available more than {limit}.",
       "exceeds_unassigned_reserved_pick": "Unassigned has {limit}. To make more available, pick a purpose.",
-      "exceeds_purpose_reserved": "You can’t make available more than you have saved in {purpose}: {limit}.",
+      "exceeds_purpose_reserved": "You can't make available more than {limit}.",
       "generic": "We couldn't save the change. Please try again.",
       "duplicate": "That change was already recorded."
     },
@@ -2158,8 +2158,8 @@
       "errors": {
         "duplicate": "You already have a purpose called “{name}”.",
         "generic": "We couldn’t save the purpose. Try again.",
-        "exceeds_unassigned": "You can’t assign more than you have unassigned: {limit}.",
-        "exceeds_allocated": "You can’t unassign more than you have assigned to {purpose}: {limit}."
+        "exceeds_unassigned": "You can't assign more than {limit}.",
+        "exceeds_allocated": "You can't unassign more than {limit}."
       },
       "allocate": "Assign",
       "unallocate": "Unassign",

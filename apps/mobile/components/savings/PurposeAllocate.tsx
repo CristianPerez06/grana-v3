@@ -91,10 +91,7 @@ export const PurposeAllocate = ({
   const limitError = overLimit
     ? allocating
       ? t('savings.purposes.errors.exceeds_unassigned', { limit: money(available) })
-      : t('savings.purposes.errors.exceeds_allocated', {
-          limit: money(available),
-          purpose: purpose?.name ?? '',
-        })
+      : t('savings.purposes.errors.exceeds_allocated', { limit: money(available) })
     : null
 
   const submit = async () => {
