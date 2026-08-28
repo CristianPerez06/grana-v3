@@ -4,7 +4,7 @@ import { ChevronDown, Plus } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
-import { formatForDisplay, parseMoneyInput } from '@grana/validation'
+import { parseMoneyInput } from '@grana/validation'
 import {
   fitChipCount,
   MODULE_CURRENCIES,
@@ -27,6 +27,7 @@ import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { FormSheetBody } from '../layout/FormSheetBody'
 import { SheetBackHeader } from './SheetBackHeader'
+import { TABULAR } from './tabular'
 import { CHIP_SLOP, TAP_SLOP } from './tap-slop'
 import { PurposePicker } from './PurposePicker'
 import { PurposeForm } from './PurposeForm'
@@ -723,7 +724,6 @@ const SavingsForm = ({
               })
             : t('savings.errors.exceeds_unassigned_reserved', { limit: money(limit, currency) })
     : null
-  const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 16 + 2
 
   const submit = async () => {
     setError(null)
@@ -779,48 +779,62 @@ const SavingsForm = ({
           min-height. Two surfaces that ask for an amount should not look like two
           different apps — and the chip is what gives this one its currency
           selector. */}
-      {/* Más compacta que la del alta de movimientos, y a propósito: allá la
-          pantalla es entera y el monto puede ocupar lo que quiera; acá es una
-          sheet topeada al 90% donde cada bloque le come el lugar al CTA. Mismas
-          medidas que web, que ya había hecho este mismo recorte. */}
-      <View className="mt-3 rounded-2xl border border-border bg-card px-4 pb-3 pt-3">
-        <View className="relative">
-          <Text className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-wider text-text-soft">
+      {/* El héroe de monto, con la MISMA forma que web y no solo con las mismas
+          medidas: el rótulo y el chip en una fila propia —en flujo, no
+          absolutos—, y abajo el símbolo, la cifra y la calculadora sobre la
+          misma baseline, alineados a la IZQUIERDA.
+
+          Estaba escrito al revés: rótulo y chip absolutos sobre una cifra
+          CENTRADA, con la calculadora colgando debajo del chip. Eran las mismas
+          medidas y otra pantalla — y de paso 13px más baja, que es parte de por
+          qué nativo se leía más comprimido que web.
+
+          `tabular-nums` va por `fontVariant`, que es como se pide en RN, y el
+          `lineHeight` explícito reemplaza al `leading-none` de web: sin él, RN
+          le suma al renglón el ascendente y el descendente de la fuente. */}
+      <View className="mt-3 rounded-2xl border border-border bg-card px-4 py-3">
+        <View className="flex-row items-start justify-between">
+          <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
             {t('savings.amount_label')}
           </Text>
-          <View className="absolute right-0 top-0 items-end gap-1.5">
-            <Pressable
-              onPress={cycleCurrency}
-              disabled={currencyOptions.length < 2}
-              accessibilityRole="button"
-              accessibilityLabel={t('savings.currency_label')}
-              className="flex-row items-center gap-1 rounded-lg border border-border bg-border-soft px-2.5 py-1"
-            >
-              <Text className="text-xs font-bold text-text">{currency}</Text>
-              {currencyOptions.length > 1 && <ChevronDown size={12} color={colors.text} />}
-            </Pressable>
+          <Pressable
+            onPress={cycleCurrency}
+            disabled={currencyOptions.length < 2}
+            accessibilityRole="button"
+            accessibilityLabel={t('savings.currency_label')}
+            className="shrink-0 flex-row items-center gap-1 rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1"
+          >
+            <Text className="text-xs font-bold text-text">{currency}</Text>
+            {currencyOptions.length > 1 && <ChevronDown size={12} color={colors.text} />}
+          </Pressable>
+        </View>
+        <View className="mt-2 flex-row items-baseline gap-1.5">
+          <Text
+            className="text-[20px] font-bold text-text opacity-50"
+            style={{ lineHeight: 20 }}
+          >
+            {CURRENCY_SYMBOL[currency]}
+          </Text>
+          <MoneyAmountInput
+            bare
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="0"
+            autoFocus
+            style={{
+              flex: 1,
+              paddingVertical: 0,
+              lineHeight: 27,
+              fontVariant: ['tabular-nums'],
+            }}
+            className="text-[27px] font-extrabold text-text"
+          />
+          <View className="shrink-0 self-center">
             <MoneyCalculator seed={amount} onResult={setAmount} />
-          </View>
-          <View className="min-h-[46px] flex-row items-center justify-center">
-            <Text className="pl-1 text-[27px] font-bold text-text">
-              {CURRENCY_SYMBOL[currency]}
-            </Text>
-            <MoneyAmountInput
-              bare
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="0"
-              autoFocus
-              style={{ width: amountInputWidth, paddingVertical: 0 }}
-              className="ml-1 text-[27px] font-bold text-text"
-            />
           </View>
         </View>
       </View>
 
-      {/* La fecha, compacta y con atajos: el mismo patrón que el alta de
-          movimientos. Como card entera pesaba igual que el monto, y acá la fecha
-          es casi siempre hoy — el foco es cuánto y para qué. */}
       {/* Atajos de monto: suman al valor actual, y «Todo» lleva al tope. Guardar
           suele ser una cifra redonda, y escribir 50.000 en el teclado de un
           teléfono son cinco toques que un chip resuelve en uno.
@@ -1022,13 +1036,15 @@ const SavingsForm = ({
                   ? t('savings.saved_total')
                   : t('savings.purposes.unassigned_available')}
           </Text>
-          <Text className="text-[13.5px] font-semibold text-text">{money(limit, currency)}</Text>
+          <Text className="text-[13.5px] font-semibold text-text" style={TABULAR}>
+            {money(limit, currency)}
+          </Text>
         </View>
         <View className="flex-row justify-between py-0.5">
           <Text className="text-[13.5px] text-text-muted">
             {mode === 'save' ? t('savings.you_will_save') : t('savings.you_will_release')}
           </Text>
-          <Text className="text-[13.5px] font-semibold text-positive">
+          <Text className="text-[13.5px] font-semibold text-emerald-deep" style={TABULAR}>
             {`${value > 0 ? '−' : ''}${money(value, currency)}`}
           </Text>
         </View>
@@ -1044,6 +1060,7 @@ const SavingsForm = ({
           </Text>
           <Text
             className={`text-[16px] font-extrabold ${overLimit ? 'text-negative' : 'text-text'}`}
+            style={TABULAR}
           >
             {`${remainder < 0 ? '−' : ''}${money(Math.abs(remainder), currency)}`}
           </Text>

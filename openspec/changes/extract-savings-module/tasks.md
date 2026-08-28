@@ -436,6 +436,43 @@ definición.
   pantalla menos el agarradero, el colchón y los insets— quedan **+105px en un iPhone 16 Pro** y
   **+14px en un Android de 360×740**. En un SE de 320×568 no entra ni entraba: ahí scrollea 117px.
 
+  **Séptima — paridad perceptual real entre las dos superficies mobile.** El ritmo entre bloques ya
+  coincidía, pero el resultado visual no: nativo se seguía leyendo más comprimido. La auditoría
+  propiedad por propiedad de los tres formularios encontró que **todo lo que quedaba estaba
+  concentrado en el héroe de monto**, que estaba escrito con OTRA FORMA y no solo con otras medidas.
+
+  ```
+  ### El héroe de monto tenía otra forma en nativo
+  - Web mobile:   apps/web/lib/savings/components/savings-drawer.tsx
+                  apps/web/lib/savings/components/purpose-allocate.tsx
+  - Nativo:       apps/mobile/components/savings/SavingsDrawer.tsx
+                  apps/mobile/components/savings/PurposeAllocate.tsx
+  - Cambio:       el rótulo y el chip pasan de ABSOLUTOS sobre el número a una
+                  fila propia en flujo; la cifra, de CENTRADA a alineada a la
+                  izquierda; el símbolo, de 27px sólido a 20px al 50%; el peso,
+                  de `bold` a `extrabold`; la calculadora, de colgar debajo del
+                  chip a ir en línea. Más `fontVariant: ['tabular-nums']` y un
+                  `lineHeight` explícito (el `tabular-nums`/`leading-none` de
+                  web), el verde del resumen de `positive` a `emerald-deep`
+                  —eran dos verdes distintos— y el chip de moneda al mismo
+                  casi-blanco.
+  - Divergencia:  dos, ambas aceptadas y ambas por componente compartido:
+                  (1) el ícono del `DateField bare` mide 18 en nativo y 16 en
+                      web — el componente lo comparte el alta de movimientos;
+                  (2) `tracking-wider` (0.05em) contra `tracking-[0.08em]` de
+                      web en los rótulos: 0.35px por carácter, y nativewind no
+                      resuelve `em` en `letterSpacing`.
+                  Consecuencia asumida: el héroe de «Guardar» ya NO es el mismo
+                  que el del alta de movimientos NATIVA, que sigue con la cifra
+                  centrada. La regla de este QA es la paridad web ↔ nativo.
+  - Runtime:      requiere `expo start -c`.
+  - Cierra:       casos 6, 7 y 8.
+  ```
+
+  El héroe baja de 96px a 77 —el mismo alto que web— y el formulario queda en 559px: **+124px de
+  margen en un iPhone 16 Pro y +33 en un Android de 360×740**, o sea más aire que antes y en las dos
+  superficies el mismo.
+
 - [x] 6.14 **Comparativa web ↔ nativa, superficie por superficie** (E27): **nueve divergencias**, tres
   graves —lo tipeado se perdía en el desvío, el detalle de un propósito tenía botón y enlace
   invertidos, y el tope negaba sin ofrecer la salida—. Las nueve corregidas. La comparación mecánica

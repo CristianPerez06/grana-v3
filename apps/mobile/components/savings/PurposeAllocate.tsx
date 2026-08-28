@@ -5,13 +5,14 @@ import { colors } from '../../lib/colors'
 import { PURPOSE_SEEDS, fitChipCount, type Purpose } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
-import { formatForDisplay, parseMoneyInput } from '@grana/validation'
+import { parseMoneyInput } from '@grana/validation'
 import { useT } from '../../lib/locale-context'
 import { Button } from '../ui/Button'
 import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { allocateToPurpose, unallocateFromPurpose } from '../../lib/savings/mutations'
 import { SheetBackHeader } from './SheetBackHeader'
+import { TABULAR } from './tabular'
 import { CHIP_SLOP, TAP_SLOP } from './tap-slop'
 
 type Currency = 'ARS' | 'USD'
@@ -124,7 +125,6 @@ export const PurposeAllocate = ({
   const remainder = available - value
   const overLimit = value > available
   const allocating = direction === 'allocate'
-  const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 16 + 2
 
   const limitError = overLimit
     ? allocating
@@ -180,48 +180,64 @@ export const PurposeAllocate = ({
         </Text>
       )}
 
-      {/* EL héroe de monto de la app: el mismo de «Guardar» y el del alta de
-          movimientos. Acá era el mismo bloque con otras medidas —30px contra 34,
-          el rótulo más chico, el chip en otro fondo y la calculadora al lado del
-          número en vez de abajo del chip— y eso ponía la misma pregunta con dos
-          caras distintas en dos vistas del MISMO sheet. */}
-      <View className="mt-3 rounded-2xl border border-border bg-card px-4 pb-3 pt-3">
-        <View className="relative">
-          <Text className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-wider text-text-soft">
+      {/* El héroe de monto, con la MISMA forma que web y no solo con las mismas
+          medidas: el rótulo y el chip en una fila propia —en flujo, no
+          absolutos—, y abajo el símbolo, la cifra y la calculadora sobre la
+          misma baseline, alineados a la IZQUIERDA.
+
+          Estaba escrito al revés: rótulo y chip absolutos sobre una cifra
+          CENTRADA, con la calculadora colgando debajo del chip. Eran las mismas
+          medidas y otra pantalla — y de paso 13px más baja, que es parte de por
+          qué nativo se leía más comprimido que web.
+
+          `tabular-nums` va por `fontVariant`, que es como se pide en RN, y el
+          `lineHeight` explícito reemplaza al `leading-none` de web: sin él, RN
+          le suma al renglón el ascendente y el descendente de la fuente. */}
+      <View className="mt-3 rounded-2xl border border-border bg-card px-4 py-3">
+        <View className="flex-row items-start justify-between">
+          <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
             {t('savings.amount_label')}
           </Text>
           {/* La moneda se elige acá: cambiarla cambia el piso, porque lo que
               hay sin destino en pesos no es lo que hay sin destino en dólares. */}
-          <View className="absolute right-0 top-0 items-end gap-1.5">
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('savings.currency_label')}
-              disabled={currencies.length < 2}
-              onPress={() =>
-                setCurrency(
-                  currencies[(currencies.indexOf(currency) + 1) % currencies.length] ?? currency,
-                )
-              }
-              className="flex-row items-center gap-1 rounded-lg border border-border bg-border-soft px-2.5 py-1"
-            >
-              <Text className="text-xs font-bold text-text">{currency}</Text>
-              {currencies.length > 1 && <ChevronDown size={12} color={colors.text} />}
-            </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('savings.currency_label')}
+            disabled={currencies.length < 2}
+            onPress={() =>
+              setCurrency(
+                currencies[(currencies.indexOf(currency) + 1) % currencies.length] ?? currency,
+              )
+            }
+            className="shrink-0 flex-row items-center gap-1 rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1"
+          >
+            <Text className="text-xs font-bold text-text">{currency}</Text>
+            {currencies.length > 1 && <ChevronDown size={12} color={colors.text} />}
+          </Pressable>
+        </View>
+        <View className="mt-2 flex-row items-baseline gap-1.5">
+          <Text
+            className="text-[20px] font-bold text-text opacity-50"
+            style={{ lineHeight: 20 }}
+          >
+            {CURRENCY_SYMBOL[currency]}
+          </Text>
+          <MoneyAmountInput
+            bare
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="0"
+            autoFocus
+            style={{
+              flex: 1,
+              paddingVertical: 0,
+              lineHeight: 27,
+              fontVariant: ['tabular-nums'],
+            }}
+            className="text-[27px] font-extrabold text-text"
+          />
+          <View className="shrink-0 self-center">
             <MoneyCalculator seed={amount} onResult={setAmount} />
-          </View>
-          <View className="min-h-[46px] flex-row items-center justify-center">
-            <Text className="pl-1 text-[27px] font-bold text-text">
-              {CURRENCY_SYMBOL[currency]}
-            </Text>
-            <MoneyAmountInput
-              bare
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="0"
-              autoFocus
-              style={{ width: amountInputWidth, paddingVertical: 0 }}
-              className="ml-1 text-[27px] font-bold text-text"
-            />
           </View>
         </View>
       </View>
@@ -340,13 +356,15 @@ export const PurposeAllocate = ({
               ? t('savings.purposes.unassigned_available')
               : t('savings.purposes.allocated_in', { purpose: purpose?.name ?? '' })}
           </Text>
-          <Text className="text-[13.5px] font-semibold text-text">{money(available)}</Text>
+          <Text className="text-[13.5px] font-semibold text-text" style={TABULAR}>
+            {money(available)}
+          </Text>
         </View>
         <View className="flex-row justify-between py-0.5">
           <Text className="text-[13.5px] text-text-muted">
             {t(allocating ? 'savings.purposes.will_allocate' : 'savings.purposes.will_unallocate')}
           </Text>
-          <Text className="text-[13.5px] font-semibold text-positive">
+          <Text className="text-[13.5px] font-semibold text-emerald-deep" style={TABULAR}>
             {`${value > 0 ? '−' : ''}${money(value)}`}
           </Text>
         </View>
@@ -356,6 +374,7 @@ export const PurposeAllocate = ({
           </Text>
           <Text
             className={`text-[16px] font-extrabold ${overLimit ? 'text-negative' : 'text-text'}`}
+            style={TABULAR}
           >
             {`${remainder < 0 ? '−' : ''}${money(Math.abs(remainder))}`}
           </Text>
