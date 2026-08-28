@@ -464,10 +464,19 @@ nombres, y es motivo suficiente para no haber cerrado.**
 
 1. **Nada de esto se implementa antes del QA visual nativo de `extract-savings-module`.** Es la compuerta
    vigente y no cambió.
-2. **El próximo paso es un mock**, no un schema: la puerta desde la cuenta, la pantalla de diferencia con
-   sus tres casos de signo, las tres opciones de causa, la línea del mes en las dos versiones —adentro de
-   «Entró» y con término propio— y la fila de Movimientos. **Ninguna tabla, ningún SQL.** Es el mismo
-   orden que evitó que el propósito naciera colgado de una fila.
+2. ✅ **El mock existe**: `docs/design/modelo-de-dinero/conciliacion-saldo-rendimiento.html`. Dieciséis
+   pantallas: la puerta con sus tres copys, el sheet de saldo real vacío y calculado, las tres causas
+   sugeridas por signo, los casos positivo / negativo / cero, Movimientos, **las dos versiones de la card
+   del mes**, el stress test con seis líneas, y las dos correcciones de copy. **Ninguna tabla, ningún SQL.**
+
+   Dos cosas que solo aparecieron al dibujarlas:
+   - **La card aguanta**, pero no plana: con dos líneas financieras bajo **un solo par de reglas
+     punteadas**. El techo deja de ser el número de líneas y pasa a ser el de **zonas**, que sigue
+     siendo cuatro. Plana, dos reglas seguidas leen como dos secciones.
+   - **La colisión de vocabulario es peor de lo que decía §14.** Puesta en una pantalla, «Rindió
+     +$25.000» arriba de una sección llamada «En rendimiento» —donde esos $25.000 **no** se
+     generaron— no es una molestia de estilo: es un error de categoría que el usuario **no tiene forma
+     de descubrir**.
 3. **Recién con ese mock se retoma el naming de FCI**, con las dos capas sobre la mesa y una sola
    decisión de vocabulario en vez de dos.
 4. **Aparte y en cualquier momento**, porque no depende de nada de esto: el copy de «Tu banco muestra»
