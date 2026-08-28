@@ -1,6 +1,6 @@
--- ═══════════════════════════════════════════════════════════════════════════
+-- ==================================================================
 -- 0060 — get_available_sums: el saldo inicial faltaba en accounts_net
--- ═══════════════════════════════════════════════════════════════════════════
+-- ==================================================================
 --
 -- BUG QUE ARREGLA
 --
@@ -139,9 +139,9 @@ comment on function public.get_available_sums(date) is
 revoke execute on function public.get_available_sums(date) from public;
 grant  execute on function public.get_available_sums(date) to authenticated;
 
--- ═══════════════════════════════════════════════════════════════════════════
+-- ==================================================================
 -- Self-checks
--- ═══════════════════════════════════════════════════════════════════════════
+-- ==================================================================
 --
 -- La 0057 ya verificaba que la función DERIVE de `get_account_balance_sums` —la
 -- lección de la 0051 sobre no replicar predicados— y pasó en verde mientras el
