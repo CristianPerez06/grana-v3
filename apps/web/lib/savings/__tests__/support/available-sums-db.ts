@@ -12,14 +12,52 @@ import { SCHEMA as BALANCE_SCHEMA, functionStatements as balanceFunctions } from
  * migration — what runs is what ships, not a transcription.
  *
  * 0057 composes on 0051/0052 (`get_account_balance_sums`), so those load first.
+ *
+ * 0060 replaces `get_available_sums` to add the sumando that was missing — the
+ * declared opening balance of each account. It is applied AFTER 0057, in the same
+ * order the dashboard SQL editor would: applying the old one and then the new one
+ * is what proves the replacement actually takes (a signature that did not match
+ * would fail here and not in production). That also brings `account_currencies`
+ * into the harness, whose DDL comes verbatim from 0007 + 0041.
  */
 
-const MIGRATION_0057 = resolve(
-  __dirname,
-  '../../../../../../supabase/migrations/0057_availability_reserve.sql',
-)
+const M = (file: string) => resolve(__dirname, '../../../../../../supabase/migrations/', file)
+
+const MIGRATION_0007 = M('0007_accounts.sql')
+const MIGRATION_0041 = M('0041_allow_negative_initial_balance.sql')
+const MIGRATION_0057 = M('0057_availability_reserve.sql')
+const MIGRATION_0060 = M('0060_available_sums_initial_balance.sql')
 
 const migration = () => readFileSync(MIGRATION_0057, 'utf-8')
+
+/**
+ * 0007's `create table public.account_currencies (…);` plus 0041's drop of the
+ * non-negative CHECK. Verbatim: an account CAN open "en rojo", and a harness that
+ * rejected it would not be the shipped schema.
+ */
+export function accountCurrenciesStatements(): string[] {
+  const ddl = readFileSync(MIGRATION_0007, 'utf-8').match(
+    /create table public\.account_currencies[\s\S]*?\n\);/i,
+  )
+  if (!ddl) throw new Error('account_currencies create table not found in 0007')
+
+  const drop = readFileSync(MIGRATION_0041, 'utf-8').match(
+    /alter table public\.account_currencies[\s\S]*?;/i,
+  )
+  if (!drop) throw new Error('the non-negative constraint drop was not found in 0041')
+
+  return [ddl[0], drop[0]]
+}
+
+/** 0060's replacement of `get_available_sums`, verbatim. */
+export function availableSumsFix(): string {
+  const blocks =
+    readFileSync(MIGRATION_0060, 'utf-8').match(/create or replace function[\s\S]*?\$\$;/gi) ?? []
+  if (blocks.length !== 1) {
+    throw new Error(`expected 1 function definition in 0060, found ${blocks.length}`)
+  }
+  return blocks[0]
+}
 
 /** 0057's `create table public.availability_reserve (…);`, verbatim. */
 export function reserveTableStatement(): string {
@@ -49,13 +87,15 @@ const DEPENDENCIES = `
   insert into public.currencies (code) values ('ARS'), ('USD'), ('EUR');
 `
 
-/** A fresh in-memory Postgres with the schema, 0051/0052 and 0057 applied. */
+/** A fresh in-memory Postgres with the schema, 0051/0052, 0057 and 0060 applied. */
 export async function createAvailableDb(): Promise<PGlite> {
   const db = new PGlite()
   await db.exec(BALANCE_SCHEMA)
   await db.exec(DEPENDENCIES)
+  for (const ddl of accountCurrenciesStatements()) await db.exec(ddl)
   for (const fn of balanceFunctions()) await db.exec(fn)
   await db.exec(reserveTableStatement())
   for (const fn of reserveFunctionStatements()) await db.exec(fn)
+  await db.exec(availableSumsFix())
   return db
 }
