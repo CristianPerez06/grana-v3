@@ -11,6 +11,7 @@ export {
   toCanonical,
   formatGrouped,
   formatForDisplay,
+  resolveTypedMoneyText,
 } from "./money-input-format";
 export {
   signupSchema,

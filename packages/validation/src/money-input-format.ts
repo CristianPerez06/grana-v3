@@ -76,3 +76,35 @@ export const formatGrouped = (canonical: string): string => {
 
 // The input's displayed value: canonical (as stored upstream) → grouped text.
 export const formatForDisplay = (canonical: string): string => formatGrouped(canonical)
+
+/**
+ * El texto que un campo de monto NATIVO acaba de recibir, resuelto a canónico.
+ *
+ * Existe por un problema que web no tiene. Web intercepta la tecla `.` y la
+ * cambia por `,` en el `keydown`, así que sabe que el usuario **la tipeó**. En
+ * React Native solo llega el texto resultante, y ahí un `.` es ambiguo:
+ *
+ *     "5.00"  ¿es «cinco con cero cero»… o «5.000» al que le borraron un dígito?
+ *
+ * Mirando el texto solo, no se puede saber. La regla que lo resuelve es que
+ * **borrar nunca agrega un punto**: si el texto es más corto que lo que estaba
+ * en pantalla, cualquier `.` que tenga es de MILES y no de centavos.
+ *
+ * Sin esto, borrar un dígito de `5.000` devolvía `5,00` — el punto de miles
+ * leído como decimal. Encontrado en el QA visual nativo del módulo de ahorro.
+ *
+ * @param previousDisplay Lo que el campo venía mostrando, ya agrupado.
+ * @param incoming El texto que devolvió el `onChangeText`.
+ */
+export const resolveTypedMoneyText = (
+  previousDisplay: string,
+  incoming: string,
+  allowNegative = false,
+): string => {
+  // Un `.` al final seguido de ≤2 dígitos es decimal SOLO si el usuario acaba de
+  // agregar algo. Los puntos de agrupación nunca quedan al final de un número
+  // bien formado, pero sí quedan ahí a mitad de un borrado.
+  const grew = incoming.length > previousDisplay.length
+  const text = grew ? incoming.replace(/\.(\d{0,2})$/, ',$1') : incoming
+  return toCanonical(text, allowNegative)
+}

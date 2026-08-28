@@ -1,6 +1,6 @@
 import { type ComponentProps } from 'react'
 import type { MoneyAmountInputProps } from '@grana/ui-contracts'
-import { toCanonical, formatForDisplay } from '@grana/validation'
+import { formatForDisplay, resolveTypedMoneyText } from '@grana/validation'
 import { Input } from './Input'
 
 // Money fields MUST use this instead of a plain `<Input>` for currency.
@@ -42,12 +42,6 @@ const sanitize = (raw: string): string => {
   return head + tail
 }
 
-// A `.` the user typed for cents (grouping dots never sit at the end): a dot at
-// the end followed by ≤2 digits is a decimal — map it to the es-AR comma before
-// canonicalizing so the numeric keypad's `.` reaches cents. RN counterpart of
-// web's `.`→`,` keydown remap; a mid-number `.` stays grouping and is dropped.
-const remapDecimalDot = (text: string): string => text.replace(/\.(\d{0,2})$/, ',$1')
-
 export function MoneyAmountInput({
   value,
   onChangeText,
@@ -63,9 +57,16 @@ export function MoneyAmountInput({
       value={display}
       keyboardType="decimal-pad"
       inputMode="decimal"
+      // El `.` del teclado numérico tiene que llegar a los centavos, pero acá
+      // solo llega el texto resultante: un `.` puede ser el que el usuario
+      // acaba de tipear o el de MILES que ya estaba. `resolveTypedMoneyText`
+      // los distingue comparando contra lo que se venía mostrando — borrar
+      // nunca agrega un punto. Web no lo necesita porque intercepta la tecla.
       onChangeText={(text) =>
         onChangeText(
-          groupThousands ? toCanonical(remapDecimalDot(text), allowNegative) : sanitize(text),
+          groupThousands
+            ? resolveTypedMoneyText(display, text, allowNegative)
+            : sanitize(text),
         )
       }
     />

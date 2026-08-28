@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronDown } from 'lucide-react-native'
+import { ChevronDown, Plus } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
@@ -889,6 +889,7 @@ const SavingsForm = ({
             <Text className="shrink text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
               {mode === 'save' ? t('savings.purposes.label') : t('savings.purposes.source_label')}
             </Text>
+            <View className="shrink-0 flex-row items-center gap-3">
             {hiddenCount > 0 && (
               <Pressable
                 accessibilityRole="button"
@@ -913,6 +914,27 @@ const SavingsForm = ({
                 </Text>
               </Pressable>
             )}
+            {/* Crear uno nuevo solo tiene sentido al guardar: uno recién creado
+                no tiene plata, así que como ORIGEN no serviría para nada.
+
+                Va ACÁ y no entre los chips, por la misma razón que el control de
+                overflow: al final de una fila que envuelve queda huérfano en su
+                propio renglón cuando la última fila está llena, y ahí no se lee
+                como acción. Con texto y no como un «+» pelado, igual que web:
+                un ícono solo obliga a adivinar qué crea. */}
+            {mode === 'save' && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onPickPurpose}
+                className="min-h-[44px] shrink-0 flex-row items-center gap-1"
+              >
+                <Plus size={13} color={colors.emeraldDeep} strokeWidth={2.5} />
+                <Text className="text-[12px] font-extrabold text-positive">
+                  {t('savings.purposes.new')}
+                </Text>
+              </Pressable>
+            )}
+            </View>
           </View>
           <View className="mt-2 flex-row flex-wrap gap-2">
             {shownOptions.map((option) => {
@@ -933,18 +955,6 @@ const SavingsForm = ({
                 </Pressable>
               )
             })}
-            {/* Crear uno nuevo solo al guardar: recién creado no tiene plata,
-                así que como ORIGEN no serviría. */}
-            {mode === 'save' && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('savings.purposes.new')}
-                onPress={onPickPurpose}
-                className="size-11 items-center justify-center rounded-full border border-dashed border-border"
-              >
-                <Text className="text-[16px] font-bold text-positive">+</Text>
-              </Pressable>
-            )}
           </View>
         </View>
       )}
