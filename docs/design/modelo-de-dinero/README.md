@@ -3,6 +3,27 @@
 Simulación de pantallas del modelo de `docs/modelo-de-dinero.md`, fase por fase. Abrir los `.html`
 en el navegador.
 
+## Vocabulario vigente — la única tabla que hay que creerle
+
+Varios mocks de abajo son **históricos** y usan nombres que ya se descartaron. Si alguno contradice esta
+tabla, **gana esta tabla**.
+
+| Hecho | Rótulo vigente | Descartado |
+|---|---|---|
+| Una **cuenta remunerada** acreditó intereses sola | **Interés acreditado** | «Rindió» queda solo como copy de apoyo, nunca como rótulo |
+| La **sección** donde vive la plata puesta en instrumentos | **Plata colocada** | **«En rendimiento»**, por colisión semántica con las cuentas remuneradas |
+| Plata que **salió** hacia un instrumento | **Colocaste** | «Pusiste a rendir», «A rendimiento» |
+| Un **rescate positivo y líquido** | **Rendimiento cobrado** | «Ganaste» |
+| Un **rescate negativo** | **Resultado −$X** | «Perdiste» |
+
+**Por qué se cayó «En rendimiento»:** una cuenta remunerada **no es una posición y no vive en esa
+sección**, pero genera una línea del mes. Con la línea diciendo «Rindió» arriba de una sección llamada
+«En rendimiento» —donde esa plata **no se generó**— el usuario asocia dos cosas que no van juntas, y no
+tiene forma de descubrir que se equivocó. Está dibujado en `conciliacion-saldo-rendimiento.html`,
+sección G. Lo demás está en `docs/exploracion-instrumentos.md` §5.2d.
+
+---
+
 | Archivo | Fase | Estado |
 |---|---|---|
 | `modulo-ahorro-e-inversion.html` | Módulo | **Vigente.** La casa de Guardado y Propósitos: la puerta desde el dashboard, la jerarquía, el estado vacío y la decisión del corte de moneda. Es `extract-savings-module`, prerrequisito de la fase 3 |
@@ -11,9 +32,9 @@ en el navegador.
 | `marca-cuenta-intereses.html` | **Previa a 3A** | **Vigente.** La marca opcional por cuenta —«esta cuenta puede acreditar intereses»— que decide **cuánta presencia** tiene la puerta de conciliación: dónde entra en crear/editar, el detalle con la marca apagada, prendida y apagada-con-historial, la sugerencia después del primer interés, la matriz marca × historial y el copy. **Es donde está escrita la regla que gobierna la capa: *Grana ofrece conciliación, pero no persigue conciliación*** |
 | `interes-acreditado-flujo.html` | **Previa a 3A** | **Vigente. Es el flujo definitivo de la capa.** Diez pantallas, un solo camino, decisiones aplicadas: la puerta con dos pesos según historial, el sheet, las tres causas, **la confirmación con «qué va a pasar»**, Movimientos, la card del mes, los signos negativo y cero, y **el estado periódico con umbrales por historial**. Incluye el mes cargado —sueldo, gastos, guardado, interés y colocación— y **17 decisiones cerradas listas para spec** |
 | `conciliacion-saldo-rendimiento.html` | **Previa a 3A** | **Superado como flujo por `interes-acreditado-flujo.html`, y se conserva por el razonamiento.** Es donde se compararon los tres copys de la puerta, se pusieron A y B de la card una al lado de la otra, y **se descubrió la colisión que cambió el naming de instrumentos** (sección G). Cuando el saldo real de una cuenta no coincide con el calculado: la puerta discreta en el detalle de cuenta, el sheet de saldo real con la diferencia en vivo, las tres causas —rindió / me faltó registrar / no sé— sugeridas por signo pero no impuestas, los casos positivo, negativo y cero, y las **dos versiones de la card del mes**. Incluye el stress test con seis líneas y las dos correcciones de copy que ya están mal en producción. Su razonamiento está en `docs/exploracion-rendimiento-cuentas.md` |
-| `fase-3a-fci-v1.html` | 3A · FCI | **Vigente, y es el mock de referencia de la fase.** Diecisiete pantallas con la dirección provisoria cerrada: la sección se llama **«En rendimiento»**, el criterio de admisión es de comportamiento y no de producto, v1 es manual y simple, el «pusiste» nunca va solo y el resultado se dice sobrio. Incluye los dos estados sin nada, las dos altas con la pregunta de duplicación, el rescate total en los dos signos, el parcial, y las líneas del mes |
-| `fase-3a-naming-final.html` | 3A · FCI | **Vigente. Es donde se decide el nombre.** Los cinco casos que producto puso como prueba —un FCI activo, el alta «lo puse hoy», rescate positivo, rescate negativo, FCI + plazo fijo— más la línea del mes, cada uno con los tres nombres y **los mismos datos**. Solo varían título de sección, verbo del alta, verbo del mes y rótulo del resultado. Su hallazgo más fuerte es que en el rescate negativo **las tres columnas salen idénticas** |
-| `fase-3a-fci-naming.html` | 3A · FCI | **Superado por `fase-3a-fci-v1.html` en lo que decidía.** Comparaba tres nombres con los mismos datos (A «Puesto a trabajar» · B «Plata colocada» · C «Inversiones» de control). Cumplió: sacó la discusión de la prosa y la puso en pantalla. El nombre que salió de ahí y del feedback externo **no es ninguno de los tres** — es «En rendimiento». Se conserva porque es la evidencia de por qué. Su razonamiento está en `docs/exploracion-instrumentos.md` |
+| `fase-3a-fci-v1.html` | 3A · FCI | **Vigente, y es el mock de referencia de la fase.** Diecisiete pantallas, y **usa el naming vigente**: la sección se llama **«Plata colocada»**, el verbo del mes es **«Colocaste»**, el rescate positivo dice **«Rendimiento cobrado»** y el negativo **«Resultado −$X»**. El criterio de admisión es de comportamiento y no de producto, v1 es manual y simple, y el «pusiste» nunca va solo. Incluye los dos estados sin nada, las dos altas con la pregunta de duplicación, el rescate total en los dos signos, el parcial, y las líneas del mes |
+| `fase-3a-naming-final.html` | 3A · FCI | **Histórico. NO decidió el nombre**, aunque para eso se hizo. Los cinco casos que producto puso como prueba, cada uno con los tres nombres y **los mismos datos**. «En rendimiento» pasó las dos condiciones de descarte y ganó igual — y aun así se cayó después, por una capa que no estaba sobre la mesa. Se conserva por dos cosas: el hallazgo de que en el rescate negativo **las tres columnas salen idénticas**, y la lección de método —**un ganador solo vale contra lo que estaba sobre la mesa** |
+| `fase-3a-fci-naming.html` | 3A · FCI | **Histórico.** La primera comparativa de naming (A «Puesto a trabajar» · B «Plata colocada» · C «Inversiones» de control). Cumplió: sacó la discusión de la prosa. De acá salió «En rendimiento» —una cuarta que ninguna de las tablas iba a encontrar—, que después se cayó; **el ganador final terminó siendo su opción B**. Su razonamiento está en `docs/exploracion-instrumentos.md` |
 | `fase-3a-plazo-fijo.html` | 3B · Plazo fijo | **Cambió de número: ahora es 3B.** El orden de fases se corrigió y la primera es FCI, no plazo fijo. Su razonamiento contable —stock vs. flujo, los tres desenlaces, el interés que no es ingreso— **sigue vigente y es de donde sale medio el documento de exploración**; lo que cambia es cuándo se construye. La navegación hay que redibujarla: la cuenta pasa a ser **atajo contextual**, no la puerta principal |
 | `fase-3-posiciones.html` | 3 · Posiciones | **Superado por `fase-3a`.** Se conserva por el razonamiento contable —stock vs. flujo, el bucket, los tres desenlaces—, pero su circuito de once pantallas repetía el patrón que la fase 2 desarmó |
 | — | 4 y 5 | No se mockean todavía: dibujar el detalle de una meta o la pantalla de patrimonio sería inventar decisiones que no están tomadas, y un mock convincente de algo no decidido termina implementándose tal cual |

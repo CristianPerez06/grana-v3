@@ -30,12 +30,13 @@
 > **«Rendimiento cobrado»** — la palabra volvió a estar libre, que era el único costo visible que tenía
 > el nombre descartado.
 >
-> **Revisión 3 — la dirección de FCI v1 quedó cerrada sobre el mock, no sobre este texto.** La sección
-> se llama **«En rendimiento»**, que no era ninguno de los tres candidatos que este documento comparó
-> (§5.2c). El resultado de un rescate se dice **«Resultado»**, un rótulo para los dos signos, y el
-> «pusiste» **nunca va solo**. Todo está dibujado en
-> `docs/design/modelo-de-dinero/fase-3a-fci-v1.html`, que es la referencia de la fase; §5.2 y §5.2b se
-> conservan como el razonamiento que llevó ahí, no como la recomendación vigente.
+> **Revisión 3 — la dirección de FCI v1 se cerró sobre el mock, no sobre este texto**, y el nombre pasó
+> por dos vueltas: primero se eligió «En rendimiento» (§5.2c) y después se cayó (§5.2d). **Lo vigente es
+> «Plata colocada»**, con verbo **«Colocaste»**, rescate positivo **«Rendimiento cobrado»** y negativo
+> **«Resultado −$X»**. El «pusiste» **nunca va solo**. Todo está dibujado en
+> `docs/design/modelo-de-dinero/fase-3a-fci-v1.html`, que es la referencia de la fase y **ya usa el
+> nombre vigente**; §5.2, §5.2b y §5.2c se conservan como el razonamiento que llevó ahí, no como la
+> recomendación vigente.
 
 ---
 
@@ -447,9 +448,9 @@ cuesta más que nombrarla bien — es la lección que ya dejó «Ahorro e invers
 
 | Candidato | Entiende un argentino común | Sirve FCI | Sirve PF | Sirve broker | ¿Se confunde con Guardado? | ¿Suena a banco/broker? | Voz de Grana |
 |---|:--:|:--:|:--:|:--:|---|---|---|
-| **En rendimiento** *(elegido)* | 🟢 alto | 🟢 | 🟢 | 🟡 un CEDEAR en baja no está «rindiendo» | 🟢 **No**: «guardado» es un acto tuyo, «en rendimiento» es un estado de la plata | 🟢 No | 🟢 Palabra corriente, no de folleto |
+| ~~**En rendimiento**~~ *(elegido y después descartado — §5.2d)* | 🟢 alto | 🟢 | 🟢 | 🟡 un CEDEAR en baja no está «rindiendo» | 🟢 **No**: «guardado» es un acto tuyo, «en rendimiento» es un estado de la plata | 🟢 No | 🔴 **Choca con la capa de cuentas remuneradas** |
 | **Puesto a trabajar** | 🟢 alto | 🟢 | 🟢 | 🟢 | 🟢 **No**: «guardado» es quieto, «trabajando» hace algo | 🟢 No | 🟢 Verbo del usuario |
-| **Plata colocada** | 🟡 medio-alto | 🟢 | 🟢 | 🟡 se estira | 🟡 **Riesgo**: los dos son participios de «dejé la plata en algún lado» | 🟡 «Colocación» es palabra del que vende | 🟡 Correcta pero neutra |
+| **Plata colocada** *(VIGENTE)* | 🟡 medio-alto | 🟢 | 🟢 | 🟡 se estira | 🟡 **Riesgo**: los dos son participios de «dejé la plata en algún lado» | 🟡 «Colocación» es palabra del que vende | 🟡 Correcta pero neutra |
 | Inversiones | 🟢 alto | 🟢 | 🔴 no se siente inversión | 🟢 | 🟢 No | 🟡 | 🔴 Deja afuera protegerse, que es el acto argentino |
 | A resguardo | 🟡 | 🔴 **falso**: se rescata en el día | 🟢 | 🔴 | 🟡 | 🟢 No | 🟡 |
 | Instrumentos | 🔴 jerga | 🟢 | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 Nadie dice «mis instrumentos» |
@@ -495,6 +496,10 @@ de las dos alertas, gana B. Si C —el control— se entiende mucho mejor que la
 usar C: es que ni A ni B se entienden y hay que buscar una cuarta.
 
 ### 5.2c Cerrado, y con una cuarta que esta tabla no tenía
+
+> **Superado por §5.2d.** Lo de abajo describe la **primera** elección, que después se cayó. **El nombre
+> vigente es «Plata colocada».** Se conserva porque explica de dónde salió la cuarta opción y por qué
+> la comparación A/B/C no alcanzaba.
 
 **Ganó «En rendimiento»**, que no era ninguno de los tres del mock. Salió de contrastar el mock con
 feedback externo, que es exactamente el desenlace que §5.2b había dejado previsto —«hay que buscar una
