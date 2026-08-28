@@ -1,6 +1,10 @@
 # Tasks: extract-savings-module
 
 > **Sin migraciones.** Si este change termina tocando SQL, algo se entendió mal (E6).
+>
+> **Excepción, y no es scope creep: la 0060** (§8). No agrega nada al módulo — arregla un bug de
+> producción en `get_available_sums` que este change destapó al ponerle un segundo consumidor a esa
+> función. Aterrizó en esta rama porque es donde se encontró, no porque el módulo lo necesitara.
 
 ## Estado
 
@@ -17,6 +21,7 @@ Lo que queda abierto es de **cuatro** clases, y ninguna es implementación pendi
 | **Diferido a monetización** | 4b.1–4b.4 | Apagar el módulo solo tiene sentido con sistema de planes, que no existe (E10) |
 | **Backlog no bloqueante** | 4c.12 · 6.7b | Anotado para no perderlo; no frena nada |
 | **Compuertas** | 7.1 · 7.2 | No archivar hasta el QA visual nativo; la fase 3A viene después |
+| **Deuda destapada** | 8.2 | Cuatro hallazgos del barrido que siguió al bug crítico. Ninguno bloquea, ninguno es de este change |
 
 **Nada de esto se toca hasta mirar la app nativa corriendo**: lo que el QA visual encuentre puede
 cambiar lo que haya que hacer, y arreglar a ciegas sobre código que nunca se ejecutó es escribir dos
@@ -345,3 +350,52 @@ definición.
 - [ ] 7.2 **La fase 3A (plazo fijo) se construye adentro de este módulo** y por eso va después. El
   mock `fase-3a-plazo-fijo.html` hay que redibujarlo con la cuenta como **atajo contextual** y no
   como arquitectura
+
+## 8. Un bug crítico que este change destapó
+
+- [x] 8.1 **`get_available_sums` omitía el saldo inicial de las cuentas. Cerrado.**
+
+  **Síntoma.** «Para gastar» mostraba el número correcto un instante y después bajaba, en web y en
+  nativa. El Hero llega server-rendered y pinta el total de cuentas; cuando resolvía la consulta del
+  disponible, lo pisaba con un número más chico. Y como «Tenías» **se deriva** de ese número, se
+  corrían todos los términos de la card a la vez — sin dejar de cerrar, que es lo que lo hacía
+  silencioso.
+
+  **Causa.** La 0057 componía `accounts_net` con `get_account_balance_sums`, que devuelve **solo el
+  neto de movimientos** por cuenta y moneda. El saldo de una cuenta es `initial_balance + neto de
+  movimientos`, y el primer sumando nunca entró: la palabra `initial_balance` no aparecía en toda la
+  migración. La diferencia era exactamente la suma de los saldos iniciales declarados.
+
+  **Fix.** Migración **0060**: `accounts_net` pasa a ser *saldo inicial vigente + neto de
+  movimientos*, con la misma regla de `initial_balance_date` que aplica el Hero. Va ahí y no en
+  `get_account_balance_sums`, que tiene un significado propio y correcto — cambiárselo arreglaría
+  este call site y rompería los otros dos.
+
+  **Verificación.** Treinta y tres tests sobre la SQL que se envía (PGlite), agregados al archivo que
+  ya cubría la 0057 **sin tocar sus quince**: el inicial sin movimientos, el corte por fecha en sus
+  tres bordes, cuenta archivada y tarjeta fuera del universo, bimoneda, filas vacías, y **paridad
+  contra el Hero** —contra `accounts_net` y nunca contra `available`, que ya restó lo guardado—.
+  Comprobado que **15 de los 33 se ponen en rojo al quitar el fix**. Más verificación manual en la
+  app real: los cuatro consumidores de la función, dos usuarios, dos monedas, todo al centavo.
+
+  **Estado: cerrado.** El QA visual nativo estaba corriendo sobre un número base equivocado; recién
+  con esto tiene sentido mirarlo.
+
+- [ ] 8.2 **Backlog destapado por el barrido posterior.** Ninguno bloquea el QA ni el archivado, y
+  **ninguno es de este change** — se anotan acá porque acá se encontraron.
+
+  - **`initial_balance_date` no se aplica en Cuentas.** El Hero y `get_available_sums` respetan la
+    fecha del saldo inicial; las tres composiciones de `packages/accounts` no. Con un inicial fechado
+    a futuro, el detalle de la cuenta muestra un número distinto del que esa cuenta aporta al
+    disponible. Divergencia real, incidencia muy baja.
+  - **`computeBalance` está sin uso y su lógica duplicada tres veces.** Vive en
+    `packages/accounts/src/balance.ts`, se re-exporta desde web, y nadie la llama: los tres lugares
+    que calculan saldo inlinean la misma aritmética. Es el patrón que la 0051 dejó documentado como
+    causa de divergencia, y es **por qué el punto anterior pudo pasar**. Conviene arreglarlos juntos.
+  - **La 0057 conserva la definición vieja de `get_available_sums`.** Aplicar todo en orden queda
+    bien porque la 0060 va después; re-ejecutar solo la 0057 devuelve el bug. Falta una nota en su
+    encabezado.
+  - **El copy «Tu banco muestra»** del puente rotula `accountsNet`, que es el cálculo de Grana y no
+    un dato del banco. Inocuo mientras los dos números coincidan; falso en una cuenta con drift. Ya
+    estaba anotado en `docs/exploracion-rendimiento-cuentas.md` §2.3, con
+    *«En tus cuentas, según Grana»* como reemplazo propuesto.
