@@ -12,7 +12,7 @@ import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { allocateToPurpose, unallocateFromPurpose } from '../../lib/savings/mutations'
 import { SheetBackHeader } from './SheetBackHeader'
-import { TABULAR } from './tabular'
+import { MONEY_LINE_HEIGHT, TABULAR } from './tabular'
 import { CHIP_SLOP, TAP_SLOP } from './tap-slop'
 
 type Currency = 'ARS' | 'USD'
@@ -195,7 +195,7 @@ export const PurposeAllocate = ({
           le suma al renglón el ascendente y el descendente de la fuente. */}
       <View className="mt-3 rounded-2xl border border-border bg-card px-4 py-3">
         <View className="flex-row items-start justify-between">
-          <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+          <Text className="text-[11px] font-bold uppercase tracking-wider leading-[1.5] text-text-soft">
             {t('savings.amount_label')}
           </Text>
           {/* La moneda se elige acá: cambiarla cambia el piso, porque lo que
@@ -211,14 +211,22 @@ export const PurposeAllocate = ({
             }
             className="shrink-0 flex-row items-center gap-1 rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1"
           >
-            <Text className="text-xs font-bold text-text">{currency}</Text>
+            <Text className="text-xs font-bold leading-[1.5] text-text">{currency}</Text>
             {currencies.length > 1 && <ChevronDown size={12} color={colors.text} />}
           </Pressable>
         </View>
-        <View className="mt-2 flex-row items-baseline gap-1.5">
+        {/* El renglón del monto necesita ALTO REAL, no el `leading-none` de web.
+            Un `lineHeight` igual al `fontSize` es lo que cortaba «$ 50.000»
+            arriba y abajo: el navegador deja que el glifo se salga de su caja de
+            línea, RN la RECORTA. Una cifra de 27px pide unos 34 entre ascendente
+            y descendente, así que van 36 —con su `min-h` para que la fila no se
+            colapse— y el mismo valor en el símbolo, para que los dos compartan
+            la baseline. El monto es el campo principal: el alto sale de otro
+            lado, nunca de acá. */}
+        <View className="mt-2 min-h-[36px] flex-row items-baseline gap-1.5">
           <Text
             className="text-[20px] font-bold text-text opacity-50"
-            style={{ lineHeight: 20 }}
+            style={{ lineHeight: MONEY_LINE_HEIGHT }}
           >
             {CURRENCY_SYMBOL[currency]}
           </Text>
@@ -231,7 +239,11 @@ export const PurposeAllocate = ({
             style={{
               flex: 1,
               paddingVertical: 0,
-              lineHeight: 27,
+              lineHeight: MONEY_LINE_HEIGHT,
+              // Android le suma al renglón el padding de la fuente, que acá se
+              // ve como el número descentrado dentro de su caja.
+              includeFontPadding: false,
+              textAlignVertical: 'center',
               fontVariant: ['tabular-nums'],
             }}
             className="text-[27px] font-extrabold text-text"
@@ -254,7 +266,7 @@ export const PurposeAllocate = ({
               no se lee como acción sino como un chip cortado. Acá había quedado
               como chip. */}
           <View className="flex-row items-center justify-between gap-3">
-            <Text className="shrink text-[11px] font-bold uppercase tracking-wider text-text-soft">
+            <Text className="shrink text-[11px] font-bold uppercase tracking-wider leading-[1.5] text-text-soft">
               {t('savings.purposes.pick_inline')}
             </Text>
             <View className="shrink-0 flex-row items-center gap-3">
@@ -312,7 +324,7 @@ export const PurposeAllocate = ({
                 }`}
               >
                 <Text className="text-[15px]">{option.icon ?? '🫙'}</Text>
-                <Text className="text-[13px] font-semibold text-text">{option.name}</Text>
+                <Text className="text-[13px] font-semibold leading-[1.5] text-text">{option.name}</Text>
               </Pressable>
             ))}
             {/* Las sugerencias solo cuando NO hay propósitos plegados: son un
@@ -340,7 +352,7 @@ export const PurposeAllocate = ({
                 }`}
               >
                 <Text className="text-[15px]">{seed.icon}</Text>
-                <Text className="text-[13px] font-semibold text-text-muted">
+                <Text className="text-[13px] font-semibold leading-[1.5] text-text-muted">
                   {t(`savings.purposes.seeds.${seed.key}`)}
                 </Text>
               </Pressable>
@@ -351,29 +363,29 @@ export const PurposeAllocate = ({
 
       <View className="mt-4 rounded-xl border border-border-soft bg-card px-4 py-3">
         <View className="flex-row justify-between py-0.5">
-          <Text className="text-[13.5px] text-text-muted">
+          <Text className="text-[13.5px] leading-[1.5] text-text-muted">
             {allocating
               ? t('savings.purposes.unassigned_available')
               : t('savings.purposes.allocated_in', { purpose: purpose?.name ?? '' })}
           </Text>
-          <Text className="text-[13.5px] font-semibold text-text" style={TABULAR}>
+          <Text className="text-[13.5px] font-semibold leading-[1.5] text-text" style={TABULAR}>
             {money(available)}
           </Text>
         </View>
         <View className="flex-row justify-between py-0.5">
-          <Text className="text-[13.5px] text-text-muted">
+          <Text className="text-[13.5px] leading-[1.5] text-text-muted">
             {t(allocating ? 'savings.purposes.will_allocate' : 'savings.purposes.will_unallocate')}
           </Text>
-          <Text className="text-[13.5px] font-semibold text-emerald-deep" style={TABULAR}>
+          <Text className="text-[13.5px] font-semibold leading-[1.5] text-emerald-deep" style={TABULAR}>
             {`${value > 0 ? '−' : ''}${money(value)}`}
           </Text>
         </View>
         <View className="mt-1.5 flex-row justify-between border-t border-border-soft pt-2">
-          <Text className="text-[13.5px] text-text-muted">
+          <Text className="text-[13.5px] leading-[1.5] text-text-muted">
             {t(allocating ? 'savings.purposes.left_unassigned' : 'savings.purposes.stays_allocated')}
           </Text>
           <Text
-            className={`text-[16px] font-extrabold ${overLimit ? 'text-negative' : 'text-text'}`}
+            className={`text-[16px] font-extrabold leading-[1.5] ${overLimit ? 'text-negative' : 'text-text'}`}
             style={TABULAR}
           >
             {`${remainder < 0 ? '−' : ''}${money(Math.abs(remainder))}`}
@@ -388,7 +400,7 @@ export const PurposeAllocate = ({
       </Text>
 
       {(limitError ?? error) != null && (
-        <Text className="mt-3 text-[13px] font-semibold text-negative">{limitError ?? error}</Text>
+        <Text className="mt-3 text-[13px] font-semibold leading-[1.5] text-negative">{limitError ?? error}</Text>
       )}
 
       <View className="mt-4">

@@ -97,7 +97,12 @@ export function DateField({ value, onChange, placeholder, invalid, open, onOpenC
           className="flex-row items-center gap-2"
         >
           <Calendar size={18} color={colors.textMuted} />
-          <Text className={`text-[13px] font-semibold ${value ? 'text-text' : 'text-text-soft'}`}>
+          {/* `leading-[1.5]` explícito: en web este texto hereda el 1.5 del preflight
+              de Tailwind y en RN caía en el ~1.2 de la fuente, así que la fila de
+              la fecha medía menos que la misma fila en web. */}
+          <Text
+            className={`text-[13px] font-semibold leading-[1.5] ${value ? 'text-text' : 'text-text-soft'}`}
+          >
             {display}
           </Text>
         </Pressable>

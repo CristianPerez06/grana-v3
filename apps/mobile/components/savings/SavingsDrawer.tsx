@@ -27,7 +27,7 @@ import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { FormSheetBody } from '../layout/FormSheetBody'
 import { SheetBackHeader } from './SheetBackHeader'
-import { TABULAR } from './tabular'
+import { MONEY_LINE_HEIGHT, TABULAR } from './tabular'
 import { CHIP_SLOP, TAP_SLOP } from './tap-slop'
 import { PurposePicker } from './PurposePicker'
 import { PurposeForm } from './PurposeForm'
@@ -794,7 +794,7 @@ const SavingsForm = ({
           le suma al renglón el ascendente y el descendente de la fuente. */}
       <View className="mt-3 rounded-2xl border border-border bg-card px-4 py-3">
         <View className="flex-row items-start justify-between">
-          <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+          <Text className="text-[11px] font-bold uppercase tracking-wider leading-[1.5] text-text-soft">
             {t('savings.amount_label')}
           </Text>
           <Pressable
@@ -804,14 +804,22 @@ const SavingsForm = ({
             accessibilityLabel={t('savings.currency_label')}
             className="shrink-0 flex-row items-center gap-1 rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1"
           >
-            <Text className="text-xs font-bold text-text">{currency}</Text>
+            <Text className="text-xs font-bold leading-[1.5] text-text">{currency}</Text>
             {currencyOptions.length > 1 && <ChevronDown size={12} color={colors.text} />}
           </Pressable>
         </View>
-        <View className="mt-2 flex-row items-baseline gap-1.5">
+        {/* El renglón del monto necesita ALTO REAL, no el `leading-none` de web.
+            Un `lineHeight` igual al `fontSize` es lo que cortaba «$ 50.000»
+            arriba y abajo: el navegador deja que el glifo se salga de su caja de
+            línea, RN la RECORTA. Una cifra de 27px pide unos 34 entre ascendente
+            y descendente, así que van 36 —con su `min-h` para que la fila no se
+            colapse— y el mismo valor en el símbolo, para que los dos compartan
+            la baseline. El monto es el campo principal: el alto sale de otro
+            lado, nunca de acá. */}
+        <View className="mt-2 min-h-[36px] flex-row items-baseline gap-1.5">
           <Text
             className="text-[20px] font-bold text-text opacity-50"
-            style={{ lineHeight: 20 }}
+            style={{ lineHeight: MONEY_LINE_HEIGHT }}
           >
             {CURRENCY_SYMBOL[currency]}
           </Text>
@@ -824,7 +832,11 @@ const SavingsForm = ({
             style={{
               flex: 1,
               paddingVertical: 0,
-              lineHeight: 27,
+              lineHeight: MONEY_LINE_HEIGHT,
+              // Android le suma al renglón el padding de la fuente, que acá se
+              // ve como el número descentrado dentro de su caja.
+              includeFontPadding: false,
+              textAlignVertical: 'center',
               fontVariant: ['tabular-nums'],
             }}
             className="text-[27px] font-extrabold text-text"
@@ -855,7 +867,7 @@ const SavingsForm = ({
                 hitSlop={CHIP_SLOP}
                 className="justify-center rounded-full border border-border-soft bg-card px-3.5 py-2"
               >
-                <Text className="text-[13px] font-bold text-text">
+                <Text className="text-[13px] font-bold leading-[1.5] text-text">
                   +{money(step, currency)}
                 </Text>
               </Pressable>
@@ -866,7 +878,7 @@ const SavingsForm = ({
             hitSlop={CHIP_SLOP}
             className="justify-center rounded-full border border-border-soft bg-card px-3.5 py-2"
           >
-            <Text className="text-[13px] font-bold text-text">{t('savings.shortcut_all')}</Text>
+            <Text className="text-[13px] font-bold leading-[1.5] text-text">{t('savings.shortcut_all')}</Text>
           </Pressable>
         </View>
       )}
@@ -902,7 +914,7 @@ const SavingsForm = ({
               }`}
             >
               <Text
-                className={`text-xs font-bold ${
+                className={`text-xs font-bold leading-[1.5] ${
                   date === option.value ? 'text-text' : 'text-text-muted'
                 }`}
               >
@@ -935,7 +947,7 @@ const SavingsForm = ({
                 `tracking-wider`— y no uno propio: dos eyebrows de distinto
                 cuerpo en el mismo formulario se leen como dos jerarquías, y acá
                 son la misma. Es además el que usa web. */}
-            <Text className="shrink text-[11px] font-bold uppercase tracking-wider text-text-soft">
+            <Text className="shrink text-[11px] font-bold uppercase tracking-wider leading-[1.5] text-text-soft">
               {mode === 'save' ? t('savings.purposes.label') : t('savings.purposes.source_label')}
             </Text>
             <View className="shrink-0 flex-row items-center gap-3">
@@ -1012,7 +1024,7 @@ const SavingsForm = ({
                   }`}
                 >
                   <Text className="text-[15px]">{option?.icon ?? '🫙'}</Text>
-                  <Text className="text-[13px] font-semibold text-text">
+                  <Text className="text-[13px] font-semibold leading-[1.5] text-text">
                     {option?.name ?? t('savings.purposes.none')}
                   </Text>
                 </Pressable>
@@ -1027,7 +1039,7 @@ const SavingsForm = ({
           héroe del monto, que es el bloque que sí manda acá. */}
       <View className="mt-4 rounded-xl border border-border-soft bg-card px-4 py-3">
         <View className="flex-row justify-between py-0.5">
-          <Text className="text-[13.5px] text-text-muted">
+          <Text className="text-[13.5px] leading-[1.5] text-text-muted">
             {mode === 'save'
               ? t('savings.available_now')
               : purpose != null
@@ -1036,20 +1048,20 @@ const SavingsForm = ({
                   ? t('savings.saved_total')
                   : t('savings.purposes.unassigned_available')}
           </Text>
-          <Text className="text-[13.5px] font-semibold text-text" style={TABULAR}>
+          <Text className="text-[13.5px] font-semibold leading-[1.5] text-text" style={TABULAR}>
             {money(limit, currency)}
           </Text>
         </View>
         <View className="flex-row justify-between py-0.5">
-          <Text className="text-[13.5px] text-text-muted">
+          <Text className="text-[13.5px] leading-[1.5] text-text-muted">
             {mode === 'save' ? t('savings.you_will_save') : t('savings.you_will_release')}
           </Text>
-          <Text className="text-[13.5px] font-semibold text-emerald-deep" style={TABULAR}>
+          <Text className="text-[13.5px] font-semibold leading-[1.5] text-emerald-deep" style={TABULAR}>
             {`${value > 0 ? '−' : ''}${money(value, currency)}`}
           </Text>
         </View>
         <View className="mt-1.5 flex-row justify-between border-t border-border-soft pt-2">
-          <Text className="text-[13.5px] text-text-muted">
+          <Text className="text-[13.5px] leading-[1.5] text-text-muted">
             {mode === 'save'
               ? t('savings.left_to_spend')
               : purpose != null
@@ -1059,7 +1071,7 @@ const SavingsForm = ({
                   : t('savings.purposes.left_unassigned')}
           </Text>
           <Text
-            className={`text-[16px] font-extrabold ${overLimit ? 'text-negative' : 'text-text'}`}
+            className={`text-[16px] font-extrabold leading-[1.5] ${overLimit ? 'text-negative' : 'text-text'}`}
             style={TABULAR}
           >
             {`${remainder < 0 ? '−' : ''}${money(Math.abs(remainder), currency)}`}
@@ -1073,7 +1085,7 @@ const SavingsForm = ({
       </Text>
 
       {(limitError ?? error) != null && (
-        <Text className="mt-3 px-1 text-[13px] font-semibold text-negative">
+        <Text className="mt-3 px-1 text-[13px] font-semibold leading-[1.5] text-negative">
           {limitError ?? error}
         </Text>
       )}

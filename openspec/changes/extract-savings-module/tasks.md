@@ -473,6 +473,46 @@ definición.
   margen en un iPhone 16 Pro y +33 en un Android de 360×740**, o sea más aire que antes y en las dos
   superficies el mismo.
 
+  **Octava — el monto cortado, y la causa de fondo de «nativo se ve más comprimido».** Dos cosas, y
+  la segunda explica por qué el ritmo coincidía en el código y no en la pantalla.
+
+  ```
+  ### El monto se cortaba, y todo el texto nativo medía menos que en web
+  - Web mobile:   apps/web/lib/savings/components/savings-drawer.tsx
+                  apps/web/lib/savings/components/purpose-allocate.tsx  (referencia, sin cambios)
+  - Nativo:       apps/mobile/components/savings/SavingsDrawer.tsx
+                  apps/mobile/components/savings/PurposeAllocate.tsx
+                  apps/mobile/components/ui/DateField.tsx  (disparador `bare`)
+  - Cambio:       (1) la cifra pasa a `lineHeight` 36 con `min-h-[36px]` en su
+                      fila, más `includeFontPadding: false` y
+                      `textAlignVertical: 'center'` para Android;
+                  (2) `leading-[1.5]` explícito en los 23 textos que en web
+                      heredan el 1.5 del preflight de Tailwind.
+  - Divergencia:  el `lineHeight` del monto ES la divergencia, y es de
+                  plataforma: web puede dejarlo en `leading-none` porque el
+                  navegador permite que el glifo se salga de su caja de línea;
+                  RN la recorta. Queda anotada como tal.
+                  Siguen las dos de la séptima (ícono del calendario, tracking).
+  - Runtime:      requiere `expo start -c`.
+  - Cierra:       casos 6, 7 y 8.
+  ```
+
+  El bug del monto era mío y directo: le había puesto `lineHeight: 27` a una cifra de 27px para
+  imitar el `leading-none` de web. Una cifra de 27px ocupa unos 34 entre ascendente y descendente, así
+  que RN la recortaba arriba y abajo. Van 36, y el alto sale de otro lado — nunca del monto.
+
+  Lo segundo es la causa de fondo que faltaba: **Tailwind v4 pone `line-height: 1.5` en `html`**, así
+  que en web todo texto sin `leading` explícito hereda 1.5; en React Native el valor por defecto lo
+  decide la fuente y ronda 1.2. Cada bloque de texto nativo medía **un 20% menos que el mismo bloque
+  en web** — los chips 4px por fila, cada fila del resumen 4px, los rótulos 3px. Sumado: **el
+  formulario nativo era 34px más bajo que el de web con el MISMO código de espaciado**. Eso era
+  exactamente la «sensación de aplastado», y no se veía comparando márgenes porque los márgenes
+  siempre coincidieron.
+
+  Medido bloque por bloque contra web: nativo pasa de **−34px** a **+9px** (los 9 son el renglón del
+  monto, que en nativo tiene que ser más alto). Quedan +110px de margen en un iPhone 16 Pro y +19 en
+  un Android de 360×740.
+
 - [x] 6.14 **Comparativa web ↔ nativa, superficie por superficie** (E27): **nueve divergencias**, tres
   graves —lo tipeado se perdía en el desvío, el detalle de un propósito tenía botón y enlace
   invertidos, y el tope negaba sin ofrecer la salida—. Las nueve corregidas. La comparación mecánica
