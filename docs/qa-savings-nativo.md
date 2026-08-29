@@ -8,29 +8,28 @@
 > vuelve a `openspec/changes/extract-savings-module/tasks.md`; **7.1 dice que no se archiva hasta que
 > esto pase**.
 
-## Por dónde va (28-ago-2026)
+## Por dónde va (29-ago-2026)
 
-Once hallazgos hasta acá, **todos corregidos y pusheados** — el detalle de cada uno está en la tarea
-**6.15** de `tasks.md`. Salieron de los casos **2, 3, 6, 7 y 8**. Lo que sigue, en este orden:
+Dieciséis hallazgos cerrados, todos pusheados; el detalle de cada uno está en la tarea **6.15** de
+`tasks.md`, y los cinco últimos con el bloque de la «Definition of Done» de acá abajo. Salieron de los
+casos **2, 3, 6, 7 y 8**.
 
-| Orden | Casos | Por qué ahí |
+**Todo lo hecho hasta acá pide `npx expo start -c` antes de mirarlo.**
+
+| Orden | Casos | Qué mirar |
 |---|---|---|
-| **1º** | **6 · 7 · 8** (re-pasada) | Los tres cambiaron entero en el último push: el alto del sheet, la fecha, el héroe del monto de «Destinar», los chips, el resumen, el CTA y los mensajes. Es la regla del propio doc: se arregla, se vuelve a correr |
-| **2º** | **11 · 12** | Nunca corrieron y son **lo que el último push más pudo mover**: 11 depende del alto del sheet, que se rehizo; 12, de los chips, que cambiaron de medida, de espacio y de color |
-| **3º** | **9 · 10** | Nunca corrieron, y los dos tienen un antecedente feo en 6.14 — el monto tipeado que se perdía, y el botón/enlace invertidos |
-| **4º** | **1 · 4 · 5** | Nunca corrieron. Riesgo 2 (los divisores) vive en el 4 |
-| **5º** | **13 · 14** | Navegación. Es lo único que no depende de nada de lo anterior |
+| **1º** | **6 · 7 · 8** (re-pasada) | Los tres cambiaron entero. Lo puntual: el CTA a la vista sin scrollear; **el monto SIN cortarse arriba ni abajo** —el bug de la última vuelta—; los chips en dos filas como máximo; y que nativo y web mobile se lean como la misma pantalla |
+| **2º** | **3** (re-pasada) | La card «Sin destino», ahora compacta: sin aire muerto abajo del enlace |
+| **3º** | **11 · 12** | Nunca corrieron y son lo que el trabajo de altura más pudo mover: 11 depende del alto del sheet, 12 de los chips |
+| **4º** | **9 · 10** | Nunca corrieron, y los dos tienen antecedente en 6.14 — el monto tipeado que se perdía, y el botón/enlace invertidos |
+| **5º** | **1 · 4 · 5** | Nunca corrieron. Riesgo 2 —los divisores— vive en el 4 |
+| **6º** | **13 · 14** | Navegación. Lo único que no depende de nada de lo anterior |
 
-Tres cosas puntuales para mirar de cerca en la primera tanda, porque son lo que cambió y **no se puede
-verificar sin correr la app**:
+Divergencias vigentes entre web mobile y nativo, aceptadas y con motivo (detalle en 6.15):
 
-- **El CTA sin scrollear**, en «Guardar», «Volver a usar» y «Destinar». El tope del cuerpo dejó de ser
-  un número fijo (560px) y ahora lo reparte `useSheetBodyMaxHeight()`. En un teléfono alto tiene que
-  entrar sin tocar nada; en uno chico el sheet **no puede pasar del 90% de la pantalla**.
-- **El chip elegido**, de fecha y de propósito: `bg-emerald-deep/5` es el relleno **más suave de toda
-  la app** (el que le sigue es `/10`). Si no se distingue del no elegido, hay que subirlo.
-- **«Destinar» y «Guardar» pidiendo el monto igual**: mismo cuerpo (34px), mismo chip de moneda y la
-  calculadora **abajo del chip**, no al lado del número.
+- el `lineHeight` del monto — web puede dejarlo en `leading-none`, RN recorta el glifo;
+- el ícono del calendario, 18 en nativo y 16 en web — el componente lo comparte el alta de movimientos;
+- el `tracking` de los rótulos — nativewind no resuelve `em` en `letterSpacing`.
 
 ## Definition of Done de un fix mobile
 
