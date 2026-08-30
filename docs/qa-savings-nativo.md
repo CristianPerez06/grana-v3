@@ -16,7 +16,7 @@ era lo que 6.13 decía que faltaba— en simulador y después en un **iPhone 16 
 | | |
 |---|---|
 | **En verde** | 1 · 2 · 3 · 4 · 5 · 6 · 7 · 8 · 9 · 10 · 12 · 13 · 14 |
-| **No corrido, por decisión** | **11 · Teclado abierto.** En el simulador no se puede —usa el teclado físico de la Mac, se prende con ⌘K— y se decidió no probarlo en el teléfono. Queda SIN verificar, no aprobado |
+| **Aceptado sin correr** | **11 · Teclado abierto.** Ver abajo |
 | **Sin confirmar** | El **pull-to-refresh** del caso 1. El resto del caso sí se miró |
 
 **Dieciséis hallazgos** salieron y se corrigieron durante la corrida, todos en `tasks.md` **6.15**, los
@@ -33,9 +33,31 @@ teléfono.
 glifo, web no), el ícono del calendario —18 en nativo, 16 en web, componente compartido— y el
 `tracking` de los rótulos, que nativewind no resuelve en `em`.
 
-**Lo que falta para abrir 7.1** (archivar): decidir qué se hace con el caso 11 —correrlo o aceptarlo
-sin correr, por escrito— y las cuatro preguntas de sensación de la tarea **2.9**, que no se
-respondieron.
+### Caso 11 — aceptado sin correr
+
+**Decisión del QA (Juli, 29-ago-2026): se acepta sin correr.** Queda por escrito, no tildado: nadie
+vio esta pantalla con el teclado arriba.
+
+*Por qué no se corrió.* En el simulador de iOS el teclado en pantalla está apagado por defecto —usa el
+teclado físico de la Mac— así que el caso no se puede probar ahí; hay que prenderlo con ⌘K o ir a un
+teléfono. Aun prendido, el simulador no es concluyente: la altura real la deciden el dispositivo y si
+tiene barra de sugerencias.
+
+*Qué se estaría llevando puesto si falla.* Que el teclado tape el botón de confirmar, y haya que
+bajarlo para poder guardar. Sería molesto, no destructivo: no hay pérdida de datos ni número
+equivocado — el borrador vive en el drawer y sobrevive.
+
+*Por qué el riesgo es bajo.* No es código sin escribir: los tres formularios cuelgan de
+`FormSheetBody`, que monta el `KeyboardAwareScrollView` de la app con el `KEYBOARD_BOTTOM_OFFSET`
+compartido —los 42px de la `KeyboardToolbar` más 24 de aire—, y ese offset ya está calibrado contra
+este mismo síntoma reportado en los formularios de movimientos. Además el cuerpo ahora se topea con
+`useSheetBodyMaxHeight()`, así que hay lugar para desplazarse.
+
+*Qué lo reabre.* Cualquier reporte de «tengo que cerrar el teclado para confirmar» en Ahorro, y la
+primera vez que alguien pruebe en un Android —donde el teclado y los insets se comportan distinto.
+
+**Lo que falta para abrir 7.1** (archivar): las cuatro preguntas de sensación de la tarea **2.9**, que no se
+respondieron. El caso 11 ya está resuelto, arriba.
 
 ## Definition of Done de un fix mobile
 

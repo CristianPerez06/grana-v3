@@ -17,7 +17,7 @@ Lo que queda abierto es de **cuatro** clases, y ninguna es implementación pendi
 
 | clase | tareas | por qué sigue abierta |
 |---|---|---|
-| **QA visual nativo** | 2.9 · 6.5 · 6.13 · 6.15 | **6.5 y 6.13 cerrados**: 13 de 14 casos en verde, dieciséis hallazgos corregidos. Falta el caso 11 (teclado) y las preguntas de 2.9 |
+| **QA visual nativo** | 2.9 · 6.5 · 6.13 · 6.15 | **6.5 y 6.13 cerrados**: 13 de 14 casos en verde, dieciséis hallazgos corregidos. El caso 11 quedó aceptado sin correr, por escrito. Faltan las preguntas de 2.9 |
 | **Diferido a monetización** | 4b.1–4b.4 | Apagar el módulo solo tiene sentido con sistema de planes, que no existe (E10) |
 | **Backlog no bloqueante** | 4c.12 · 6.7b | Anotado para no perderlo; no frena nada |
 | **Compuertas** | 7.1 · 7.2 | No archivar hasta el QA visual nativo; la fase 3A viene después |
@@ -309,8 +309,12 @@ definición.
 - [x] 6.5 **QA visual nativo — CORRIDO.** Trece de los catorce casos de `docs/qa-savings-nativo.md`
   en verde, en simulador y después en un **iPhone 16 Pro real**. El caso **11 (teclado abierto) no se
   corrió**: en el simulador el teclado en pantalla está apagado y se decidió no probarlo en el
-  teléfono, así que queda sin verificar y NO aprobado. Sin confirmar quedó también el pull-to-refresh
-  del caso 1. Dieciséis hallazgos salieron y se corrigieron durante la corrida (6.15); dos
+  teléfono. **Aceptado sin correr por decisión del QA**, por escrito en el doc: el riesgo es que el
+  teclado tape el botón de confirmar y haya que bajarlo, que es molesto y no destructivo —el borrador
+  vive en el drawer y sobrevive—, y los tres formularios cuelgan de `FormSheetBody`, que ya monta el
+  `KEYBOARD_BOTTOM_OFFSET` calibrado contra este mismo síntoma en los formularios de movimientos. Lo
+  reabre cualquier reporte de «tengo que cerrar el teclado para confirmar», y la primera prueba en
+  Android. Sin confirmar quedó también el pull-to-refresh del caso 1. Dieciséis hallazgos salieron y se corrigieron durante la corrida (6.15); dos
   diferencias con web quedaron aceptadas y pasaron a backlog (8.3)
 - [ ] 6.16 **Definition of Done de un fix mobile, y el protocolo de runtime.** Viven en
   `docs/qa-savings-nativo.md`. Un arreglo de Ahorro no está cerrado hasta que quedan registradas seis
