@@ -16,10 +16,13 @@ casos **2, 3, 6, 7 y 8**.
 
 **Todo lo hecho hasta acá pide `npx expo start -c` antes de mirarlo.**
 
-**Caso 6 (Guardar) — cerrado.** El monto no se corta, el botón principal se ve sin scrollear y los
-chips entran en dos filas. Quedaron dos diferencias con web que el QA aceptó y pasaron a backlog
-(**8.3**): la sheet arranca más abajo en nativo, y el header principal se redistribuye según el modelo
-de teléfono.
+**Casos 6 y 3 — cerrados.** El monto no se corta, el botón principal se ve sin scrollear y los
+chips entran en dos filas; y la card «Sin destino» quedó compacta. Quedaron dos diferencias con web
+que el QA aceptó y pasaron a backlog (**8.3**): la sheet arranca más abajo en nativo, y el header
+principal se redistribuye según el modelo de teléfono.
+
+**Sigue: 7 y 8** (las mismas tres comprobaciones de 6, en «Volver a usar» y «Destinar»), y de ahí el
+orden de la tabla.
 
 | Orden | Casos | Qué mirar |
 |---|---|---|
