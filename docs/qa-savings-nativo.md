@@ -18,7 +18,7 @@ casos **2, 3, 6, 7 y 8**.
 
 | Orden | Casos | Qué mirar |
 |---|---|---|
-| **1º** | **6 · 7 · 8** (re-pasada) | Los tres cambiaron entero. Lo puntual: el CTA a la vista sin scrollear; **el monto SIN cortarse arriba ni abajo** —el bug de la última vuelta—; los chips en dos filas como máximo; y que nativo y web mobile se lean como la misma pantalla |
+| **1º** | **6 · 7 · 8** (re-pasada) | Los tres cambiaron entero. Lo puntual: el botón principal («Guardar» / «Volver a usar» / «Destinar») a la vista sin scrollear; **el monto SIN cortarse arriba ni abajo** —el bug de la última vuelta—; los chips en dos filas como máximo; y que nativo y web mobile se lean como la misma pantalla |
 | **2º** | **3** (re-pasada) | La card «Sin destino», ahora compacta: sin aire muerto abajo del enlace |
 | **3º** | **11 · 12** | Nunca corrieron y son lo que el trabajo de altura más pudo mover: 11 depende del alto del sheet, 12 de los chips |
 | **4º** | **9 · 10** | Nunca corrieron, y los dos tienen antecedente en 6.14 — el monto tipeado que se perdía, y el botón/enlace invertidos |
@@ -176,7 +176,7 @@ cambia de prioridad.
 |---|---|
 | **Qué mirar** | Que el **origen se autocorrija**: si el propósito elegido no alcanza, el efecto tiene que reacomodar el origen solo. Que el mensaje de tope **ofrezca la salida** en vez de solo negar |
 | **Interacción mínima** | Pedir **más de lo que hay** en «Sin destino» y ver qué ofrece. Después cambiar de propósito y confirmar que el origen se acomoda |
-| **Sería bug** | **El origen queda vacío y el CTA muerto** · el tope niega sin ofrecer de dónde sacar el resto · lo tipeado **se pierde** al cambiar de origen (fue una de las tres divergencias graves de 6.14) |
+| **Sería bug** | **El origen queda vacío y el botón principal muerto** · el tope niega sin ofrecer de dónde sacar el resto · lo tipeado **se pierde** al cambiar de origen (fue una de las tres divergencias graves de 6.14) |
 | **Puede variar por nativo** | Nada. Es lógica, y es la que nunca corrió |
 
 ## 8 · Destinar
@@ -210,9 +210,9 @@ cambia de prioridad.
 
 | | |
 |---|---|
-| **Qué mirar** | Que el **teclado no tape el CTA**. Que el campo de monto quede visible mientras se tipea |
+| **Qué mirar** | Que el **teclado no tape el botón principal**. Que el campo de monto quede visible mientras se tipea |
 | **Interacción mínima** | Abrir cada formulario, tocar el campo de monto, y confirmar que se puede **llegar al botón sin cerrar el teclado** |
-| **Sería bug** | **CTA tapado** · hay que cerrar el teclado para confirmar · el sheet salta o se cierra al aparecer el teclado |
+| **Sería bug** | **Botón principal tapado** · hay que cerrar el teclado para confirmar · el sheet salta o se cierra al aparecer el teclado |
 | **Puede variar por nativo** | La **altura del teclado** cambia según teléfono y si tiene sugerencias. Probar con al menos una configuración real |
 
 ## 12 · Chips con overflow
