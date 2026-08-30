@@ -17,7 +17,7 @@ Lo que queda abierto es de **cuatro** clases, y ninguna es implementación pendi
 
 | clase | tareas | por qué sigue abierta |
 |---|---|---|
-| **QA visual nativo** | 2.9 · 6.5 · 6.13 · 6.15 | **Corriendo.** Once hallazgos hasta acá, todos corregidos (6.15) |
+| **QA visual nativo** | 2.9 · 6.5 · 6.13 · 6.15 | **6.5 y 6.13 cerrados**: 13 de 14 casos en verde, dieciséis hallazgos corregidos. Falta el caso 11 (teclado) y las preguntas de 2.9 |
 | **Diferido a monetización** | 4b.1–4b.4 | Apagar el módulo solo tiene sentido con sistema de planes, que no existe (E10) |
 | **Backlog no bloqueante** | 4c.12 · 6.7b | Anotado para no perderlo; no frena nada |
 | **Compuertas** | 7.1 · 7.2 | No archivar hasta el QA visual nativo; la fase 3A viene después |
@@ -306,11 +306,12 @@ definición.
   este mes»**, que además empareja las dos salidas —«Ahora no» / «No más este mes»—, y el botón pasa a
   `px-3`, porque el aire se calibra contra lo que dice y ya no dice un monto. Sin filas de más. Medido
   de 320 a 430 con ocho cifras en el texto
-- [ ] 6.5 **QA visual nativo** — lo único que le falta al módulo en mobile, que por lo demás está
-  **implementado**. Bloqueado por acceso, issue #58, que ya cubre todo: las cinco frases de copy, la
-  tira siguiendo la moneda del último ingreso, el nombre con espacio de más, y una **sección C** de
-  30 checks para el módulo nativo —la ruta, la entrada del menú, la card oscura, el desglose, el pie
-  y la regresión— con el aviso de que es código que corre por primera vez
+- [x] 6.5 **QA visual nativo — CORRIDO.** Trece de los catorce casos de `docs/qa-savings-nativo.md`
+  en verde, en simulador y después en un **iPhone 16 Pro real**. El caso **11 (teclado abierto) no se
+  corrió**: en el simulador el teclado en pantalla está apagado y se decidió no probarlo en el
+  teléfono, así que queda sin verificar y NO aprobado. Sin confirmar quedó también el pull-to-refresh
+  del caso 1. Dieciséis hallazgos salieron y se corrigieron durante la corrida (6.15); dos
+  diferencias con web quedaron aceptadas y pasaron a backlog (8.3)
 - [ ] 6.16 **Definition of Done de un fix mobile, y el protocolo de runtime.** Viven en
   `docs/qa-savings-nativo.md`. Un arreglo de Ahorro no está cerrado hasta que quedan registradas seis
   líneas: el componente web-mobile, el nativo, qué cambio se aplicó **en las dos**, la divergencia de
@@ -518,7 +519,13 @@ definición.
   invertidos, y el tope negaba sin ofrecer la salida—. Las nueve corregidas. La comparación mecánica
   de claves de i18n encontró cinco de ellas y hoy da **cero** diferencias: la única que queda es
   `date_label`, aceptada porque en nativo el selector de fecha lo rotula el sistema operativo
-- [ ] 6.13 **El módulo nativo está implementado y SIN QA visual nativo: nunca se ejecutó.**
+- [x] 6.13 **El módulo nativo se ejecutó.** Los tres riesgos que esta tarea marcaba como los más
+  altos pasaron: el envoltorio de las dos monedas de la card oscura rompe la línea donde corresponde,
+  los divisores caen ENTRE las filas y no alrededor —Yoga los resolvió igual que el navegador—, y el
+  efecto que corrige el origen vacío al volver a usar funciona. Lo único que sigue sin ejecutarse es
+  el teclado sobre el CTA, que es el caso 11. El texto original queda abajo, tachado por la corrida:
+
+  ~~**El módulo nativo está implementado y SIN QA visual nativo: nunca se ejecutó.**~~
   Lo que las seis verificaciones de 6.6 **no** pueden afirmar: que la pantalla se dibuje, que el
   envoltorio de las dos monedas rompa la línea donde corresponde, que los bordes que hacen de divisor
   caigan entre las monedas y no alrededor, que los tokens cálidos pinten, que el teclado no tape el

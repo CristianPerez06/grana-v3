@@ -8,40 +8,34 @@
 > vuelve a `openspec/changes/extract-savings-module/tasks.md`; **7.1 dice que no se archiva hasta que
 > esto pase**.
 
-## Por dónde va (29-ago-2026)
+## Resultado (29-ago-2026)
 
-Dieciséis hallazgos cerrados, todos pusheados; el detalle de cada uno está en la tarea **6.15** de
-`tasks.md`, y los cinco últimos con el bloque de la «Definition of Done» de acá abajo. Salieron de los
-casos **2, 3, 6, 7 y 8**.
+**Trece de los catorce casos, corridos y en verde.** El módulo nativo se ejecutó por primera vez —que
+era lo que 6.13 decía que faltaba— en simulador y después en un **iPhone 16 Pro real**.
 
-**Todo lo hecho hasta acá pide `npx expo start -c` antes de mirarlo.**
+| | |
+|---|---|
+| **En verde** | 1 · 2 · 3 · 4 · 5 · 6 · 7 · 8 · 9 · 10 · 12 · 13 · 14 |
+| **No corrido, por decisión** | **11 · Teclado abierto.** En el simulador no se puede —usa el teclado físico de la Mac, se prende con ⌘K— y se decidió no probarlo en el teléfono. Queda SIN verificar, no aprobado |
+| **Sin confirmar** | El **pull-to-refresh** del caso 1. El resto del caso sí se miró |
 
-**Cerrados: 3 · 6 · 7 · 8 · 9 · 10 · 12.** Los tres formularios entran sin scroll y con el monto
-completo; los chips se pliegan y el elegido no se esconde; el monto tipeado sobrevive al desvío de
-crear un propósito; el detalle de propósito tiene el botón y el enlace en su lugar.
+**Dieciséis hallazgos** salieron y se corrigieron durante la corrida, todos en `tasks.md` **6.15**, los
+cinco últimos con el bloque de la DoD. Los tres riesgos que 6.13 marcaba como los más altos pasaron:
+el envoltorio de las dos monedas de la card oscura rompe la línea donde corresponde, los divisores
+caen **entre** las filas y no alrededor —Yoga los resolvió igual que el navegador—, y el efecto que
+corrige el origen vacío al volver a usar funciona.
 
-**Caso 11 — NO verificado, y no por un bug.** En el simulador de iOS el teclado en pantalla está
-apagado por defecto: el simulador usa el teclado físico de la Mac, así que tocar el campo de monto no
-levanta nada y el caso no se puede probar. Se prende con **⌘K** en el simulador (o destildando
-*Hardware → Keyboard → Connect Hardware Keyboard*), y conviene confirmarlo además en un teléfono real,
-donde la altura del teclado la decide el dispositivo y si tiene barra de sugerencias.
+**Dos diferencias con web quedaron aceptadas** y pasaron a backlog (**8.3**), con el QA conforme: la
+sheet arranca más abajo en nativo que en web, y el header principal se redistribuye según el modelo de
+teléfono.
 
-**Quedan: 11 (con el teclado prendido) · 1 · 4 · 5 · 13 · 14.**
+**Tres divergencias de plataforma**, escritas y con motivo: el `lineHeight` del monto (RN recorta el
+glifo, web no), el ícono del calendario —18 en nativo, 16 en web, componente compartido— y el
+`tracking` de los rótulos, que nativewind no resuelve en `em`.
 
-Dos diferencias con web que el QA aceptó y pasaron a backlog (**8.3**): la sheet arranca más abajo en
-nativo, y el header principal se redistribuye según el modelo de teléfono.
-
-| Orden | Casos | Qué mirar |
-|---|---|---|
-| **1º** | **11** | Con el teclado en pantalla PRENDIDO (⌘K). Es lo que el trabajo de altura más pudo mover |
-| **2º** | **1 · 4 · 5** | La pantalla, no los formularios. El riesgo 2 —los divisores que dependen de recorte con margen negativo— vive en el 4 |
-| **3º** | **13 · 14** | Navegación. Lo único que no depende de nada de lo anterior |
-
-Divergencias vigentes entre web mobile y nativo, aceptadas y con motivo (detalle en 6.15):
-
-- el `lineHeight` del monto — web puede dejarlo en `leading-none`, RN recorta el glifo;
-- el ícono del calendario, 18 en nativo y 16 en web — el componente lo comparte el alta de movimientos;
-- el `tracking` de los rótulos — nativewind no resuelve `em` en `letterSpacing`.
+**Lo que falta para abrir 7.1** (archivar): decidir qué se hace con el caso 11 —correrlo o aceptarlo
+sin correr, por escrito— y las cuatro preguntas de sensación de la tarea **2.9**, que no se
+respondieron.
 
 ## Definition of Done de un fix mobile
 
