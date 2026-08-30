@@ -16,22 +16,26 @@ casos **2, 3, 6, 7 y 8**.
 
 **Todo lo hecho hasta acá pide `npx expo start -c` antes de mirarlo.**
 
-**Casos 6 y 3 — cerrados.** El monto no se corta, el botón principal se ve sin scrollear y los
-chips entran en dos filas; y la card «Sin destino» quedó compacta. Quedaron dos diferencias con web
-que el QA aceptó y pasaron a backlog (**8.3**): la sheet arranca más abajo en nativo, y el header
-principal se redistribuye según el modelo de teléfono.
+**Cerrados: 3 · 6 · 7 · 8 · 9 · 10 · 12.** Los tres formularios entran sin scroll y con el monto
+completo; los chips se pliegan y el elegido no se esconde; el monto tipeado sobrevive al desvío de
+crear un propósito; el detalle de propósito tiene el botón y el enlace en su lugar.
 
-**Sigue: 7 y 8** (las mismas tres comprobaciones de 6, en «Volver a usar» y «Destinar»), y de ahí el
-orden de la tabla.
+**Caso 11 — NO verificado, y no por un bug.** En el simulador de iOS el teclado en pantalla está
+apagado por defecto: el simulador usa el teclado físico de la Mac, así que tocar el campo de monto no
+levanta nada y el caso no se puede probar. Se prende con **⌘K** en el simulador (o destildando
+*Hardware → Keyboard → Connect Hardware Keyboard*), y conviene confirmarlo además en un teléfono real,
+donde la altura del teclado la decide el dispositivo y si tiene barra de sugerencias.
+
+**Quedan: 11 (con el teclado prendido) · 1 · 4 · 5 · 13 · 14.**
+
+Dos diferencias con web que el QA aceptó y pasaron a backlog (**8.3**): la sheet arranca más abajo en
+nativo, y el header principal se redistribuye según el modelo de teléfono.
 
 | Orden | Casos | Qué mirar |
 |---|---|---|
-| **1º** | **6 · 7 · 8** (re-pasada) | Los tres cambiaron entero. Lo puntual: el botón principal («Guardar» / «Volver a usar» / «Destinar») a la vista sin scrollear; **el monto SIN cortarse arriba ni abajo** —el bug de la última vuelta—; los chips en dos filas como máximo; y que nativo y web mobile se lean como la misma pantalla |
-| **2º** | **3** (re-pasada) | La card «Sin destino», ahora compacta: sin aire muerto abajo del enlace |
-| **3º** | **11 · 12** | Nunca corrieron y son lo que el trabajo de altura más pudo mover: 11 depende del alto del sheet, 12 de los chips |
-| **4º** | **9 · 10** | Nunca corrieron, y los dos tienen antecedente en 6.14 — el monto tipeado que se perdía, y el botón/enlace invertidos |
-| **5º** | **1 · 4 · 5** | Nunca corrieron. Riesgo 2 —los divisores— vive en el 4 |
-| **6º** | **13 · 14** | Navegación. Lo único que no depende de nada de lo anterior |
+| **1º** | **11** | Con el teclado en pantalla PRENDIDO (⌘K). Es lo que el trabajo de altura más pudo mover |
+| **2º** | **1 · 4 · 5** | La pantalla, no los formularios. El riesgo 2 —los divisores que dependen de recorte con margen negativo— vive en el 4 |
+| **3º** | **13 · 14** | Navegación. Lo único que no depende de nada de lo anterior |
 
 Divergencias vigentes entre web mobile y nativo, aceptadas y con motivo (detalle en 6.15):
 
