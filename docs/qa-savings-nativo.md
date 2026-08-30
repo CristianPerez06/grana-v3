@@ -10,14 +10,13 @@
 
 ## Resultado (29-ago-2026)
 
-**Trece de los catorce casos, corridos y en verde.** El módulo nativo se ejecutó por primera vez —que
+**Trece de los catorce casos, corridos y en verde**, el caso 1 completo con su pull-to-refresh. El módulo nativo se ejecutó por primera vez —que
 era lo que 6.13 decía que faltaba— en simulador y después en un **iPhone 16 Pro real**.
 
 | | |
 |---|---|
 | **En verde** | 1 · 2 · 3 · 4 · 5 · 6 · 7 · 8 · 9 · 10 · 12 · 13 · 14 |
 | **Aceptado sin correr** | **11 · Teclado abierto.** Ver abajo |
-| **Sin confirmar** | El **pull-to-refresh** del caso 1. El resto del caso sí se miró |
 
 **Dieciséis hallazgos** salieron y se corrigieron durante la corrida, todos en `tasks.md` **6.15**, los
 cinco últimos con el bloque de la DoD. Los tres riesgos que 6.13 marcaba como los más altos pasaron:

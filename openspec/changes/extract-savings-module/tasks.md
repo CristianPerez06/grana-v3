@@ -314,7 +314,7 @@ definición.
   vive en el drawer y sobrevive—, y los tres formularios cuelgan de `FormSheetBody`, que ya monta el
   `KEYBOARD_BOTTOM_OFFSET` calibrado contra este mismo síntoma en los formularios de movimientos. Lo
   reabre cualquier reporte de «tengo que cerrar el teclado para confirmar», y la primera prueba en
-  Android. Sin confirmar quedó también el pull-to-refresh del caso 1. Dieciséis hallazgos salieron y se corrigieron durante la corrida (6.15); dos
+  Android. Dieciséis hallazgos salieron y se corrigieron durante la corrida (6.15); dos
   diferencias con web quedaron aceptadas y pasaron a backlog (8.3)
 - [ ] 6.16 **Definition of Done de un fix mobile, y el protocolo de runtime.** Viven en
   `docs/qa-savings-nativo.md`. Un arreglo de Ahorro no está cerrado hasta que quedan registradas seis
