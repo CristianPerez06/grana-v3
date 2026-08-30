@@ -21,7 +21,7 @@ Lo que queda abierto es de **cuatro** clases, y ninguna es implementación pendi
 | **Diferido a monetización** | 4b.1–4b.4 | Apagar el módulo solo tiene sentido con sistema de planes, que no existe (E10) |
 | **Backlog no bloqueante** | 4c.12 · 6.7b | Anotado para no perderlo; no frena nada |
 | **Compuertas** | 7.1 · 7.2 | No archivar hasta el QA visual nativo; la fase 3A viene después |
-| **Deuda destapada** | 8.2 | Cuatro hallazgos del barrido que siguió al bug crítico. Ninguno bloquea, ninguno es de este change |
+| **Deuda destapada** | 8.2 · 8.3 | Cuatro hallazgos del barrido posterior, más dos del QA visual nativo. Ninguno bloquea, ninguno es de este change |
 
 **Nada de esto se toca hasta mirar la app nativa corriendo**: lo que el QA visual encuentre puede
 cambiar lo que haya que hacer, y arreglar a ciegas sobre código que nunca se ejecutó es escribir dos
@@ -582,6 +582,31 @@ definición.
 
   **Estado: cerrado.** El QA visual nativo estaba corriendo sobre un número base equivocado; recién
   con esto tiene sentido mirarlo.
+
+- [ ] 8.3 **Backlog del QA visual nativo: dos diferencias aceptadas para después.** Las dos salieron
+  del caso 6 con el QA ya conforme («no se ven iguales, pero estoy ok con cómo se ven ahora»), así que
+  **no bloquean** el cierre del QA ni el archivado. Las dos son de NATIVO y ninguna es del alcance de
+  este change: tocan `BottomSheet` y `PageHeader`, que son del shell.
+
+  - **La sheet arranca más abajo en nativo que en web.** Las dos topean al 90% de la pantalla, pero
+    las dos son de alto de CONTENIDO: se estiran hasta lo que miden y ahí paran. Con el formulario en
+    573px, en un iPhone 16 Pro el panel mide 657 con el agarradero, el colchón y los insets, y arranca
+    a 195px del borde superior — **cubre el 77% de la pantalla**. Web, en 360×740, arranca a 128 y
+    cubre el **83%**. El tope es el mismo; lo que cambia es cuánto sobra, y en un teléfono grande sobra
+    más. Se siente como una sheet más chica.
+    *Posible arreglo:* un alto MÍNIMO para la sheet —una fracción de la pantalla— para que en un
+    teléfono grande no se encoja contra su contenido. Es una decisión de producto sobre `BottomSheet`
+    y aplica a todas las sheets de la app, no solo a las de Ahorro.
+  - **El header principal se redistribuye según el modelo de teléfono.** Reportado comparando contra
+    un iPhone 16 Pro Max. Dos candidatos, y hay que ver la captura para saber cuál:
+    (a) `PageHeader` abre con `SafeAreaView edges={['top']}` más `pt-3`, así que el bloque crece con
+        el inset superior del dispositivo —isla dinámica, notch, nada— y las proporciones se corren;
+    (b) la card oscura del total parte sus dos monedas **por contenido** (`flex-wrap`), así que en un
+        teléfono ancho entran en una línea y en uno angosto se apilan. Eso está documentado como
+        deliberado en el caso 2 del QA, pero puede ser justo lo que se lee como «cambió la
+        distribución».
+    *Falta:* la captura del 16 Pro Max al lado de la del 16 Pro. Con las dos se decide si es (a), (b),
+    o si (b) deja de ser deseable y el corte pasa a ser fijo.
 
 - [ ] 8.2 **Backlog destapado por el barrido posterior.** Ninguno bloquea el QA ni el archivado, y
   **ninguno es de este change** — se anotan acá porque acá se encontraron.

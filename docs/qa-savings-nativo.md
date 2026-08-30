@@ -16,6 +16,11 @@ casos **2, 3, 6, 7 y 8**.
 
 **Todo lo hecho hasta acá pide `npx expo start -c` antes de mirarlo.**
 
+**Caso 6 (Guardar) — cerrado.** El monto no se corta, el botón principal se ve sin scrollear y los
+chips entran en dos filas. Quedaron dos diferencias con web que el QA aceptó y pasaron a backlog
+(**8.3**): la sheet arranca más abajo en nativo, y el header principal se redistribuye según el modelo
+de teléfono.
+
 | Orden | Casos | Qué mirar |
 |---|---|---|
 | **1º** | **6 · 7 · 8** (re-pasada) | Los tres cambiaron entero. Lo puntual: el botón principal («Guardar» / «Volver a usar» / «Destinar») a la vista sin scrollear; **el monto SIN cortarse arriba ni abajo** —el bug de la última vuelta—; los chips en dos filas como máximo; y que nativo y web mobile se lean como la misma pantalla |
