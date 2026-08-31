@@ -129,6 +129,19 @@ describe('resolveContextVariant', () => {
     ).toBeNull()
   })
 
+  it('consumo directo paid en cuenta credit → card-paid-consumo', () => {
+    expect(
+      resolveContextVariant(
+        mv('expense'),
+        tx({
+          status: 'paid',
+          parent_id: null,
+          source_account: { id: 'card', name: 'Visa', type: 'credit' },
+        }),
+      ),
+    ).toBe('card-paid-consumo')
+  })
+
   it('consumo directo en cuenta credit con status pending → card-pending', () => {
     expect(
       resolveContextVariant(

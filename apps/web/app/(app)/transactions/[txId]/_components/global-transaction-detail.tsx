@@ -188,6 +188,12 @@ export const GlobalTransactionDetail = ({
     (installmentSiblings != null && installmentSiblings.length > 0)
   const hasReimbursements = movement.kind === 'expense' && reimbursements.length > 0
   const isShared = sharedInfo != null && movement.kind === 'expense'
+  // A shared installment purchase must surface BOTH its cuota schedule and its
+  // split. The shared display is otherwise gated to `kind === 'expense'`, which
+  // an installment parent (`kind === 'installment_purchase'`) never matches, so
+  // its shared tiles get folded into the installment variant below.
+  const isSharedInstallment =
+    sharedInfo != null && movement.kind === 'installment_purchase'
   const isIncome = movement.kind === 'income'
   const isExpense = movement.kind === 'expense' || movement.kind === 'installment_purchase'
 
@@ -198,7 +204,15 @@ export const GlobalTransactionDetail = ({
   const flowLine: ReactNode = (() => {
     if (isTransferLike) return tDetail('flow.transfer')
     if (recurrence) return tDetail('flow.recurrence')
-    if (isInstallment) return tDetail('flow.installments', { count: movement.kind === 'installment_purchase' ? (movement.installments_total ?? installmentSiblings?.length ?? 0) : (installmentSiblings?.length ?? 0) })
+    if (isInstallment) {
+      const count =
+        movement.kind === 'installment_purchase'
+          ? (movement.installments_total ?? installmentSiblings?.length ?? 0)
+          : (installmentSiblings?.length ?? 0)
+      return isSharedInstallment
+        ? tDetail('flow.shared_installments', { count })
+        : tDetail('flow.installments', { count })
+    }
     if (isShared) return tDetail('flow.shared', { count: (sharedInfo!.bySplit.length ?? 0) + 1 })
     if (hasReimbursements) return tDetail('flow.reimbursement')
     if (isIncome) return tDetail('flow.income')
@@ -348,8 +362,20 @@ export const GlobalTransactionDetail = ({
         currentN={transaction.installment_n}
       />,
       <TilePaymentMethod key="paid" account={transaction.source_account} />,
+    )
+    // Compra en cuotas compartida: además del cronograma, mostramos el split
+    // (tu parte + dividido entre) agregando las cuotas hijas. `total` es el
+    // monto de la compra completa, no el de una cuota.
+    if (isSharedInstallment) {
+      tiles.push(
+        <TileShareYours key="yours" shared={sharedInfo!} total={parentAmount} currency={movement.currency_code} />,
+        <TileDividedAmong key="among" shared={sharedInfo!} currency={movement.currency_code} />,
+      )
+    }
+    tiles.push(
       <TileDetail
         key="detail"
+        span2={isSharedInstallment}
         rows={[
           {
             key: 'total',

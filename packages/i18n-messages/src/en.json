@@ -1020,6 +1020,7 @@
       "context": {
         "card_pending": "This card spending won't reduce your available balance until you pay the {periodo} statement.",
         "card_paid_installment": "This installment is already included in the {periodo} statement you paid.",
+        "card_paid_consumo": "This charge belongs to the {periodo} statement you already paid, so it can't be edited or deleted here.",
         "card_payment": "With this payment, the installments for the {periodo} period moved to paid.",
         "reimbursement_pending": "You're expecting this refund. When it lands, mark it as received and it'll add to your available balance.",
         "reimbursement_cancelled": "You marked this reimbursement as cancelled. If it does come in, you can reopen it."
@@ -1038,6 +1039,7 @@
         "expense": "Expense",
         "installments": "Expense in {count} installments",
         "shared": "Shared expense between {count} people",
+        "shared_installments": "Shared purchase in {count} installments",
         "reimbursement": "Expense with reimbursement",
         "recurrence": "Recurring expense",
         "income": "Income",

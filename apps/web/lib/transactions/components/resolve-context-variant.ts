@@ -11,6 +11,7 @@ import type { TransactionWithDetails } from '../types'
 export type ContextVariant =
   | 'card-pending'           // consumo/cuota hija en cuenta de tarjeta, período no pagado
   | 'card-paid-installment'  // cuota hija ya pagada (segunda en adelante)
+  | 'card-paid-consumo'      // consumo directo cuyo resumen ya fue pagado (inmutable)
   | 'card-payment'           // pago de resumen
   | 'reimbursement-pending'  // reintegro esperado, no recibido
   | 'reimbursement-cancelled' // reintegro cancelado
@@ -50,6 +51,19 @@ export const resolveContextVariant = (
     transaction.status === 'pending'
   ) {
     return 'card-pending'
+  }
+
+  // Consumo directo (no cuota hija) cuyo resumen ya fue pagado: quedó inmutable,
+  // no se puede editar ni borrar desde acá (revertirlo implica deshacer el
+  // resumen entero, que se gestiona desde el detalle del período). Sin esta nota
+  // los botones de editar/eliminar desaparecerían sin explicación. La cuota hija
+  // ya tiene su propia nota (link a la compra madre), por eso la excluimos.
+  if (
+    transaction.source_account?.type === 'credit' &&
+    transaction.status === 'paid' &&
+    !transaction.parent_id
+  ) {
+    return 'card-paid-consumo'
   }
 
   return null
