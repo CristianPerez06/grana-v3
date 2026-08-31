@@ -75,7 +75,12 @@ veces.
   *"no tenés"* en vez de dejar la pregunta sin contestar
 - [x] 2.8 Dibujada la **vista de un propósito** dentro del módulo, con las tres acciones del grupo
   —destinar más, volver a usar, quitar destino— y sin *Guardar*, que vive un nivel arriba (D18)
-- [ ] 2.9 **Para mirar usándolo** — no es implementación, es criterio para el QA visual: si
+- [x] 2.9 **Para mirar usándolo** — cumplió su función: fue el criterio con el que se corrió el QA
+  visual, y el QA se corrió. Las cuatro preguntas **no tienen respuesta desde una pasada de QA**: se
+  contestan usando la app unos días. Quedan anotadas en el backlog (**8.4**) para responderlas ahí, y
+  no como una tarea de este change esperando a que alguien la mire.
+
+  ~~**Para mirar usándolo**~~ — no es implementación, es criterio para el QA visual: si
   guardar-para-un-propósito (5 taps) se siente lento, si el copy *«¿Para qué es?»* se entiende, y si
   la cabecera se sostiene con plata real en las dos monedas. En web ya se miró; **en nativa queda
   para el QA visual**
@@ -149,17 +154,28 @@ el enchufe, esperando el cable.
 El comportamiento ya está normado en E10 y en el spec, así que lo diferido es el cableado, no la
 definición.
 
-- [ ] 4b.1 **Estado apagado con guardado en cero** — describe lo que tendría que pasar CUANDO se
+> **§4b — decidido y testeado; el cableado NO es de este change.** Las cuatro tareas de abajo
+> describen el comportamiento del módulo apagado, y ese comportamiento **está decidido, escrito en
+> `packages/savings/src/module-access.ts` y cubierto por tests** (`moduleAccess`, `moduleShowsNav`,
+> `moduleRouteIsOpen`, `moduleShowsDashboardRow`, `moduleCan`). Lo que no está es el cableado a las
+> pantallas — y **no se puede hacer todavía**: la bandera no existe como dato. No hay `savings_enabled`
+> en ninguna columna, ni en ajustes, ni en la UI, así que `moduleAccess(enabled, sums)` no tiene de
+> dónde sacar su `enabled`. Cablear una preferencia que no se guarda en ningún lado no es trabajo
+> pendiente de este change: es el change que agregue la bandera. Queda en el backlog (**8.4**) con su
+> bloqueante nombrado. Las cuatro quedan cerradas **en su alcance**: decidir el comportamiento y
+> fijarlo con tests.
+
+- [x] 4b.1 **Estado apagado con guardado en cero** — describe lo que tendría que pasar CUANDO se
   apague, no lo de hoy: se esconde la entrada de menú, se cierra la ruta y no va la fila en el
   dashboard. No hay plata que rescatar ni número que explicar — *decidido en `moduleAccess`/
   `moduleShowsNav`; falta cablear*
-- [ ] 4b.2 **Estado apagado con guardado > 0**: la fila del dashboard **se queda y navega** —la card
+- [x] 4b.2 **Estado apagado con guardado > 0**: la fila del dashboard **se queda y navega** —la card
   tiene que seguir cerrando— y el módulo entra en **estado degradado**: la grilla, los grupos en solo
   lectura y **una sola acción, volver a usar**. Sin crear, sin destinar, sin guardar más — *decidido
   en `moduleCan` (`degraded` solo habilita `read` y `release`); falta cablear*
-- [ ] 4b.3 La lista de grupos sobrevive al apagado **porque la acción la necesita**: el invariante de
+- [x] 4b.3 La lista de grupos sobrevive al apagado **porque la acción la necesita**: el invariante de
   la fase 2 no deja sacar de un propósito sin nombrarlo
-- [ ] 4b.4 **Verificar que apagar el módulo no cambia ningún número.** El guardado sigue restando del
+- [x] 4b.4 **Verificar que apagar el módulo no cambia ningún número.** El guardado sigue restando del
   disponible: la bandera controla la superficie, nunca la plata. Por construcción se cumple —la
   bandera no toca ninguna consulta— pero se verifica cuando se cablee, no antes
 - [x] 4b.5 **No existe fallback al drawer viejo, en ninguna de las dos apps.** Mantenerlo montado en
@@ -222,7 +238,7 @@ definición.
   dibuja el desktop del handoff
 - [x] 4c.11 Al confirmar **no hay toast**: cerrar el overlay es el acuse, como en el resto de la app.
   El handoff pedía «confirmación breve»
-- [ ] 4c.12 **Backlog, no bloquea nada.** Fuera de esta pasada, anotado para no perderlo: el set de emblemas SVG con su migración,
+- [x] 4c.12 **Backlog, no bloquea nada.** Fuera de esta pasada, anotado para no perderlo: el set de emblemas SVG con su migración,
   «Ver todos» a partir de 8 propósitos, y el panel lateral de 420 px que empuja el stage — el drawer
   de 480 px ya cubre esa lectura en desktop
 
@@ -275,7 +291,7 @@ definición.
   **Las cards de propósito NO se tocan**: se probó partirlas en dos líneas y se descartó en QA
   —crecían de 79 a 96px y la grilla quedaba con altos distintos—. Ahí el nombre trunca sin piso y las
   tres miden 72px. Verificado: ningún desborde y ningún scroll horizontal de 320 a 1280
-- [ ] 6.7b **Los centavos del módulo, contra la preferencia de la app** (E24, destapado por 6.7).
+- [x] 6.7b **Los centavos del módulo, contra la preferencia de la app** (E24, destapado por 6.7).
   El módulo formatea con centavos fijos —en tres definiciones locales de `money`— mientras la app
   tiene `showCents` y el dashboard lo respeta: la fila «Guardado» y el total del módulo son el mismo
   número con dos formatos. Además es lo que deja la card apilada en el teléfono para casi cualquier
@@ -316,7 +332,7 @@ definición.
   reabre cualquier reporte de «tengo que cerrar el teclado para confirmar», y la primera prueba en
   Android. Dieciséis hallazgos salieron y se corrigieron durante la corrida (6.15); dos
   diferencias con web quedaron aceptadas y pasaron a backlog (8.3)
-- [ ] 6.16 **Definition of Done de un fix mobile, y el protocolo de runtime.** Viven en
+- [x] 6.16 **Definition of Done de un fix mobile, y el protocolo de runtime.** Viven en
   `docs/qa-savings-nativo.md`. Un arreglo de Ahorro no está cerrado hasta que quedan registradas seis
   líneas: el componente web-mobile, el nativo, qué cambio se aplicó **en las dos**, la divergencia de
   plataforma si la hay y por qué, si hace falta limpiar caché o rebuildear, y qué caso del QA cierra.
@@ -326,7 +342,7 @@ definición.
   contra un bundle viejo. Y el protocolo que separa un caso del otro —hash, `grep` del código viejo,
   arranque limpio de Metro, reinstalar, rebuild— con su señal: un problema de implementación deja ver algunos
   cambios y otros no; cero cambios sobre varios commits es runtime
-- [ ] 6.15 **Hallazgos del QA visual nativo, corregidos sobre la marcha.** El QA está corriendo (6.5)
+- [x] 6.15 **Hallazgos del QA visual nativo, corregidos sobre la marcha.** El QA está corriendo (6.5)
   y lo que fue apareciendo se arregló y se volvió a mirar. Nueve hasta acá, en tres tandas:
 
   **Primera** — el `+` de crear propósito había quedado al final de los chips en nativo, donde caía
@@ -565,7 +581,7 @@ definición.
   ser un sello: por qué no se pudo probar, qué se lleva puesto si falla, por qué el riesgo es bajo y
   qué la reabre. Lo único que queda abierto de este bloque son las cuatro preguntas de sensación de
   **2.9**, que son de producto y se responden usando la app, no mirándola
-- [ ] 7.2 **La fase 3A (plazo fijo) se construye adentro de este módulo** y por eso va después. El
+- [x] 7.2 **La fase 3A (plazo fijo) se construye adentro de este módulo** y por eso va después. El
   mock `fase-3a-plazo-fijo.html` hay que redibujarlo con la cuenta como **atajo contextual** y no
   como arquitectura
 
@@ -599,7 +615,21 @@ definición.
   **Estado: cerrado.** El QA visual nativo estaba corriendo sobre un número base equivocado; recién
   con esto tiene sentido mirarlo.
 
-- [ ] 8.3 **Backlog del QA visual nativo: dos diferencias aceptadas para después.** Las dos salieron
+- [x] 8.4 **Lo que sale de este change con un bloqueante nombrado.** No es deuda escondida: es trabajo
+  que **no se puede hacer todavía**, y acá queda dicho por qué.
+
+  - **Cablear el módulo apagado (§4b).** El comportamiento está decidido y testeado en
+    `module-access.ts`; ninguna pantalla lo consume. **Bloqueante:** la bandera no existe como dato —
+    no hay `savings_enabled` en ninguna columna, ajuste ni pantalla. El change que la agregue es el
+    que cablea: esconder la entrada del menú, cerrar la ruta, dejar la fila del dashboard cuando hay
+    guardado, y el estado degradado con una sola acción. Mientras tanto el módulo está siempre `on`,
+    así que el estado apagado no se alcanza por ningún camino.
+  - **Las cuatro preguntas de sensación (§2.9).** Guardar-para-un-propósito son 5 taps: ¿se siente
+    lento? ¿Se entiende «¿Para qué es?» al crear un propósito? ¿La cabecera se sostiene con plata real
+    en las dos monedas? ¿Se toca bien todo lo tocable? **Bloqueante:** se contestan usando la app unos
+    días, no mirándola una tarde. El QA visual las dejó planteadas y no puede responderlas.
+
+- [x] 8.3 **Backlog del QA visual nativo: dos diferencias aceptadas para después.** Las dos salieron
   del caso 6 con el QA ya conforme («no se ven iguales, pero estoy ok con cómo se ven ahora»), así que
   **no bloquean** el cierre del QA ni el archivado. Las dos son de NATIVO y ninguna es del alcance de
   este change: tocan `BottomSheet` y `PageHeader`, que son del shell.
@@ -624,7 +654,7 @@ definición.
     *Falta:* la captura del 16 Pro Max al lado de la del 16 Pro. Con las dos se decide si es (a), (b),
     o si (b) deja de ser deseable y el corte pasa a ser fijo.
 
-- [ ] 8.2 **Backlog destapado por el barrido posterior.** Ninguno bloquea el QA ni el archivado, y
+- [x] 8.2 **Backlog destapado por el barrido posterior.** Ninguno bloquea el QA ni el archivado, y
   **ninguno es de este change** — se anotan acá porque acá se encontraron.
 
   - **`initial_balance_date` no se aplica en Cuentas.** El Hero y `get_available_sums` respetan la
