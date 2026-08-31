@@ -717,8 +717,8 @@ no existe.
 
 ### Requirement: La jerarquía del módulo no cambia con el ancho
 
-Guardado total es el bloque padre; «Sin destino» y los propósitos son su desglose. En responsive puede
-cambiar la cantidad de columnas, nunca la jerarquía. Si hay dos columnas, van dentro del desglose: la
+El guardado total SHALL ser el bloque padre, y «Sin destino» y los propósitos SHALL leerse como su
+desglose. En responsive SHALL poder cambiar la cantidad de columnas y NO SHALL cambiar la jerarquía. Si hay dos columnas, van dentro del desglose: la
 card del total no comparte fila con nada.
 
 #### Scenario: El mismo orden en los tres tamaños
@@ -736,8 +736,9 @@ card del total no comparte fila con nada.
 
 ### Requirement: Ningún monto se corta, y el quiebre lo decide el contenido
 
-En toda fila del módulo que combine texto y plata, el que cede es el texto. Un monto nunca se achica,
-nunca se parte y nunca se corta — ni por el borde de su contenedor ni por debajo de otro control.
+En toda fila del módulo que combine texto y plata, el que cede SHALL ser el texto. Un monto NO SHALL
+achicarse, NO SHALL partirse y NO SHALL cortarse — ni por el borde de su contenedor ni por debajo de
+otro control.
 
 Cuando el texto ya cedió todo lo que podía y el monto sigue sin entrar, la fila **se parte en dos
 líneas**: el rótulo arriba, los montos abajo, alineados a la derecha para que la columna de números
@@ -780,8 +781,8 @@ un nombre truncado se recupera abriendo el propósito.
 
 ### Requirement: El módulo es la lectura y el overlay son los actos
 
-El overlay no tiene vista de detalle: abre directo a lo que se tocó. La lectura —el total, el
-desglose, el puente con el banco y el historial— vive en la página.
+El overlay NO SHALL tener vista de detalle: SHALL abrir directo a lo que se tocó. La lectura —el
+total, el desglose, el puente con el banco y el historial— SHALL vivir en la página.
 
 #### Scenario: Volver desde un acto cierra
 
@@ -798,8 +799,8 @@ desglose, el puente con el banco y el historial— vive en la página.
 
 ### Requirement: Un propósito sin plata existe y se ve
 
-Un propósito recién creado no tiene reparto, así que no aparece en el corte por moneda. Igual existe,
-y la lista lo muestra: si no, crearlo y no verlo es indistinguible de que no se haya creado.
+Un propósito recién creado no tiene reparto, así que no aparece en el corte por moneda. Existe igual,
+y la lista SHALL mostrarlo: si no, crearlo y no verlo es indistinguible de que no se haya creado.
 
 #### Scenario: El propósito recién creado aparece
 
@@ -824,7 +825,7 @@ y la lista lo muestra: si no, crearlo y no verlo es indistinguible de que no se 
 
 ### Requirement: Crear un propósito acusa la creación
 
-El acuse es la pantalla siguiente, no un toast. Una pantalla que da por sabido que el propósito existe
+El acuse SHALL ser la pantalla siguiente y NO SHALL ser un toast. Una pantalla que da por sabido que el propósito existe
 no acusa nada: quien cierra ahí no sabe si quedó creado, y al reintentar choca contra el nombre único.
 
 #### Scenario: La pantalla siguiente lo dice
@@ -843,8 +844,8 @@ no acusa nada: quien cierra ahí no sabe si quedó creado, y al reintentar choca
 
 ### Requirement: Volver a usar tiene un origen por operación
 
-La app sugiere de dónde sale, no impone y nunca reparte sola. Si el monto supera el origen elegido,
-lo dice y nombra la salida en vez de solo negar.
+La app SHALL sugerir de dónde sale, NO SHALL imponerlo y NO SHALL repartir sola. Si el monto supera
+el origen elegido, SHALL decir el tope y nombrar la salida en vez de solo negar.
 
 #### Scenario: El origen viene preseleccionado, no bloqueado
 
@@ -869,6 +870,10 @@ lo dice y nombra la salida en vez de solo negar.
 
 ### Requirement: El origen preseleccionado nunca es un grupo vacío
 
+Al abrir volver a usar, el origen preseleccionado NO SHALL ser un grupo sin saldo en la moneda de la
+operación: el sistema SHALL correrlo al primero que tenga plata. Un origen vacío deja el tope en cero
+sobre una elección que el usuario no hizo, y el CTA muerto sin nada que lo explique.
+
 #### Scenario: Se corre al primero que tenga plata
 
 - **GIVEN** «Sin destino» está en cero y hay propósitos con saldo
@@ -877,6 +882,10 @@ lo dice y nombra la salida en vez de solo negar.
 - **AND** el tope que se muestra no es cero
 
 ### Requirement: Un nombre de propósito con espacios de más se acepta
+
+Un nombre con espacios al principio o al final SHALL aceptarse, y SHALL guardarse recortado. Un nombre
+compuesto SOLO por espacios SHALL rechazarse, y el rechazo SHALL señalar el campo del nombre en vez de
+mostrar un error genérico.
 
 #### Scenario: El espacio se absorbe, no se rechaza
 
@@ -891,6 +900,10 @@ lo dice y nombra la salida en vez de solo negar.
 - **AND** no muestra un error genérico
 
 ### Requirement: Lo escrito sobrevive a los desvíos del formulario
+
+Lo que el usuario ya escribió SHALL sobrevivir a los desvíos que el propio formulario ofrece —ir a
+crear un propósito y volver, entre otros—: el monto NO SHALL perderse, y lo que se creó en el desvío
+SHALL quedar elegido al volver. Perder el monto es cobrarle al usuario haber querido ser prolijo.
 
 #### Scenario: Crear un propósito en el medio no borra el monto
 
