@@ -6,6 +6,9 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import {
   buildCategorySlices,
   buildSubcategorySlices,
+  DONUT_TOP,
+  groupForDonut,
+  NO_OTHERS_CAP,
   type CategoryBreakdown,
   type SubcategoryBreakdown,
 } from '@grana/money-logic'
@@ -30,48 +33,6 @@ import {
   translateCategoryLabel,
   translateSubcategoryLabel,
 } from '@/lib/categories/display'
-
-// We build the breakdown WITHOUT the "Otros" tail so every category survives as
-// its own slice — the ranking list can then reveal them all (see the
-// expandable "+ N categorías más" row in CategorySpendingOverview). The donut
-// is regrouped to a clean top-N + "Otros" separately, in `groupForDonut` below.
-const NO_OTHERS_CAP = Number.MAX_SAFE_INTEGER
-// How many named arcs the donut shows before folding the rest into one "Otros"
-// slice. Mirrors the previous buildCategorySlices default (topN: 6) so the donut
-// stays visually identical.
-const DONUT_TOP = 6
-
-// Regroup an uncapped, sorted breakdown into the donut's top-N + "Otros" view,
-// recomputing the cumulative offsets so the arcs stay contiguous. Pure mirror of
-// buildCategorySlices' tail logic, applied after the fact so the ranking can
-// keep the full per-category list.
-function groupForDonut(
-  breakdown: CategoryBreakdown,
-  topN: number,
-  othersLabel: string,
-): CategoryBreakdown {
-  if (breakdown.slices.length <= topN) return breakdown
-  const named = breakdown.slices.slice(0, topN)
-  const rest = breakdown.slices.slice(topN)
-  const last = named[named.length - 1]
-  const othersValue = rest.reduce((acc, s) => acc + s.value, 0)
-  const othersPercentage = rest.reduce((acc, s) => acc + s.percentage, 0)
-  return {
-    total: breakdown.total,
-    slices: [
-      ...named,
-      {
-        categoryId: null,
-        label: othersLabel,
-        color: '#9CA3AF',
-        icon: null,
-        value: othersValue,
-        percentage: othersPercentage,
-        offset: last.offset + last.percentage,
-      },
-    ],
-  }
-}
 
 /**
  * Client container for `<CategorySpendingOverview>`. Reads filters from the

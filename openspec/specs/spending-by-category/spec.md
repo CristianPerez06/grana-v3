@@ -3,30 +3,50 @@
 ## Purpose
 
 "En qué se fue": el desglose de los gastos del mes agrupados por categoría, pesado por **neto** (gastos − reintegros recibidos) y **por moneda**. Es la carta de presentación del módulo Movimientos —un donut + ranking, con navegación por mes y drill-down al listado filtrado— y esa es su **superficie única**: el rediseño del dashboard (`redesign-dashboard-home-v2`) retiró de ahí la dona y su teaser, para no sostener la misma lectura en dos lugares. El dashboard sigue consumiendo `getMonthCategoryBreakdown`, que es la fuente del devengado con que arma "Gastaste", pero no vuelve a presentar el desglose. Responde una de las tres preguntas centrales del usuario, complementando "cuánto tengo" y "qué viene".
-
 ## Requirements
-
 ### Requirement: El módulo Movimientos abre con un desglose de gastos por categoría del mes
 
-El módulo de movimientos (`/transactions`) SHALL presentar, como carta de presentación arriba del listado, un **desglose de los gastos del mes agrupados por categoría**, que responde "¿en qué se fue?". El listado de movimientos SHALL seguir accesible (el desglose lo antecede, no lo reemplaza). La navegación por mes de la página SHALL estar unificada en un único selector (el del desglose); el bar de filtros del listado no duplica el selector de mes.
+El módulo de movimientos SHALL presentar, en **ambas plataformas** (web `/transactions` y la pantalla nativa Movimientos), como carta de presentación arriba del listado, un **desglose de los gastos del mes agrupados por categoría**, que responde "¿en qué se fue?". El listado de movimientos SHALL seguir accesible (el desglose lo antecede, no lo reemplaza).
+
+La navegación por mes de la pantalla SHALL estar unificada en **un único control**, que determina a la vez el mes del desglose y el del listado. La **ubicación** de ese control es idiomática por plataforma y NO SHALL fijarse en este spec:
+
+- **Web** lo lleva **dentro** del desglose: la ruta no tiene otro control de mes, y el bar de filtros del listado no lo duplica.
+- **Nativo** lo lleva **arriba de la pantalla** (`MonthNavigator`), porque ese control ya existe y gobierna además el feed, las recurrencias pendientes y los reintegros pendientes. La card nativa **lee** el mes y NO SHALL renderizar un selector propio.
+
+Lo que SHALL sostenerse en las dos es la invariante: **un solo** control de mes visible por pantalla, y el desglose y el listado siempre sobre el mismo mes.
 
 #### Scenario: El overview por categoría encabeza Movimientos
 
-- **WHEN** el usuario abre `/transactions`
+- **WHEN** el usuario abre `/transactions` en web
 - **THEN** ve arriba un desglose de los gastos del mes por categoría
 - **AND** el listado de movimientos sigue disponible debajo
 
+#### Scenario: El overview por categoría encabeza Movimientos en nativo
+
+- **WHEN** el usuario abre la pantalla Movimientos en la app nativa
+- **THEN** ve la card "En qué se fue" entre el selector de mes y los chips de acción (Buscar / Filtros)
+- **AND** el feed de movimientos sigue disponible debajo
+
 #### Scenario: Un único selector de mes
 
-- **WHEN** el usuario está en `/transactions`
-- **THEN** hay un solo control de mes (en el desglose), que también determina el mes del listado
+- **WHEN** el usuario está en el módulo Movimientos, en cualquiera de las dos plataformas
+- **THEN** hay un solo control de mes visible
+- **AND** ese control determina el mes del desglose y el del listado
 
+#### Scenario: La card nativa no duplica el selector de mes
+
+- **WHEN** el usuario abre la pantalla Movimientos en nativo
+- **THEN** el único control de mes es el `MonthNavigator` de la pantalla
+- **AND** la card "En qué se fue" NO muestra flechas de mes propias
+- **AND** navegar de mes con ese control recalcula el donut, el ranking y el feed juntos
 
 ---
 
 ### Requirement: El desglose pesa por el neto de cada categoría, por moneda
 
-El peso de cada categoría SHALL ser el **neto por moneda** = suma de gastos de esa categoría − suma de reintegros recibidos de esa categoría (categoría derivada del gasto). El desglose SHALL ser sólo de **gastos** (los ingresos no participan). ARS y USD NO SHALL sumarse entre sí: la vista muestra **una moneda por vez**, con ARS por defecto y un toggle ARS|USD que aparece cuando hay gasto en USD en el mes.
+El peso de cada categoría SHALL ser el **neto por moneda** = suma de gastos de esa categoría − suma de reintegros recibidos de esa categoría (categoría derivada del gasto). El desglose SHALL ser sólo de **gastos** (los ingresos no participan). ARS y USD NO SHALL sumarse entre sí: la vista muestra **una moneda por vez**, con ARS por defecto y un toggle ARS|USD.
+
+**El toggle se gatea por el usuario, no por el mes.** El toggle SHALL aparecer cuando el usuario **opera en USD** —tiene al menos una cuenta con moneda USD (bimoneda)—, y NO cuando el mes visualizado casualmente tuvo movimientos en USD. Gatearlo por mes haría que el control desapareciera al navegar a un mes sin gasto USD, dejando al usuario bimoneda sin forma de volver a la lectura en dólares; la pregunta que responde el gate es "¿este usuario piensa en dos monedas?", que es month-independent y por lo tanto cacheable a nivel usuario.
 
 Cuentan los gastos con **fecha contable en el mes** seleccionado (base **devengado**): gastos cash/débito, consumos de tarjeta, y **cada cuota** de una compra en cuotas.
 
@@ -40,7 +60,7 @@ El **pago del resumen de tarjeta NO es gasto** (cancela deuda) y NO cuenta en "E
 
 Los reintegros **recibidos** (no cancelados) de esa categoría restan, por su **fecha**, sin importar su destino (`reimbursement_target`: "a cuenta" o "en resumen") — para la categorización solo importa que volvió plata a esa categoría. Les aplica el mismo corte de caja: un reintegro fechado adelante todavía no volvió.
 
-El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando los reintegros recibidos de la categoría en el mes superan su gasto del mes (p. ej. un reintegro cuyo gasto original fue de un mes anterior, o un consumo de tarjeta aún no devengado). El sistema NO SHALL descartar ni capear a cero esos netos negativos: SHALL mostrarlos como **créditos** ("te devolvieron"), separados del peso de gasto y **fuera de la dona** (una dona no puede representar una porción negativa). El total/peso de la dona SHALL derivarse solo de los netos positivos.
+El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando los reintegros recibidos de la categoría en el mes superan su gasto del mes (p. ej. un reintegro cuyo gasto original fue de un mes anterior, o un consumo de tarjeta aún no devengado). El sistema NO SHALL descartar ni capear a cero esos netos negativos: SHALL mostrarlos como **créditos** ("te devolvieron"), separados del peso de gasto y **fuera de la dona** (una dona no puede representar una porción negativa). El total/peso de la dona SHALL derivarse solo de los netos positivos. Los créditos SHALL mostrarse en **ambas plataformas**.
 
 #### Scenario: El neto descuenta los reintegros recibidos
 
@@ -77,6 +97,17 @@ El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando lo
 - **THEN** el desglose muestra ARS por defecto y ofrece un toggle para ver USD
 - **AND** nunca suma ARS y USD en el mismo total
 
+#### Scenario: El toggle de moneda sobrevive a un mes sin gasto en USD
+
+- **WHEN** el usuario tiene al menos una cuenta en USD y navega a un mes donde no hubo ningún movimiento en USD
+- **THEN** el toggle ARS|USD sigue visible
+- **AND** al elegir USD el desglose muestra su estado vacío de ese mes, no la lectura en ARS
+
+#### Scenario: El usuario monomoneda no ve el toggle
+
+- **WHEN** el usuario no tiene ninguna cuenta con moneda USD
+- **THEN** el desglose no muestra el toggle ARS|USD en ninguna plataforma
+
 #### Scenario: Un gasto de caja fechado adelante no pesa todavía
 
 - **WHEN** hoy es el 1 de agosto y la categoría Hogar tiene un gasto de débito de $300.000 fechado el 20 de agosto
@@ -87,7 +118,6 @@ El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando lo
 
 - **WHEN** hoy es el 1 de agosto y la categoría Hogar tiene una cuota de tarjeta de $50.000 fechada el 20 de agosto
 - **THEN** esa cuota SÍ cuenta en el desglose de agosto desde hoy (ya está incurrida: la compra ocurrió antes)
-
 
 ---
 
@@ -106,12 +136,13 @@ El desglose SHALL mostrarse como un **donut** que representa el peso relativo de
 - **WHEN** hay más categorías de las que el donut muestra legiblemente
 - **THEN** las de menor peso se agrupan en una entrada "Otros"
 
-
 ---
 
 ### Requirement: Tocar una categoría abre sus movimientos
 
 Al tocar una categoría del desglose (donut o ranking), el sistema SHALL abrir, debajo del desglose, la **lista de las líneas que componen el peso de esa categoría** en el mes y la moneda visualizados. Esta lista SHALL usar la **misma lente contable (CONSUMO / devengado)** que el desglose, de modo que **la suma de los montos mostrados en la lista iguale el peso de la categoría en el donut**. La lista drilleada NO SHALL usar la lente CAJA del listado general (`get_movements_page`); el listado general conserva su semántica sin cambios y se restablece al limpiar el filtro de categoría.
+
+Esta regla SHALL regir en **ambas plataformas**: web y nativo comparten la lente (`@grana/money-logic`) y la query de la lista (`getMonthCategoryLines` en `@grana/transactions`), de modo que la reconciliación no puede divergir entre ellas.
 
 La lista drilleada aplica cuando el **único** filtro de contenido activo es la categoría (opcionalmente acotada por subcategoría y por la moneda visualizada). Si el usuario superpone **otro** filtro (cuenta, tipo, rango de monto o búsqueda de texto), ya no está en el drill puro: el listado SHALL volver a la lente CAJA del listado general (`get_movements_page`), que respeta TODOS los filtros combinados. La reconciliación con el donut solo se promete en el estado de drill puro.
 
@@ -126,13 +157,22 @@ Cada fila de la lista drilleada SHALL apuntar a una **transacción real** (la cu
 
 Cuando el desglose está en modo subcategoría (una categoría activa con sus subcategorías en el donut), la lista drilleada SHALL respetar el mismo filtro: la categoría activa, o la subcategoría si el usuario navega a una. Al seleccionar una subcategoría el donut SHALL permanecer mostrando el desglose por subcategoría de la categoría activa (NO SHALL volver a la vista de todas las categorías): seleccionar una subcategoría solo acota la lista, conservando el contexto "dentro de esta categoría". Tocar la subcategoría ya seleccionada la deselecciona (vuelve a la categoría completa) sin salir del drill.
 
-> **Paridad de plataforma — MOBILE PENDIENTE (tech lead).** La lista drilleada que reconcilia con el donut está implementada **solo en web** (mergeado 2026-07-13, `5dc3ff59`). En nativo el drill de categoría todavía usa la lente CAJA (`get_movements_page`) y NO reconcilia. Para la paridad, la **lente ya está compartida** en `@grana/money-logic` (`categoryOwnPortion`, `countsAsCategorySpend`), usada por el donut (`getMonthCategoryBreakdown`) y por la lista, con un test de invariante en `@grana/dashboard` que garantiza que no divergen. Lo que falta es la **query de la lista**: `getMonthCategoryLines` vive hoy en `apps/web/lib/transactions/queries.ts` (no en un package, porque no puede ir a `@grana/dashboard` sin ciclo transactions→dashboard). Recomendación: **hoistearla a `@grana/transactions`** (que ya expone `toFinancialMovement`, `TRANSACTION_SELECT`, `attachLinkedExpenses`) para que web y nativo la compartan; mobile luego branchea su lista del drill puro para usarla y renderiza con su fila nativa + chip "Cuota n de N" + monto = tu parte. Revisar también la paridad de los ajustes de UX asociados (el drill de egresos no fija filtro de moneda; seleccionar subcategoría mantiene el donut en modo subcategoría).
+**El drill es el filtro, no un estado aparte.** Tocar una categoría SHALL despachar el filtro de categoría de la pantalla; el desglose deriva su modo (categorías vs subcategorías) de ese filtro. NO SHALL existir un estado de drill interno del componente que pueda quedar desincronizado del listado de abajo.
+
+**La moneda visualizada es el filtro de moneda de la pantalla.** El toggle ARS|USD del desglose SHALL escribir el mismo estado de moneda que filtra el listado, de modo que donut y lista nunca muestren monedas distintas. En nativo eso implica que elegir USD en la card hace visible el chip de filtro "USD" entre los filtros activos, y quitar ese chip devuelve el desglose a ARS.
 
 #### Scenario: La lista drilleada suma el peso del donut
 
 - **WHEN** el usuario toca una categoría cuyo peso en el donut es $100.000 en la moneda visualizada
 - **THEN** el sistema muestra debajo la lista de líneas que componen esa categoría
 - **AND** la suma de los montos mostrados en la lista es $100.000
+
+#### Scenario: La lista drilleada nativa suma el peso del donut
+
+- **WHEN** el usuario nativo toca una categoría cuyo peso en el donut es $100.000
+- **THEN** el feed de abajo cambia a la lista devengada de esa categoría
+- **AND** la suma de los montos mostrados es $100.000
+- **AND** coincide con lo que web muestra para el mismo mes, categoría y moneda
 
 #### Scenario: Una cuota se muestra por su mes de vencimiento
 
@@ -189,8 +229,12 @@ Cuando el desglose está en modo subcategoría (una categoría activa con sus su
 - **THEN** el listado usa la lente CAJA general que respeta todos los filtros combinados (no la lista devengada)
 - **AND** el sistema no promete que ese listado sume el peso del donut
 
+#### Scenario: El toggle de moneda de la card nativa filtra el feed
 
----
+- **WHEN** el usuario nativo toca "USD" en la card "En qué se fue"
+- **THEN** el donut y el feed pasan los dos a USD
+- **AND** aparece el chip de filtro "USD" entre los filtros activos de la pantalla
+- **AND** quitar ese chip devuelve el donut y el feed a ARS
 
 ### Requirement: El desglose navega por mes
 
@@ -200,7 +244,6 @@ El desglose SHALL permitir navegar entre meses, mostrando por defecto el mes act
 
 - **WHEN** el usuario navega al mes anterior en el desglose
 - **THEN** el donut y el ranking se recalculan con los gastos de ese mes
-
 
 ---
 
@@ -244,3 +287,4 @@ El desglose de **ingresos** NO SHALL verse afectado: el ingreso no se comparte (
 
 - **WHEN** tengo un gasto propio no compartido de $30.000
 - **THEN** el desglose lo cuenta completo ($30.000)
+

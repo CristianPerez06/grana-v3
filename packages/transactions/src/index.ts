@@ -11,6 +11,12 @@ export {
   getTransactionDetail,
   getInstallmentFamily,
   getReimbursementsForExpense,
+  // The drilled reconciliation list of a category ("En qué se fue"). It lives
+  // HERE and not next to `getMonthCategoryBreakdown` in `@grana/dashboard`
+  // because it needs the movement machinery below (`TRANSACTION_SELECT`,
+  // `attachLinkedExpenses`, `toFinancialMovement`), and this package already
+  // depends on `@grana/dashboard` — putting it there would close the cycle.
+  getMonthCategoryLines,
   // Internal helpers shared with the web-retained transactions feed reads
   // (getTransactions, getMonthCategoryLines) so the select shape and the
   // linked-expense / history-row rules are not duplicated.
@@ -18,7 +24,7 @@ export {
   attachLinkedExpenses,
   isHistoryRow,
 } from './queries'
-export type { ExpenseReimbursementVM } from './queries'
+export type { ExpenseReimbursementVM, MonthCategoryLines } from './queries'
 
 export type {
   Transaction,
@@ -77,3 +83,8 @@ export type {
 // Amount tone (pure). `toneToClass` (Tailwind) stays in web.
 export { resolveTone } from './tone'
 export type { Tone } from './tone'
+
+// Option catalog for the movement filters sheet (accounts / categories /
+// subcategories of the active category), shared by web and mobile.
+export { getMovementFilterOptions } from './filter-options'
+export type { MovementFilterOptions } from './filter-options'

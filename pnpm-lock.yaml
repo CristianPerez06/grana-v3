@@ -505,6 +505,9 @@ importers:
       '@grana/supabase':
         specifier: workspace:*
         version: link:../supabase
+      '@grana/ui-contracts':
+        specifier: workspace:*
+        version: link:../ui-contracts
     devDependencies:
       vitest:
         specifier: ^3.0.0
