@@ -14,7 +14,8 @@
   "dependencies": {
     "@grana/dashboard": "workspace:*",
     "@grana/money-logic": "workspace:*",
-    "@grana/supabase": "workspace:*"
+    "@grana/supabase": "workspace:*",
+    "@grana/ui-contracts": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^3.0.0"

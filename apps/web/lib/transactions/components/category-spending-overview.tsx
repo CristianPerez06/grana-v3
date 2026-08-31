@@ -4,7 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import type { CategoryBreakdown, CategorySlice, SubcategoryBreakdown } from '@grana/money-logic'
+import {
+  DONUT_FALLBACK,
+  generateSubTints,
+  INCOME_PALETTE,
+  MODE_ACCENT,
+  RANKING_VISIBLE,
+  type CategoryBreakdown,
+  type CategorySlice,
+  type SubcategoryBreakdown,
+} from '@grana/money-logic'
 
 const fillTemplate = (template: string, values: Record<string, string | number>): string => {
   let out = template
@@ -16,68 +25,10 @@ const fillTemplate = (template: string, values: Record<string, string | number>)
 import { useShowCents } from '@/lib/preferences-context'
 import { donutAmountFontSize } from '@/lib/donut-amount'
 
-const DONUT_FALLBACK = '#9CA3AF'
-// How many category rows the ranking shows before folding the rest into the
-// expandable "+ N más" control. Independent of the donut's top-6 + "Otros"
-// grouping — most users sit under this and never see the toggle.
-const RANKING_VISIBLE = 10
-
-// ── Mode palette / accent (design handoff: selector Egresos / Ingresos) ────────
-// Egresos keeps each category's own DB colour (multicolour by design); Ingresos
-// uses a fixed green palette assigned by ranking position so income categories
-// read as a single tonal family even when they have no colour set.
-const INCOME_PALETTE = ['#0E9E6E', '#16B981', '#4FC79A', '#86D9B8']
-// Accent drives the eyebrow title, the donut centre label and the active tab.
-const MODE_ACCENT: Record<'egresos' | 'ingresos', string> = {
-  egresos: '#0B1A2B',
-  ingresos: '#0E9E6E',
-}
 // Max subcategory slices pre-created in the SVG pool (keeps DOM stable).
 const MAX_SUB_SLICES = 8
 // Lock duration (ms) matching the CSS transition so clicks mid-animation are ignored.
 const DRILL_LOCK_MS = 380
-
-// ── Color tinting ─────────────────────────────────────────────────────────────
-
-function hexToHSL(hex: string): { h: number; s: number; l: number } {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  if (!result) return { h: 0, s: 0, l: 50 }
-  const r = parseInt(result[1], 16) / 255
-  const g = parseInt(result[2], 16) / 255
-  const b = parseInt(result[3], 16) / 255
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  const l = (max + min) / 2
-  if (max === min) return { h: 0, s: 0, l: l * 100 }
-  const d = max - min
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-  let h = 0
-  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
-  else if (max === g) h = ((b - r) / d + 2) / 6
-  else h = ((r - g) / d + 4) / 6
-  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) }
-}
-
-// Generates N tints that stay in the parent colour's family but separate on
-// two axes so neighbouring slices read distinctly even when their shares are
-// nearly equal: a wide lightness ramp (76% lightest → 30% darkest) plus a
-// small analogous hue sweep centred on the parent (±span°). Saturation is
-// clamped to a readable band so bright hues don't blow out and muddy ones
-// don't wash out.
-function generateSubTints(parentColor: string, n: number): string[] {
-  if (n === 0) return []
-  const { h, s } = hexToHSL(parentColor)
-  const sc = Math.min(Math.max(s, 48), 66)
-  if (n === 1) return [`hsl(${h} ${sc}% 52%)`]
-  // Wider arc as the slice count grows, capped so we stay analogous (in family).
-  const span = Math.min(14 + n * 5, 54)
-  return Array.from({ length: n }, (_, j) => {
-    const t = j / (n - 1) // 0 (largest slice) → 1 (smallest)
-    const hue = Math.round((h - span / 2 + span * t + 360) % 360)
-    const l = Math.round(76 - (76 - 30) * t)
-    return `hsl(${hue} ${sc}% ${l}%)`
-  })
-}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

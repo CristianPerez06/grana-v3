@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Repeat, Search, SlidersHorizontal, X } from 'lucide-react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import type { TransactionWithDetails } from '@grana/transactions'
+import {
+  toFinancialMovement,
+  type FinancialMovement,
+  type TransactionWithDetails,
+} from '@grana/transactions'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { colors } from '../../lib/colors'
-import { resolveCategoryLabel } from '../../lib/accounts/movement-view'
 import {
   applyAccountFilters,
   activeFilterCount,
@@ -17,9 +21,14 @@ import {
   shiftMonth,
   type AccountMovementFilters,
 } from '../../lib/accounts/movement-filters'
+import { getMovementFilterOptions } from '../../lib/transactions/queries'
 import { MovementRow } from './MovementRow'
 import { MovementRowsSkeleton } from './MovementRowsSkeleton'
-import { MovementFiltersSheet, type CategoryOption } from './MovementFiltersSheet'
+import { MovementFiltersSheet } from '../movements/MovementFiltersSheet'
+import {
+  ActiveFilterChips,
+  type ActiveFilterChip,
+} from '../movements/ActiveFilterChips'
 
 type Props = {
   movements: TransactionWithDetails[]
@@ -42,54 +51,57 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
   const [searchMode, setSearchMode] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  // Category + subcategory options derived from the account's own movements, so
-  // the filters never offer a category with no rows here.
-  const categoryOptions = useMemo<CategoryOption[]>(() => {
-    const map = new Map<string, { id: string; label: string; subs: Map<string, string> }>()
-    for (const tx of movements) {
-      if (!tx.category_id || !tx.category) continue
-      let entry = map.get(tx.category_id)
-      if (!entry) {
-        entry = {
-          id: tx.category_id,
-          label: resolveCategoryLabel(tx.category, t) ?? tx.category.name,
-          subs: new Map(),
-        }
-        map.set(tx.category_id, entry)
-      }
-      if (tx.subcategory_id && tx.subcategory) {
-        const subLabel =
-          tx.subcategory.user_id === null
-            ? t(`subcategories.${tx.subcategory.canonical_name}`)
-            : tx.subcategory.name
-        entry.subs.set(tx.subcategory_id, subLabel)
-      }
-    }
-    return [...map.values()].map((e) => ({
-      id: e.id,
-      label: e.label,
-      subcategories: [...e.subs].map(([id, label]) => ({ id, label })),
-    }))
-  }, [movements, t])
+  // Which category the OPTIONS catalog is fetched for. Tracks the sheet's draft
+  // so picking a category surfaces its subcategories in the same pass.
+  const [optionsCategoryId, setOptionsCategoryId] = useState<string | null>(null)
+
+  // Options come from the CATALOG, same as the web account detail and the global
+  // feed — one source for the shared sheet instead of two with different
+  // semantics. The trade-off is accepted: the menu may offer a category with no
+  // rows in this account.
+  const optionsQuery = useQuery({
+    queryKey: ['transactions', 'filter-options', optionsCategoryId] as const,
+    queryFn: () => getMovementFilterOptions(optionsCategoryId),
+  })
+  const options = optionsQuery.data
+
+  // The derived `FinancialMovement` per row, which the filters need twice over:
+  // the type axis is the DERIVED `kind` (not the `transaction_type` column) so
+  // the shared sheet speaks one language on both surfaces, and the free-text
+  // match runs on the same shared `movementMatchesText` web uses, which reads
+  // this model. Derived once per movements load with `toFinancialMovement` — the
+  // repo's single kind derivation — not on every filter interaction.
+  const movementById = useMemo(() => {
+    const map = new Map<string, FinancialMovement>()
+    for (const tx of movements) map.set(tx.id, toFinancialMovement(tx))
+    return map
+  }, [movements])
 
   const filtered = useMemo(
-    () => applyAccountFilters(movements, filters).slice().reverse(),
-    [movements, filters],
+    () => applyAccountFilters(movements, filters, movementById).slice().reverse(),
+    [movements, filters, movementById],
   )
   const activeCount = activeFilterCount(filters)
 
-  const categoryLabelFor = (id: string) =>
-    categoryOptions.find((c) => c.id === id)?.label ?? null
-  const subcategoryLabelFor = (catId: string, subId: string) =>
-    categoryOptions.find((c) => c.id === catId)?.subcategories.find((s) => s.id === subId)?.label ??
-    null
+  const categoryLabelFor = (id: string) => {
+    const category = options?.categories.find((c) => c.id === id)
+    if (!category) return null
+    return category.user_id === null
+      ? t(`categories.${category.canonical_name}`)
+      : category.name
+  }
+  const subcategoryLabelFor = (subId: string) => {
+    const sub = options?.subcategories.find((s) => s.id === subId)
+    if (!sub) return null
+    return sub.user_id === null ? t(`subcategories.${sub.canonical_name}`) : sub.name
+  }
 
   // Active-filter chips (removable). month + query have their own controls.
-  const chips: { key: string; label: string; onRemove: () => void }[] = []
+  const chips: ActiveFilterChip[] = []
   if (filters.type) {
     chips.push({
       key: 'type',
-      label: t(`transactions.types.${filters.type}`),
+      label: t(`transactions.movement_kinds.${filters.type}`),
       onRemove: () => setFilters((f) => ({ ...f, type: null })),
     })
   }
@@ -104,8 +116,7 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
     chips.push({
       key: 'subcategory',
       label:
-        subcategoryLabelFor(filters.categoryId, filters.subcategoryId) ??
-        t('transactions.filters.subcategory'),
+        subcategoryLabelFor(filters.subcategoryId) ?? t('transactions.filters.subcategory'),
       onRemove: () => setFilters((f) => ({ ...f, subcategoryId: null })),
     })
   }
@@ -225,21 +236,7 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
       )}
 
       {/* Active filter chips */}
-      {chips.length > 0 && (
-        <View className="flex-row flex-wrap gap-2">
-          {chips.map((chip) => (
-            <Pressable
-              key={chip.key}
-              onPress={chip.onRemove}
-              accessibilityRole="button"
-              className="flex-row items-center gap-1 rounded-full bg-border-soft px-2.5 py-1"
-            >
-              <Text className="text-[12px] font-semibold text-text-muted">{chip.label}</Text>
-              <X size={12} color={colors.textMuted} />
-            </Pressable>
-          ))}
-        </View>
-      )}
+      <ActiveFilterChips chips={chips} />
 
       {/* List */}
       {loading ? (
@@ -263,7 +260,9 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
         onClose={() => setFiltersOpen(false)}
         filters={filters}
         onApply={setFilters}
-        categoryOptions={categoryOptions}
+        options={options}
+        onDraftCategoryChange={setOptionsCategoryId}
+        showAccountFilter={false}
       />
     </View>
   )

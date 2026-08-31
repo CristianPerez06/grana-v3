@@ -4,7 +4,10 @@ import {
   getDashboardHero,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
+  getMonthIncomeBreakdown,
   getMonthSpending,
+  getMonthSubcategoryBreakdown,
+  hasUsdAccount,
 } from '@grana/dashboard'
 import { supabase } from '../supabase'
 
@@ -57,11 +60,17 @@ export function useProfileFirstName() {
   })
 }
 
-export function useMonthCategoryBreakdown(year: number, month: number) {
+// Expense by category — the donut's data in Egresos mode. Keyed under
+// `transactions` (not `dashboard`) to mirror web's `QUERY_KEYS.breakdownExpense`:
+// the dashboard consumes this read to build "Gastaste", but the breakdown the
+// key addresses belongs to the Movimientos surface. Safe to realign — the hook
+// had no consumer and nothing invalidated the old key.
+export function useMonthCategoryBreakdown(year: number, month: number, enabled = true) {
   const key = monthKey(year, month)
   return useQuery({
-    queryKey: ['dashboard', 'category-breakdown', key] as const,
+    queryKey: ['transactions', 'breakdown', 'expense', key] as const,
     queryFn: () => getMonthCategoryBreakdown(supabase, key),
+    enabled,
   })
 }
 
@@ -71,5 +80,54 @@ export function useMonthSpending(year: number, month: number) {
   return useQuery({
     queryKey: ['dashboard', 'month-spending', key] as const,
     queryFn: () => getMonthSpending(supabase, key),
+  })
+}
+
+// ── "En qué se fue" — the spending overview's reads ───────────────────────────
+// Query keys mirror web's `QUERY_KEYS.breakdown*` / `hasUsdAccount` shapes, so
+// the same breakdown is addressable the same way on both platforms and an
+// invalidation written for one reads correctly against the other.
+
+/** Income by category ("De dónde vino") — the Ingresos mode of the overview. */
+export function useMonthIncomeBreakdown(year: number, month: number, enabled = true) {
+  const key = monthKey(year, month)
+  return useQuery({
+    queryKey: ['transactions', 'breakdown', 'income', key] as const,
+    queryFn: () => getMonthIncomeBreakdown(supabase, key),
+    enabled,
+  })
+}
+
+/**
+ * Subcategory composition of ONE category — the in-category donut the overview
+ * shows while a category filter is active. Gated on `categoryId`: with no
+ * category there is nothing to decompose.
+ */
+export function useMonthSubcategoryBreakdown(
+  year: number,
+  month: number,
+  categoryId: string | null,
+) {
+  const key = monthKey(year, month)
+  return useQuery({
+    queryKey: ['transactions', 'breakdown', 'expense', key, 'subcategory', categoryId ?? ''] as const,
+    queryFn: () => getMonthSubcategoryBreakdown(supabase, key, categoryId as string),
+    enabled: Boolean(categoryId),
+  })
+}
+
+/**
+ * Whether the user operates in USD at all (bimoneda) — gates the ARS/USD pills.
+ *
+ * The question is "does this user think in two currencies", NOT "did this month
+ * have USD movements": gating by month would make the toggle vanish when the
+ * user navigates to a month with no USD activity, stranding them in ARS. Being
+ * month-independent, it also caches across navigation.
+ */
+export function useHasUsdAccount() {
+  return useQuery({
+    queryKey: ['transactions', 'breakdown', 'has-usd-account'] as const,
+    queryFn: () => hasUsdAccount(supabase),
+    staleTime: 30 * 60 * 1000,
   })
 }
