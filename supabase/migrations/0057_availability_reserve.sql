@@ -2,6 +2,23 @@
 --
 -- Run AFTER 0056_reactivate_verduleria.sql.
 --
+-- ═══════════════════════════════════════════════════════════════════
+-- OJO: hay DOS migraciones numeradas 0057.
+--
+--   0057_availability_reserve.sql            (23-ago, rama de ahorro)
+--   0057_get_movements_page_search_fields.sql (27-ago, main)
+--
+-- Se desarrollaron en paralelo y cada rama tomó el número sin ver a la
+-- otra. **El orden entre ellas no importa**: tocan funciones distintas y
+-- ninguna depende de la otra —una redefine `get_movements_page`, la otra
+-- `get_available_sums` y `get_reserve_flow_sums`—, así que aplicarlas en
+-- cualquier orden da el mismo resultado. Las dos ya están aplicadas.
+--
+-- No se renumeraron a propósito: las dos ya se pegaron en la base con
+-- este nombre, y renombrar una migración aplicada rompe la
+-- correspondencia entre el archivo y lo que realmente se corrió.
+-- ═══════════════════════════════════════════════════════════════════
+--
 -- ===================================================================
 -- OJO: la definición de `get_available_sums` que está acá abajo quedó
 -- OBSOLETA. Omite el saldo inicial de las cuentas, que es el bug crítico
