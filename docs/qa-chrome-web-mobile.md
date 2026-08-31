@@ -25,6 +25,32 @@ Los dos que más riesgo tenían pasaron limpio:
 **Quedan los tres de teléfono** —el teclado (8), la PWA en iPhone (9) y Android (10)— más `6.1`, que
 son los deltas de spec y se aplican **al** archivar.
 
+### Los tres de teléfono — aceptados sin correr
+
+**Decisión del QA (Juli, 29-ago-2026): se aceptan sin correr.** Van por escrito, no tildados: nadie
+vio este chrome con un teclado virtual real ni instalado como PWA.
+
+*Por qué no se corrieron.* Los tres necesitan un dispositivo. El teclado porque `visualViewport` solo
+se mueve con un teclado virtual real; la PWA porque `env(safe-area-inset-*)` solo resuelve en iOS
+standalone; Android porque no había uno a mano. Chrome DevTools no puede simular ninguno de los tres —
+sus «Pixel» y «Galaxy» son el mismo motor de escritorio en otro tamaño.
+
+*Qué se estaría llevando puesto si fallan.*
+- **El teclado (8):** la tab bar se queda arriba del teclado, o el sheet queda debajo. Molesto y
+  visible al primer uso, no destructivo: no hay pérdida de datos.
+- **La PWA (9):** una banda blanca entre el notch y el navy, o la barra pisada por la home indicator.
+  Es puramente cosmético, y **solo en la web instalada** — en Safari normal no aplica.
+- **Android (10):** lo mismo que 8, con el teclado y los insets de Android.
+
+*Por qué el riesgo es acotado.* No es código sin escribir. El esconder la barra está implementado con
+`visualViewport` (decisión 2 del design) y el `viewport-fit=cover` con `env(safe-area-inset-*)` ya
+está puesto — lo que falta es verlos, no hacerlos. Y los siete casos de navegador, que son los que
+ejercen la estructura del chrome, pasaron sin un solo hallazgo.
+
+*Qué los reabre.* El primer reporte de «la barra me tapa el teclado» o «hay una franja blanca arriba»,
+y la primera vez que alguien instale la PWA en un teléfono. Son baratos de correr: el 8 y el 9 son
+tres minutos con un iPhone en la misma red que `localhost:3000`.
+
 ## Antes de empezar
 
 - Chrome DevTools en **390px** de ancho (iPhone 14 Pro en el selector de dispositivos).
