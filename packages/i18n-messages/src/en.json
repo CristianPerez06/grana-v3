@@ -1119,6 +1119,7 @@
         "expense": "Expense",
         "installments": "Expense in {count} installments",
         "shared": "Shared expense between {count} people",
+        "shared_installments": "Shared purchase in {count} installments",
         "reimbursement": "Expense with reimbursement",
         "recurrence": "Recurring expense",
         "income": "Income",
