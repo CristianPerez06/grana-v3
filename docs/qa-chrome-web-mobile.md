@@ -1,0 +1,114 @@
+# QA de navegador — `mirror-native-chrome-on-web-mobile`
+
+> **Qué cambió.** La web en viewport de teléfono dejó de ser «la web angosta» y pasa a **espejar el
+> chrome de la app nativa**: header navy full-bleed, tab bar fija de cuatro slots
+> (`Inicio · Movimientos · Hogar · ⋯`), menú como bottom sheet, y los `Drawer` presentándose como
+> bottom sheets en vez de paneles laterales. **Solo el chrome**: el contenido de cada ruta no se tocó,
+> y en escritorio no cambia nada.
+>
+> Son las verificaciones que quedaron abiertas en `tasks.md` §7 y 4.3/4.4. Es lo único que separa a
+> esta change de poder archivarse.
+
+## Antes de empezar
+
+- Chrome DevTools en **390px** de ancho (iPhone 14 Pro en el selector de dispositivos).
+- Sesión iniciada, con al menos una cuenta y un movimiento.
+- Mirá también **una vez en 800px** (el caso 5), que es donde tiene que volver el escritorio.
+
+---
+
+## 1 · La tab bar y el header, en `/transactions`
+
+| | |
+|---|---|
+| **Qué mirar** | El **header navy pegado al tope**, sin barra blanca arriba. La **tab bar fija abajo** con «Movimientos» marcado. El botón flotante de agregar **sin apoyarse sobre la barra** |
+| **Sería bug** | Una topbar blanca con hamburguesa (el chrome viejo) · la barra scrollea con el contenido en vez de quedar fija · el botón flotante pisa la barra o queda tapado · el navy no llega al borde y deja franjas blancas a los costados |
+| **Puede variar** | El alto exacto del header depende del safe-area simulado. No es bug si el navy llega al tope |
+
+## 2 · El menú `⋯`
+
+| | |
+|---|---|
+| **Qué mirar** | Que **suba desde abajo como sheet**, por encima de la tab bar. Que muestre la **identidad** (tu nombre / cuenta) y los ítems que bajaron del sidebar: **Cuentas, Tarjetas, Ahorro e inversión y Ajustes** |
+| **Interacción** | Abrirlo, tocar el scrim → **cierra** |
+| **Sería bug** | Se abre como panel lateral · queda por debajo de la tab bar · falta la identidad o alguno de los ítems · el scrim no cierra |
+
+## 3 · Una sección sin barra (chromeless)
+
+| | |
+|---|---|
+| **Qué mirar** | Entrar a **Cuentas desde el menú**: la sección se dibuja **sin tab bar**, y a cambio tiene **back-link a Inicio** |
+| **Interacción** | Tocar el back-link → vuelve a Inicio |
+| **Sería bug** | La tab bar sigue abajo · no hay back-link, o lo hay y no vuelve · vuelve pero rompe el historial |
+| **Por qué importa** | Es la regla que se importó del nativo: lo que cuelga del menú no tiene barra, y por eso **debe** declarar su vuelta |
+
+## 4 · El escritorio vuelve — 800px
+
+| | |
+|---|---|
+| **Qué mirar** | Redimensionar a **800px**: vuelve el **sidebar**, desaparecen la **tab bar** y el **botón flotante**, y los headers vuelven al flujo del contenido (sin banda navy full-bleed) |
+| **Sería bug** | Queda la tab bar en escritorio · queda el botón flotante · el header sigue navy a todo el ancho · el sidebar no vuelve |
+| **Por qué importa** | El corte es en `md` (768px). Este caso es el que confirma que **escritorio no se tocó** |
+
+## 5 · Los dos overlays que se dibujan adentro del panel
+
+| | |
+|---|---|
+| **Qué mirar** | A 390px, abrir el **alta de cuenta**: el **selector de banco** despliega su lista **dentro del sheet** y scrollea con el dedo. Lo mismo con la **calculadora de monto** |
+| **Sería bug** | La lista se corta y no se puede scrollear · se dibuja fuera del sheet, tapada o a mitad de pantalla · se abre hacia abajo y queda fuera de la vista en vez de flipear hacia arriba |
+| **Por qué importa** | Son los **únicos dos** que se portalean adentro del panel. Que el sheet sea más bajo que un panel lateral es justo lo que puede romperlos, y hasta ahora solo se verificó **leyendo el código** |
+
+## 6 · Un sheet con poco contenido
+
+| | |
+|---|---|
+| **Qué mirar** | A 390px, abrir un drawer corto —por ejemplo **editar el nombre del hogar**—: el sheet **hugea su alto**, ocupa lo que mide su contenido |
+| **Sería bug** | Ocupa la pantalla entera para mostrar dos campos · queda un hueco vacío abajo · el grabber no aparece |
+
+## 7 · Dónde está la acción de crear
+
+| | |
+|---|---|
+| **Qué mirar** | A 390px, recorrer **`/accounts`, `/cards`, `/settings/categories`, `/transactions/recurring` y `/cards/[id]`**: la acción de crear está **en el header, arriba a la derecha, en verde**, y **no hay ningún botón flotante**. En **`/dashboard`, `/transactions` y `/shared`** el botón flotante **sí sigue** |
+| **Sería bug** | Queda un flotante en las cinco primeras · desapareció el de las tres últimas · la acción de crear no está en ningún lado |
+| **Por qué importa** | Es la corrección posterior a review (3.13): un solo botón flotante en todo el producto, como en el nativo |
+
+---
+
+## Los tres que necesitan teléfono
+
+DevTools **no** puede verificar ninguno de estos, y conviene decirlo antes de que alguien los tilde
+mirando el simulador.
+
+## 8 · El teclado esconde la barra *(teléfono, cualquier navegador)*
+
+| | |
+|---|---|
+| **Qué mirar** | En `/transactions`, abrir el alta y **enfocar el monto**: la tab bar **se esconde**, el sheet queda **por encima del teclado**, y la barra **vuelve** al cerrarlo |
+| **Sería bug** | La barra se queda y el teclado la empuja fuera de lugar · el sheet queda debajo del teclado · la barra no vuelve |
+| **Por qué no sirve DevTools** | Se implementó con `visualViewport`, que **solo se mueve con un teclado virtual real** (decisión 2 del design). En el simulador de escritorio no pasa nada |
+
+## 9 · La PWA en un iPhone real
+
+| | |
+|---|---|
+| **Qué mirar** | Instalar la web en la pantalla de inicio y abrirla: el **navy llega hasta el notch** y la **tab bar respeta la home indicator** |
+| **Sería bug** | Banda blanca arriba del navy · la barra queda debajo de la home indicator o pisada por ella |
+| **Por qué no sirve DevTools** | `env(safe-area-inset-*)` solo resuelve en iOS **standalone**. Es literalmente lo único que el navegador de escritorio no puede simular |
+
+## 10 · Android
+
+| | |
+|---|---|
+| **Qué mirar** | Repetir los casos **1** y **8** en un Android |
+| **Por qué aparte** | El teclado y los insets se comportan distinto que en iOS, y es donde más veces nos mordió |
+
+---
+
+## Cómo cerrar
+
+1. **Todo en verde** → se archiva la change (tarea 6.1: los deltas de spec se aplican **al** archivar).
+2. **Algo roto** → se arregla, y se vuelve a correr ese caso más los dos que lo rodean.
+3. **Algo que no se puede correr** → **excepción escrita**, nunca tildado: por qué no se corrió, qué se
+   lleva puesto si falla, por qué el riesgo es bajo, y qué la reabre. Es la misma forma que usó el
+   caso 11 del QA de ahorro (`docs/qa-savings-nativo.md`).
