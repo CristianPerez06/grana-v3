@@ -1,0 +1,303 @@
+import type { GranaSupabaseClient } from '@grana/supabase'
+import { formatDateISO, getTodayAR, type BalanceCurrency } from '@grana/money-logic'
+import type {
+  AllocationEntry,
+  AvailableSums,
+  PurposeSums,
+  ReserveEntry,
+  ReserveFlowSums,
+} from './types'
+
+const isBalanceCurrency = (c: string): c is BalanceCurrency => c === 'ARS' || c === 'USD'
+
+const toNumber = (v: number | string | null): number => (v == null ? 0 : Number(v))
+
+// ── getAvailableSums ──────────────────────────────────────────────────────────
+// El disponible real por moneda, agregado en Postgres por `get_available_sums`
+// (migración 0057).
+//
+// Devuelve `available` ya restado y NO expone un helper que lo recomponga a
+// partir de `accountsNet` y `reserved`. Esas dos columnas están para que la UI
+// pueda EXPLICAR la resta (el drawer muestra "disponible − a guardar = queda"),
+// no para que alguien la rehaga.
+//
+// La razón es la lección de la migración 0051: el criterio de "cuenta propia"
+// estaba replicado a mano en cada call site y ya había divergido en producción.
+// Esta función tiene TRES consumidores —el Hero, el tope del drawer y la
+// validación del write path— así que derivar la resta por separado en cada uno
+// garantiza que un día no coincidan.
+//
+// `p_today` fija el corte temporal al mismo "hoy" financiero que renderiza el
+// resto de la UI: una reserva futura existe pero no descuenta todavía.
+export async function getAvailableSums(
+  supabase: GranaSupabaseClient,
+  today: Date = getTodayAR(),
+): Promise<AvailableSums[]> {
+  const { data, error } = await supabase.rpc('get_available_sums', {
+    p_today: formatDateISO(today),
+  })
+
+  if (error) throw error
+
+  return (data ?? [])
+    .filter((row) => isBalanceCurrency(row.currency_code))
+    .map((row) => ({
+      currencyCode: row.currency_code as BalanceCurrency,
+      accountsNet: toNumber(row.accounts_net),
+      reserved: toNumber(row.reserved),
+      available: toNumber(row.available),
+    }))
+}
+
+/**
+ * El disponible de UNA moneda. Ausente en la respuesta = cero: un usuario sin
+ * saldo ni reservas en dólares no tiene fila de dólares, y eso significa que no
+ * tiene nada, no que el dato falte.
+ */
+export async function getAvailableForCurrency(
+  supabase: GranaSupabaseClient,
+  currencyCode: BalanceCurrency,
+  today: Date = getTodayAR(),
+): Promise<AvailableSums> {
+  const sums = await getAvailableSums(supabase, today)
+  return (
+    sums.find((s) => s.currencyCode === currencyCode) ?? {
+      currencyCode,
+      accountsNet: 0,
+      reserved: 0,
+      available: 0,
+    }
+  )
+}
+
+// ── getPurposeSums ────────────────────────────────────────────────────────────
+// Lo guardado por (propósito, moneda), agregado en Postgres por
+// `get_purpose_sums` (migración 0058).
+//
+// Tiene dos consumidores y el segundo es el que obliga a que esto viva en SQL:
+// el detalle agrupado del drawer, y el PISO del write path. Con propósitos, "no
+// podés volver a usar más de lo que tenés guardado" deja de alcanzar — el total
+// puede cubrir un retiro que deja UN propósito en negativo. Sumar las filas en
+// TS para averiguarlo sería la misma divergencia de 0051 un nivel más abajo.
+//
+// El total por moneda de esta lectura es, por construcción, el `reserved` de
+// `getAvailableSums`. Ninguna de las dos se deriva de la otra: son dos cortes de
+// las mismas filas.
+export async function getPurposeSums(
+  supabase: GranaSupabaseClient,
+  today: Date = getTodayAR(),
+): Promise<PurposeSums[]> {
+  const { data, error } = await supabase.rpc('get_purpose_sums', {
+    p_today: formatDateISO(today),
+  })
+
+  if (error) throw error
+
+  return (data ?? [])
+    .filter((row) => isBalanceCurrency(row.currency_code))
+    .map((row) => ({
+      purposeId: row.purpose_id ?? null,
+      purposeName: row.purpose_name ?? null,
+      purposeIcon: row.purpose_icon ?? null,
+      currencyCode: row.currency_code as BalanceCurrency,
+      reserved: toNumber(row.reserved),
+    }))
+}
+
+/**
+ * El piso de UN propósito en UNA moneda: hasta acá se puede volver a usar.
+ *
+ * Ausente en la respuesta = cero, igual que en `getAvailableForCurrency`. Y acá
+ * el cero importa más: un propósito sin filas y un propósito que ya se vació
+ * significan lo mismo para esta pregunta —no hay nada que volver a usar— y los
+ * dos tienen que responder 0 y no `undefined`.
+ *
+ * `purposeId` en null pregunta por «Sin destino», que es un grupo más.
+ */
+export async function getReservedForPurpose(
+  supabase: GranaSupabaseClient,
+  currencyCode: BalanceCurrency,
+  purposeId: string | null,
+  today: Date = getTodayAR(),
+): Promise<PurposeSums> {
+  const sums = await getPurposeSums(supabase, today)
+  return (
+    sums.find((s) => s.currencyCode === currencyCode && s.purposeId === purposeId) ?? {
+      purposeId,
+      purposeName: null,
+      purposeIcon: null,
+      currencyCode,
+      reserved: 0,
+    }
+  )
+}
+
+// ── getReserveFlowSums ────────────────────────────────────────────────────────
+// El neto reservado del período, por moneda. Alimenta la fila "Guardaste este
+// mes" del dashboard.
+//
+// Existe por la misma razón que `getAvailableSums`: la fila es un FLUJO, y
+// calcularlo a mano en TS reintroduce el mismo riesgo de divergencia que evita
+// la lectura del stock. Nadie recompone ni uno ni otro.
+export async function getReserveFlowSums(
+  supabase: GranaSupabaseClient,
+  from: Date,
+  to: Date,
+  today: Date = getTodayAR(),
+): Promise<ReserveFlowSums[]> {
+  const { data, error } = await supabase.rpc('get_reserve_flow_sums', {
+    p_from: formatDateISO(from),
+    p_to: formatDateISO(to),
+    p_today: formatDateISO(today),
+  })
+
+  if (error) throw error
+
+  return (data ?? [])
+    .filter((row) => isBalanceCurrency(row.currency_code))
+    .map((row) => ({
+      currencyCode: row.currency_code as BalanceCurrency,
+      reservedNet: toNumber(row.reserved_net),
+    }))
+}
+
+// ── getReserveHistory ─────────────────────────────────────────────────────────
+// Las decisiones de una moneda, más recientes primero.
+//
+// Alimenta la vista de detalle, que existe por una razón de fondo: como guardar
+// NO es un movimiento, no aparece en Movimientos, y sin este listado el usuario
+// no podría auditar su propia decisión.
+//
+// ACOTADA. Un `.select()` sin `.limit()` crece con el uso y, pasado el `max-rows`
+// de PostgREST, se trunca EN SILENCIO: sin error, con menos filas, y sin que
+// nada avise — el mismo defecto que la migración 0051 tuvo que sacar de los
+// saldos. Acá no corrompe ningún número (el total y el neto salen de SQL), pero
+// escondería movimientos viejos sin decirlo.
+//
+// Pide UNO DE MÁS que los que va a mostrar: es la forma barata de saber si hay
+// más sin contar la tabla entera, y deja que la UI lo diga en vez de callarlo.
+//
+// Orden determinístico hasta el desempate: dos reservas del mismo día llegan
+// siempre en el mismo orden, o el listado se reordenaría solo entre renders.
+export const RESERVE_HISTORY_LIMIT = 25
+
+export async function getReserveHistory(
+  supabase: GranaSupabaseClient,
+  /**
+   * Omitida, trae TODAS las monedas en una sola lista.
+   *
+   * El detalle dejó de estar partido por moneda —la moneda es el eje de la
+   * operación, no el de la lectura— así que su historial tampoco puede estarlo.
+   * Y traerlo en una consulta y no en dos importa: dos listas de 25 mezcladas a
+   * mano dan hasta 50 filas y un "hay más" que ya no significa nada.
+   */
+  currencyCode?: BalanceCurrency,
+): Promise<{ entries: ReserveEntry[]; hasMore: boolean }> {
+  const base = supabase
+    .from('availability_reserve')
+    .select('id, currency_code, amount, date, created_at')
+
+  const { data, error } = await (currencyCode
+    ? base.eq('currency_code', currencyCode)
+    : base)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(RESERVE_HISTORY_LIMIT + 1)
+
+  if (error) throw error
+
+  const rows = data ?? []
+
+  return {
+    hasMore: rows.length > RESERVE_HISTORY_LIMIT,
+    entries: rows.slice(0, RESERVE_HISTORY_LIMIT).map((row) => ({
+      id: row.id,
+      currencyCode: row.currency_code as BalanceCurrency,
+      amount: toNumber(row.amount),
+      date: row.date,
+      createdAt: row.created_at,
+    })),
+  }
+}
+
+// ── getAllocationHistory ──────────────────────────────────────────────────────
+// Los repartos de UN propósito, más recientes primero.
+//
+// Lista aparte de la de reservas, y es la consecuencia visible de que sean dos
+// actos distintos: "Guardaste $200.000" es un hecho sobre el disponible;
+// "Apartaste $150.000 para Japón" no mueve ningún total. Mezclarlos en un solo
+// listado obligaría al usuario a distinguir a ojo dos cosas que no se parecen.
+//
+// Acotada por la misma razón que la otra: una lista que se corta sin avisar es
+// indistinguible de un historial incompleto.
+export async function getAllocationHistory(
+  supabase: GranaSupabaseClient,
+  currencyCode: BalanceCurrency,
+  purposeId: string,
+): Promise<{ entries: AllocationEntry[]; hasMore: boolean }> {
+  const { data, error } = await supabase
+    .from('savings_purpose_allocation')
+    .select('id, purpose_id, currency_code, amount, date, created_at')
+    .eq('currency_code', currencyCode)
+    .eq('purpose_id', purposeId)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(RESERVE_HISTORY_LIMIT + 1)
+
+  if (error) throw error
+
+  const rows = data ?? []
+
+  return {
+    hasMore: rows.length > RESERVE_HISTORY_LIMIT,
+    entries: rows.slice(0, RESERVE_HISTORY_LIMIT).map((row) => ({
+      id: row.id,
+      purposeId: row.purpose_id,
+      currencyCode: row.currency_code as BalanceCurrency,
+      amount: toNumber(row.amount),
+      date: row.date,
+      createdAt: row.created_at,
+    })),
+  }
+}
+
+// ── getLatestIncome ───────────────────────────────────────────────────────────
+// El ÚLTIMO ingreso cargado, en una moneda: su monto y cuándo se registró.
+//
+// Es la base sobre la que la tira propone guardar, y tiene que ser un ingreso y
+// no el total del mes: lo que el usuario acaba de cobrar es la plata sobre la
+// que está dispuesto a decidir, mientras que el total del mes incluye plata que
+// ya gastó.
+//
+// Ordena por `created_at`, NO por `date`: lo que la tira persigue es "el que
+// acabás de cargar", y eso es cuándo se registró, no qué fecha contable le
+// pusiste.
+//
+// Y NO se acota al mes en curso. Un ingreso viejo cargado hoy —poner al día
+// atrasos— es plata que **sí está en el disponible de hoy**, así que negarle la
+// propuesta sería preciosista: el usuario acaba de registrar plata y el momento
+// de decidir es ese. Lo único que queda afuera es el FUTURO, por `p_on_or_before`:
+// un ingreso fechado mañana existe pero todavía no es un hecho.
+export async function getLatestIncome(
+  supabase: GranaSupabaseClient,
+  currencyCode: BalanceCurrency,
+  onOrBeforeISO: string,
+): Promise<{ amount: number; createdAt: string } | null> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('amount, created_at')
+    .eq('type', 'income')
+    .eq('currency_code', currencyCode)
+    .is('status', null)
+    .lte('date', onOrBeforeISO)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(1)
+
+  if (error) throw error
+
+  const row = (data ?? [])[0]
+  return row ? { amount: toNumber(row.amount), createdAt: row.created_at } : null
+}

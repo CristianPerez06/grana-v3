@@ -1,0 +1,1004 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fase 3 · Poner a trabajar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --navy:#0B1A2B; --page:#F6F7F9; --card:#FFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+  --text:#0B1A2B; --muted:#6B7683; --soft:#8A94A3; --neutral:#7A8494;
+  --emerald:#10B981; --emerald-deep:#059669; --emerald-bg:#ECFDF5;
+  --terracotta:#B56A5A; --slate:#3A6B8A; --plum:#8A6E98; --warning:#C49A3C;
+  --tile:#F1F3F6;
+  --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(11,26,43,.05),0 6px 18px rgba(11,26,43,.05);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* ---------- page chrome ---------- */
+.doc{max-width:1240px;margin:0 auto;padding:0 28px 100px}
+.masthead{background:var(--navy);color:#fff;padding:52px 28px 44px;margin-bottom:44px}
+.masthead .in{max-width:1240px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.62);margin:0 0 12px;font-weight:600}
+.masthead h1{margin:0 0 12px;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.masthead p{margin:0;max-width:62ch;color:rgba(255,255,255,.66);font-size:16px}
+.masthead .warn{margin-top:24px;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:14px;color:rgba(255,255,255,.8);max-width:78ch}
+.masthead .warn b{color:#fff;font-weight:600}
+.masthead .stale{margin-top:20px;padding:16px 18px;border-radius:12px;background:rgba(255,196,120,.14);border:1px solid rgba(255,196,120,.38);font-size:14px;line-height:1.55;color:rgba(255,255,255,.86);max-width:78ch}
+.masthead .stale b{color:#ffd9a3;font-weight:700}
+.masthead .stale ul{margin:10px 0 0;padding-left:18px}
+.masthead .stale li{margin-top:5px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:44px 36px;align-items:start}
+
+.step{display:flex;flex-direction:column;gap:14px}
+.step-head{display:flex;align-items:flex-start;gap:12px}
+.step-num{flex:0 0 auto;min-width:30px;padding:0 6px;height:30px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
+.step-head h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.step-head .sub{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.badge{display:inline-block;margin-top:6px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+.b-new{background:var(--emerald-bg);color:var(--emerald-deep)}
+.b-mod{background:#EAF1F6;color:var(--slate)}
+.b-same{background:var(--tile);color:var(--neutral)}
+
+.note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--border);padding-left:14px}
+.note b{color:var(--text);font-weight:600}
+.note + .note{margin-top:-4px}
+
+/* ---------- phone ---------- */
+.phone{width:100%;max-width:392px;border:1px solid var(--border);border-radius:22px;background:var(--page);overflow:hidden;box-shadow:var(--shadow)}
+.scr{padding:16px;display:flex;flex-direction:column;gap:12px}
+.scr.tight{gap:10px}
+
+/* drawer header */
+.dh{display:flex;align-items:flex-start;justify-content:space-between;padding:4px 2px 2px}
+.dh .k{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.dh h3{margin:2px 0 0;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.x{width:32px;height:32px;border-radius:9px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:15px}
+
+/* segmented */
+.seg{display:flex;gap:2px;background:var(--tile);border-radius:12px;padding:4px}
+.seg span{flex:1;text-align:center;font-size:12px;font-weight:600;color:var(--muted);padding:8px 4px;border-radius:9px;white-space:nowrap}
+.seg span.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(11,26,43,.08)}
+.seg.ghost span.ghost{color:#B6BFCA;border:1px dashed #C9D2DC}
+
+/* cards */
+.c{background:#fff;border:1px solid var(--border-soft);border-radius:16px}
+.c.pad{padding:14px 15px}
+
+/* amount */
+.amt{padding:15px 16px 17px;position:relative}
+.amt .lbl{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.amt .cur{position:absolute;right:14px;top:13px;border:1px solid var(--border);border-radius:9px;padding:5px 9px;font-size:12px;font-weight:600;color:var(--text)}
+.amt .val{display:flex;align-items:baseline;gap:6px;margin-top:8px}
+.amt .val .s{font-size:23px;font-weight:600;color:var(--soft)}
+.amt .val .n{font-size:38px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.amt .val .n.zero{color:#C4CBD4}
+
+/* rows */
+.rows > div{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--border-soft)}
+.rows > div:first-child{border-top:0}
+.tile{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:var(--tile);display:grid;place-items:center;font-size:15px}
+.rw{flex:1;min-width:0}
+.rw .k{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.rw .v{font-size:15px;font-weight:600;margin-top:1px;display:flex;align-items:center;gap:7px}
+.rw .v.ph{color:#B6BFCA;font-weight:500}
+.chip-acc{display:inline-flex;align-items:center;gap:6px}
+.chip-acc i{width:22px;height:22px;border-radius:7px;background:var(--slate);display:grid;place-items:center;font-size:11px;font-style:normal}
+.chev{color:#C4CBD4;font-size:16px}
+
+/* calc row (the drawer's math) */
+.calc{padding:13px 15px}
+.calc div{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;padding:5px 0}
+.calc div span:first-child{color:var(--muted)}
+.calc div span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+.calc .rule{border-top:1px solid var(--border-soft);margin-top:6px;padding-top:9px}
+.calc .rule span:last-child{font-size:16px;font-weight:700}
+.calc .minus span:last-child{color:var(--emerald-deep)}
+
+/* cta */
+.cta{margin-top:2px;background:var(--emerald);color:#fff;border-radius:13px;padding:15px;text-align:center;font-size:15.5px;font-weight:700}
+.cta.ghost{background:#fff;color:var(--muted);border:1px solid var(--border);font-weight:600}
+
+/* guidance strip */
+.gd{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:14px 15px}
+.gd .top{display:flex;gap:12px;align-items:flex-start}
+.gd .tile{background:var(--emerald-bg)}
+.gd h4{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.gd p{margin:3px 0 0;font-size:13px;color:var(--muted);line-height:1.4}
+.gd .acts{display:flex;gap:8px;margin-top:13px}
+.gd .acts .cta{flex:1;margin:0;padding:11px;font-size:14px;border-radius:11px}
+
+/* dashboard card */
+.dash{border-radius:20px;overflow:hidden;border:1px solid var(--border-soft);background:#fff}
+.dark{background:radial-gradient(120% 140% at 92% 12%,rgba(16,185,129,.16),transparent 60%),var(--navy);color:#fff;padding:22px 18px 18px;text-align:center}
+.dark .lbl{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.dark .big{font-size:36px;font-weight:700;letter-spacing:-.025em;margin-top:9px;line-height:1}
+.dark .big s{font-size:21px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)}
+.dark .usd{margin-top:9px;font-size:14px;color:rgba(255,255,255,.72);display:flex;align-items:center;justify-content:center;gap:7px}
+.dark .usd i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.1em;background:rgba(255,255,255,.12);border-radius:5px;padding:3px 6px}
+.donde{margin-top:20px;border-top:1px solid rgba(255,255,255,.14);padding-top:14px;display:grid;grid-template-columns:1fr 1px 1fr;gap:0;text-align:left}
+.donde .divi{background:rgba(255,255,255,.14)}
+.donde .col{padding:0 12px}
+.donde .col:first-child{padding-left:2px}
+.donde .ch{display:flex;justify-content:space-between;align-items:baseline;font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:9px}
+.donde .r{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 0;color:rgba(255,255,255,.88)}
+.donde .r i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+.donde .r b{margin-left:auto;font-weight:600;color:rgba(255,255,255,.62);font-variant-numeric:tabular-nums}
+.light{padding:16px 18px 18px}
+.light .t{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);margin-bottom:12px}
+.tri{display:grid;grid-template-columns:1fr;gap:9px}
+.tri .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tri .row .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.tri .row .l i{width:7px;height:7px;border-radius:50%}
+.tri .row .a{font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.saved{margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between}
+.saved .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.saved .l i{width:7px;height:7px;border-radius:50%;background:var(--emerald)}
+.saved .a{font-size:15.5px;font-weight:700;color:var(--emerald-deep);font-variant-numeric:tabular-nums}
+.saved .a .g{color:#C4CBD4;font-size:13px;margin-left:5px;font-weight:600}
+
+/* overlay presentation (drawer web / bottom sheet mobile) */
+.ov{position:relative;background:var(--page)}
+.ov .behind{filter:saturate(.7);opacity:.55;padding:16px 16px 0;pointer-events:none}
+.ov .scrim{position:absolute;inset:0;background:rgba(11,26,43,.42)}
+.ov .sheet{position:relative;margin-top:-14px;background:var(--page);border-radius:20px 20px 0 0;box-shadow:0 -8px 28px rgba(11,26,43,.18);padding:10px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.ov .grab{width:38px;height:4px;border-radius:999px;background:#D3DAE2;margin:0 auto 4px}
+.ov .sh{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 2px}
+.ov .sh h3{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+
+/* wayfinding */
+.ways{margin-top:56px;background:#fff;border:1px solid var(--border);border-radius:20px;padding:28px 30px 30px}
+.ways h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.ways .lede{margin:0 0 24px;font-size:15px;color:var(--muted);max-width:66ch}
+.ways .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px 34px}
+.way{border:1px solid var(--border-soft);border-radius:16px;padding:18px 20px 20px;background:var(--page)}
+.way .cap{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.way h4{margin:5px 0 4px;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.way .taps{font-size:12px;font-weight:700;color:var(--emerald-deep);background:var(--emerald-bg);border-radius:999px;padding:3px 9px;display:inline-block;margin-bottom:14px}
+.way ol{margin:0;padding-left:0;list-style:none;counter-reset:s}
+.way li{counter-increment:s;position:relative;padding-left:30px;font-size:14px;color:var(--muted);margin-bottom:11px;line-height:1.45}
+.way li::before{content:counter(s);position:absolute;left:0;top:1px;width:21px;height:21px;border-radius:7px;background:#fff;border:1px solid var(--border);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text)}
+.way li b{color:var(--text);font-weight:600}
+.way li:last-child{margin-bottom:0}
+
+/* three states of the row */
+.states{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:4px 15px 12px}
+.states .st{padding-top:11px}
+.states .st + .st{border-top:1px solid var(--border-soft);margin-top:11px}
+.states .cap{font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#B6BFCA;margin-bottom:7px}
+.states .line{display:flex;align-items:center;justify-content:space-between}
+.states .line .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.states .line .l i{width:7px;height:7px;border-radius:50%;background:var(--emerald)}
+.states .line .l i.off{background:#D3DAE2}
+.states .line .a{font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.states .line .a.em{color:var(--emerald-deep)}
+.states .line .a.nt{color:var(--text)}
+.states .line .g{color:#C4CBD4;font-size:13px;margin-left:5px;font-weight:600}
+.states .line.mute .l{color:var(--soft)}
+
+/* detail view */
+.dt-hero{background:radial-gradient(120% 140% at 92% 12%,rgba(16,185,129,.18),transparent 60%),var(--navy);color:#fff;border-radius:18px;padding:18px}
+.dt-hero .k{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.dt-hero .n{font-size:31px;font-weight:700;letter-spacing:-.02em;margin-top:8px;line-height:1}
+.dt-hero .sub{margin-top:9px;font-size:13px;color:rgba(255,255,255,.68)}
+.dt-hero .flow{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.14);display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:rgba(255,255,255,.68)}
+.dt-hero .flow b{color:#6EE7B7;font-weight:700;font-size:15px}
+.sec-t{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);padding:2px 4px}
+.hist > div{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--border-soft)}
+.hist > div:first-child{border-top:0}
+.hist .n{flex:1}
+.hist .n b{display:block;font-size:14.5px;font-weight:600}
+.hist .n span{font-size:12px;color:var(--soft)}
+.hist .a{font-weight:700;font-size:14.5px;font-variant-numeric:tabular-nums}
+.hist .a.pos{color:var(--emerald-deep)}
+.hist .a.neg{color:var(--neutral)}
+.two{display:flex;gap:9px}
+.two .cta{flex:1;margin:0}
+
+/* movements list */
+.mv-head{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 0}
+.mv-head h3{margin:0;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.mv-day{font-size:11px;font-weight:600;color:var(--soft);padding:12px 14px 6px}
+.mv > div.r{display:flex;align-items:center;gap:11px;padding:11px 14px;border-top:1px solid var(--border-soft)}
+.mv .av{width:32px;height:32px;border-radius:50%;background:var(--tile);display:grid;place-items:center;font-size:14px}
+.mv .n{flex:1;min-width:0}
+.mv .n b{display:block;font-size:14px;font-weight:700}
+.mv .n span{font-size:11.5px;color:var(--soft)}
+.mv .a{font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.mv .a.neg{color:var(--terracotta)}
+.mv .a.pos{color:var(--emerald-deep)}
+.tag{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;background:var(--tile);color:var(--neutral);margin-left:5px;vertical-align:1px}
+
+.overlay-empty{margin-top:10px;border:1px dashed var(--border);border-radius:12px;padding:13px 14px;font-size:13px;color:var(--muted);background:#fff}
+.overlay-empty b{color:var(--text);font-weight:700}
+
+.foot{margin-top:64px;padding-top:32px;border-top:1px solid #DCE2E9;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:34px 44px}
+.foot h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);margin:0 0 12px;font-weight:700}
+.foot p{margin:0 0 11px;font-size:14.5px;color:var(--muted);max-width:58ch}
+.foot strong{color:var(--text);font-weight:600}
+.foot ul{margin:0;padding-left:18px;font-size:14.5px;color:var(--muted)}
+.foot li{margin-bottom:8px}
+.foot li b{color:var(--text);font-weight:600}
+@media (max-width:520px){.doc{padding:0 16px 60px}.masthead{padding:36px 16px 30px}.masthead h1{font-size:27px}}
+
+/* ---------- fase 3 ---------- */
+.masthead .open{margin-top:20px;padding:16px 18px;border-radius:12px;background:rgba(110,231,183,.10);border:1px solid rgba(110,231,183,.30);font-size:14px;line-height:1.55;color:rgba(255,255,255,.84);max-width:78ch}
+.masthead .open b{color:#6EE7B7;font-weight:700}
+.masthead .open ol{margin:10px 0 0;padding-left:20px}
+.masthead .open li{margin-top:6px}
+
+.b-open{background:#FFF6E5;color:#9A6B12}
+.b-bad{background:#FDECEA;color:#B03A2E}
+
+/* la card del mes, versión auditable */
+.ledger{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:6px 16px 14px}
+.ledger .cap{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#B6BFCA;padding:12px 0 8px}
+.ledger .l{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 0;font-size:13.5px}
+.ledger .l .k{color:var(--muted);display:flex;align-items:center;gap:8px}
+.ledger .l .k i{width:7px;height:7px;border-radius:50%;background:#D3DAE2;flex:0 0 auto}
+.ledger .l .k i.em{background:var(--emerald)}
+.ledger .l .k i.sl{background:var(--slate)}
+.ledger .l .k i.pl{background:var(--plum)}
+.ledger .l .a{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.ledger .l .a.em{color:var(--emerald-deep)}
+.ledger .l .a.sl{color:var(--slate)}
+.ledger .l .a.pl{color:var(--plum)}
+.ledger .l.new{background:#F3F0F7;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:9px}
+.ledger .sum{border-top:1px solid var(--border);margin-top:8px;padding-top:10px}
+.ledger .sum .k{color:var(--text);font-weight:700;font-size:13.5px}
+.ledger .sum .a{font-size:17px;font-weight:800}
+.ledger .verdict{margin-top:11px;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;display:flex;gap:9px;align-items:flex-start}
+.ledger .verdict b{font-weight:700}
+.ledger .verdict.ok{background:var(--emerald-bg);color:#05614A}
+.ledger .verdict.no{background:#FDECEA;color:#8C2F24}
+.ledger .verdict .m{font-size:14px;line-height:1;margin-top:1px}
+.ledger .gap{color:#B03A2E;font-weight:700}
+
+/* comparador */
+.ab{margin-top:56px;background:#fff;border:1px solid var(--border);border-radius:20px;padding:28px 30px 30px}
+.ab h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.ab .lede{margin:0 0 22px;font-size:15px;color:var(--muted);max-width:70ch}
+.ab table{width:100%;border-collapse:collapse;font-size:14px}
+.ab th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding:0 12px 10px 0;border-bottom:1px solid var(--border)}
+.ab td{padding:11px 12px 11px 0;border-bottom:1px solid var(--border-soft);color:var(--muted);vertical-align:top}
+.ab td b{color:var(--text);font-weight:600}
+.ab td:last-child,.ab th:last-child{padding-right:0}
+.ab .num{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;color:var(--text)}
+.ab .yes{color:var(--emerald-deep);font-weight:700}
+.ab .no{color:#B03A2E;font-weight:700}
+
+/* posición: fila y detalle */
+.pos-row{display:flex;align-items:center;gap:11px;padding:12px 14px;border-top:1px solid var(--border-soft)}
+.pos-row:first-child{border-top:0}
+.pos-row .tile{background:#EFEBF4}
+.pos-row .n{flex:1;min-width:0}
+.pos-row .n b{display:block;font-size:14px;font-weight:700}
+.pos-row .n span{font-size:11.5px;color:var(--soft)}
+.pos-row .a{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+
+.callout{background:#fff;border:1px solid var(--border-soft);border-left:3px solid var(--plum);border-radius:12px;padding:13px 15px;font-size:13.5px;color:var(--muted);line-height:1.5}
+.callout b{color:var(--text);font-weight:700}
+.callout.warn-c{border-left-color:var(--warning)}
+.callout.bad-c{border-left-color:#B03A2E}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chips span{border:1px solid var(--border);background:#fff;border-radius:999px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--text)}
+.chips span.on{border-color:var(--emerald-deep);background:var(--emerald-bg);color:#05614A}
+
+/* La vuelta atrás va ARRIBA A LA IZQUIERDA, antes del título, y es un control
+   de 44×44 con borde — el mismo `DrawerBackHeader` que usa la app. El ✕ de
+   cerrar sí va a la derecha: son dos controles distintos y estaban confundidos. */
+.sh.back,.dh.back{justify-content:flex-start;gap:12px}
+.bk{flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:21px;line-height:1;font-weight:500}
+.sh.back h3,.dh.back > div{flex:1;min-width:0}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="in">
+    <p class="eyebrow">Grana · modelo de dinero · mock de producto</p>
+    <h1>Fase 3 · Poner a trabajar</h1>
+    <p>El ciclo entero de un plazo fijo, pantalla por pantalla: hacerlo, la cuenta del mes, el vencimiento y el mes siguiente. El mock no dibuja la fase entera — no hay hub ni schema. Existe para contestar, con números, lo que estaba abierto antes de tocar tablas.</p>
+    <div class="open"><b>Las dos preguntas que este mock viene a cerrar.</b>
+      <ol>
+        <li><b>Pasos 1–7 · ¿Cómo se crea un plazo fijo?</b> Dibujarlo pantalla por pantalla destapó un campo duplicado que un mock más corto dejaba pasar: <b>el capital se pedía dos veces</b>, en el monto de la transferencia y otra vez en el alta de la posición. Dos campos para el mismo número.</li>
+        <li><b>Pasos 12–16 · El vencimiento.</b> Vuelven $ 724.164,38 sobre $ 700.000. <b>Capital y rendimiento no viajan juntos</b>: el capital vuelve por el mismo término por el que se fue —así el bucket <b>netea cero</b>— y el rendimiento es línea propia. La prueba está en el caso capitalizado, donde <b>no entró nada a ninguna cuenta y el mes no dice nada</b>.</li>
+        <li><b>Paso 11 · ¿Stock o flujo?</b> Guardado resta el <b>stock entero</b> porque guardar no saca plata de las cuentas. Poner a trabajar sí la saca, así que su término es el <b>flujo del mes</b> — y por eso, al revés que Guardado, <b>se dibuja también en meses pasados</b>.</li>
+        <li><b>Pasos 8–10 · ¿Aparece una línea nueva en «Resumen del mes»?</b> El README la dejó abierta porque es prima hermana de <i>«Pasaste a otras cuentas»</i>, que ya fue rechazada una vez. Se juzga con los mismos números al lado. <b>La cuenta la cierra</b> — ver el comparador al pie.</li>
+        <li><b>Pasos 1–2 · ¿Dónde entra «Invertir»?</b> No hace falta ninguna pestaña, y tampoco es «Nuevo movimiento»: la puerta principal es <b>la cuenta donde está la plata</b>. Si no cruza de entidad, la acción es algo que hacés con lo que ya está ahí — y así el circuito baja de 5 taps a 3.</li>
+        <li><b>El lenguaje.</b> La pantalla dice <b>«Hiciste un plazo fijo»</b>, no «Puesto a trabajar»: nombrar la cosa alcanza cuando hay una sola, y la abstracción recién hace falta en el hub.</li>
+      </ol>
+    </div>
+    <div class="warn"><b>No es diseño final, y todavía no hay schema.</b> Los números son los de agosto de 2026 de una cuenta real, para que la aritmética se pueda auditar a ojo. El HTML no es código de producción.</div>
+    <div class="stale"><b>Superado por <code>fase-3a-plazo-fijo.html</code>.</b> Su circuito de carga —formulario → selector → formulario → vuelta— repetía el patrón que la fase 2 tardó dos semanas en desarmar, y el camino principal ni siquiera estaba dibujado. <b>El mock vigente tiene dos pantallas de carga.</b> Este se conserva por el razonamiento contable, que sigue valiendo entero: stock vs. flujo, el bucket que tiene que nacer en la agregación, y los tres desenlaces del vencimiento.</div>
+  </div>
+</header>
+
+<div class="doc">
+<div class="grid">
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <div>
+        <h2>Desde la cuenta donde está la plata</h2>
+        <p class="sub">La puerta principal, y no es «Nuevo movimiento».</p>
+        <span class="badge b-new">Puerta nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh back"><span class="bk">‹</span><div><div class="k">Cuenta</div><h3>Comafi</h3></div></div>
+      <div class="dt-hero">
+        <div class="k">Saldo</div>
+        <div class="n">$ 762.862<s style="font-size:20px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)">,23</s></div>
+        <div class="sub">Caja de ahorro en pesos</div>
+      </div>
+      <div class="c rows">
+        <div><div class="tile">📈</div><div class="rw"><div class="v">Hacer un plazo fijo</div></div><span class="chev">›</span></div>
+        <div><div class="tile">↔️</div><div class="rw"><div class="v">Transferir a otra cuenta</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="sec-t">Movimientos</div>
+      <div class="c mv">
+        <div class="r"><div class="av">💼</div><div class="n"><b>Sueldo</b><span>24 de ago</span></div><span class="a pos">+$ 1.240.000,00</span></div>
+      </div>
+    </div></div>
+    <p class="note"><b>Esto salió de una observación del producto:</b> <i>"cuando uno invierte, el dinero va a salir siempre de la misma entidad financiera desde donde se está eligiendo sacar el dinero."</i> Es cierto, y tiene una consecuencia de navegación: <b>si la plata no cruza de entidad, la acción no es un movimiento entre lugares — es algo que hacés con la plata que ya está ahí.</b></p>
+    <p class="note">Entrando desde la cuenta, <b>dos preguntas ya están contestadas</b>: de dónde sale y en qué banco queda el plazo fijo. El circuito pasa de <b>5 taps de decisión a 3</b> — monto, plazo, confirmar.</p>
+    <p class="note"><b>Y escala sin pestañas.</b> Mañana la misma cuenta ofrece «Comprar dólares» o «Suscribir un FCI» como cosas que hacés con la plata que está ahí, no como tipos de movimiento nuevos. Una pestaña por instrumento convierte el selector en un menú de productos.</p>
+    <p class="note"><b>Y no aparece en todas las cuentas.</b> El tipo ya está en la base —<code>account_type</code> es <code>'cash' | 'bank'</code>— así que la regla de 3A se escribe sola: <b>solo en las de tipo <code>bank</code></b>. En Billetera no se dibuja: no se hace un plazo fijo con la plata de una billetera virtual.</p>
+    <p class="note"><b>Ofrecer un producto imposible es peor que no ofrecerlo.</b> Quien lo toca desde una cuenta que no puede tiene que enterarse recién en el error, y eso enseña que la app no sabe con qué está trabajando. 3B necesita más finura —un bróker no es <code>bank</code> y no hace plazos fijos, hace suscripciones— pero eso es una distinción que 3A no tiene que anticipar.</p>
+    <p class="note"><b>Grana igual no le va a decir a nadie que invierta.</b> No hay tira que diga <i>"tenés $4.900.000 sin rendir"</i>: describir hechos es una cosa, recomendar instrumentos es otra. La acción está donde tiene sentido, no ofrecida.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <div>
+        <h2>La otra puerta: Transferencia</h2>
+        <p class="sub">Secundaria, para quien la busque ahí. El segmented no cambia.</p>
+        <span class="badge b-mod">Gana un destino</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr tight">
+      <div class="dh"><div><div class="k">Nuevo movimiento</div><h3>Registrar</h3></div><span class="x">✕</span></div>
+      <div class="seg"><span>Gasto</span><span>Ingreso</span><span class="on">Transferencia</span><span>Ajuste</span><span>Cambio</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">700.000</span></div>
+      </div>
+      <div class="c rows">
+        <div><div class="tile">🏦</div><div class="rw"><div class="k">Desde</div><div class="v"><span class="chip-acc"><i>C</i></span>Comafi</div></div><span class="chev">›</span></div>
+        <div><div class="tile">📍</div><div class="rw"><div class="k">Hacia</div><div class="v ph">Elegir destino</div></div><span class="chev">›</span></div>
+        <div><div class="tile">📅</div><div class="rw"><div class="k">Fecha</div><div class="v">25 de ago</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="cta ghost">Registrar transferencia</div>
+    </div></div>
+    <p class="note"><b>Por abajo sigue siendo una transferencia</b> —sale plata de una cuenta y entra a una posición—, así que reutiliza el mismo motor. Lo que cambia es que <b>el usuario no tiene por qué pensar «voy a transferir»</b>: piensa «voy a hacer un plazo fijo». Modelo interno y lenguaje de pantalla son dos capas.</p>
+    <p class="note"><b>Una sexta pestaña seguiría siendo un error</b>, y también «Hacer plazo fijo» como pestaña: es modelar el <b>destino</b> como si fuera un <b>tipo</b>, el mismo error de categoría que el <code>counts_as_available</code>. Y no escala — 3B traería «Comprar FCI», «Comprar dólares», y el selector de tipos se vuelve un menú de productos.</p>
+    <p class="note">El <b>monto se escribe una sola vez.</b> Es el detalle que más fácil se rompe: si la pantalla del plazo fijo vuelve a pedir el capital, son dos campos para el mismo número y el primero que se desactualice manda.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">3</span>
+      <div>
+        <h2>El destino, que ahora tiene dos grupos</h2>
+        <p class="sub">La única lista que cambia en todo el circuito.</p>
+        <span class="badge b-mod">Gana filas</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh back"><span class="bk">‹</span><h3>¿Hacia dónde?</h3></div>
+      <div class="sec-t">Tus cuentas</div>
+      <div class="c rows">
+        <div><div class="tile">👛</div><div class="rw"><div class="v">Billetera</div></div><span class="a" style="font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums">$ 4.322.885,94</span></div>
+        <div><div class="tile">🏦</div><div class="rw"><div class="v">Comafi</div></div><span class="a" style="font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums">$ 762.862,23</span></div>
+      </div>
+      <div class="sec-t">Otra cosa</div>
+      <div class="c">
+        <div class="pos-row"><div class="tile">📈</div><div class="n"><b>Hacer un plazo fijo</b><span>En Comafi, de donde sale la plata</span></div><span class="chev">›</span></div>
+      </div>
+      <p class="note" style="border:0;padding:0;margin:2px 2px 0">Todavía no tenés ninguna posición abierta. Cuando tengas, aparecen acá arriba del <b>+</b>.</p>
+    </div></div>
+    <p class="note"><b>Los dos grupos dicen algo verdadero:</b> a una cuenta la plata llega y sigue disponible; a un plazo fijo llega y deja de estarlo. Es la misma distinción que la card del mes va a nombrar en el paso 9, dicha antes de que pase.</p>
+    <p class="note"><b>El grupo NO se llama «Puesto a trabajar».</b> Es abstracto y poco familiar justo en el momento en que el usuario está eligiendo. Dice lo que va a hacer.</p>
+    <p class="note"><b>El «Nuevo plazo fijo» ya viene con el banco resuelto</b> — el de la cuenta de origen. Un plazo fijo se constituye donde está la plata; preguntarlo sería preguntar algo que la pantalla anterior ya contestó. Se puede cambiar, para el caso raro del bróker.</p>
+    <p class="note">Con posiciones abiertas, esta lista es también por donde se les <b>agrega plata</b> a las que lo admiten. Un plazo fijo no; un FCI sí.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">4</span>
+      <div>
+        <h2>El plazo fijo: dos preguntas</h2>
+        <p class="sub">Todo lo demás ya está contestado.</p>
+        <span class="badge b-new">Pantalla nueva</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Nuevo plazo fijo</h3></div>
+      <div class="c calc" style="padding:12px 15px">
+        <div><span>Capital</span><span>$ 700.000,00</span></div>
+        <div><span>En</span><span>Comafi</span></div>
+      </div>
+      <div class="sec-t">¿Hasta cuándo?</div>
+      <div class="chips"><span class="on">30 días</span><span>60</span><span>90</span><span>180</span><span>Otra fecha</span></div>
+      <div class="c rows">
+        <div><div class="tile">📅</div><div class="rw"><div class="k">Vence</div><div class="v">24 de sep de 2026</div></div></div>
+      </div>
+      <div class="sec-t">¿A qué tasa?</div>
+      <div class="c rows">
+        <div><div class="tile">📊</div><div class="rw"><div class="k">TNA</div><div class="v">42 %</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc" style="background:#F6FDFA;border-color:#CDEDE0">
+        <div><span>Vas a cobrar el 24 de sep</span><span style="font-size:16px;font-weight:800">$ 724.164,38</span></div>
+        <div style="padding-top:2px"><span style="font-size:12.5px;color:var(--soft)">Si tu banco muestra otro neto, cambialo</span><span style="font-size:12.5px;color:var(--emerald-deep);font-weight:700">Editar</span></div>
+      </div>
+      <div class="cta">Listo</div>
+    </div></div>
+    <p class="note"><b>El capital y el banco se muestran, no se piden.</b> Los dos vienen del paso anterior. Es la misma regla que la fase 2 aprendió con los propósitos: <i>lo que se hereda de dónde se tocó no se vuelve a preguntar</i> — contestar dos veces lo mismo es la forma más común de que los dos números terminen distintos.</p>
+    <p class="note"><b>Los chips de plazo antes que la fecha.</b> Nadie piensa "24 de septiembre": piensa "a 30 días". La fecha se muestra debajo, calculada, porque es la que importa después y hay que poder verla. <b>Otra fecha</b> abre el picker para el caso que no entra en los chips.</p>
+    <p class="note"><b>La tasa NO es opcional, y esto era un error del mock anterior.</b> En un plazo fijo argentino la tasa se sabe siempre: el banco te la muestra en pantalla antes de confirmar, junto con <b>el monto exacto que vas a cobrar</b>. Un plazo fijo del que no sabés la tasa no existe.</p>
+    <p class="note"><b>Y por eso mostrar «vas a cobrar $ 724.164,38» no es proyectar.</b> El mock anterior lo evitaba con el argumento de que <i>"proyectar plata que todavía no existe es lo más parecido a prometer un rendimiento"</i>. No aplica: no es un pronóstico de Grana, es <b>la aritmética de un contrato que ya firmaste</b>. Repetir un dato que el banco ya te dio no es recomendar nada.</p>
+    <p class="note"><b>Y el estimado es editable</b>, porque a veces el banco descuenta algo —impuesto de sellos, según la provincia y el banco— y el neto que muestra no es la cuenta redonda. Manda el número del banco.</p>
+    <p class="note"><b>El impuesto no necesita modelarse.</b> Lo que se descuenta hace que vuelva menos, y <code>volvió − capital</code> ya lo absorbe: sale un rendimiento más chico, que es exactamente lo que pasó. Un campo «impuestos» sería pedir un dato que el resultado ya contiene.</p>
+    <p class="note"><b>Es lo que separa 3A de 3B.</b> En un plazo fijo el resultado es conocido de antemano; en un FCI, no. La misma pantalla no puede prometer un número en los dos casos, y esa es una razón más para no diseñarlos juntos.</p>
+    <p class="note">El CTA dice <b>Listo</b>, no «Crear plazo fijo»: acá no se confirma nada todavía. Devuelve al paso 5, que es donde se registra el movimiento.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">5</span>
+      <div>
+        <h2>De vuelta, con las dos consecuencias</h2>
+        <p class="sub">La última pantalla donde los dos números se pueden mostrar juntos.</p>
+        <span class="badge b-mod">Gana la previsualización</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr tight">
+      <div class="dh"><div><div class="k">Nuevo movimiento</div><h3>Registrar</h3></div><span class="x">✕</span></div>
+      <div class="seg"><span>Gasto</span><span>Ingreso</span><span class="on">Transferencia</span><span>Ajuste</span><span>Cambio</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">700.000</span></div>
+      </div>
+      <div class="c rows">
+        <div><div class="tile">🏦</div><div class="rw"><div class="k">Desde</div><div class="v"><span class="chip-acc"><i>C</i></span>Comafi</div></div><span class="chev">›</span></div>
+        <div><div class="tile">📈</div><div class="rw"><div class="k">Hacia</div><div class="v">Plazo fijo Comafi · vence 24 sep</div></div><span class="chev">›</span></div>
+        <div><div class="tile">📅</div><div class="rw"><div class="k">Fecha</div><div class="v">25 de ago</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Queda en Comafi</span><span>$ 62.862,23</span></div>
+        <div class="minus"><span>Pasa al plazo fijo</span><span>−$ 700.000,00</span></div>
+        <div class="rule"><span>Te queda para gastar</span><span>$ 4.205.748,17</span></div>
+      </div>
+      <p class="note" style="border:0;padding:0;margin:2px 2px 0">Tu plata no se gastó: cambió de lugar, y no la vas a poder tocar hasta el <b>24 de septiembre</b>.</p>
+      <div class="cta">Registrar transferencia</div>
+    </div></div>
+    <p class="note"><b>La frase de abajo es la única defensa contra el malentendido.</b> Es la hermana de <i>«La plata no se mueve. Solo deja de contar como disponible»</i> de la fase 1, con el signo cambiado: acá la plata <b>sí</b> se mueve, y lo que hay que decir es que <b>no se gastó</b>. Las dos frases existen porque el mismo número bajando significa dos cosas distintas.</p>
+    <p class="note"><b>Se muestran los dos números que bajan</b>, el saldo de la cuenta y el disponible, porque bajan por razones distintas y esta es la última pantalla donde se los puede ver juntos. Después de acá viven en dos lugares separados.</p>
+    <p class="note">Y se nombra la <b>fecha de vencimiento en la frase</b>, no solo en la fila. Es el dato que convierte esto en una decisión: lo que se está aceptando no es que baje el disponible, es <b>hasta cuándo</b>.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">6</span>
+      <div>
+        <h2>Cómo queda en Movimientos</h2>
+        <p class="sub">Un hecho del ledger, como cualquier otro.</p>
+        <span class="badge b-mod">Fila nueva, lista vieja</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="mv-head"><h3>Movimientos</h3><span class="chev">⌕</span></div>
+      <div class="c mv">
+        <div class="mv-day">Martes 25 de agosto</div>
+        <div class="r"><div class="av">📈</div><div class="n"><b>Plazo fijo Comafi</b><span>Transferencia · vence 24 sep</span></div><span class="a">$ 700.000,00</span></div>
+        <div class="r"><div class="av">🛒</div><div class="n"><b>Coto</b><span>Supermercado</span></div><span class="a neg">−$ 38.420,10</span></div>
+        <div class="mv-day">Lunes 24 de agosto</div>
+        <div class="r"><div class="av">💼</div><div class="n"><b>Sueldo</b><span>Ingreso</span></div><span class="a pos">+$ 1.240.000,00</span></div>
+      </div>
+      <div class="callout"><b>No lleva signo ni color de gasto.</b> Una transferencia no suma ni resta al mes: mueve. Es el mismo tratamiento que ya tiene una transferencia entre dos cuentas propias.</div>
+    </div></div>
+    <p class="note"><b>«En qué se fue» no lo muestra.</b> Las transferencias ya están fuera de la analítica de gastos desde antes de esta fase — no hay nada que construir, solo que no romperlo. Si el plazo fijo apareciera ahí, la categoría más grande del mes de cualquiera que ahorra sería «transferencias».</p>
+    <p class="note">La fila <b>dice el vencimiento</b> en el subtítulo. Es lo que la distingue de una transferencia común y lo que alguien va a estar buscando cuando la encuentre acá dentro de tres semanas.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">7</span>
+      <div>
+        <h2>Lo que el circuito NO pregunta</h2>
+        <p class="sub">Cinco campos que un formulario de plazo fijo suele tener.</p>
+        <span class="badge b-open">Criterio</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="states">
+        <div class="st"><div class="cap">No pregunta</div><div class="line"><span class="l"><i class="off"></i>Nombre del plazo fijo</span></div>
+          <p class="note" style="border:0;padding:6px 0 0;margin:0;font-size:12.5px">Se llama «Plazo fijo Comafi». Nadie le pone nombre propio a un plazo fijo, y pedirlo obliga a inventar uno por mes.</p></div>
+        <div class="st"><div class="cap">No pregunta</div><div class="line"><span class="l"><i class="off"></i>Moneda</span></div>
+          <p class="note" style="border:0;padding:6px 0 0;margin:0;font-size:12.5px">La del monto de la transferencia. Un plazo fijo en pesos no se hace con dólares.</p></div>
+        <div class="st"><div class="cap">No pregunta</div><div class="line"><span class="l"><i class="off"></i>Fecha de inicio</span></div>
+          <p class="note" style="border:0;padding:6px 0 0;margin:0;font-size:12.5px">Es la del movimiento. Dos fechas para el mismo hecho es una que puede quedar mal.</p></div>
+        <div class="st"><div class="cap">No pregunta, calcula</div><div class="line"><span class="l"><i></i>Lo que vas a cobrar</span></div>
+          <p class="note" style="border:0;padding:6px 0 0;margin:0;font-size:12.5px">Sale de capital, plazo y tasa. <b>No es una proyección: es un contrato.</b> El banco ya te dio ese número — Grana lo repite, no lo inventa.</p></div>
+        <div class="st"><div class="cap">No pregunta</div><div class="line"><span class="l"><i class="off"></i>¿Renueva solo?</span></div>
+          <p class="note" style="border:0;padding:6px 0 0;margin:0;font-size:12.5px">Se contesta el 24 de septiembre, cuando vence y hay algo que decidir. Preguntarlo hoy es pedir una decisión con un mes de anticipación.</p></div>
+      </div>
+    </div></div>
+    <p class="note"><b>Cada campo que no está es una decisión, no una omisión.</b> El circuito entero pide <b>dos datos nuevos</b>: cuánto tiempo y a qué tasa. Todo lo demás se hereda o se deriva.</p>
+    <p class="note">El total, entrando por la cuenta: <b>3 taps de decisión</b> —monto, plazo, confirmar—. Por la puerta secundaria de Transferencia son 5, porque de dónde sale y hacia dónde va hay que decirlos.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">8</span>
+      <div>
+        <h2>El mes, sin línea nueva</h2>
+        <p class="sub">Cierra igual. Ese es el problema.</p>
+        <span class="badge b-bad">Reescribe el pasado</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Resumen del mes · agosto</div>
+        <div class="l new" style="background:#FDECEA"><span class="k"><i></i>Tenías</span><span class="a">−$ 3.429.825,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 8.021.007,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 205.433,66</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.205.748,17</span></div>
+        <div class="verdict no"><span class="m">✕</span><div><b>La suma cierra, y «Tenías» miente.</b> El 1 de agosto tenías <b>−$ 2.729.825,17</b>. La card dice −$ 3.429.825,17: exactamente $ 700.000 peor. Nadie lo puede notar sumando, porque la cuenta da.</div></div>
+      </div>
+    </div></div>
+    <p class="note"><b>«Tenías» no se lee: se despeja.</b> <code>Tenías = disponible − (entró − se fué − guardado)</code>. La identidad se cumple <b>por construcción</b>, así que nunca se va a ver un hueco: cualquier plata que salga de las cuentas sin término propio la absorbe «Tenías» en silencio.</p>
+    <p class="note">Eso vuelve la falla <b>peor</b> que un hueco, no mejor. Una suma que no da es algo que el usuario puede agarrar. <b>Un pasado reescrito no.</b> Y es exactamente contra lo que ya advierte el código de la fase 1: <i>"mayo leería un número el lunes y otro el martes sin que haya pasado nada en mayo"</i>.</p>
+    <p class="note">Por eso <b>no es prima hermana de <i>«Pasaste a otras cuentas»</i></b>. Aquella nombraba un movimiento que <b>no cambiaba el disponible</b> — plata yendo de un bolsillo tuyo a otro, los dos contando igual. Era ruido porque no explicaba ningún cambio. Esta explica exactamente $700.000 de cambio.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">9</span>
+      <div>
+        <h2>El mes, con la línea</h2>
+        <p class="sub">Los mismos números, un término más.</p>
+        <span class="badge b-new">Propuesta</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Resumen del mes · agosto</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">−$ 2.729.825,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 8.021.007,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 205.433,66</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
+        <div class="l new"><span class="k"><i class="pl"></i>Hiciste un plazo fijo</span><span class="a pl">−$ 700.000,00</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.205.748,17</span></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>Cierra, y «Tenías» vuelve a ser cierto.</b> −$ 2.729.825,17 es lo que había el 1 de agosto. Cada línea nombra una razón por la que el disponible cambió, y no hay ninguna razón sin línea.</div></div>
+      </div>
+    </div></div>
+    <p class="note"><b>Color propio, no el emerald de Guardado.</b> Comparten que sacan plata del disponible, pero no son lo mismo: <b>guardado se deshace con un tap</b> y esto <b>no se puede tocar hasta el 24 de septiembre</b>. Pintarlas iguales diría que son la misma decisión con distinto nombre.</p>
+    <p class="note"><b>Va abajo de Guardado, no arriba.</b> Es el orden de irreversibilidad: lo que podés deshacer va primero. Y es el orden en que ocurren — se guarda antes de poner a trabajar, nunca al revés.</p>
+    <p class="note"><b>La línea dice el vehículo, no la abstracción.</b> El mock anterior decía «Puesto a trabajar» —el término del documento del modelo— y no había pasado por nadie: se heredó y nadie lo cuestionó. En pantalla suena a newsletter financiera. <b>«Hiciste un plazo fijo» es lo que diría cualquiera.</b></p>
+    <p class="note"><b>El término abstracto no hace falta todavía.</b> En 3A hay un solo tipo de posición, así que nombrarlo alcanza. El paraguas —«Plazos fijos e inversiones», «Rindiendo», «Plata invertida»— recién hace falta en el hub y en 3B, cuando haya varias cosas que agrupar. Inventarlo antes es ponerle nombre a una categoría de un solo elemento.</p>
+    <p class="note"><b>«Puesto a trabajar» sobrevive como concepto interno</b> —el bucket de la agregación, el término de la identidad—, igual que <i>reserva</i> sobrevive adentro mientras la pantalla dice <i>Guardado</i>. Ninguna palabra del modelo cruza a la interfaz.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">10</span>
+      <div>
+        <h2>La salida fácil, y por qué no</h2>
+        <p class="sub">Meterlo adentro de «Se fué».</p>
+        <span class="badge b-bad">Descartada</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Resumen del mes · agosto</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">−$ 2.729.825,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 8.021.007,00</span></div>
+        <div class="l new" style="background:#FDECEA"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 905.433,66</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.205.748,17</span></div>
+        <div class="verdict no"><span class="m">✕</span><div><b>La aritmética cierra y el número miente.</b> Dice que gastaste $905.433 en agosto cuando gastaste $205.433. Ese número alimenta la tira de ritmo, la comparación con el mes pasado y «En qué se fue»: el error no queda acá, se propaga.</div></div>
+      </div>
+    </div></div>
+    <p class="note"><b>Es la trampa de la fase.</b> Cerrar la cuenta es fácil: cualquier término absorbe cualquier diferencia. Lo difícil es que además <b>cada término siga significando lo que dice</b>.</p>
+    <p class="note">Y tiene una tercera variante, más tentadora: <b>una sola línea «Fuera de lo disponible −$ 880.000»</b> que junte guardado y posiciones. También cierra, y colapsa una decisión reversible con plata inmovilizada por un mes. El usuario que ve un solo número no sabe cuánto de eso puede recuperar hoy.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">11</span>
+      <div>
+        <h2>Guardado es un stock. Esto es un flujo.</h2>
+        <p class="sub">La diferencia decide si la línea aparece en meses pasados.</p>
+        <span class="badge b-new">Regla nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Agosto, mirado en noviembre</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">−$ 2.729.825,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 8.021.007,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 205.433,66</span></div>
+        <div class="l" style="opacity:.42"><span class="k"><i class="em"></i>Guardado</span><span class="a em">no se dibuja</span></div>
+        <div class="l new"><span class="k"><i class="pl"></i>Hiciste un plazo fijo</span><span class="a pl">−$ 700.000,00</span></div>
+        <div class="l sum"><span class="k">Saldo al cierre</span><span class="a">$ 4.385.748,17</span></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>Las dos líneas hacen lo contrario, y por la misma razón.</b> Guardado desaparece de un mes cerrado; el plazo fijo se queda para siempre en el mes donde ocurrió.</div></div>
+      </div>
+      <div class="callout"><b>Guardar no saca plata de las cuentas.</b> Por eso su término es el <b>stock entero</b>, meses anteriores incluidos: el saldo con el que abrió el mes todavía lo contiene y hay que restarlo completo.<br><br><b>Poner a trabajar sí la saca.</b> Lo que salió en julio ya no está en el saldo con el que abrió agosto — restar el stock lo contaría dos veces. El término es el <b>flujo del mes</b>.</div>
+    </div></div>
+    <p class="note"><b>Que sea flujo es lo que la hace pertenecer a su mes.</b> Un stock es una postura de hoy, y mostrarlo sobre un mes cerrado reescribe el pasado — por eso Guardado no se dibuja ahí. Un flujo es un hecho fechado: en agosto salieron $700.000, y eso va a ser verdad en noviembre igual que hoy.</p>
+    <p class="note"><b>Sin el término, agosto queda mal para siempre.</b> Mirado en noviembre, «Tenías» se despeja contra el saldo de cuentas al cierre —que ya no tiene los $700.000— y da −$ 3.429.825,17. El mismo error del paso 8, congelado en un mes que ya nadie va a revisar.</p>
+    <p class="note"><b>Y tiene signo.</b> Cuando en septiembre vuelva el capital, el flujo de ese mes es negativo y la línea <b>suma</b> al disponible. Va a necesitar dos textos, como <i>Guardaste</i> / <i>Volviste a usar</i>. Cuál es el par correcto, todavía no está decidido.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">12</span>
+      <div>
+        <h2>Venció, y Grana no se enteró</h2>
+        <p class="sub">No hay conexión con el banco. Lo tiene que decir el usuario.</p>
+        <span class="badge b-new">Pantalla nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="sec-t">Plazos fijos</div>
+      <div class="c">
+        <div class="pos-row" style="background:#FFFBF2;border-radius:16px">
+          <div class="tile" style="background:#FDF0D5">⏰</div>
+          <div class="n"><b>Plazo fijo Comafi</b><span style="color:var(--warning);font-weight:600">Venció el 24 de sep</span></div>
+          <span class="a">$ 700.000,00</span>
+        </div>
+      </div>
+      <div class="gd">
+        <div class="top">
+          <div class="tile">⏰</div>
+          <div><h4>¿Qué pasó con este plazo fijo?</h4><p>Venció hace un día. Grana no se conecta con tu banco, así que necesita que se lo cuentes.</p></div>
+        </div>
+        <div class="acts"><div class="cta">Volvió a mi cuenta</div><div class="cta ghost">Lo renové</div></div>
+      </div>
+      <div class="callout warn-c"><b>Hasta que lo contestes, la posición sigue valiendo su capital.</b> Grana no inventa el interés que <i>debería</i> haber ganado: mientras no sepa qué pasó, muestra lo que puso, no lo que supone.</div>
+    </div></div>
+    <p class="note"><b>Es la primera vez que Grana pregunta algo por su cuenta.</b> Todo lo demás lo registra el usuario cuando quiere; un vencimiento tiene fecha propia y llega solo. La pregunta va donde vive la posición, no como notificación: nada acá es urgente.</p>
+    <p class="note"><b>Dos respuestas, no un formulario.</b> «Volvió a mi cuenta» y «Lo renové» son los dos caminos reales, y llevan a pantallas distintas. Preguntar primero <i>cuánto</i> obligaría a pensar en números antes de decir qué pasó.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">13</span>
+      <div>
+        <h2>Volvió: capital y rendimiento, separados</h2>
+        <p class="sub">Un número entra, dos salen.</p>
+        <span class="badge b-new">Pantalla nueva</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Volvió a mi cuenta</h3></div>
+      <div class="c amt">
+        <div class="lbl">¿Cuánto volvió?</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">724.164,38</span></div>
+        <p style="margin:9px 0 0;font-size:12.5px;color:var(--soft)">Es lo que decía tu plazo fijo. Si el banco depositó otra cosa, corregilo.</p>
+      </div>
+      <div class="c rows">
+        <div><div class="tile">🏦</div><div class="rw"><div class="k">A qué cuenta</div><div class="v"><span class="chip-acc"><i>C</i></span>Comafi</div></div><span class="chev">›</span></div>
+        <div><div class="tile">📅</div><div class="rw"><div class="k">Fecha</div><div class="v">24 de sep</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Capital que habías puesto</span><span>$ 700.000,00</span></div>
+        <div class="minus"><span>Rendimiento</span><span>+$ 24.164,38</span></div>
+        <div class="rule"><span>Volvió a Comafi</span><span>$ 724.164,38</span></div>
+      </div>
+      <p class="note" style="border:0;padding:0;margin:2px 2px 0">Los $ 700.000 ya eran tuyos y vuelven a estar disponibles. Lo que ganaste son <b>$ 24.164,38</b>.</p>
+      <div class="cta">Registrar</div>
+    </div></div>
+    <p class="note"><b>El usuario escribe UN número: el que dice el banco.</b> Grana hace la resta —lo que volvió menos lo que había puesto— y muestra las dos partes. Pedirle que las separe él sería pedirle una cuenta que la app ya puede hacer, y que además puede hacer mal.</p>
+    <p class="note"><b>El monto viene prellenado, y eso lo cambia de pregunta a confirmación.</b> Como la tasa se sabe desde el día uno, Grana ya sabe cuánto tenía que volver: en el caso normal el usuario solo confirma. Escribir un número es el caso de excepción, no el flujo.</p>
+    <p class="note"><b>Pero la resta se hace contra el capital, nunca contra el estimado.</b> Si el banco descontó un impuesto y depositó menos, manda el banco: el estimado era la aritmética del contrato, el depósito es el hecho. Y el impuesto sale solo — vuelve menos, así que el rendimiento es más chico.</p>
+    <p class="note">Con esto, el <b>rendimiento negativo sale gratis</b>: si vuelven $ 680.000 sobre $ 700.000, la misma resta da <b>−$ 20.000</b> y la pantalla dice «Rendimiento −$ 20.000». No hay un caso especial que programar (paso 16).</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">13b</span>
+      <div>
+        <h2>Renové: y ahí se parte en dos</h2>
+        <p class="sub">La pregunta que decide si el mes muestra algo.</p>
+        <span class="badge b-open">La bisagra</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Lo renové</h3></div>
+      <div class="c rows">
+        <div><div class="tile">📅</div><div class="rw"><div class="k">Nuevo vencimiento</div><div class="v">24 de oct · 30 días</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="sec-t">¿Y el interés?</div>
+      <div class="c rows">
+        <div><div class="tile">🔁</div><div class="rw"><div class="v">Quedó adentro, renovó todo</div><div class="k" style="text-transform:none;letter-spacing:0;font-weight:500;color:var(--soft);margin-top:3px">Ahora trabajan $ 724.164,38</div></div><span class="chev">✓</span></div>
+        <div><div class="tile">🏦</div><div class="rw"><div class="v">Me lo pagaron a la cuenta</div><div class="k" style="text-transform:none;letter-spacing:0;font-weight:500;color:var(--soft);margin-top:3px">Siguen trabajando $ 700.000</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="cta">Registrar</div>
+    </div></div>
+    <p class="note"><b>Esta pregunta parece un detalle contable y decide qué ve el usuario.</b> Si el interés se pagó a la cuenta, entró plata: el mes lo muestra. Si capitalizó, <b>no entró nada a ninguna cuenta</b> y el mes —que es una lectura de liquidez— no tiene nada que decir.</p>
+    <p class="note"><b>Un rendimiento capitalizado no es un evento del mes.</b> Es la posición que vale más. Aparece en su detalle y en el total de tus plazos fijos, no en «Resumen del mes». Meterlo ahí sería afirmar que entró plata que no entró.</p>
+    <p class="note">Consecuencia incómoda pero correcta: <b>alguien que renueva capitalizando todo el año no ve su ganancia en ningún mes.</b> La ve en la posición, que crece. La lectura de "cuánto gané" no es del mes — es de patrimonio, y es de la fase 5.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">14</span>
+      <div>
+        <h2>Septiembre, con las dos líneas</h2>
+        <p class="sub">Vencimiento normal, el capital vuelve a la cuenta.</p>
+        <span class="badge b-new">Propuesta</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Resumen del mes · septiembre</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">$ 4.385.748,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 1.240.000,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 980.000,00</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
+        <div class="l new"><span class="k"><i class="pl"></i>Volvió del plazo fijo</span><span class="a pl">+$ 700.000,00</span></div>
+        <div class="l new" style="background:#FFF7E8"><span class="k"><i style="background:var(--warning)"></i>Rendimiento cobrado</span><span class="a" style="color:#9A6B12">+$ 24.164,38</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 5.189.912,55</span></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>Las dos líneas dicen cosas distintas.</b> $ 700.000 volvieron: ya eran tuyos. $ 24.164,38 son nuevos. Juntarlos en un solo «+$ 724.164» borraría exactamente la diferencia que el usuario quiere saber.</div></div>
+      </div>
+      <div class="callout"><b>«Volvió del plazo fijo» es la misma línea que «Hiciste un plazo fijo»</b>, con el flujo dado vuelta. Por eso el bucket <b>netea cero</b> en la vida de la posición: −700.000 en agosto, +700.000 en septiembre. Si diera distinto de cero, algo se coló adentro.</div>
+    </div></div>
+    <p class="note"><b>«Rendimiento cobrado», no «Rendimiento» a secas.</b> La regla real es <i>la ganancia que se hizo líquida</i>, y «Rendimiento» solo se lee como «cuánto gané» — que es otra cosa, y que en el caso capitalizado sería falso. <b>Cobrado</b> dice cuándo aparece: cuando vuelve a una cuenta.</p>
+    <p class="note"><b>Y es línea propia, no se mete adentro de «Entró».</b> Y el caso que lo decide es el negativo: una pérdida metida en «Entró/Se fué» aterriza en «Se fué», afirmando que salió plata de una cuenta cuando la cuenta <b>subió</b>. Es el mismo error que meter el plazo fijo en «Se fué», del otro lado del espejo.</p>
+    <p class="note"><b>Ninguna de las dos líneas se dibuja si no hubo actividad</b>, igual que Guardado. Un mes normal sigue teniendo cuatro. Las líneas nuevas aparecen exactamente cuando hay algo nuevo que explicar.</p>
+    <p class="note"><b>Y nada de esto es <code>income</code>.</b> El bucket es propio, así que «ingresos del mes», la tira de ritmo y la sugerencia de guardar —que filtra por <code>type = 'income'</code>— no lo ven. El rendimiento no dispara «¿guardás una parte?».</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">15</span>
+      <div>
+        <h2>Renovó capitalizando: el mes no dice nada</h2>
+        <p class="sub">Y está bien que no diga.</p>
+        <span class="badge b-same">Sin líneas nuevas</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Resumen del mes · septiembre</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">$ 4.385.748,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 1.240.000,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 980.000,00</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.465.748,17</span></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>No cruzó plata ningún límite.</b> El capital siguió adentro y el interés también. La card es una lectura de liquidez: no tiene nada que reportar porque no pasó nada con la liquidez.</div></div>
+      </div>
+      <div class="c">
+        <div class="pos-row"><div class="tile">📈</div><div class="n"><b>Plazo fijo Comafi</b><span>Vence 24 de oct · renovado</span></div><span class="a">$ 724.164,38</span></div>
+      </div>
+      <div class="callout"><b>La ganancia está: la posición vale $ 24.164,38 más.</b> Se ve en su fila y en el total de tus plazos fijos. No se ve en el mes porque el mes cuenta cómo se movió la plata dentro y fuera de las cuentas, y esta no se movió.</div>
+    </div></div>
+    <p class="note"><b>Este caso es el que prueba que «Rendimiento» no puede ser simplemente «la ganancia del mes».</b> Es <b>la ganancia que se hizo líquida</b>. Un rendimiento capitalizado es real y no es líquido, y la card no es el lugar donde vive.</p>
+    <p class="note">Es también el que muestra por qué la pregunta del paso 13b no se puede saltear: sin ella, Grana no sabe si la posición pasó a valer $ 724.164,38 o si siguió valiendo $ 700.000 y entraron $ 24.164,38 a una cuenta. Son dos estados distintos del mundo.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">15b</span>
+      <div>
+        <h2>Renovó el capital y cobró el interés</h2>
+        <p class="sub">El tercer desenlace, y el que prueba que la línea puede ir sola.</p>
+        <span class="badge b-new">Propuesta</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Resumen del mes · septiembre</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">$ 4.385.748,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 1.240.000,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 980.000,00</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
+        <div class="l new" style="background:#FFF7E8"><span class="k"><i style="background:var(--warning)"></i>Rendimiento cobrado</span><span class="a" style="color:#9A6B12">+$ 24.164,38</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.489.912,55</span></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>El capital no se movió, el interés sí.</b> Los $ 700.000 siguen adentro del plazo fijo nuevo, así que no hay línea de posición. Entraron $ 24.164,38 a la cuenta, así que sí hay línea de rendimiento.</div></div>
+      </div>
+      <div class="callout"><b>Las dos líneas son independientes.</b> Una nombra el capital que cruzó el límite; la otra, la ganancia que se hizo líquida. Pueden aparecer juntas, sola cada una, o ninguna — y cada combinación es un desenlace real del vencimiento.</div>
+    </div></div>
+    <p class="note"><b>Los tres desenlaces, y qué muestra el mes:</b></p>
+    <div class="states">
+      <div class="st"><div class="cap">Volvió todo a la cuenta</div><div class="line"><span class="l"><i></i>Volvió del plazo fijo <b style="color:var(--text)">+$ 700.000</b></span></div><div class="line" style="margin-top:5px"><span class="l"><i></i>Rendimiento cobrado <b style="color:var(--text)">+$ 24.164,38</b></span></div></div>
+      <div class="st"><div class="cap">Renovó capital, cobró el interés</div><div class="line"><span class="l"><i></i>Rendimiento cobrado <b style="color:var(--text)">+$ 24.164,38</b></span></div><div class="line mute" style="margin-top:5px"><span class="l"><i class="off"></i>Sin línea de posición</span></div></div>
+      <div class="st"><div class="cap">Renovó todo, capitalizando</div><div class="line mute"><span class="l"><i class="off"></i>El mes no dice nada</span></div><div class="line mute" style="margin-top:5px"><span class="l"><i class="off"></i>La posición pasa a valer $ 724.164,38</span></div></div>
+    </div>
+    <p class="note"><b>Son tres, no cuatro.</b> «Renovar el capital» y «cobrar el interés y renovar el capital» son el mismo desenlace: si el capital renovó, el interés fue a algún lado, y el único lado posible es tu cuenta. No existe un interés que se quede flotando sin cobrarse ni capitalizarse.</p>
+    <p class="note">Por eso alcanzan <b>dos preguntas</b> —¿volvió o renovaste? y, solo si renovaste, ¿el interés quedó adentro o te lo pagaron?— en vez de una lista de cuatro opciones donde dos dicen lo mismo.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">16</span>
+      <div>
+        <h2>Las variantes, sin caso especial</h2>
+        <p class="sub">La misma resta contesta las seis.</p>
+        <span class="badge b-new">Regla</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Rescate anticipado, con penalidad</div>
+        <div class="l"><span class="k">Volvió</span><span class="a">$ 706.041,10</span></div>
+        <div class="l"><span class="k">Capital</span><span class="a">$ 700.000,00</span></div>
+        <div class="l sum"><span class="k">Rendimiento</span><span class="a" style="color:#9A6B12">+$ 6.041,10</span></div>
+      </div>
+      <div class="ledger">
+        <div class="cap">FCI con resultado negativo</div>
+        <div class="l"><span class="k">Volvió</span><span class="a">$ 680.000,00</span></div>
+        <div class="l"><span class="k">Capital</span><span class="a">$ 700.000,00</span></div>
+        <div class="l sum"><span class="k">Rendimiento</span><span class="a" style="color:#B03A2E">−$ 20.000,00</span></div>
+      </div>
+      <div class="ledger">
+        <div class="cap">Rescate parcial · FCI</div>
+        <div class="l"><span class="k">Volvió</span><span class="a">$ 310.000,00</span></div>
+        <div class="l"><span class="k">Capital rescatado</span><span class="a">$ 300.000,00</span></div>
+        <div class="l sum"><span class="k">Rendimiento</span><span class="a" style="color:#9A6B12">+$ 10.000,00</span></div>
+      </div>
+      <div class="callout"><b>Ninguna necesita código propio.</b> Todas son <code>volvió − capital</code>, con el signo que salga. La penalidad es un rendimiento chico; la pérdida es un rendimiento negativo; el rescate parcial es la misma resta sobre la parte que salió.</div>
+    </div></div>
+    <p class="note"><b>Lo único que el rescate parcial sí necesita</b> es que la posición sepa cuánto capital le queda adentro — <b>$ 400.000</b> después del ejemplo de arriba. Eso es de la fase <b>3B</b>: un plazo fijo común no se rescata en partes, un FCI sí.</p>
+    <p class="note">Y una que no entra por esta puerta: <b>el interés pagado a cuenta sin vencimiento</b>, típico de una cuenta remunerada. El modelo ya lo tiene resuelto por otro lado — <b>una cuenta remunerada no es una posición</b>, porque esa plata está disponible y se puede gastar mañana sin rescatar nada.</p>
+  </section>
+
+</div>
+
+<div class="ab">
+  <h2>El comparador, con la cuenta hecha</h2>
+  <p class="lede">Las cuatro opciones sobre los mismos números de agosto: $700.000 a un plazo fijo el 25, con el disponible pasando de $4.905.748,17 a $4.205.748,17. <b>Tres de las cuatro cierran la suma</b> — cerrar no alcanza como criterio.</p>
+  <table>
+    <thead><tr><th style="width:26%">Opción</th><th style="width:19%">«Se fué» dice</th><th style="width:19%">¿La suma cierra?</th><th>Qué rompe</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>Sin línea nueva</b><br>No tocar nada</td>
+        <td class="num">−$ 205.433,66</td>
+        <td class="no">Sí, con «Tenías» falso</td>
+        <td>El arranque del mes. «Tenías» se despeja, así que absorbe los $700.000 y agosto pasa a decir −$&nbsp;3.429.825,17 cuando fue −$&nbsp;2.729.825,17. <b>La suma cierra: nadie lo puede notar sumando.</b></td>
+      </tr>
+      <tr>
+        <td><b>Dentro de «Se fué»</b><br>Tratarlo como gasto</td>
+        <td class="num">−$ 905.433,66</td>
+        <td class="yes">Sí</td>
+        <td>El significado de «Se fué», y con él la tira de ritmo, la comparación mensual y «En qué se fue». El error se propaga.</td>
+      </tr>
+      <tr>
+        <td><b>Una línea junta</b><br>«Fuera de lo disponible»</td>
+        <td class="num">−$ 205.433,66</td>
+        <td class="yes">Sí</td>
+        <td>La diferencia entre lo que podés deshacer hoy y lo que está inmovilizado hasta el 24 de septiembre. Un número solo no la puede decir.</td>
+      </tr>
+      <tr style="background:#F6FDFA">
+        <td><b>Línea propia</b><br>«Hiciste un plazo fijo»</td>
+        <td class="num">−$ 205.433,66</td>
+        <td class="yes">Sí, y «Tenías» es cierto</td>
+        <td><b>Nada.</b> Cada línea nombra una razón del cambio, y ninguna razón queda sin línea.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="ways">
+  <h2>Qué quedó cerrado y qué no</h2>
+  <p class="lede">Este mock existía para resolver dos decisiones. Cerró una y media.</p>
+  <div class="cols">
+    <div class="way">
+      <div class="cap">Cerrado</div>
+      <h4>La línea nueva no es opcional</h4>
+      <span class="taps">Era una pregunta de aritmética, no de gusto</span>
+      <ol>
+        <li>Sin un <b>cuarto término</b> la card deja de cerrar contra el número que tiene arriba, y esa identidad es lo que la hace auditable a ojo.</li>
+        <li><b>No es prima de «Pasaste a otras cuentas»:</b> aquella nombraba un movimiento que no cambiaba el disponible. Esta explica exactamente $700.000 de cambio.</li>
+        <li>Va <b>debajo de Guardado</b>, en <b>color propio</b>: comparten que sacan plata del disponible, pero una se deshace con un tap y la otra no.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Cerrado</div>
+      <h4>«Invertir» no necesita lugar</h4>
+      <span class="taps">El segmented se queda en cinco</span>
+      <ol>
+        <li>Poner plata a trabajar es una <b>transferencia con destino a una posición</b>, no un tipo de movimiento nuevo.</li>
+        <li>Una sexta pestaña sería modelar el <b>destino</b> como si fuera un <b>tipo</b> — el mismo error de categoría que el <code>counts_as_available</code> que el modelo ya descartó.</li>
+        <li>Lo único que cambia es el <b>selector de destino</b>, que ya existía y gana filas.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Lo delicado</div>
+      <h4>El bucket, no la línea</h4>
+      <span class="taps">Hoy ya cae en «Se fué», sin escribir una línea de código</span>
+      <ol>
+        <li>El mes se arma desde <b>buckets con signo</b>: <code>totalAdjustment</code>, <code>totalSettlement</code>, <code>totalExchange</code>, <code>totalTransfer</code>. El negativo va a «Se fué», el positivo a «Entró».</li>
+        <li><code>totalTransfer</code> es <b>«el residual de las transferencias cuyas dos patas no son propias»</b> — cero en el caso normal. Una posición no es una cuenta propia, así que una transferencia hacia ella cae <b>ahí</b>, en negativo, <b>en «Se fué»</b>.</li>
+        <li>No es un riesgo a futuro: es el <b>comportamiento actual</b>. El bucket tiene que <b>nacer en la agregación</b>, no en la UI. Si nace solo como fila de UI, tapa que abajo sigue entrando como gasto.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Cerrado</div>
+      <h4>El circuito pide dos datos</h4>
+      <span class="taps">3 taps entrando por la cuenta</span>
+      <ol>
+        <li><b>Cuánto tiempo</b> (chips: 30 · 60 · 90 · 180 · otra fecha) y <b>a qué tasa</b>. Nada más.</li>
+        <li><b>El capital y el banco se heredan</b> y se muestran, no se piden. Preguntarlos de nuevo es la forma más común de que los dos números terminen distintos.</li>
+        <li><b>El monto al vencimiento se calcula y se muestra</b>, editable. No es una proyección: es la aritmética de un contrato firmado.</li>
+        <li>No pregunta <b>nombre, moneda, fecha de inicio ni si renueva</b>. Cada uno se hereda, se deriva, o se contesta el día que hay algo que decidir.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Cerrado para 3A</div>
+      <h4>La pantalla dice el vehículo</h4>
+      <span class="taps">El paraguas recién hace falta en el hub</span>
+      <ol>
+        <li><b>«Hiciste un plazo fijo» · «Volvió del plazo fijo» · «Rendimiento cobrado».</b> Nombrar la cosa alcanza cuando hay una sola.</li>
+        <li><b>«Puesto a trabajar» queda adentro</b>, como concepto del modelo y nombre del bucket — igual que <i>reserva</i> vive adentro mientras la pantalla dice <i>Guardado</i>.</li>
+        <li>Para el <b>hub</b> sigue abierto: <b>«Plazos fijos e inversiones»</b> es la más clara y la menos poética; <b>«Rindiendo»</b> y <b>«Plata invertida»</b> son las otras candidatas. Se decide cuando el hub se dibuje.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Cerrado</div>
+      <h4>El rescate son dos cosas, no una</h4>
+      <span class="taps">Vuelven $ 724.164,38 sobre $ 700.000</span>
+      <ol>
+        <li>Los <b>$ 700.000</b> vuelven por el <b>mismo término</b> que se fueron, con el flujo dado vuelta. Así el bucket <b>neto de una posición cerrada da exactamente cero</b> — que es un invariante que se puede testear.</li>
+        <li>Los <b>$ 24.164,38</b> son plata que <b>nunca estuvo en una cuenta</b>. Meterlos en el mismo término lo rompe: el neto de la posición daría +$ 24.164,38, como si hubieras sacado más de lo que pusiste.</li>
+        <li>El rendimiento es <b>línea propia con signo</b>, no una parte de «Entró». Lo decide el caso negativo: una pérdida metida ahí aterriza en «Se fué», afirmando que salió plata de una cuenta que <b>subió</b>. Y <b>nunca <code>income</code></b>, para que no lo vean «ingresos del mes» ni la tira que sugiere guardar.</li>
+        <li><b>Solo la ganancia que se hizo líquida.</b> Un rendimiento capitalizado es real y no entró a ninguna cuenta: vive en la posición, que vale más, y el mes no lo nombra. La lectura de «cuánto gané» no es del mes — es de patrimonio, fase 5.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Abierto</div>
+      <h4>Lo que sigue, y en qué orden</h4>
+      <span class="taps">Antes de tocar schema</span>
+      <ol>
+        <li><b>Partir la fase en 3A y 3B.</b> Plazo fijo primero —capital fijo, vencimiento fijo, sin rescate parcial— y FCI/bróker después. Es el caso cerrado, y la fase 2 ya enseñó lo que cuesta comprometer un modelo antes de que la pantalla lo pida. El <b>rescate parcial</b> es lo único del paso 16 que queda para 3B.</li>
+        <li><b>El detalle de una posición</b>: capital, vencimiento, custodio, y qué se puede hacer antes de que venza.</li>
+        <li><b>Un propósito sobre una posición.</b> Hoy el techo del reparto es lo guardado; con posiciones pasa a ser <b>lo guardado más las posiciones</b>, y eso cambia el trigger de la 0059.</li>
+        <li><b>El hub «Mi plata»</b> — último, porque es lectura pura: se dibuja bien recién cuando sabemos qué hay para leer.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <div>
+    <h3>Por qué estos números</h3>
+    <p>Son los de <strong>agosto de 2026 de una cuenta real</strong>, con el guardado y los propósitos de la fase 2 ya cargados. Un mock con números redondos deja pasar errores que uno con números reales no: acá la suma se puede auditar a ojo y la diferencia de $700.000 salta sola.</p>
+    <p>El plazo fijo sale de <strong>Comafi</strong>, que tiene $762.862,23. Después queda con $62.862,23 — una cuenta casi vacía, que es lo que de verdad pasa cuando alguien pone a trabajar casi todo lo que tenía en un banco.</p>
+  </div>
+  <div>
+    <h3>Lo que este mock no dibuja</h3>
+    <ul>
+      <li>El <strong>hub «Mi plata / Dónde está»</strong>, con sus dos cortes del mismo total.</li>
+      <li>El <strong>detalle de una posición</strong> y su valuación.</li>
+      <li>El <strong>rescate</strong>, y cómo se separa capital de ganancia.</li>
+      <li>Cualquier <strong>schema</strong>. No hay tablas propuestas: el orden es mirar primero.</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Dónde vive el razonamiento</h3>
+    <p><code>docs/modelo-de-dinero.md</code> — el modelo, ya corregido con lo que las fases 1 y 2 enseñaron.</p>
+    <p><code>docs/design/modelo-de-dinero/README.md</code> — las decisiones abiertas que cada mock viene a resolver.</p>
+    <p>Las fases 1 y 2 están construidas; sus mocks quedaron atrás de la implementación y lo dicen arriba.</p>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

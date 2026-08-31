@@ -15,6 +15,13 @@ export const GUIDANCE_IDS = {
   FIRST_MOVEMENT_CATEGORY: 'first_movement.category',
   FIRST_MOVEMENT_SAVED: 'first_movement.saved',
 
+  // Guardar — sugerencia después de un ingreso (Change: add-savings-set-aside).
+  // `seen_at` funciona acá como CURSOR MENSUAL: se refresca cada vez que la tira
+  // se muestra, así que un segundo ingreso del mismo mes ya no la dispara y al
+  // mes siguiente vuelve sola. NUNCA se marca `completed`: eso la mataría para
+  // siempre, y es una sugerencia recurrente.
+  SAVINGS_SUGGEST_AFTER_INCOME: 'savings.suggest_after_income',
+
   // Cuentas (Change 2 - no implementado aún)
   // ACCOUNTS_DISCOVERY: 'accounts.discovery',
 

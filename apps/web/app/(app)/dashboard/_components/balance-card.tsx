@@ -11,6 +11,7 @@ import {
   type MonthBalanceByCurrency,
   type AmountDensity,
   type PlacementRow,
+  type SavingsRow,
 } from '@grana/dashboard'
 import { Card } from '@/components/ui/card'
 import { useShowCents } from '@/lib/preferences-context'
@@ -210,6 +211,102 @@ const Flow = ({
 )
 
 /**
+ * The savings row — BELOW A RULE, never a fourth column of the strip.
+ *
+ * Above the rule the card shows how the money MOVED this month; below it, how
+ * much of it the user decided not to touch. Making it a fourth sibling would
+ * claim it is the same kind of thing as an income or an expense.
+ *
+ * It shows the TOTAL set aside, carried-over months included, which is what
+ * makes the card verifiable: `Tenías` stays the account balance the month opened
+ * with — a number the user can check against their own accounts — instead of
+ * silently absorbing earlier reserves.
+ *
+ * Emerald, not terracotta: terracotta is reserved in Grana for what is due or
+ * overdue, and this is progress.
+ */
+const SavingsLine = ({
+  row,
+  usdRow,
+  showUsd,
+  density,
+}: {
+  row: SavingsRow
+  usdRow: SavingsRow | null
+  showUsd: boolean
+  /** El MISMO paso tipográfico que los tres de arriba: la fila es de otra
+   *  naturaleza, y eso ya lo dicen la regla y el color — un tamaño distinto no
+   *  agrega significado, se lee como un descuido. */
+  density: AmountDensity
+}) => {
+  const t = useTranslations('dashboard')
+  const isEmpty = row.state === 'empty'
+
+  return (
+    // NAVEGA al módulo, no abre un overlay. El dashboard conserva la lectura y
+    // pierde la operatoria (E3): con el formulario montado acá, «Ahorro e
+    // inversión» tenía dos puertas que abrían cosas distintas, y la de más a
+    // mano era la que no llevaba al módulo.
+    //
+    // Un `Link` de verdad y no un botón que navega: se puede abrir en otra
+    // pestaña, se puede copiar el destino, y el navegador lo precarga.
+    <Link
+      href="/savings"
+      // Sin relleno al pasar el mouse: un bloque gris a todo el ancho debajo de
+      // los tres montos se lee como otra card metida adentro de la card. Lo que
+      // marca que es tocable es el chevron, que se oscurece con el resto.
+      className="group mt-3 flex w-full items-center justify-between gap-3 border-t border-border-soft pt-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      <span
+        className={cn(
+          'flex shrink-0 items-center gap-[9px] text-[14px] font-bold transition-colors',
+          isEmpty ? 'text-text-soft group-hover:text-text-muted' : 'text-text-muted',
+        )}
+      >
+        {/* El estado vacío tampoco lleva color: es una invitación, no una
+            lectura. Una línea apagada es todo el precio de la puerta permanente
+            para quien nunca va a guardar. */}
+        <span
+          aria-hidden
+          className={cn('size-[9px] rounded-full', isEmpty ? 'bg-border' : 'bg-emerald')}
+        />
+        {t(`savings.${row.state}`)}
+      </span>
+      <span className="flex min-w-0 items-baseline gap-1.5">
+        {!isEmpty && (
+          <span className="flex flex-col items-end">
+            <span
+              className={cn(
+                'whitespace-nowrap font-extrabold leading-none tracking-[-0.04em] text-emerald-deep',
+                SUMMARY_SIZE[density],
+              )}
+            >
+              <MaskedAmount amount={row.amount} currency="ARS" signPrefix="−" />
+            </span>
+            {showUsd && usdRow && usdRow.state !== 'empty' && (
+              <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
+                <MaskedAmount
+                  amount={usdRow.amount}
+                  currency="USD"
+                  showCentsOverride
+                  signPrefix="−"
+                />
+              </span>
+            )}
+          </span>
+        )}
+        <span
+          aria-hidden
+          className="text-[15px] font-bold text-text-soft transition-colors group-hover:text-text-muted"
+        >
+          ›
+        </span>
+      </span>
+    </Link>
+  )
+}
+
+/**
  * "Saldo disponible total" — one card with two zones: a dark one with the
  * balance, the USD line and the "Dónde está" breakdown folded in, and a light
  * one with "Resumen del mes".
@@ -227,17 +324,25 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
   const t = useTranslations('dashboard')
   const format = useFormatter()
   const showCents = useShowCents()
-  const { hero, summary, venia, isCurrent, selected, isLoading } = useBalanceMonth({
-    todayISO,
-    heroInitial,
-    monthInitial,
-  })
+  const { hero, summary, venia, savings, displayed, isCurrent, selected, isLoading } =
+    useBalanceMonth({
+      todayISO,
+      heroInitial,
+      monthInitial,
+    })
 
   const placement = derivePlacement(hero?.accounts ?? [])
-  // One type step for the three amounts, so they never shrink at different
-  // points — same rule as the tiles of "Cuánto gastaste".
+  // One type step for the whole block, so the amounts never shrink at different
+  // points — same rule as the tiles of "Cuánto gastaste". The savings amount is
+  // in the array too: it sits in the same block and, left out, a long total
+  // would overflow while the three above it stayed comfortable.
   const summaryDensity = densestAmountDensity(
-    [venia?.ARS ?? 0, summary?.ARS.entro ?? 0, summary?.ARS.seFue ?? 0],
+    [
+      venia?.ARS ?? 0,
+      summary?.ARS.entro ?? 0,
+      summary?.ARS.seFue ?? 0,
+      savings.ARS?.amount ?? 0,
+    ],
     showCents,
   )
   // One decision for the whole summary block (see `Flow`).
@@ -245,7 +350,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
     (venia?.USD ?? 0) !== 0 ||
     (summary?.USD.entro ?? 0) !== 0 ||
     (summary?.USD.seFue ?? 0) !== 0
-  const hasUsd = placement.USD.rows.length > 0 || (hero?.usd ?? 0) !== 0
+  const hasUsd = placement.USD.rows.length > 0 || displayed.USD !== 0
   const monthLabel = format.dateTime(new Date(selected.year, selected.month - 1, 1), {
     month: 'long',
     year: 'numeric',
@@ -270,7 +375,10 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
         ) : (
           <>
         <p className="mt-[11px] text-[clamp(2.125rem,3.4vw,2.625rem)] font-extrabold leading-[0.95] tracking-[-0.05em]">
-          <MaskedAmountDisplay amount={hero?.ars ?? 0} currency="ARS" dimSymbol />
+          {/* The disponible real in the current month; the closing balance in a
+              past one. The label above already tells them apart, and the reserve
+              is netted exactly where it says "disponible". */}
+          <MaskedAmountDisplay amount={displayed.ARS} currency="ARS" dimSymbol />
         </p>
 
         {hasUsd && (
@@ -279,7 +387,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
               USD
             </span>
             <span className="text-[16px] font-bold text-white/90">
-              <MaskedAmount amount={hero?.usd ?? 0} currency="USD" showCentsOverride />
+              <MaskedAmount amount={displayed.USD} currency="USD" showCentsOverride />
             </span>
           </p>
         )}
@@ -378,6 +486,15 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             loading={isLoading}
           />
         </div>
+
+        {savings.ARS && (
+          <SavingsLine
+            row={savings.ARS}
+            usdRow={savings.USD}
+            showUsd={summaryHasUsd}
+            density={summaryDensity}
+          />
+        )}
       </div>
     </Card>
   )

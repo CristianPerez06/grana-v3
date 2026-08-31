@@ -10,6 +10,9 @@ type Props = {
   /**
    * Caps the scroller's height so a long form scrolls inside the sheet instead
    * of pushing it past its own max height (`BottomSheet` caps the panel at 90%).
+   * Inside a `BottomSheet` this must come from `useSheetBodyMaxHeight()`, which
+   * splits what is left of the screen — a hardcoded number leaves the CTA below
+   * the fold on a tall phone and clipped on a short one.
    * Full-height overlays (`Drawer`) leave it unset and let flex do the work.
    */
   maxHeight?: number

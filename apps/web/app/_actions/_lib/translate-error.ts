@@ -11,6 +11,7 @@ export type ErrorKind =
   | 'recurrence'
   | 'category'
   | 'subcategory'
+  | 'savings'
 
 const KIND_NAMESPACE: Record<ErrorKind, string> = {
   account: 'accounts.errors',
@@ -19,6 +20,7 @@ const KIND_NAMESPACE: Record<ErrorKind, string> = {
   recurrence: 'recurrences.errors',
   category: 'settings.categories.errors',
   subcategory: 'settings.categories.errors',
+  savings: 'savings.errors',
 }
 
 // Maps a Postgres error code (from a Supabase response) to a user-facing

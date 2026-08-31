@@ -20,7 +20,8 @@
     "eas:ios": "pnpm --filter mobile build:ios",
     "eas:ios:local": "pnpm --filter mobile build:ios:local",
     "eas:list": "pnpm --filter mobile build:list",
-    "openspec:check": "if grep -rE '^TBD - created by archiving' openspec/specs/ --include='*.md' -l 2>/dev/null; then echo 'ERROR: master specs contain post-archive TBD placeholders at line start. Complete the Purpose section before merging.' >&2; exit 1; fi; if grep -rE '^(## )?Purpose: TBD' openspec/specs/ --include='*.md' -l 2>/dev/null; then echo 'ERROR: master specs contain Purpose: TBD. Complete the Purpose section before merging.' >&2; exit 1; fi; echo 'openspec:check OK'"
+    "openspec:check": "pnpm openspec:validate && if grep -rE '^TBD - created by archiving' openspec/specs/ --include='*.md' -l 2>/dev/null; then echo 'ERROR: master specs contain post-archive TBD placeholders at line start. Complete the Purpose section before merging.' >&2; exit 1; fi; if grep -rE '^(## )?Purpose: TBD' openspec/specs/ --include='*.md' -l 2>/dev/null; then echo 'ERROR: master specs contain Purpose: TBD. Complete the Purpose section before merging.' >&2; exit 1; fi; echo 'openspec:check OK'",
+    "openspec:validate": "npx --yes @fission-ai/openspec@1.7.0 validate --specs --strict"
   },
   "devDependencies": {
     "supabase": "^2.98.2"

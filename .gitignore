@@ -49,3 +49,4 @@ storybook-static
 
 # supabase cli local cache
 supabase/.temp/
+tmp_grana_contact/

@@ -98,3 +98,19 @@ export function revalidateAfterAccountMutation(): void {
   revalidatePath('/cards', 'layout')
   revalidatePath('/dashboard')
 }
+
+/**
+ * Invalidate after a save or release.
+ *
+ * Only `/dashboard`: the reserve is a DECISION, not a movement. It creates no
+ * row in `transactions`, changes no account balance and appears nowhere in
+ * Movimientos — so `/transactions`, `/accounts` and `/cards` have nothing to
+ * refresh. The one number that moves is the disponible, and it lives on the
+ * dashboard.
+ *
+ * If this ever needs to grow, the honest reason would be a NEW surface that
+ * reads the reserve — not a movement route that suddenly shows one.
+ */
+export function revalidateAfterSavingsMutation(): void {
+  revalidatePath('/dashboard')
+}

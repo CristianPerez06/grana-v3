@@ -38,6 +38,9 @@ importers:
       '@grana/recurrences':
         specifier: workspace:*
         version: link:../../packages/recurrences
+      '@grana/savings':
+        specifier: workspace:*
+        version: link:../../packages/savings
       '@grana/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -174,6 +177,9 @@ importers:
       '@grana/recurrences':
         specifier: workspace:*
         version: link:../../packages/recurrences
+      '@grana/savings':
+        specifier: workspace:*
+        version: link:../../packages/savings
       '@grana/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -439,6 +445,22 @@ importers:
       '@grana/transactions-mutations':
         specifier: workspace:*
         version: link:../transactions-mutations
+      '@grana/validation':
+        specifier: workspace:*
+        version: link:../validation
+    devDependencies:
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@20.19.41)(happy-dom@15.11.7)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.9.0)
+
+  packages/savings:
+    dependencies:
+      '@grana/money-logic':
+        specifier: workspace:*
+        version: link:../money-logic
+      '@grana/supabase':
+        specifier: workspace:*
+        version: link:../supabase
       '@grana/validation':
         specifier: workspace:*
         version: link:../validation

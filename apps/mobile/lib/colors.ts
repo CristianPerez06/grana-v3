@@ -24,6 +24,7 @@ export const colors = {
   textMuted: '#6B7683',
   textSoft: '#8A94A3',
   card: '#FFFFFF',
+  border: '#E6EAEF',
   borderSoft: '#EEF1F4',
   white: '#FFFFFF',
 } as const

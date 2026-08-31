@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fase 1 · Guardar — circuito de pantallas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --navy:#0B1A2B; --page:#F6F7F9; --card:#FFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+  --text:#0B1A2B; --muted:#6B7683; --soft:#8A94A3; --neutral:#7A8494;
+  --emerald:#10B981; --emerald-deep:#059669; --emerald-bg:#ECFDF5;
+  --terracotta:#B56A5A; --slate:#3A6B8A; --plum:#8A6E98; --warning:#C49A3C;
+  --tile:#F1F3F6;
+  --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(11,26,43,.05),0 6px 18px rgba(11,26,43,.05);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* ---------- page chrome ---------- */
+.doc{max-width:1240px;margin:0 auto;padding:0 28px 100px}
+.masthead{background:var(--navy);color:#fff;padding:52px 28px 44px;margin-bottom:44px}
+.masthead .in{max-width:1240px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.62);margin:0 0 12px;font-weight:600}
+.masthead h1{margin:0 0 12px;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.masthead p{margin:0;max-width:62ch;color:rgba(255,255,255,.66);font-size:16px}
+.masthead .warn{margin-top:24px;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:14px;color:rgba(255,255,255,.8);max-width:78ch}
+.masthead .warn b{color:#fff;font-weight:600}
+.masthead .stale{margin-top:20px;padding:16px 18px;border-radius:12px;background:rgba(255,196,120,.14);border:1px solid rgba(255,196,120,.38);font-size:14px;line-height:1.55;color:rgba(255,255,255,.86);max-width:78ch}
+.masthead .stale b{color:#ffd9a3;font-weight:700}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:44px 36px;align-items:start}
+
+.step{display:flex;flex-direction:column;gap:14px}
+.step-head{display:flex;align-items:flex-start;gap:12px}
+.step-num{flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
+.step-head h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.step-head .sub{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.badge{display:inline-block;margin-top:6px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+.b-new{background:var(--emerald-bg);color:var(--emerald-deep)}
+.b-mod{background:#EAF1F6;color:var(--slate)}
+.b-same{background:var(--tile);color:var(--neutral)}
+
+.note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--border);padding-left:14px}
+.note b{color:var(--text);font-weight:600}
+.note + .note{margin-top:-4px}
+
+/* ---------- phone ---------- */
+.phone{width:100%;max-width:392px;border:1px solid var(--border);border-radius:22px;background:var(--page);overflow:hidden;box-shadow:var(--shadow)}
+.scr{padding:16px;display:flex;flex-direction:column;gap:12px}
+.scr.tight{gap:10px}
+
+/* drawer header */
+.dh{display:flex;align-items:flex-start;justify-content:space-between;padding:4px 2px 2px}
+.dh .k{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.dh h3{margin:2px 0 0;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.x{width:32px;height:32px;border-radius:9px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:15px}
+
+/* segmented */
+.seg{display:flex;gap:2px;background:var(--tile);border-radius:12px;padding:4px}
+.seg span{flex:1;text-align:center;font-size:12px;font-weight:600;color:var(--muted);padding:8px 4px;border-radius:9px;white-space:nowrap}
+.seg span.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(11,26,43,.08)}
+.seg.ghost span.ghost{color:#B6BFCA;border:1px dashed #C9D2DC}
+
+/* cards */
+.c{background:#fff;border:1px solid var(--border-soft);border-radius:16px}
+.c.pad{padding:14px 15px}
+
+/* amount */
+.amt{padding:15px 16px 17px;position:relative}
+.amt .lbl{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.amt .cur{position:absolute;right:14px;top:13px;border:1px solid var(--border);border-radius:9px;padding:5px 9px;font-size:12px;font-weight:600;color:var(--text)}
+.amt .val{display:flex;align-items:baseline;gap:6px;margin-top:8px}
+.amt .val .s{font-size:23px;font-weight:600;color:var(--soft)}
+.amt .val .n{font-size:38px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.amt .val .n.zero{color:#C4CBD4}
+
+/* rows */
+.rows > div{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--border-soft)}
+.rows > div:first-child{border-top:0}
+.tile{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:var(--tile);display:grid;place-items:center;font-size:15px}
+.rw{flex:1;min-width:0}
+.rw .k{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.rw .v{font-size:15px;font-weight:600;margin-top:1px;display:flex;align-items:center;gap:7px}
+.rw .v.ph{color:#B6BFCA;font-weight:500}
+.chip-acc{display:inline-flex;align-items:center;gap:6px}
+.chip-acc i{width:22px;height:22px;border-radius:7px;background:var(--slate);display:grid;place-items:center;font-size:11px;font-style:normal}
+.chev{color:#C4CBD4;font-size:16px}
+
+/* calc row (the drawer's math) */
+.calc{padding:13px 15px}
+.calc div{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;padding:5px 0}
+.calc div span:first-child{color:var(--muted)}
+.calc div span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+.calc .rule{border-top:1px solid var(--border-soft);margin-top:6px;padding-top:9px}
+.calc .rule span:last-child{font-size:16px;font-weight:700}
+.calc .minus span:last-child{color:var(--emerald-deep)}
+
+/* cta */
+.cta{margin-top:2px;background:var(--emerald);color:#fff;border-radius:13px;padding:15px;text-align:center;font-size:15.5px;font-weight:700}
+.cta.ghost{background:#fff;color:var(--muted);border:1px solid var(--border);font-weight:600}
+
+/* guidance strip */
+.gd{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:14px 15px}
+.gd .top{display:flex;gap:12px;align-items:flex-start}
+.gd .tile{background:var(--emerald-bg)}
+.gd h4{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.gd p{margin:3px 0 0;font-size:13px;color:var(--muted);line-height:1.4}
+.gd .acts{display:flex;gap:8px;margin-top:13px}
+.gd .acts .cta{flex:1;margin:0;padding:11px;font-size:14px;border-radius:11px}
+
+/* dashboard card */
+.dash{border-radius:20px;overflow:hidden;border:1px solid var(--border-soft);background:#fff}
+.dark{background:radial-gradient(120% 140% at 92% 12%,rgba(16,185,129,.16),transparent 60%),var(--navy);color:#fff;padding:22px 18px 18px;text-align:center}
+.dark .lbl{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.dark .big{font-size:36px;font-weight:700;letter-spacing:-.025em;margin-top:9px;line-height:1}
+.dark .big s{font-size:21px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)}
+.dark .usd{margin-top:9px;font-size:14px;color:rgba(255,255,255,.72);display:flex;align-items:center;justify-content:center;gap:7px}
+.dark .usd i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.1em;background:rgba(255,255,255,.12);border-radius:5px;padding:3px 6px}
+.donde{margin-top:20px;border-top:1px solid rgba(255,255,255,.14);padding-top:14px;display:grid;grid-template-columns:1fr 1px 1fr;gap:0;text-align:left}
+.donde .divi{background:rgba(255,255,255,.14)}
+.donde .col{padding:0 12px}
+.donde .col:first-child{padding-left:2px}
+.donde .ch{display:flex;justify-content:space-between;align-items:baseline;font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:9px}
+.donde .r{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 0;color:rgba(255,255,255,.88)}
+.donde .r i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+.donde .r b{margin-left:auto;font-weight:600;color:rgba(255,255,255,.62);font-variant-numeric:tabular-nums}
+.light{padding:16px 18px 18px}
+.light .t{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);margin-bottom:12px}
+.tri{display:grid;grid-template-columns:1fr;gap:9px}
+.tri .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tri .row .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.tri .row .l i{width:7px;height:7px;border-radius:50%}
+.tri .row .a{font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.saved{margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between}
+.saved .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.saved .l i{width:7px;height:7px;border-radius:50%;background:var(--emerald)}
+.saved .a{font-size:15.5px;font-weight:700;color:var(--emerald-deep);font-variant-numeric:tabular-nums}
+.saved .a .g{color:#C4CBD4;font-size:13px;margin-left:5px;font-weight:600}
+
+/* overlay presentation (drawer web / bottom sheet mobile) */
+.ov{position:relative;background:var(--page)}
+.ov .behind{filter:saturate(.7);opacity:.55;padding:16px 16px 0;pointer-events:none}
+.ov .scrim{position:absolute;inset:0;background:rgba(11,26,43,.42)}
+.ov .sheet{position:relative;margin-top:-14px;background:var(--page);border-radius:20px 20px 0 0;box-shadow:0 -8px 28px rgba(11,26,43,.18);padding:10px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.ov .grab{width:38px;height:4px;border-radius:999px;background:#D3DAE2;margin:0 auto 4px}
+.ov .sh{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 2px}
+.ov .sh h3{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+
+/* wayfinding */
+.ways{margin-top:56px;background:#fff;border:1px solid var(--border);border-radius:20px;padding:28px 30px 30px}
+.ways h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.ways .lede{margin:0 0 24px;font-size:15px;color:var(--muted);max-width:66ch}
+.ways .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px 34px}
+.way{border:1px solid var(--border-soft);border-radius:16px;padding:18px 20px 20px;background:var(--page)}
+.way .cap{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.way h4{margin:5px 0 4px;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.way .taps{font-size:12px;font-weight:700;color:var(--emerald-deep);background:var(--emerald-bg);border-radius:999px;padding:3px 9px;display:inline-block;margin-bottom:14px}
+.way ol{margin:0;padding-left:0;list-style:none;counter-reset:s}
+.way li{counter-increment:s;position:relative;padding-left:30px;font-size:14px;color:var(--muted);margin-bottom:11px;line-height:1.45}
+.way li::before{content:counter(s);position:absolute;left:0;top:1px;width:21px;height:21px;border-radius:7px;background:#fff;border:1px solid var(--border);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text)}
+.way li b{color:var(--text);font-weight:600}
+.way li:last-child{margin-bottom:0}
+
+/* three states of the row */
+.states{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:4px 15px 12px}
+.states .st{padding-top:11px}
+.states .st + .st{border-top:1px solid var(--border-soft);margin-top:11px}
+.states .cap{font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#B6BFCA;margin-bottom:7px}
+.states .line{display:flex;align-items:center;justify-content:space-between}
+.states .line .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.states .line .l i{width:7px;height:7px;border-radius:50%;background:var(--emerald)}
+.states .line .l i.off{background:#D3DAE2}
+.states .line .a{font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.states .line .a.em{color:var(--emerald-deep)}
+.states .line .a.nt{color:var(--text)}
+.states .line .g{color:#C4CBD4;font-size:13px;margin-left:5px;font-weight:600}
+.states .line.mute .l{color:var(--soft)}
+
+/* detail view */
+.dt-hero{background:radial-gradient(120% 140% at 92% 12%,rgba(16,185,129,.18),transparent 60%),var(--navy);color:#fff;border-radius:18px;padding:18px}
+.dt-hero .k{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.dt-hero .n{font-size:31px;font-weight:700;letter-spacing:-.02em;margin-top:8px;line-height:1}
+.dt-hero .sub{margin-top:9px;font-size:13px;color:rgba(255,255,255,.68)}
+.dt-hero .flow{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.14);display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:rgba(255,255,255,.68)}
+.dt-hero .flow b{color:#6EE7B7;font-weight:700;font-size:15px}
+.sec-t{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);padding:2px 4px}
+.hist > div{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--border-soft)}
+.hist > div:first-child{border-top:0}
+.hist .n{flex:1}
+.hist .n b{display:block;font-size:14.5px;font-weight:600}
+.hist .n span{font-size:12px;color:var(--soft)}
+.hist .a{font-weight:700;font-size:14.5px;font-variant-numeric:tabular-nums}
+.hist .a.pos{color:var(--emerald-deep)}
+.hist .a.neg{color:var(--neutral)}
+.two{display:flex;gap:9px}
+.two .cta{flex:1;margin:0}
+
+/* movements list */
+.mv-head{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 0}
+.mv-head h3{margin:0;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.mv-day{font-size:11px;font-weight:600;color:var(--soft);padding:12px 14px 6px}
+.mv > div.r{display:flex;align-items:center;gap:11px;padding:11px 14px;border-top:1px solid var(--border-soft)}
+.mv .av{width:32px;height:32px;border-radius:50%;background:var(--tile);display:grid;place-items:center;font-size:14px}
+.mv .n{flex:1;min-width:0}
+.mv .n b{display:block;font-size:14px;font-weight:700}
+.mv .n span{font-size:11.5px;color:var(--soft)}
+.mv .a{font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.mv .a.neg{color:var(--terracotta)}
+.mv .a.pos{color:var(--emerald-deep)}
+.tag{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;background:var(--tile);color:var(--neutral);margin-left:5px;vertical-align:1px}
+
+.overlay-empty{margin-top:10px;border:1px dashed var(--border);border-radius:12px;padding:13px 14px;font-size:13px;color:var(--muted);background:#fff}
+.overlay-empty b{color:var(--text);font-weight:700}
+
+.foot{margin-top:64px;padding-top:32px;border-top:1px solid #DCE2E9;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:34px 44px}
+.foot h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);margin:0 0 12px;font-weight:700}
+.foot p{margin:0 0 11px;font-size:14.5px;color:var(--muted);max-width:58ch}
+.foot strong{color:var(--text);font-weight:600}
+.foot ul{margin:0;padding-left:18px;font-size:14.5px;color:var(--muted)}
+.foot li{margin-bottom:8px}
+.foot li b{color:var(--text);font-weight:600}
+@media (max-width:520px){.doc{padding:0 16px 60px}.masthead{padding:36px 16px 30px}.masthead h1{font-size:27px}}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="in">
+    <p class="eyebrow">Grana · modelo de dinero · mock de producto</p>
+    <h1>Fase 1 · Guardar</h1>
+    <p>Un mes de punta a punta: cobrar el sueldo, guardar una parte, y ver dónde quedó todo. Los mismos números atraviesan las seis pantallas para que la aritmética se pueda seguir.</p>
+    <div class="warn"><b>No es diseño final.</b> Es una referencia de producto redibujada sobre el lenguaje visual real de la app (segmented de tipos, card de monto con chip de moneda, filas con tile + label small-caps + chevron, botón emerald, hero navy), tomado de capturas de producción. El HTML no es código.</div>
+    <div class="stale"><b>La fase 1 está construida: la referencia es la app, no este mock.</b> Un cambio de nomenclatura que acá no está: <b>«Liberar» se llama «Volver a usar»</b>. «Liberar» describe lo que le pasa a la plata, no lo que hace el usuario. El modelo, ya corregido, vive en <code>docs/modelo-de-dinero.md</code>.</div>
+  </div>
+</header>
+
+<div class="doc">
+<div class="grid">
+
+  <!-- 1 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <div>
+        <h2>Confirmar el sueldo</h2>
+        <p class="sub">El punto de partida. Grana ya espera tu acción sobre los recurrentes.</p>
+        <span class="badge b-same">Sin cambios</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="mv-head"><h3>Movimientos</h3></div>
+      <div class="c" style="padding:13px 15px;display:flex;gap:12px;align-items:center;background:#FDF8EC;border-color:#F2E6CB">
+        <span class="tile" style="background:#F7EDD6">🕒</span>
+        <div class="rw"><div class="v" style="font-size:14.5px;font-weight:700">Movimientos recurrentes pendientes</div><div style="font-size:12px;color:var(--muted)">Grana espera tu acción antes de registrarlas</div></div>
+        <span style="font-size:11px;font-weight:700;color:#96702A;background:#F7EDD6;border-radius:999px;padding:4px 9px">7 pendientes</span>
+      </div>
+      <div class="c rows">
+        <div><span class="tile">💼</span><div class="rw"><div class="k">Hoy · 5 ago</div><div class="v">Sueldo</div></div><span class="a" style="font-weight:700;color:var(--emerald-deep);font-size:14.5px">+$ 2.000.000</span></div>
+      </div>
+      <div class="cta">Confirmar ingreso</div>
+    </div></div>
+    <p class="note">El disparador es <b>un ingreso, por cualquier camino</b>: confirmar una recurrencia o cargarlo a mano. La fase 1 no asume que el sueldo sea recurrente.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <div>
+        <h2>La tira aparece</h2>
+        <p class="sub">Una vez por mes, después de un ingreso. Servida por <code>guidance</code>.</p>
+        <span class="badge b-new">Nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="c" style="padding:12px 14px;display:flex;gap:11px;align-items:center;background:var(--emerald-bg);border-color:#CDEEE0">
+        <span class="tile" style="background:#D8F3E7">✓</span>
+        <div class="rw"><div class="v" style="font-size:14px;font-weight:700">Ingreso registrado</div><div style="font-size:12px;color:var(--muted)">Sueldo · +$ 2.000.000</div></div>
+      </div>
+      <div class="gd">
+        <div class="top">
+          <span class="tile">🐖</span>
+          <div>
+            <h4>¿Guardás una parte?</h4>
+            <p>Podés apartar $ 200.000 de este ingreso para no gastarlos. La plata se queda donde está.</p>
+          </div>
+        </div>
+        <div class="acts">
+          <div class="cta">Guardar $ 200.000</div>
+          <div class="cta ghost" style="flex:0 0 auto;padding:11px 16px">Ahora no</div>
+        </div>
+      </div>
+      <div class="overlay-empty">El monto sugerido es el <b>10 %</b> la primera vez. Después es el porcentaje que usaste la vez anterior — <b>no el importe</b>.</div>
+    </div></div>
+    <p class="note">Dice <b>«podés apartar»</b>, no «te conviene guardar». Es una propuesta de comportamiento, no una recomendación financiera.</p>
+    <p class="note">Si la descartás, <code>guidance</code> lo registra y no vuelve a aparecer.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">3</span>
+      <div>
+        <h2>El drawer de Guardar</h2>
+        <p class="sub">Hereda la moneda del ingreso. No pregunta fecha: es hoy por definición del acto.</p>
+        <span class="badge b-new">Nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Nuevo</div><h3>Guardar</h3></div><span class="x">✕</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div>
+        <div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">200.000</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Disponible hoy</span><span>$ 4.000.000</span></div>
+        <div class="minus"><span>Vas a guardar</span><span>− $ 200.000</span></div>
+        <div class="rule"><span>Te queda para gastar</span><span>$ 3.800.000</span></div>
+      </div>
+      <div class="cta">Guardar</div>
+      <div class="overlay-empty">Los $ 4.000.000 son <b>el disponible del momento</b>, no el saldo al cierre del mes: hoy es 5 de agosto y acaba de entrar el sueldo.</div>
+    </div></div>
+    <p class="note">No hay campo de moneda ni de fecha: los dos se infieren del ingreso del que viene. Abierto suelto, ofrece moneda <b>solo si tenés saldo en las dos</b>.</p>
+    <p class="note">El cálculo es contra <b>el disponible</b>, nunca contra el monto del ingreso: enmarcarlo así diría que ese guardado pertenece a ese movimiento, y una reserva es fungible.</p>
+    <p class="note">Nada del copy sugiere una transferencia. <b>Grana no inventa un movimiento para representar una intención.</b></p>
+  </section>
+
+  <!-- 4 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">4</span>
+      <div>
+        <h2>El dashboard</h2>
+        <p class="sub">La única pantalla existente que la fase 1 toca. Cambian dos cosas.</p>
+        <span class="badge b-mod">Modificada</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dash">
+        <div class="dark">
+          <div class="lbl">Saldo disponible total</div>
+          <div class="big"><s>$</s> 1.600.000<s>,00</s></div>
+          <div class="usd"><i>USD</i> US$ 850,00</div>
+          <div class="donde">
+            <div class="col">
+              <div class="ch"><span>ARS</span></div>
+              <div class="r"><i style="background:#4C56C0"></i>Mercado Pago <b>64 %</b></div>
+              <div class="r"><i style="background:#3A6B8A"></i>Galicia <b>23 %</b></div>
+            </div>
+            <div class="divi"></div>
+            <div class="col">
+              <div class="ch"><span>USD</span><span>Ver cuentas</span></div>
+              <div class="r"><i style="background:#0D9488"></i>Galicia USD <b>100 %</b></div>
+            </div>
+          </div>
+        </div>
+        <div class="light">
+          <div class="t">Resumen del mes</div>
+          <div class="tri">
+            <div class="row"><span class="l"><i style="background:#8A94A3"></i>Tenías</span><span class="a">$ 1.000.000</span></div>
+            <div class="row"><span class="l"><i style="background:var(--emerald)"></i>Entró</span><span class="a">+$ 2.000.000</span></div>
+            <div class="row"><span class="l"><i style="background:#2C5269"></i>Se fué</span><span class="a">−$ 1.200.000</span></div>
+          </div>
+          <div class="saved">
+            <span class="l"><i></i>Guardaste este mes</span>
+            <span class="a">−$ 200.000 <span class="g">›</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="overlay-empty"><b>1.000.000 + 2.000.000 − 1.200.000 − 200.000 = 1.600.000.</b> La card sigue cerrando en pantalla, sin salir a buscar nada.</div>
+      <div class="sec-t" style="margin-top:6px">La fila, en sus tres estados</div>
+      <div class="states">
+        <div class="st">
+          <div class="cap">Guardaste más de lo que liberaste</div>
+          <div class="line"><span class="l"><i></i>Guardaste este mes</span><span class="a em">−$ 200.000 <span class="g">›</span></span></div>
+        </div>
+        <div class="st">
+          <div class="cap">Liberaste más de lo que guardaste</div>
+          <div class="line"><span class="l"><i></i>Liberaste este mes</span><span class="a em">+$ 50.000 <span class="g">›</span></span></div>
+        </div>
+        <div class="st">
+          <div class="cap">Tenés guardado, pero este mes no tocaste nada</div>
+          <div class="line"><span class="l"><i></i>Guardado</span><span class="a nt">$ 350.000 <span class="g">›</span></span></div>
+        </div>
+        <div class="st">
+          <div class="cap">Nunca guardaste</div>
+          <div class="line mute"><span class="l"><i class="off"></i>Guardar algo</span><span class="a"><span class="g">›</span></span></div>
+        </div>
+      </div>
+      <div class="overlay-empty"><b>El verbo y el signo giran juntos.</b> Si liberaste más de lo que guardaste, la plata volvió a lo que podés gastar: el monto va en más y la fila lo dice. «Guardaste este mes +$ 50.000» no se entendería.<br><br>Los dos primeros estados abren el <b>detalle</b>; el último abre directo el drawer de <b>Guardar</b>, porque no hay nada que mirar todavía.<br><br><b>Los dos de abajo no participan de la cuenta</b> —no hay flujo que contabilizar— y ahí la identidad vuelve a cerrar con tres términos, como cierra hoy.</div>
+    </div></div>
+    <p class="note">El rótulo <b>no cambia</b>. Al netear el guardado, «Saldo disponible total» pasa a ser literalmente cierto.</p>
+    <p class="note">La línea va <b>bajo una regla</b>, no como cuarta columna: la tira de tres es liquidez —plata entrando y saliendo— y guardar es una decisión sobre plata que se quedó donde estaba.</p>
+    <p class="note">Va en <b>emerald y con signo menos</b>. El menos dice «salió de lo que podés gastar», que es cierto; el color dice que eso es bueno. El terracota queda reservado para lo que está por pagar o vencido.</p>
+    <p class="note">Se renderiza <b>solo en el mes corriente</b>. En un mes pasado la card vuelve a ser exactamente la de hoy, y la palabra «disponible» no aparece.</p>
+    <p class="note"><b>La fila está siempre</b>, en uno de tres estados. Si solo apareciera cuando hay flujo, el que guardó en agosto y en septiembre no tocó nada se quedaría sin ver el guardado y sin puerta al detalle — y el que dijo «ahora no» a la tira no tendría por dónde volver.</p>
+    <p class="note">El costo es el tercer estado: <b>una línea muda para alguien que nunca va a guardar</b>. Por eso es una sola fila, en gris, sin número, sin ícono y sin color.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">5</span>
+      <div>
+        <h2>El detalle del Guardado</h2>
+        <p class="sub">No es una página: es un overlay sobre el dashboard. Drawer lateral en web, bottom sheet en nativo.</p>
+        <span class="badge b-new">Nueva</span>
+      </div>
+    </div>
+    <div class="phone ov">
+      <div class="behind">
+        <div class="dash">
+          <div class="dark" style="padding:16px 18px 12px">
+            <div class="lbl">Saldo disponible total</div>
+            <div class="big" style="font-size:30px"><s>$</s> 1.600.000<s>,00</s></div>
+          </div>
+          <div class="light" style="padding:12px 18px">
+            <div class="tri"><div class="row"><span class="l"><i style="background:#8A94A3"></i>Tenías</span><span class="a">$ 1.000.000</span></div></div>
+            <div class="saved"><span class="l"><i></i>Guardaste este mes</span><span class="a">−$ 200.000</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><h3>Guardado</h3><span class="x">✕</span></div>
+      <div class="dt-hero">
+        <div class="k">Guardado en pesos</div>
+        <div class="n">$ 350.000,00</div>
+        <div class="sub">De un disponible de $ 1.600.000</div>
+        <div class="flow"><span>Este mes</span><b>+$ 150.000</b></div>
+      </div>
+      <div class="sec-t">Historial</div>
+      <div class="c hist">
+        <div><span class="tile">↑</span><div class="n"><b>Guardaste</b><span>5 de agosto</span></div><span class="a pos">+$ 200.000</span></div>
+        <div><span class="tile">↓</span><div class="n"><b>Volviste a usar</b><span>18 de agosto</span></div><span class="a neg">−$ 50.000</span></div>
+        <div><span class="tile">↑</span><div class="n"><b>Guardaste</b><span>12 de julio</span></div><span class="a pos">+$ 200.000</span></div>
+      </div>
+      <div class="two"><div class="cta">Guardar</div><div class="cta ghost">Volver a usar</div></div>
+      <div class="overlay-empty">El <b>total</b> es $ 350.000 (stock) y el <b>neto del mes</b> es +$ 150.000 (flujo). Son dos números distintos y la vista no los confunde.</div>
+    </div></div>
+    <p class="note">Existe por una razón de fondo: como guardar <b>no es un movimiento</b>, no aparece en Movimientos — y sin esta vista no podrías auditar tu propia decisión.</p>
+    <p class="note">El historial muestra julio, pero <b>no se resta del saldo al cierre de julio</b> en ninguna pantalla. La reconciliación del guardado vive solo en el mes corriente.</p>
+    <p class="note"><b>No entra a la navegación, y no por postura:</b> la URL no cambia, así que no hay ninguna dirección a la que ir. Cerrás y estás donde estabas, con el número que tocaste ahí mismo. Es el mismo mecanismo que editar una cuenta desde la lista (<code>accounts-edit-drawer.tsx</code>).</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">6</span>
+      <div>
+        <h2>Movimientos, después de guardar</h2>
+        <p class="sub">La pantalla que demuestra que el modelo se sostiene: no pasó nada.</p>
+        <span class="badge b-same">Sin cambios</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr tight">
+      <div class="mv-head"><h3>Movimientos</h3></div>
+      <div class="c mv">
+        <div class="mv-day">Miércoles, 5 De Agosto</div>
+        <div class="r"><span class="av">💼</span><div class="n"><b>Sueldo</b><span>Ingresos › Sueldo</span></div><span class="a pos">+$ 2.000.000,00</span></div>
+        <div class="mv-day">Martes, 4 De Agosto</div>
+        <div class="r"><span class="av">🛒</span><div class="n"><b>Coto</b><span>Comida › Supermercado</span></div><span class="a neg">−$ 84.300,00</span></div>
+        <div class="r"><span class="av">⚡</span><div class="n"><b>Epe</b><span class="tag">Recurrente</span><span style="display:block">Servicios › Luz</span></div><span class="a neg">−$ 37.978,29</span></div>
+      </div>
+      <div class="overlay-empty">Guardar $ 200.000 el 5 de agosto <b>no dejó ninguna fila acá</b>, y el saldo de Mercado Pago no se movió un centavo.</div>
+    </div></div>
+    <p class="note">Es la prueba de que guardar es una <b>decisión</b> y no un hecho. Si apareciera una fila, Grana estaría inventando un movimiento financiero que el banco nunca vio.</p>
+    <p class="note">Por eso la pantalla 5 tiene que existir: es el único lugar donde esa decisión queda auditable.</p>
+  </section>
+
+  <!-- 7 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">7</span>
+      <div>
+        <h2>Volver a usar</h2>
+        <p class="sub">La pregunta que el drawer tiene que contestar solo: ¿a qué cuenta vuelve la plata?</p>
+        <span class="badge b-new">Nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Guardado en pesos</div><h3>Volver a usar</h3></div><span class="x">✕</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div>
+        <div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">50.000</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Tenés guardado</span><span>$ 350.000</span></div>
+        <div class="minus"><span>Vas a volver a usar</span><span>− $ 50.000</span></div>
+        <div class="rule"><span>Queda guardado</span><span>$ 300.000</span></div>
+      </div>
+      <div class="c pad" style="display:flex;gap:11px;align-items:flex-start;background:#F7FAFC;border-color:#E3EAF0">
+        <span class="tile" style="background:#EAF1F6">ⓘ</span>
+        <div style="font-size:13px;color:var(--muted);line-height:1.45">Esos $ 50.000 <b style="color:var(--text)">vuelven a estar disponibles para gastar</b>. La plata no se mueve: sigue en las mismas cuentas donde está hoy.</div>
+      </div>
+      <div class="cta">Volver a usar</div>
+      <div class="overlay-empty"><b>No hay campo de cuenta de destino</b>, y no es un olvido: no hay destino. Guardar nunca sacó la plata de ninguna cuenta, así que liberar no la devuelve a ninguna.</div>
+    </div></div>
+    <p class="note">Es el punto donde el modelo se puede malentender: <b>«guardar» y «liberar» suenan a mover</b>. Un selector de cuenta acá enseñaría el modelo equivocado justo en el momento en que el usuario lo está aprendiendo.</p>
+    <p class="note">La moneda se hereda del detalle, que ya es por moneda. No se pregunta.</p>
+    <p class="note">El tope es simétrico al de guardar: <b>no podés liberar más de lo que tenés guardado</b>. El stock no puede quedar negativo — sería decir que podés gastar plata que no tenés.</p>
+  </section>
+
+</div>
+
+<div class="ways">
+  <h2>¿A dónde voy para guardar plata?</h2>
+  <p class="lede">Hay dos puertas y las dos terminan en el mismo drawer. La primera aparece sola en el momento oportuno; la segunda está siempre, en la pantalla en la que caés al abrir la app.</p>
+  <div class="cols">
+    <div class="way">
+      <div class="cap">Puerta 1 · aparece sola</div>
+      <h4>Justo después de cobrar</h4>
+      <span class="taps">2 taps</span>
+      <ol>
+        <li>Registrás un ingreso — a mano o confirmando un recurrente. <b>La tira aparece abajo.</b></li>
+        <li>Tocás <b>«Guardar $ 200.000»</b> y confirmás. El monto ya viene puesto.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Puerta 2 · está siempre</div>
+      <h4>Cualquier día del mes</h4>
+      <span class="taps">3 taps</span>
+      <ol>
+        <li>Abrís la app. Caés en el <b>dashboard</b>, y la card de saldo es lo primero.</li>
+        <li>Tocás la <b>fila de Guardado</b>, abajo de la regla. Está siempre, tengas guardado o no.</li>
+        <li>En el detalle, <b>«Guardar»</b>. Escribís el monto y confirmás.</li>
+      </ol>
+    </div>
+  </div>
+  <p class="lede" style="margin:22px 0 0">Si nunca guardaste, la fila dice <b>«Guardar algo»</b> y el paso 2 te lleva directo al drawer: dos taps, sin pasar por un detalle vacío. Y no hay una tercera puerta escondida — <b>fuera de esas dos, no se puede guardar</b>, que es lo que hace que la respuesta sea fácil de recordar.</p>
+</div>
+
+<div class="foot">
+  <div>
+    <h3>Lo que la fase 1 construye</h3>
+    <ul>
+      <li><b>Dos drawers nuevos</b> — Guardar y el detalle del Guardado.</li>
+      <li><b>Una tira</b> sobre <code>guidance</code>, máximo una vez por mes.</li>
+      <li><b>Una pantalla existente modificada</b> — el dashboard, en dos lugares.</li>
+      <li><b>Ninguna ruta nueva. Ninguna entrada de menú. Ningún formulario tocado.</b></li>
+    </ul>
+  </div>
+  <div>
+    <h3>Lo que decide este circuito</h3>
+    <p><strong>El acto son dos taps.</strong> Confirmás el ingreso, tocás «Guardar $ 200.000», confirmás. El drawer viene prellenado porque hereda todo lo que puede inferir.</p>
+    <p><strong>Los números cierran a la vista</strong> en la pantalla 4, y el detalle de la 5 separa los dos que se confunden: el total guardado y el de este mes.</p>
+    <p><strong>La pantalla 6 no es relleno.</strong> Es la que demuestra que el modelo no miente: guardar no dejó rastro en el ledger porque no fue un hecho del ledger.</p>
+  </div>
+  <div>
+    <h3>Abierto para fase 2</h3>
+    <p>El drawer de la pantalla 3 gana <strong>un campo opcional</strong>: «¿Para qué?», con los propósitos ya usados y «Crear nuevo» al vuelo. Nada más cambia.</p>
+    <p>El detalle de la pantalla 5 agrupa el historial <strong>por propósito</strong>.</p>
+    <p>Sigue sin entrar nada a la navegación.</p>
+  </div>
+</div>
+</div>
+
+</body>
+</html>

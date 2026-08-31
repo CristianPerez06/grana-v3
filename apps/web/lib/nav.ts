@@ -18,7 +18,7 @@ export const isActive = (pathname: string, href: string) => {
  * left with no visible way out. Mirrors `CHROMELESS_SECTIONS` in
  * `apps/mobile/components/layout/TabBar.tsx`.
  */
-const CHROMELESS_SECTIONS: readonly string[] = ['/accounts', '/cards', '/settings']
+const CHROMELESS_SECTIONS: readonly string[] = ['/accounts', '/cards', '/savings', '/settings']
 
 /**
  * Routes that live inside a tab's section but read as a dedicated full-screen

@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fase 2 · Para qué — circuito de pantallas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --navy:#0B1A2B; --page:#F6F7F9; --card:#FFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+  --text:#0B1A2B; --muted:#6B7683; --soft:#8A94A3; --neutral:#7A8494;
+  --emerald:#10B981; --emerald-deep:#059669; --emerald-bg:#ECFDF5;
+  --terracotta:#B56A5A; --slate:#3A6B8A; --plum:#8A6E98; --warning:#C49A3C;
+  --tile:#F1F3F6;
+  --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(11,26,43,.05),0 6px 18px rgba(11,26,43,.05);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* ---------- page chrome ---------- */
+.doc{max-width:1240px;margin:0 auto;padding:0 28px 100px}
+.masthead{background:var(--navy);color:#fff;padding:52px 28px 44px;margin-bottom:44px}
+.masthead .in{max-width:1240px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.62);margin:0 0 12px;font-weight:600}
+.masthead h1{margin:0 0 12px;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.masthead p{margin:0;max-width:62ch;color:rgba(255,255,255,.66);font-size:16px}
+.masthead .warn{margin-top:24px;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:14px;color:rgba(255,255,255,.8);max-width:78ch}
+.masthead .warn b{color:#fff;font-weight:600}
+.masthead .stale{margin-top:20px;padding:16px 18px;border-radius:12px;background:rgba(255,196,120,.14);border:1px solid rgba(255,196,120,.38);font-size:14px;line-height:1.55;color:rgba(255,255,255,.86);max-width:78ch}
+.masthead .stale b{color:#ffd9a3;font-weight:700}
+.masthead .stale ul{margin:10px 0 0;padding-left:18px}
+.masthead .stale li{margin-top:5px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:44px 36px;align-items:start}
+
+.step{display:flex;flex-direction:column;gap:14px}
+.step-head{display:flex;align-items:flex-start;gap:12px}
+.step-num{flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
+.step-head h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.step-head .sub{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.badge{display:inline-block;margin-top:6px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+.b-new{background:var(--emerald-bg);color:var(--emerald-deep)}
+.b-mod{background:#EAF1F6;color:var(--slate)}
+.b-same{background:var(--tile);color:var(--neutral)}
+
+.note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--border);padding-left:14px}
+.note b{color:var(--text);font-weight:600}
+.note + .note{margin-top:-4px}
+
+/* ---------- phone ---------- */
+.phone{width:100%;max-width:392px;border:1px solid var(--border);border-radius:22px;background:var(--page);overflow:hidden;box-shadow:var(--shadow)}
+.scr{padding:16px;display:flex;flex-direction:column;gap:12px}
+.scr.tight{gap:10px}
+
+/* drawer header */
+.dh{display:flex;align-items:flex-start;justify-content:space-between;padding:4px 2px 2px}
+.dh .k{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.dh h3{margin:2px 0 0;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.x{width:32px;height:32px;border-radius:9px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:15px}
+
+/* segmented */
+.seg{display:flex;gap:2px;background:var(--tile);border-radius:12px;padding:4px}
+.seg span{flex:1;text-align:center;font-size:12px;font-weight:600;color:var(--muted);padding:8px 4px;border-radius:9px;white-space:nowrap}
+.seg span.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(11,26,43,.08)}
+.seg.ghost span.ghost{color:#B6BFCA;border:1px dashed #C9D2DC}
+
+/* cards */
+.c{background:#fff;border:1px solid var(--border-soft);border-radius:16px}
+.c.pad{padding:14px 15px}
+
+/* amount */
+.amt{padding:15px 16px 17px;position:relative}
+.amt .lbl{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.amt .cur{position:absolute;right:14px;top:13px;border:1px solid var(--border);border-radius:9px;padding:5px 9px;font-size:12px;font-weight:600;color:var(--text)}
+.amt .val{display:flex;align-items:baseline;gap:6px;margin-top:8px}
+.amt .val .s{font-size:23px;font-weight:600;color:var(--soft)}
+.amt .val .n{font-size:38px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.amt .val .n.zero{color:#C4CBD4}
+
+/* rows */
+.rows > div{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--border-soft)}
+.rows > div:first-child{border-top:0}
+.tile{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:var(--tile);display:grid;place-items:center;font-size:15px}
+.rw{flex:1;min-width:0}
+.rw .k{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.rw .v{font-size:15px;font-weight:600;margin-top:1px;display:flex;align-items:center;gap:7px}
+.rw .v.ph{color:#B6BFCA;font-weight:500}
+.chip-acc{display:inline-flex;align-items:center;gap:6px}
+.chip-acc i{width:22px;height:22px;border-radius:7px;background:var(--slate);display:grid;place-items:center;font-size:11px;font-style:normal}
+.chev{color:#C4CBD4;font-size:16px}
+
+/* calc row (the drawer's math) */
+.calc{padding:13px 15px}
+.calc div{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;padding:5px 0}
+.calc div span:first-child{color:var(--muted)}
+.calc div span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+.calc .rule{border-top:1px solid var(--border-soft);margin-top:6px;padding-top:9px}
+.calc .rule span:last-child{font-size:16px;font-weight:700}
+.calc .minus span:last-child{color:var(--emerald-deep)}
+
+/* cta */
+.cta{margin-top:2px;background:var(--emerald);color:#fff;border-radius:13px;padding:15px;text-align:center;font-size:15.5px;font-weight:700}
+.cta.ghost{background:#fff;color:var(--muted);border:1px solid var(--border);font-weight:600}
+
+/* guidance strip */
+.gd{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:14px 15px}
+.gd .top{display:flex;gap:12px;align-items:flex-start}
+.gd .tile{background:var(--emerald-bg)}
+.gd h4{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.gd p{margin:3px 0 0;font-size:13px;color:var(--muted);line-height:1.4}
+.gd .acts{display:flex;gap:8px;margin-top:13px}
+.gd .acts .cta{flex:1;margin:0;padding:11px;font-size:14px;border-radius:11px}
+
+/* dashboard card */
+.dash{border-radius:20px;overflow:hidden;border:1px solid var(--border-soft);background:#fff}
+.dark{background:radial-gradient(120% 140% at 92% 12%,rgba(16,185,129,.16),transparent 60%),var(--navy);color:#fff;padding:22px 18px 18px;text-align:center}
+.dark .lbl{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.dark .big{font-size:36px;font-weight:700;letter-spacing:-.025em;margin-top:9px;line-height:1}
+.dark .big s{font-size:21px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)}
+.dark .usd{margin-top:9px;font-size:14px;color:rgba(255,255,255,.72);display:flex;align-items:center;justify-content:center;gap:7px}
+.dark .usd i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.1em;background:rgba(255,255,255,.12);border-radius:5px;padding:3px 6px}
+.donde{margin-top:20px;border-top:1px solid rgba(255,255,255,.14);padding-top:14px;display:grid;grid-template-columns:1fr 1px 1fr;gap:0;text-align:left}
+.donde .divi{background:rgba(255,255,255,.14)}
+.donde .col{padding:0 12px}
+.donde .col:first-child{padding-left:2px}
+.donde .ch{display:flex;justify-content:space-between;align-items:baseline;font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:9px}
+.donde .r{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 0;color:rgba(255,255,255,.88)}
+.donde .r i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+.donde .r b{margin-left:auto;font-weight:600;color:rgba(255,255,255,.62);font-variant-numeric:tabular-nums}
+.light{padding:16px 18px 18px}
+.light .t{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);margin-bottom:12px}
+.tri{display:grid;grid-template-columns:1fr;gap:9px}
+.tri .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tri .row .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.tri .row .l i{width:7px;height:7px;border-radius:50%}
+.tri .row .a{font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.saved{margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between}
+.saved .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.saved .l i{width:7px;height:7px;border-radius:50%;background:var(--emerald)}
+.saved .a{font-size:15.5px;font-weight:700;color:var(--emerald-deep);font-variant-numeric:tabular-nums}
+.saved .a .g{color:#C4CBD4;font-size:13px;margin-left:5px;font-weight:600}
+
+/* overlay presentation (drawer web / bottom sheet mobile) */
+.ov{position:relative;background:var(--page)}
+.ov .behind{filter:saturate(.7);opacity:.55;padding:16px 16px 0;pointer-events:none}
+.ov .scrim{position:absolute;inset:0;background:rgba(11,26,43,.42)}
+.ov .sheet{position:relative;margin-top:-14px;background:var(--page);border-radius:20px 20px 0 0;box-shadow:0 -8px 28px rgba(11,26,43,.18);padding:10px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.ov .grab{width:38px;height:4px;border-radius:999px;background:#D3DAE2;margin:0 auto 4px}
+.ov .sh{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 2px}
+.ov .sh h3{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+
+/* wayfinding */
+.ways{margin-top:56px;background:#fff;border:1px solid var(--border);border-radius:20px;padding:28px 30px 30px}
+.ways h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.ways .lede{margin:0 0 24px;font-size:15px;color:var(--muted);max-width:66ch}
+.ways .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px 34px}
+.way{border:1px solid var(--border-soft);border-radius:16px;padding:18px 20px 20px;background:var(--page)}
+.way .cap{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.way h4{margin:5px 0 4px;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.way .taps{font-size:12px;font-weight:700;color:var(--emerald-deep);background:var(--emerald-bg);border-radius:999px;padding:3px 9px;display:inline-block;margin-bottom:14px}
+.way ol{margin:0;padding-left:0;list-style:none;counter-reset:s}
+.way li{counter-increment:s;position:relative;padding-left:30px;font-size:14px;color:var(--muted);margin-bottom:11px;line-height:1.45}
+.way li::before{content:counter(s);position:absolute;left:0;top:1px;width:21px;height:21px;border-radius:7px;background:#fff;border:1px solid var(--border);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text)}
+.way li b{color:var(--text);font-weight:600}
+.way li:last-child{margin-bottom:0}
+
+/* three states of the row */
+.states{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:4px 15px 12px}
+.states .st{padding-top:11px}
+.states .st + .st{border-top:1px solid var(--border-soft);margin-top:11px}
+.states .cap{font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#B6BFCA;margin-bottom:7px}
+.states .line{display:flex;align-items:center;justify-content:space-between}
+.states .line .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.states .line .l i{width:7px;height:7px;border-radius:50%;background:var(--emerald)}
+.states .line .l i.off{background:#D3DAE2}
+.states .line .a{font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.states .line .a.em{color:var(--emerald-deep)}
+.states .line .a.nt{color:var(--text)}
+.states .line .g{color:#C4CBD4;font-size:13px;margin-left:5px;font-weight:600}
+.states .line.mute .l{color:var(--soft)}
+
+/* detail view */
+.dt-hero{background:radial-gradient(120% 140% at 92% 12%,rgba(16,185,129,.18),transparent 60%),var(--navy);color:#fff;border-radius:18px;padding:18px}
+.dt-hero .k{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.dt-hero .n{font-size:31px;font-weight:700;letter-spacing:-.02em;margin-top:8px;line-height:1}
+.dt-hero .sub{margin-top:9px;font-size:13px;color:rgba(255,255,255,.68)}
+.dt-hero .flow{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.14);display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:rgba(255,255,255,.68)}
+.dt-hero .flow b{color:#6EE7B7;font-weight:700;font-size:15px}
+.sec-t{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);padding:2px 4px}
+.hist > div{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--border-soft)}
+.hist > div:first-child{border-top:0}
+.hist .n{flex:1}
+.hist .n b{display:block;font-size:14.5px;font-weight:600}
+.hist .n span{font-size:12px;color:var(--soft)}
+.hist .a{font-weight:700;font-size:14.5px;font-variant-numeric:tabular-nums}
+.hist .a.pos{color:var(--emerald-deep)}
+.hist .a.neg{color:var(--neutral)}
+.two{display:flex;gap:9px}
+.two .cta{flex:1;margin:0}
+
+/* movements list */
+.mv-head{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 0}
+.mv-head h3{margin:0;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.mv-day{font-size:11px;font-weight:600;color:var(--soft);padding:12px 14px 6px}
+.mv > div.r{display:flex;align-items:center;gap:11px;padding:11px 14px;border-top:1px solid var(--border-soft)}
+.mv .av{width:32px;height:32px;border-radius:50%;background:var(--tile);display:grid;place-items:center;font-size:14px}
+.mv .n{flex:1;min-width:0}
+.mv .n b{display:block;font-size:14px;font-weight:700}
+.mv .n span{font-size:11.5px;color:var(--soft)}
+.mv .a{font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.mv .a.neg{color:var(--terracotta)}
+.mv .a.pos{color:var(--emerald-deep)}
+.tag{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;background:var(--tile);color:var(--neutral);margin-left:5px;vertical-align:1px}
+
+.overlay-empty{margin-top:10px;border:1px dashed var(--border);border-radius:12px;padding:13px 14px;font-size:13px;color:var(--muted);background:#fff}
+.overlay-empty b{color:var(--text);font-weight:700}
+
+.foot{margin-top:64px;padding-top:32px;border-top:1px solid #DCE2E9;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:34px 44px}
+.foot h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);margin:0 0 12px;font-weight:700}
+.foot p{margin:0 0 11px;font-size:14.5px;color:var(--muted);max-width:58ch}
+.foot strong{color:var(--text);font-weight:600}
+.foot ul{margin:0;padding-left:18px;font-size:14.5px;color:var(--muted)}
+.foot li{margin-bottom:8px}
+.foot li b{color:var(--text);font-weight:600}
+@media (max-width:520px){.doc{padding:0 16px 60px}.masthead{padding:36px 16px 30px}.masthead h1{font-size:27px}}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="in">
+    <p class="eyebrow">Grana · modelo de dinero · mock de producto</p>
+    <h1>Fase 2 · Para qué</h1>
+    <p>El guardado gana un nombre. Nada más: ni monto objetivo, ni fecha, ni progreso — eso es fase 4. Cinco pantallas, y tres de ellas son la fase 1 con un campo más.</p>
+    <div class="warn"><b>Por qué el "para qué" va antes que las posiciones.</b> «Guardaste $200.000» es una abstracción; «Guardaste $200.000 para Japón» es una razón para volver. Y no necesita saber dónde está esa plata ni cuánto rinde, así que es barato y compra retención temprana.</div>
+    <div class="stale"><b>Este mock quedó atrás de la implementación.</b> La fase 2 está construida, y construirla corrigió dos cosas que acá se dan por buenas. Se conserva como registro de por dónde empezó el pensamiento; <b>la referencia de qué hace la fase 2 es la app</b>, y el modelo vive en <code>docs/modelo-de-dinero.md</code>.
+      <ul>
+        <li><b>Los verbos cambiaron.</b> «Liberar» es <b>Volver a usar</b>; «asignar / desasignar» son <b>Destinar / Quitar destino</b>. Acá se lee la nomenclatura vieja en todas las pantallas.</li>
+        <li><b>El propósito NO se le cuelga a la fila de guardar.</b> La pantalla 5 dice que la fila de liberar «lleva el mismo <code>purpose_id</code> que las de guardar». Eso resultó ser un error de categoría —la plata guardada es fungible, igual que no tiene cuenta no tiene fila— y la migración 0059 lo corrigió: el propósito es un <b>reparto por monto</b> en su propia tabla, y «Sin destino» es el resto derivado.</li>
+        <li><b>«Volver a usar» desde el total ya no abre una pantalla para elegir el origen</b>: se elige con chips en el mismo formulario.</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<div class="doc">
+<div class="grid">
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <div>
+        <h2>El drawer gana un campo</h2>
+        <p class="sub">Opcional, y opcional para siempre. Guardar sin decir para qué sigue siendo válido.</p>
+        <span class="badge b-mod">Modificada</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Nuevo</div><h3>Guardar</h3></div><span class="x">✕</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div>
+        <div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">200.000</span></div>
+      </div>
+      <div class="c rows">
+        <div><span class="tile">🎯</span><div class="rw"><div class="k">¿Para qué?</div><div class="v ph">Todavía no sé</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Disponible hoy</span><span>$ 4.000.000</span></div>
+        <div class="minus"><span>Vas a guardar</span><span>− $ 200.000</span></div>
+        <div class="rule"><span>Te queda para gastar</span><span>$ 3.800.000</span></div>
+      </div>
+      <div class="cta">Guardar</div>
+    </div></div>
+    <p class="note">Es <b>una fila más</b>, en el mismo lugar donde el usuario ya espera filas. El resto del drawer no cambia: mismo monto, mismo cálculo, misma moneda heredada.</p>
+    <p class="note">El valor por defecto es <b>«Todavía no sé»</b>, no un campo vacío que parezca obligatorio. Guardar sin destino es un caso legítimo y frecuente — no un formulario a medio llenar.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <div>
+        <h2>Elegir el propósito</h2>
+        <p class="sub">Los que ya usaste, y crear uno nuevo sin salir de acá.</p>
+        <span class="badge b-new">Nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Guardar · $ 200.000</div><h3>¿Para qué?</h3></div><span class="x">✕</span></div>
+      <div class="c rows">
+        <div><span class="tile">—</span><div class="rw"><div class="v">Todavía no sé</div></div><span style="color:var(--emerald-deep);font-weight:700">✓</span></div>
+        <div><span class="tile">🚑</span><div class="rw"><div class="v">Emergencia</div></div></div>
+        <div><span class="tile">✈️</span><div class="rw"><div class="v">Vacaciones</div></div></div>
+      </div>
+      <div class="c rows">
+        <div><span class="tile" style="background:var(--emerald-bg)">＋</span><div class="rw"><div class="v">Crear un propósito</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="overlay-empty"><b>No hay pantalla de administración de propósitos.</b> Se crean acá, cuando hacen falta, y se dejan de usar solos cuando dejás de elegirlos.</div>
+    </div></div>
+    <p class="note">Un propósito en fase 2 es <b>solo un nombre</b> (y un ícono). Sin monto objetivo, sin fecha, sin progreso — eso llega en fase 4, y llega bien recién cuando hay posiciones abajo.</p>
+    <p class="note">«Todavía no sé» encabeza la lista y viene tildado. La opción de no decidir tiene que ser la más fácil, o el campo deja de ser opcional en la práctica.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">3</span>
+      <div>
+        <h2>El detalle, agrupado</h2>
+        <p class="sub">Mismo overlay de la fase 1. Cambia cómo se ordena el historial.</p>
+        <span class="badge b-mod">Modificada</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Guardado en pesos</div><h3>Guardado</h3></div><span class="x">✕</span></div>
+      <div class="dt-hero">
+        <div class="k">Total guardado</div>
+        <div class="n">$ 350.000,00</div>
+        <div class="flow"><span>Este mes</span><b>+$ 150.000</b></div>
+      </div>
+      <div class="c hist">
+        <div><span class="tile">🚑</span><div class="n"><b>Emergencia</b><span>2 movimientos</span></div><span class="a">$ 200.000</span><span class="chev">›</span></div>
+        <div><span class="tile">✈️</span><div class="n"><b>Vacaciones</b><span>1 movimiento</span></div><span class="a">$ 100.000</span><span class="chev">›</span></div>
+        <div><span class="tile">—</span><div class="n"><b>Sin destino</b><span>1 movimiento</span></div><span class="a">$ 50.000</span><span class="chev">›</span></div>
+      </div>
+      <div class="two"><div class="cta">Guardar</div><div class="cta ghost">Liberar</div></div>
+      <div class="overlay-empty">Los <b>$ 50.000 sin destino</b> son de la fase 1, cuando el campo no existía. No hay backfill ni migración: lo viejo simplemente no tiene propósito, y está bien.</div>
+    </div></div>
+    <p class="note">Los tres subtotales suman el total del hero. El agrupado es un <b><code>group by</code>, no una entidad nueva</b>: cada reserva sigue siendo una fila con su fecha.</p>
+    <p class="note">"Sin destino" no es un estado de error ni un pendiente. Es una categoría más, y no lleva badge ni color de aviso.</p>
+    <p class="note"><b>Cada grupo es tocable</b>, y eso es lo que resuelve la pregunta de la pantalla 5: entrás a un propósito y actuás ahí adentro.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">4</span>
+      <div>
+        <h2>Ponerle nombre a algo que ya guardaste</h2>
+        <p class="sub">El segundo par de verbos del modelo: asignar y desasignar.</p>
+        <span class="badge b-new">Nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="sec-t">Sin destino · 1 movimiento</div>
+      <div class="c hist">
+        <div><span class="tile">↑</span><div class="n"><b>Guardaste</b><span>12 de julio</span></div><span class="a pos">+$ 50.000</span></div>
+      </div>
+      <div class="c rows">
+        <div><span class="tile">🎯</span><div class="rw"><div class="k">¿Para qué fue?</div><div class="v ph">Elegir un propósito</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c pad" style="display:flex;gap:11px;align-items:flex-start;background:#F7FAFC;border-color:#E3EAF0">
+        <span class="tile" style="background:#EAF1F6">ⓘ</span>
+        <div style="font-size:13px;color:var(--muted);line-height:1.45">Ponerle o sacarle un propósito <b style="color:var(--text)">no cambia cuánto tenés guardado</b> ni cuánto podés gastar. Solo cambia para qué es.</div>
+      </div>
+      <div class="cta">Guardar cambios</div>
+    </div></div>
+    <p class="note">Es el segundo par de verbos: <b>asignar ⇄ desasignar</b>. Igual que guardar y liberar, <b>no mueve plata</b> — pero a diferencia de ellos, tampoco cambia el disponible. Es la operación más inofensiva del modelo.</p>
+    <p class="note">Por eso se puede hacer sobre reservas viejas sin ningún riesgo: el número de arriba no se entera.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">5</span>
+      <div>
+        <h2>Liberar, con propósitos en juego</h2>
+        <p class="sub">¿De qué propósito sale? No se pregunta: se hereda de dónde tocaste.</p>
+        <span class="badge b-mod">Modificada</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">🚑 Emergencia</div><h3>Liberar</h3></div><span class="x">✕</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div>
+        <div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">50.000</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Guardado en Emergencia</span><span>$ 200.000</span></div>
+        <div class="minus"><span>Vas a liberar</span><span>− $ 50.000</span></div>
+        <div class="rule"><span>Queda en Emergencia</span><span>$ 150.000</span></div>
+      </div>
+      <div class="c pad" style="display:flex;gap:11px;align-items:flex-start;background:#F7FAFC;border-color:#E3EAF0">
+        <span class="tile" style="background:#EAF1F6">ⓘ</span>
+        <div style="font-size:13px;color:var(--muted);line-height:1.45">Vuelven a estar disponibles para gastar. <b style="color:var(--text)">La plata no se mueve de ninguna cuenta</b>, y tus otros propósitos no cambian.</div>
+      </div>
+      <div class="cta">Liberar</div>
+      <div class="overlay-empty"><b>Sin campo de propósito.</b> Llegaste tocando «Emergencia», así que Grana ya sabe de dónde sale — igual que el drawer de fase 1 hereda la moneda del ingreso del que viene.</div>
+    </div></div>
+    <p class="note"><b>El único caso en que sí pregunta</b> es si abrís Liberar desde el botón del total teniendo más de un propósito con saldo. Ahí la primera pantalla es elegir de cuál, con los montos a la vista. No hay una tercera opción: repartirlo solo sería inventar una imputación.</p>
+    <p class="note">Y aparece un <b>tope nuevo, por propósito</b>: no podés liberar $80.000 de Emergencia si Emergencia tiene $50.000, aunque el total guardado sea $350.000. Si no, un propósito podría quedar en negativo mientras el global cierra.</p>
+    <p class="note">Técnicamente la fila de liberar lleva el mismo <code>purpose_id</code> que las de guardar. El saldo de un propósito es <b>la suma de sus filas</b>, con signo — el mismo mecanismo que el total, un nivel más abajo. <b>Ninguna lectura de plata cambia.</b></p>
+    <p class="note">En <b>fase 1 esto no existe</b>: sin propósitos, liberar no tiene nada que preguntar.</p>
+  </section>
+
+</div>
+
+<div class="ways">
+  <h2>Lo que fase 2 <em>no</em> hace</h2>
+  <p class="lede">La tentación de esta fase es convertir el propósito en una meta. Son cosas distintas y separarlas es lo que la mantiene barata.</p>
+  <div class="cols">
+    <div class="way">
+      <div class="cap">Fase 2 · ahora</div>
+      <h4>Propósito</h4>
+      <span class="taps">Solo un nombre</span>
+      <ol>
+        <li><b>Emergencia.</b> Sin monto objetivo.</li>
+        <li>Sin fecha.</li>
+        <li>Sin progreso ni barra.</li>
+        <li>Sin pantalla propia: vive adentro del detalle del guardado.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Fase 4 · después</div>
+      <h4>Meta</h4>
+      <span class="taps">El propósito gana un objetivo</span>
+      <ol>
+        <li><b>Japón: US$ 2.000 para marzo.</b></li>
+        <li>Cuánto te falta, y a qué ritmo vas.</li>
+        <li>Respaldada por posiciones, que llegan en fase 3.</li>
+        <li>Recién ahí Grana puede decir algo incómodo y cierto: <b>tu objetivo está en dólares y tu ahorro en pesos</b>.</li>
+      </ol>
+    </div>
+  </div>
+  <p class="lede" style="margin:22px 0 0">Adelantar la meta a fase 2 la dejaría sin respaldo: una barra de progreso que no sabe en qué está parada tu plata mide el número nominal y no el poder de compra — que en Argentina es justamente lo que no hay que hacer.</p>
+</div>
+
+<div class="foot">
+  <div>
+    <h3>Lo que fase 2 construye</h3>
+    <ul>
+      <li><b>Una tabla</b> — <code>savings_purpose</code>: id, usuario, nombre, ícono.</li>
+      <li><b>Una columna nullable</b> — <code>purpose_id</code> en <code>availability_reserve</code>, en la misma migración. Aditivo, sin backfill.</li>
+      <li><b>Una fila</b> en el drawer de Guardar y <b>un selector</b>.</li>
+      <li><b>Un <code>group by</code></b> en el detalle.</li>
+      <li><b>Ninguna ruta nueva. Ninguna entrada de menú.</b> Igual que fase 1.</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Por qué no rompe nada</h3>
+    <p>Las reservas de la fase 1 quedan con <code>purpose_id</code> en nulo y se muestran como <strong>«Sin destino»</strong>. No hay migración de datos ni valor por defecto inventado.</p>
+    <p>Ninguna lectura de plata cambia: <code>get_available_sums</code> y <code>get_reserve_flow_sums</code> siguen exactamente iguales, porque el propósito <strong>no participa de ningún número</strong>.</p>
+    <p>El dashboard <strong>no se toca</strong>. La fila sigue diciendo lo mismo: el propósito vive un nivel más adentro.</p>
+  </div>
+  <div>
+    <h3>Abierto</h3>
+    <p><strong>El fondo de emergencia como propósito con reglas propias</strong> —tamaño derivable del gasto mensual, liquidez por encima de rendimiento— es tentador y no es de esta fase.</p>
+    <p><strong>Si un propósito puede tener reservas en las dos monedas.</strong> «Japón» es naturalmente bimoneda; el guardado es por moneda. Se resuelve con la meta, en fase 4.</p>
+  </div>
+</div>
+</div>
+
+</body>
+</html>

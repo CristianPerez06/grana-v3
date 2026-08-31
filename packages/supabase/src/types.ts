@@ -59,6 +59,110 @@ export type Database = {
           },
         ]
       }
+      availability_reserve: {
+        Row: {
+          amount: number
+          created_at: string
+          currency_code: string
+          date: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency_code: string
+          date: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency_code?: string
+          date?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_reserve_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      savings_purpose_allocation: {
+        Row: {
+          amount: number
+          created_at: string
+          currency_code: string
+          date: string
+          id: string
+          purpose_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency_code: string
+          date: string
+          id?: string
+          purpose_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency_code?: string
+          date?: string
+          id?: string
+          purpose_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "savings_purpose_allocation_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "savings_purpose_allocation_purpose_id_fkey"
+            columns: ["purpose_id"]
+            isOneToOne: false
+            referencedRelation: "savings_purpose"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      savings_purpose: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       accounts: {
         Row: {
           color_key: string | null
@@ -1114,6 +1218,15 @@ export type Database = {
           net: number
         }[]
       }
+      get_available_sums: {
+        Args: { p_today?: string }
+        Returns: {
+          accounts_net: number
+          available: number
+          currency_code: string
+          reserved: number
+        }[]
+      }
       get_household_member_profiles: {
         Args: never
         Returns: {
@@ -1126,6 +1239,23 @@ export type Database = {
         Returns: Json[]
       }
       get_owned_account_ids: { Args: never; Returns: string[] }
+      get_purpose_sums: {
+        Args: { p_today?: string }
+        Returns: {
+          currency_code: string
+          purpose_icon: string | null
+          purpose_id: string | null
+          purpose_name: string | null
+          reserved: number
+        }[]
+      }
+      get_reserve_flow_sums: {
+        Args: { p_from: string; p_to: string; p_today?: string }
+        Returns: {
+          currency_code: string
+          reserved_net: number
+        }[]
+      }
       is_household_member: {
         Args: { p_household_id: string }
         Returns: boolean
@@ -1137,6 +1267,15 @@ export type Database = {
           p_amount: number
           p_currency: string
           p_date: string
+        }
+        Returns: string
+      }
+      write_reserve: {
+        Args: {
+          p_amount: number
+          p_currency: string
+          p_date: string
+          p_purpose_id?: string | null
         }
         Returns: string
       }

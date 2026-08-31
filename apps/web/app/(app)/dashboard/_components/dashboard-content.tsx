@@ -8,6 +8,7 @@ import { DashboardErrorBoundary } from './dashboard-error-boundary'
 import { SharedStripContainer } from './shared-strip-container'
 import { SpentCardContainer } from './spent-card-container'
 import { SpentCardSkeleton } from './spent-card-skeleton'
+import { SaveSuggestionStrip } from '@/lib/savings/components/save-suggestion-strip'
 
 // Dashboard composition (design handoff `docs/design/dashboard-home/`), four
 // blocks in fixed order: "Saldo disponible total" (full width) → "Cuánto
@@ -26,6 +27,12 @@ export const DashboardContent = async () => {
   return (
     <DashboardErrorBoundary>
       <div className="flex flex-col gap-4">
+        {/* La sugerencia de guardar. Va ARRIBA de la card porque su momento es
+            "acabás de cobrar", y se resuelve entera en el cliente: si no
+            corresponde ofrecerla no renderiza nada y la fila 1 sube sola. No es
+            una tarea pendiente — sin badge, sin contador, sin bloquear nada. */}
+        <SaveSuggestionStrip year={currentYear} month={currentMonth} />
+
         {/* Fila 1 — "Saldo disponible total" a ancho completo: el total, la
             fila USD y "Dónde está" plegado adentro del hero oscuro. */}
         <Suspense fallback={<BalanceCardSkeleton />}>

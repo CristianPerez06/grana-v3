@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="design_doc_mode" content="canvas" />
+<title>grana · Ahorro v3 · pantalla y flujos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#F5F2EC;--card:#FFFFFF;--ink:#1B2A33;--muted:#6F7A80;--soft:#5F6A70;--faint:#7C858A;--border:#EAE5DC;--line:#F1EDE5;--emerald:#11B981;--emerald-deep:#0B7F58;--emerald-soft:#EFFAF4;--terracota:#C97A5F;--amber:#E0A03F;--amber-deep:#845714;--amber-soft:#FDF7EC;--slate:#4A7B92;--slate-deep:#27505F;--clay:#8C7A66;--violet:#7E6BB0;--violet-deep:#544485;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+body{background:#DED9D0}
+a{text-decoration:none;color:inherit}a:hover{color:var(--emerald-deep)}
+button{font-family:inherit;cursor:pointer}
+.tnum{font-variant-numeric:tabular-nums}
+.tag{position:absolute;width:390px}
+.tag .kk{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#7E786C}
+.tag h3{font-size:21px;font-weight:800;letter-spacing:-.03em;margin-top:6px}
+.tag p{font-size:13px;font-weight:500;color:#66625A;margin-top:5px;line-height:1.45;text-wrap:pretty}
+.ph{position:absolute;background:var(--bg);border-radius:30px;border:1px solid #DCD6CB;overflow:hidden;box-shadow:0 24px 50px -28px rgba(27,42,51,.4)}
+.scr{display:flex;flex-direction:column;height:100%;position:relative}
+.nb{display:flex;align-items:center;gap:11px;padding:18px 16px 6px}
+.nb .bk{width:36px;height:36px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;color:var(--muted);flex:none}
+.nb .bk svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.nb .ti{font-size:16.5px;font-weight:800;letter-spacing:-.03em}
+.nb .rt{margin-left:auto;display:flex;gap:8px}
+.nb .ic{width:36px;height:36px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;color:var(--muted)}
+.nb .ic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.body{flex:1;padding:8px 16px 20px;display:flex;flex-direction:column;gap:11px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:22px}
+.lbl{font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.foot{font-size:11.5px;font-weight:600;color:var(--muted);line-height:1.45;text-wrap:pretty}
+.link{position:relative;color:var(--emerald-deep);font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;align-self:center;padding:4px 6px;margin-right:-6px}
+.link::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:44px}
+.link svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+.rowh{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 3px}
+.rowh h2{font-size:14.5px;font-weight:800;letter-spacing:-.02em}
+/* card principal */
+.main{overflow:hidden;background:var(--ink);border:none}
+.main .lbl{color:rgba(255,255,255,.55)}
+.main .pair .v{color:#fff}
+.main .pair .v .cur{color:rgba(255,255,255,.5)}
+.main .pair .sep{background:rgba(255,255,255,.14)}
+.main .sup{color:rgba(255,255,255,.66)}
+.main .in{padding:18px 18px 16px}
+.main .pair{display:grid;grid-template-columns:1fr 1px 1fr;align-items:start;gap:16px;margin-top:15px}
+.main .pair .sep{background:var(--line);align-self:stretch}
+.main .pair .k{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--soft)}
+.main .pair .v{font-size:27px;font-weight:800;letter-spacing:-.045em;line-height:1;white-space:nowrap}
+.main .pair .v .cur{color:var(--soft);font-weight:700;font-size:.8em}
+.main .sup{font-size:12px;font-weight:600;color:var(--muted);margin-top:15px;line-height:1.45}
+.abar{display:grid;grid-template-columns:repeat(3,1fr);background:#FCFBF8}
+.abar button{border:none;background:transparent;min-height:48px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.abar button+button{border-left:1px solid var(--line)}
+.abar button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+/* sin destino · fuera de la lista */
+.nodest{background:linear-gradient(180deg,#FDF6E8,#FCF2DF);border:1px solid #F0DFBB;border-radius:20px;padding:15px 16px}
+.nodest .hd{display:flex;align-items:center;gap:12px}
+.nodest .ic{width:40px;height:40px;border-radius:50%;border:1.5px dashed #C79B45;display:grid;place-items:center;color:var(--amber-deep);flex:none}
+.nodest .ic svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.nodest .tx{flex:1;min-width:0}
+.nodest .tx .n{font-size:11px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--amber-deep)}
+.nodest .tx .v{font-size:22px;font-weight:800;letter-spacing:-.045em;color:#5F3D0B;margin-top:6px}
+.nodest .b{flex:none;border:none;background:var(--amber-deep);color:#fff;font-size:12.5px;font-weight:800;border-radius:13px;padding:0 15px;min-height:44px}
+.nodest .c{font-size:11.5px;font-weight:600;color:#7A5A20;margin-top:11px;padding-top:11px;border-top:1px dashed #E3CFA4;line-height:1.45}
+/* propósitos */
+.plist{display:flex;flex-direction:column;gap:9px}
+.pcard{border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:13px;min-height:72px;border:1px solid transparent;background:var(--card)}
+.pcard .ic{width:42px;height:42px;border-radius:15px;display:grid;place-items:center;flex:none}
+.pcard .ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.pcard .tx{flex:1;min-width:0}
+.pcard .tx .n{font-size:14.5px;font-weight:800;letter-spacing:-.015em;color:var(--ink)}
+.pcard .tx .s{font-size:11.5px;font-weight:600;margin-top:4px;color:var(--muted)}
+.pcard .am{text-align:right;flex:none}
+.pcard .am .a{font-size:16.5px;font-weight:800;letter-spacing:-.04em;white-space:nowrap;color:var(--ink)}
+.pcard .am .u{font-size:11.5px;font-weight:700;margin-top:4px;color:var(--muted);white-space:nowrap}
+.pcard .go{flex:none;color:var(--faint);margin-left:2px}
+.pcard .go svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+/* sheets */
+.dim{position:absolute;inset:0;background:rgba(27,42,51,.5)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:28px 28px 0 0;padding:10px 20px 22px;box-shadow:0 -14px 44px -14px rgba(27,42,51,.45)}
+.grab{width:42px;height:4px;border-radius:99px;background:#E1DCD2;margin:0 auto 14px}
+.sh-k{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.sh-t{font-size:20px;font-weight:800;letter-spacing:-.035em;margin-top:7px}
+.sh-s{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:7px;display:flex;align-items:center;gap:7px}
+.sh-s svg{width:15px;height:15px;fill:none;stroke:var(--emerald-deep);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.seg{display:flex;gap:3px;background:#F1EDE5;border-radius:12px;padding:3px;margin-top:14px}
+.seg button{flex:1;border:none;background:transparent;color:var(--soft);font-size:12px;font-weight:800;padding:9px;border-radius:9px;min-height:44px}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(27,42,51,.1)}
+.amt{margin-top:16px;display:flex;align-items:baseline;justify-content:center;gap:5px}
+.amt .cur{font-size:22px;font-weight:700;color:var(--soft)}
+.amt .n{font-size:42px;font-weight:800;letter-spacing:-.05em}
+.amt .car{width:2.5px;height:36px;background:var(--emerald);border-radius:2px;margin-left:3px;align-self:center}
+.avail{text-align:center;font-size:11.5px;font-weight:700;color:var(--muted);margin-top:9px}
+.chips{display:flex;gap:8px;margin-top:14px}
+.chips button{flex:1;border:1px solid var(--border);background:var(--card);border-radius:12px;padding:11px 6px;font-size:12.5px;font-weight:800;color:var(--ink);min-height:44px}
+.chips button.on{border-color:var(--emerald);background:var(--emerald-soft);color:var(--emerald-deep)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.pad button{border:none;background:#F4F1EA;border-radius:14px;min-height:46px;font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.pad button.fn{background:transparent;color:var(--muted);font-size:17px}
+.cta{border:none;border-radius:15px;background:var(--emerald);color:#fff;font-size:15px;font-weight:800;width:100%;min-height:52px;margin-top:14px;box-shadow:0 10px 22px -10px rgba(17,185,129,.75)}
+.cta.amb{background:var(--amber-deep);box-shadow:0 10px 22px -10px rgba(132,87,20,.6)}
+.sh-note{font-size:11.5px;font-weight:600;color:var(--muted);line-height:1.5;margin-top:12px;text-align:center;text-wrap:pretty}
+.sh-note b{color:var(--ink);font-weight:800}
+.pick{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.pick .op{display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:16px;padding:11px 13px;min-height:60px;background:var(--card)}
+.pick .op.on{border-color:var(--emerald);background:var(--emerald-soft)}
+.pick .op .ic{width:36px;height:36px;border-radius:13px;display:grid;place-items:center;flex:none}
+.pick .op .ic svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pick .op .nm{flex:1;min-width:0;font-size:13.5px;font-weight:800;letter-spacing:-.01em}
+.pick .op .nm small{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-top:3px}
+.pick .op .rd{width:22px;height:22px;border-radius:50%;border:2px solid #DDD8CE;flex:none;display:grid;place-items:center}
+.pick .op.on .rd{border-color:var(--emerald);background:var(--emerald)}
+.pick .op.on .rd::after{content:"";width:8px;height:8px;border-radius:50%;background:#fff}
+/* detalle */
+.dhero{padding:16px 18px 16px}
+.dhero .top{display:flex;align-items:center;gap:14px}
+.dhero .ic{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;flex:none}
+.dhero .ic svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dhero h1{font-size:18px;font-weight:800;letter-spacing:-.03em}
+.dhero .sb{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:4px}
+.dpair{display:grid;grid-template-columns:1fr 1px 1fr;gap:16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);text-align:left}
+.dpair .sep{background:var(--line)}
+.dpair .k{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--soft)}
+.dpair .v{font-size:25px;font-weight:800;letter-spacing:-.045em}
+.dpair .v .cur{color:var(--soft);font-weight:700;font-size:.8em}
+.dact{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.dact button{border:none;border-radius:15px;min-height:50px;font-size:13.5px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px}
+.dact button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.dact .p{background:var(--emerald);color:#fff;box-shadow:0 9px 20px -10px rgba(17,185,129,.7)}
+.dact .s{background:var(--card);color:var(--ink);border:1px solid var(--border)}
+.mv{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--line)}
+.mv:first-of-type{border-top:none}
+.mv .ic{width:34px;height:34px;border-radius:12px;background:#F4F1EA;color:var(--soft);display:grid;place-items:center;flex:none}
+.mv .ic svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+.mv .tx{flex:1;min-width:0;font-size:13.5px;font-weight:700}
+.mv .tx small{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-top:3px}
+.mv .a{font-size:14px;font-weight:800;letter-spacing:-.03em;white-space:nowrap}
+.note{position:absolute;width:430px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px}
+.note h4{font-size:15.5px;font-weight:800;letter-spacing:-.02em}
+.field{font-size:19px;font-weight:800;letter-spacing:-.03em;margin-top:11px;padding-bottom:11px;border-bottom:2px solid var(--emerald);display:flex;align-items:center}
+.car2{width:2.5px;height:22px;background:var(--emerald);border-radius:2px;margin-left:4px}
+.emb{display:flex;gap:9px;margin-top:13px}
+.emb .e{width:56px;height:52px;border-radius:16px;border:2px solid transparent;display:grid;place-items:center}
+.emb .e svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.emb .e.on{border-color:var(--ink)}
+.note .nl{margin-top:14px;display:flex;flex-direction:column;gap:13px}
+.note .k{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.note .t{font-size:13px;font-weight:600;color:#4E575C;line-height:1.5;margin-top:5px;text-wrap:pretty}
+.note .t b{color:var(--ink);font-weight:800}
+</style>
+<template id="__bundler_thumbnail" data-bg-color="#F5F2EC">
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="800" fill="#F5F2EC"/><text x="600" y="300" text-anchor="middle" font-family="'Plus Jakarta Sans',system-ui,sans-serif" font-size="110" font-weight="800" letter-spacing="-4" fill="#1B2A33">Ahorro</text><rect x="330" y="380" width="540" height="70" rx="24" fill="#FCF2DF"/><rect x="330" y="470" width="540" height="70" rx="24" fill="#F2F7F9"/><rect x="330" y="560" width="540" height="70" rx="24" fill="#EFFAF4"/></svg>
+</template>
+</head>
+<body>
+
+<!-- ===== 1 · PANTALLA ===== -->
+<div class="tag" style="left:60px;top:40px"><div class="kk">v3 · 390px</div><h3>Ahorro</h3><p>Botonera baja, monedas en columnas iguales, Sin destino fuera de la lista y propósitos con íconos propios.</p></div>
+
+<div class="ph" style="left:60px;top:180px;width:390px;height:800px" data-screen-label="Ahorro · v3">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><div><div style="font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)">Ahorro e inversión</div><span class="ti">Ahorro</span></div><div class="rt"><span class="ic"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+  <div class="body">
+    <div class="card main">
+      <div class="in">
+        <div class="lbl">Guardado</div>
+        <div class="pair">
+          <div><div class="v tnum"><span class="cur">$</span> 1.150.000</div></div>
+          <div class="sep"></div>
+          <div><div class="v tnum"><span class="cur">US$</span> 900</div></div>
+        </div>
+        <p class="sup">Plata apartada: sigue en tus cuentas, pero no cuenta para gastar.</p>
+      </div>
+      <div class="abar">
+        <button><svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>Guardar</button>
+        <button><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Volver a usar</button>
+        <button><svg viewBox="0 0 24 24"><path d="M12 4v6M12 10L6 20M12 10l6 10"/></svg>Destinar</button>
+      </div>
+    </div>
+    <div class="nodest">
+      <div class="hd">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 8v8M9 12h6"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <div class="tx"><div class="n">Sin destino</div><div class="v tnum">$ 160.000</div></div>
+        <button class="b">Destinar</button>
+      </div>
+      <p class="c">Resto sin asignar, no es un propósito. Está guardado, pero todavía no dijiste para qué.</p>
+    </div>
+    <div class="rowh"><h2>Para qué guardaste</h2><a class="link" href="#">Nuevo<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></a></div>
+    <div class="plist">
+      <div class="pcard" style="border-color:#E1EBF0"><span class="ic" style="background:#E4EEF3;color:var(--slate-deep)"><svg viewBox="0 0 24 24"><path d="M2 19h20"/><path d="M3 16l6-8 4 5 2.5-3L21 16z"/><circle cx="17" cy="6" r="2"/></svg></span><div class="tx"><div class="n">Viaje a Bariloche</div><div class="s">Julio 2027</div></div><div class="am"><div class="a tnum">$ 480.000</div><div class="u tnum">US$ 300</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="border-color:#D8F0E4"><span class="ic" style="background:#DDF4EA;color:var(--emerald-deep)"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9z"/><path d="M12 12v6a2.5 2.5 0 0 0 5 0"/></svg></span><div class="tx"><div class="n">Fondo de emergencia</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 420.000</div><div class="u tnum">US$ 600</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="border-color:#E6E0F2"><span class="ic" style="background:#EBE5F6;color:var(--violet-deep)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20M9.5 16h5"/></svg></span><div class="tx"><div class="n">Notebook nueva</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 90.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+    </div>
+    <p class="foot" style="padding:0 4px">Los dólares se muestran aparte y nunca se suman a los pesos.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===== 2 · GUARDAR ===== -->
+<div class="tag" style="left:500px;top:40px"><div class="kk">Sheet</div><h3>Guardar</h3><p>Un paso: moneda, monto y confirmación. No pregunta de dónde sale ni a dónde va, porque el tap ya lo dijo.</p></div>
+
+<div class="ph" style="left:500px;top:180px;width:390px;height:800px" data-screen-label="Sheet · Guardar">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ti">Ahorro</span></div>
+  <div class="body">
+    <div class="card main"><div class="in"><div class="lbl">Guardado</div><div class="pair"><div><div class="v tnum"><span class="cur">$</span> 1.150.000</div></div><div class="sep"></div><div><div class="v tnum"><span class="cur">US$</span> 900</div></div></div></div></div>
+  </div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="sh-k">Guardar</div>
+    <div class="sh-t">¿Cuánto querés guardar?</div>
+    <div class="sh-s"><svg viewBox="0 0 24 24"><path d="M4 7h11M11 3l4 4-4 4M20 17H9M13 13l-4 4 4 4"/></svg>Sale de Para gastar y pasa a Guardado</div>
+    <div class="seg"><button class="on">Pesos</button><button>Dólares</button></div>
+    <div class="amt tnum"><span class="cur">$</span><span class="n">50.000</span><span class="car"></span></div>
+    <div class="avail tnum">Podés guardar hasta $ 842.300</div>
+    <div class="chips"><button>+ 10.000</button><button class="on">+ 50.000</button><button>Todo</button></div>
+    <div class="pad"><button>1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>6</button><button>7</button><button>8</button><button>9</button><button class="fn">,</button><button>0</button><button class="fn">⌫</button></div>
+    <button class="cta">Guardar $ 50.000</button>
+    <p class="sh-note">La plata <b>no se mueve de tus cuentas</b>. Solo deja de contar como disponible.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===== 3 · VOLVER A USAR ===== -->
+<div class="tag" style="left:940px;top:40px"><div class="kk">Sheet</div><h3>Volver a usar</h3><p>Igual que Guardar, al revés. Sale primero de Sin destino; si hace falta más, se elige de qué propósito.</p></div>
+
+<div class="ph" style="left:940px;top:180px;width:390px;height:800px" data-screen-label="Sheet · Volver a usar">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ti">Ahorro</span></div>
+  <div class="body">
+    <div class="card main"><div class="in"><div class="lbl">Guardado</div><div class="pair"><div><div class="v tnum"><span class="cur">$</span> 1.150.000</div></div><div class="sep"></div><div><div class="v tnum"><span class="cur">US$</span> 900</div></div></div></div></div>
+  </div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="sh-k">Volver a usar</div>
+    <div class="sh-t">¿Cuánto querés volver a usar?</div>
+    <div class="sh-s"><svg viewBox="0 0 24 24"><path d="M4 7h11M11 3l4 4-4 4M20 17H9M13 13l-4 4 4 4"/></svg>Sale de Guardado y vuelve a Para gastar</div>
+    <div class="seg"><button class="on">Pesos</button><button>Dólares</button></div>
+    <div class="amt tnum"><span class="cur">$</span><span class="n">160.000</span><span class="car"></span></div>
+    <div class="avail tnum">Sin destino: $ 160.000 · Guardado: $ 1.150.000</div>
+    <div class="chips"><button class="on">De Sin destino</button><button>De un propósito</button></div>
+    <div class="pad"><button>1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>6</button><button>7</button><button>8</button><button>9</button><button class="fn">,</button><button>0</button><button class="fn">⌫</button></div>
+    <button class="cta">Volver a usar $ 160.000</button>
+    <p class="sh-note">Primero sale de lo que <b>no tiene propósito</b>. Si querés más, elegís de cuál sacarlo.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===== 4 · DESTINAR ===== -->
+<div class="tag" style="left:1380px;top:40px"><div class="kk">Sheet</div><h3>Destinar</h3><p>Monto y destino en el mismo paso. Si entrás desde la card de un propósito, el destino ya viene elegido.</p></div>
+
+<div class="ph" style="left:1380px;top:180px;width:390px;height:800px" data-screen-label="Sheet · Destinar">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ti">Ahorro</span></div>
+  <div class="body">
+    <div class="card main"><div class="in"><div class="lbl">Guardado</div><div class="pair"><div><div class="v tnum"><span class="cur">$</span> 1.150.000</div></div><div class="sep"></div><div><div class="v tnum"><span class="cur">US$</span> 900</div></div></div></div></div>
+  </div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="sh-k">Destinar</div>
+    <div class="sh-t">¿Cuánto y a qué propósito?</div>
+    <div class="sh-s"><svg viewBox="0 0 24 24"><path d="M12 4v6M12 10L6 20M12 10l6 10"/></svg>Sale de Sin destino · $ 160.000 disponibles</div>
+    <div class="amt tnum"><span class="cur">$</span><span class="n">60.000</span><span class="car"></span></div>
+    <div class="chips"><button>+ 20.000</button><button class="on">+ 60.000</button><button>Todo</button></div>
+    <div class="pick">
+      <div class="op on"><span class="ic" style="background:#E4EEF3;color:var(--slate-deep)"><svg viewBox="0 0 24 24"><path d="M2 19h20"/><path d="M3 16l6-8 4 5 2.5-3L21 16z"/><circle cx="17" cy="6" r="2"/></svg></span><div class="nm">Viaje a Bariloche<small class="tnum">$ 480.000 · US$ 300</small></div><span class="rd"></span></div>
+      <div class="op"><span class="ic" style="background:#DDF4EA;color:var(--emerald-deep)"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9z"/><path d="M12 12v6a2.5 2.5 0 0 0 5 0"/></svg></span><div class="nm">Fondo de emergencia<small class="tnum">$ 420.000 · US$ 600</small></div><span class="rd"></span></div>
+      <div class="op"><span class="ic" style="background:#EBE5F6;color:var(--violet-deep)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20M9.5 16h5"/></svg></span><div class="nm">Notebook nueva<small class="tnum">$ 90.000</small></div><span class="rd"></span></div>
+    </div>
+    <button class="cta amb">Destinar $ 60.000 a Viaje a Bariloche</button>
+    <p class="sh-note">Tu total guardado <b>no cambia</b>: le pusiste nombre a una parte.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===== 5 · DETALLE ===== -->
+<div class="tag" style="left:1820px;top:40px"><div class="kk">Pantalla</div><h3>Detalle de un propósito</h3><p>Se entra tocando la card. Monedas en columnas iguales, dos acciones y el historial de lo que entró y salió.</p></div>
+
+<div class="ph" style="left:1820px;top:180px;width:390px;height:730px" data-screen-label="Detalle · Viaje a Bariloche">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ti">Propósito</span><div class="rt"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></span></div></div>
+  <div class="body">
+    <div class="card">
+      <div class="dhero">
+        <div class="top">
+          <span class="ic" style="background:#E4EEF3;color:var(--slate-deep)"><svg viewBox="0 0 24 24"><path d="M2 19h20"/><path d="M3 16l6-8 4 5 2.5-3L21 16z"/><circle cx="17" cy="6" r="2"/></svg></span>
+          <div><h1>Viaje a Bariloche</h1><div class="sb">Julio 2027 · creado en marzo</div></div>
+        </div>
+        <div class="dpair">
+          <div><div class="v tnum"><span class="cur">$</span> 480.000</div></div>
+          <div class="sep"></div>
+          <div><div class="v tnum"><span class="cur">US$</span> 300</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="dact">
+      <button class="p"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Destinar acá</button>
+      <button class="s"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>Sacar de acá</button>
+    </div>
+    <div class="card" style="padding:16px 18px">
+      <div class="rowh" style="padding:0"><h2>Movimientos</h2><a class="link" href="#">Ver todos<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></a></div>
+      <div style="margin-top:6px">
+        <div class="mv"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></span><div class="tx">Destinaste acá<small>12 de agosto · desde Sin destino</small></div><span class="a tnum" style="color:var(--emerald-deep)">+ $ 80.000</span></div>
+        <div class="mv"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></span><div class="tx">Destinaste acá<small>2 de julio · desde Sin destino</small></div><span class="a tnum" style="color:var(--emerald-deep)">+ US$ 300</span></div>
+        <div class="mv"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><div class="tx">Sacaste de acá<small>18 de junio · volvió a Sin destino</small></div><span class="a tnum" style="color:var(--terracota)">− $ 40.000</span></div>
+      </div>
+    </div>
+    <p class="foot" style="padding:0 4px">Sacar de acá devuelve la plata a <b>Sin destino</b>. Para poder gastarla, usá <b>Volver a usar</b> en Ahorro.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===== 6 · NUEVO PROPÓSITO ===== -->
+<div class="tag" style="left:2260px;top:40px"><div class="kk">Pantalla</div><h3>Nuevo propósito</h3><p>Nombre, emblema y, si quiere, algo de Sin destino ya destinado. Fecha opcional y sin metas.</p></div>
+
+<div class="ph" style="left:2260px;top:180px;width:390px;height:730px" data-screen-label="Nuevo propósito">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="ti">Nuevo propósito</span></div>
+  <div class="body">
+    <div class="card" style="padding:18px">
+      <div class="lbl">Nombre</div>
+      <div class="field">Curso de inglés<span class="car2"></span></div>
+      <p class="foot" style="margin-top:11px">Con que se entienda para qué es, alcanza.</p>
+    </div>
+    <div class="card" style="padding:18px">
+      <div class="lbl">Emblema</div>
+      <div class="emb">
+        <button class="e on" style="background:#EBE5F6;color:var(--violet-deep)"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg></button>
+        <button class="e" style="background:#E4EEF3;color:var(--slate-deep)"><svg viewBox="0 0 24 24"><path d="M2 19h20"/><path d="M3 16l6-8 4 5 2.5-3L21 16z"/><circle cx="17" cy="6" r="2"/></svg></button>
+        <button class="e" style="background:#DDF4EA;color:var(--emerald-deep)"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9z"/><path d="M12 12v6a2.5 2.5 0 0 0 5 0"/></svg></button>
+        <button class="e" style="background:#F7E7DF;color:#8A4530"><svg viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/></svg></button>
+        <button class="e" style="background:#F1EFE9;color:#6B6053"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></button>
+      </div>
+    </div>
+    <div class="card" style="padding:18px">
+      <div class="lbl">¿Para cuándo? <span style="letter-spacing:0;text-transform:none;font-weight:600;color:var(--muted)">opcional</span></div>
+      <div class="chips" style="margin-top:12px"><button class="on">Sin fecha</button><button>Elegir mes</button></div>
+    </div>
+    <div class="card" style="padding:18px">
+      <div class="lbl">¿Le destinás algo ahora? <span style="letter-spacing:0;text-transform:none;font-weight:600;color:var(--muted)">opcional</span></div>
+      <div class="amt tnum" style="margin-top:13px;justify-content:flex-start"><span class="cur">$</span><span class="n" style="font-size:32px;color:var(--faint)">0</span><span class="car" style="height:28px"></span></div>
+      <p class="foot" style="margin-top:10px">Arranca en cero. Si querés, podés destinarle algo de <b>Sin destino</b>, donde tenés $ 160.000 — o dejarlo así y destinarle después.</p>
+    </div>
+    <button class="cta" style="margin-top:2px">Crear propósito</button>
+  </div>
+</div>
+</div>
+
+<div class="note" style="left:60px;top:1020px">
+<h4>Qué cambió en v3</h4>
+<div class="nl">
+<div><div class="k">Sin destino</div><div class="t">Salió de la lista de propósitos y quedó <b>arriba del título "Para qué guardaste"</b>: ya no es un ítem más, es un estado del dinero que espera decisión. Forma distinta (bloque ámbar de esquina 20px, sin ícono cuadrado sino círculo punteado), rótulo en mayúsculas en vez de nombre propio, y su explicación adentro en lugar de subtítulo.</div></div>
+<div><div class="k">Card del total en oscuro</div><div class="t">La card principal va en <b>ink #1B2A33</b> con los montos en blanco, los símbolos al 50% y el divisor al 14%. La botonera se queda clara (#FCFBF8) para que las acciones sigan leyéndose tocables. El resto de la pantalla no cambia: Sin destino conserva el ámbar como excepción.</div></div>
+<div><div class="k">Monedas</div><div class="t">Dos columnas iguales de <b>1fr</b> con divisor de 1px al medio y el mismo tamaño de número. Saqué los rótulos "Pesos" y "Dólares": el <b>$</b> y el <b>US$</b> ya lo dicen, y sin ellos la card baja 20px y se despega de la sensación de planilla.</div></div>
+<div><div class="k">Íconos</div><div class="t">Más descriptivos y con contenedor sólido en tinte propio: montaña con sol, paraguas, notebook. Trazo más fino (1.9) y contenedor de 42px con radio 15 para que se lean como emblema del propósito, no como icono de sistema.</div></div>
+<div><div class="k">Los tres sheets</div><div class="t">Un paso cada uno, con la misma anatomía: rótulo, pregunta, línea que explica el movimiento, moneda, monto, atajos, teclado y CTA con el monto escrito. <b>Destinar</b> es el único que suma selección de destino, porque desde la botonera no hay propósito elegido; entrando desde una card, ese bloque ya viene resuelto.</div></div>
+<div><div class="k">Detalle</div><div class="t">Ícono y nombre en una fila (no centrados, que inflaban el alto), las dos monedas en columnas iguales, dos acciones y el historial. Sin barras ni metas: el propósito todavía no tiene objetivo, así que no hay nada que porcentualizar.</div></div>
+<div><div class="k">Nomenclatura</div><div class="t">Ruta y menú: <b>Ahorro e inversión</b> (arriba del título, en versalitas). Pantalla: <b>Ahorro</b>. Inversiones todavía no entra, pero vive después dentro del mismo módulo, así que la ruta ya lo anticipa.</div></div>
+<div><div class="k">Sin destino en cero</div><div class="t">El bloque de arriba aparece <b>solo si el monto es mayor a cero</b>. En cero desaparece y su explicación baja al pie de la lista de propósitos, en una línea gris: nada de bloques vacíos ni de "$ 0" ámbar gritando.</div></div>
+<div><div class="k">Nuevo propósito</div><div class="t">Cuatro bloques, dos de ellos opcionales y marcados como tales: <b>nombre</b> con el campo ya enfocado, <b>emblema</b> como fila de opciones (no una paleta infinita), <b>fecha</b> en dos chips y un monto inicial que sale de <b>Sin destino</b>. Se puede crear tocando solo el nombre y el CTA.</div></div>
+</div>
+</div>
+
+
+<!-- ===== 7 · VACÍO ===== -->
+<div class="tag" style="left:2700px;top:40px"><div class="kk">Estado vacío</div><h3>Todavía no guardó nada</h3><p>Sin propósitos ni Sin destino: solo el concepto y una acción. La botonera queda reducida a Guardar.</p></div>
+
+<div class="ph" style="left:2700px;top:180px;width:390px;height:560px" data-screen-label="Ahorro · estado vacío">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><div><div style="font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)">Ahorro e inversión</div><span class="ti">Ahorro</span></div><div class="rt"><span class="ic"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+  <div class="body">
+    <div class="card main">
+      <div class="in">
+        <div class="lbl">Guardado</div>
+        <div class="pair"><div><div class="v tnum" style="color:rgba(255,255,255,.42)"><span class="cur" style="color:rgba(255,255,255,.32)">$</span> 0</div></div><div class="sep"></div><div><div class="v tnum" style="color:rgba(255,255,255,.42)"><span class="cur" style="color:rgba(255,255,255,.32)">US$</span> 0</div></div></div>
+      </div>
+    </div>
+    <div class="card" style="padding:26px 22px 24px;text-align:center">
+      <span style="width:60px;height:60px;border-radius:20px;background:var(--emerald-soft);color:var(--emerald-deep);display:grid;place-items:center;margin:0 auto"><svg viewBox="0 0 24 24" style="width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M7 7V5.5A2.5 2.5 0 0 1 9.5 3h5A2.5 2.5 0 0 1 17 5.5V7"/><path d="M12 12v3"/></svg></span>
+      <h2 style="font-size:19px;font-weight:800;letter-spacing:-.035em;margin-top:16px">Todavía no guardaste nada</h2>
+      <p style="font-size:13.5px;font-weight:500;color:var(--muted);line-height:1.55;margin-top:11px;text-wrap:pretty"><b style="color:var(--ink);font-weight:800">Guardado</b> es plata apartada: sigue en tus cuentas, pero no cuenta como disponible para gastar. No se invierte ni se mueve de lugar.</p>
+      <button class="cta" style="margin-top:20px">Guardar por primera vez</button>
+      <p class="foot" style="margin-top:13px">Podés volver a usarla cuando quieras. Después le pones un propósito, o la dejás sin destino.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== 8 · 7 PROPÓSITOS ===== -->
+<div class="tag" style="left:3140px;top:40px"><div class="kk">Escala</div><h3>Con 7 propósitos</h3><p>Mismo orden: total, acciones, Sin destino y desglose. Los propósitos se ordenan por monto y la paleta de emblemas cicla sobre cinco tintes.</p></div>
+
+<div class="ph" style="left:3140px;top:180px;width:390px;height:1180px" data-screen-label="Ahorro · 7 propósitos">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><div><div style="font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)">Ahorro e inversión</div><span class="ti">Ahorro</span></div><div class="rt"><span class="ic"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+  <div class="body">
+    <div class="card main">
+      <div class="in">
+        <div class="lbl">Guardado</div>
+        <div class="pair"><div><div class="v tnum"><span class="cur">$</span> 1.150.000</div></div><div class="sep"></div><div><div class="v tnum"><span class="cur">US$</span> 900</div></div></div>
+        <p class="sup">Plata apartada: sigue en tus cuentas, pero no cuenta para gastar.</p>
+      </div>
+      <div class="abar">
+        <button><svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>Guardar</button>
+        <button><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Volver a usar</button>
+        <button><svg viewBox="0 0 24 24"><path d="M12 4v6M12 10L6 20M12 10l6 10"/></svg>Destinar</button>
+      </div>
+    </div>
+    <div class="nodest">
+      <div class="hd">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 8v8M9 12h6"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <div class="tx"><div class="n">Sin destino</div><div class="v tnum">$ 60.000</div></div>
+        <button class="b">Destinar</button>
+      </div>
+      <p class="c">Resto sin asignar, no es un propósito. Está guardado, pero todavía no dijiste para qué.</p>
+    </div>
+    <div class="rowh"><h2>Para qué guardaste</h2><a class="link" href="#">Nuevo<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></a></div>
+    <div class="plist">
+      <div class="pcard" style="border-color:#E1EBF0"><span class="ic" style="background:#E4EEF3;color:var(--slate-deep)"><svg viewBox="0 0 24 24"><path d="M2 19h20"/><path d="M3 16l6-8 4 5 2.5-3L21 16z"/><circle cx="17" cy="6" r="2"/></svg></span><div class="tx"><div class="n">Viaje a Bariloche</div><div class="s">Julio 2027</div></div><div class="am"><div class="a tnum">$ 380.000</div><div class="u tnum">US$ 300</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="border-color:#D8F0E4"><span class="ic" style="background:#DDF4EA;color:var(--emerald-deep)"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9z"/><path d="M12 12v6a2.5 2.5 0 0 0 5 0"/></svg></span><div class="tx"><div class="n">Fondo de emergencia</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 300.000</div><div class="u tnum">US$ 600</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="border-color:#E6E0F2"><span class="ic" style="background:#EBE5F6;color:var(--violet-deep)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20M9.5 16h5"/></svg></span><div class="tx"><div class="n">Notebook nueva</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 140.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="border-color:#D8F0E4"><span class="ic" style="background:#DDF4EA;color:var(--emerald-deep)"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9z"/><path d="M12 12v6a2.5 2.5 0 0 0 5 0"/></svg></span><div class="tx"><div class="n">Mudanza</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 100.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="border-color:#F2E1D8"><span class="ic" style="background:#F7E7DF;color:#8A4530"><svg viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/></svg></span><div class="tx"><div class="n">Alquiler de enero</div><div class="s">Enero 2027</div></div><div class="am"><div class="a tnum">$ 90.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="border-color:#E4E1D8"><span class="ic" style="background:#F1EFE9;color:#6B6053"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></span><div class="tx"><div class="n">Curso de inglés</div><div class="s">Marzo 2027</div></div><div class="am"><div class="a tnum">$ 60.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="border-color:#E1EBF0"><span class="ic" style="background:#E4EEF3;color:var(--slate-deep)"><svg viewBox="0 0 24 24"><path d="M2 19h20"/><path d="M3 16l6-8 4 5 2.5-3L21 16z"/><circle cx="17" cy="6" r="2"/></svg></span><div class="tx"><div class="n">Regalos</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 20.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+    </div>
+    <p class="foot" style="padding:0 4px">Los dólares se muestran aparte y nunca se suman a los pesos.</p>
+  </div>
+</div>
+</div>
+
+</body>
+</html>

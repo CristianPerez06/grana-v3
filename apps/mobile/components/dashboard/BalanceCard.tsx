@@ -3,14 +3,16 @@ import { useRouter } from 'expo-router'
 import {
   densestAmountDensity,
   derivePlacement,
-  deriveMonthOpening,
+  deriveBalanceCardView,
   deriveMonthSummary,
   type AmountDensity,
   type CurrencyPlacement,
+  type SavingsRow,
 } from '@grana/dashboard'
 import { useT } from '../../lib/locale-context'
 import { accountColors, colors } from '../../lib/colors'
 import { useDashboardHero, useMonthBalanceSeries } from '../../lib/dashboard/queries'
+import { useAvailableTotals } from '../../lib/savings/queries'
 import { useShowCents } from '../../lib/preferences-context'
 import { useDashboardMonth } from './DashboardMonthContext'
 import {
@@ -162,14 +164,65 @@ const Flow = ({
   </View>
 )
 
+/**
+ * The savings row — BELOW A RULE, never a fourth member of the strip.
+ *
+ * Above the rule the card shows how the money MOVED; below it, how much of it
+ * the user decided not to touch. On a phone the row is deliberately COMPACT —
+ * one line, label left, amount right — because the card is already tall and this
+ * is a readout with an action, not a fourth amount competing for attention.
+ *
+ * It shows the TOTAL set aside, which is what keeps "Venía" meaning the account
+ * balance the month opened with instead of silently absorbing earlier reserves.
+ */
+const SavingsLine = ({ row, onPress }: { row: SavingsRow; onPress: () => void }) => {
+  const t = useT()
+  const isEmpty = row.state === 'empty'
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      className="mt-2.5 flex-row items-center justify-between border-t border-border-soft pt-2.5"
+    >
+      <View className="flex-row items-center gap-2">
+        <View
+          className="h-[7px] w-[7px] rounded-full"
+          style={{ backgroundColor: isEmpty ? colors.border : colors.positive }}
+        />
+        <Text
+          className={`text-[13px] font-bold ${isEmpty ? 'text-text-soft' : 'text-text-muted'}`}
+        >
+          {t(`dashboard.savings.${row.state}`)}
+        </Text>
+      </View>
+      <View className="flex-row items-center gap-1.5">
+        {!isEmpty && (
+          <MaskedAmount
+            amount={row.amount}
+            currency="ARS"
+            signPrefix="−"
+            className="text-[15px] font-extrabold text-positive"
+          />
+        )}
+        <Text className="text-[14px] font-bold text-text-soft">›</Text>
+      </View>
+    </Pressable>
+  )
+}
+
 export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
   const t = useT()
   const showCents = useShowCents()
   const router = useRouter()
   const { selected, current, isCurrent } = useDashboardMonth()
 
-  const heroQuery = useDashboardHero(balanceCutISO(selected, current, todayISO))
+  const cutISO = balanceCutISO(selected, current, todayISO)
+  const heroQuery = useDashboardHero(cutISO)
   const monthQuery = useMonthBalanceSeries(selected.year, selected.month)
+  // Only for the current month: the reserve is netted exactly where the card says
+  // "disponible", and a past month's label already says something else.
+  const availableQuery = useAvailableTotals(cutISO, isCurrent)
 
   // ONE skeleton for the whole card while either read is pending: they share a
   // card, and filling one zone before the other makes it assemble in jumps. Only
@@ -185,17 +238,18 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
 
   const hero = heroQuery.data
   const placement = hero ? derivePlacement(hero.accounts) : null
-  const hasUsd = hero != null && (placement!.USD.rows.length > 0 || hero.usd !== 0)
-
   const summary = monthQuery.data ? deriveMonthSummary(monthQuery.data) : null
-  // Derived, not read: one less round-trip and the identity holds by construction.
-  const venia =
-    hero && summary
-      ? {
-          ARS: deriveMonthOpening(hero.ars, summary.ARS),
-          USD: deriveMonthOpening(hero.usd, summary.USD),
-        }
-      : null
+
+  // Same decision function as web: which number the dark zone shows, which state
+  // the savings row is in, and what "Venía" derives from.
+  const { displayed, savings, venia } = deriveBalanceCardView({
+    isCurrent,
+    accounts: hero ? { ARS: hero.ars, USD: hero.usd } : null,
+    available: isCurrent ? (availableQuery.data ?? null) : null,
+    summary,
+  })
+  const hasUsd = hero != null && (placement!.USD.rows.length > 0 || displayed.USD !== 0)
+
   const summaryHasUsd =
     (venia?.USD ?? 0) !== 0 ||
     (summary?.USD.entro ?? 0) !== 0 ||
@@ -226,7 +280,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
           {hero && (
             <>
               <MaskedAmountDisplay
-                amount={hero.ars}
+                amount={displayed.ARS}
                 currency="ARS"
                 className="text-center text-[34px] font-extrabold text-white"
                 decimalClassName="text-[15px] text-white/55"
@@ -237,7 +291,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
                     <Text className="text-[11px] font-extrabold text-positive">USD</Text>
                   </View>
                   <MaskedAmount
-                    amount={hero.usd}
+                    amount={displayed.USD}
                     currency="USD"
                     showCentsOverride
                     className="text-[15px] font-bold text-white/90"
@@ -319,7 +373,16 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             loading={isLoading}
           />
         </View>
+
+        {/* La fila EXPLICA el disponible —la identidad de la card cierra con
+            ella— y para operar LLEVA al módulo. La card explica; el módulo opera
+            (E3). Ya no monta el overlay: el estado vacío paga un tap de más y a
+            cambio la operatoria queda en un solo lugar. */}
+        {savings.ARS && (
+          <SavingsLine row={savings.ARS} onPress={() => router.push('/(app)/savings')} />
+        )}
       </View>
+
     </View>
   )
 }

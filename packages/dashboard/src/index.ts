@@ -1,4 +1,5 @@
 export {
+  getAvailableTotals,
   getCommittedOutlook,
   getDashboardHero,
   getMonthBalanceSeries,
@@ -10,6 +11,7 @@ export {
   resolveMonthRange,
   SUBCATEGORY_UNCATEGORIZED_ID,
   UNCATEGORIZED_ID,
+  type CurrencyTotals,
   type MonthCategoryBreakdown,
   type MonthSubcategoryBreakdown,
 } from './queries'
@@ -39,6 +41,15 @@ export {
 } from './spending'
 
 export { deriveMonthOpening } from './month-opening'
+
+export { deriveBalanceCardView, type BalanceCardView } from './balance-card-view'
+
+export {
+  deriveSavingsRow,
+  savingsIdentityTerm,
+  type SavingsRow,
+  type SavingsRowState,
+} from './savings-row'
 
 export {
   aggregateMonthSpending,

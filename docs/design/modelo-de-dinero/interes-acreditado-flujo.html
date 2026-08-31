@@ -1,0 +1,931 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interés acreditado · flujo definitivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --navy:#0B1A2B; --page:#F6F7F9; --card:#FFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+  --text:#0B1A2B; --muted:#6B7683; --soft:#8A94A3; --neutral:#7A8494;
+  --emerald:#10B981; --emerald-deep:#059669; --emerald-bg:#ECFDF5;
+  --terracotta:#B56A5A; --terracotta-bg:#FBEDEA; --slate:#3A6B8A; --plum:#8A6E98; --warning:#C49A3C;
+  --warm-bg:#F8EFDA; --warm-bd:#DFCCA4; --warm-tx:#6B4E14; --warm-dp:#8A5A16;
+  --tile:#F1F3F6;
+  --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(11,26,43,.05),0 6px 18px rgba(11,26,43,.05);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+.doc{max-width:1320px;margin:0 auto;padding:0 28px 110px}
+.masthead{background:var(--navy);color:#fff;padding:52px 28px 44px;margin-bottom:40px}
+.masthead .in{max-width:1320px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.62);margin:0 0 12px;font-weight:600}
+.masthead h1{margin:0 0 12px;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.masthead p{margin:0;max-width:72ch;color:rgba(255,255,255,.68);font-size:16px}
+.masthead .warn{margin-top:22px;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:14px;color:rgba(255,255,255,.8);max-width:86ch}
+.masthead .warn b{color:#fff;font-weight:700}
+.masthead .warn ul{margin:9px 0 0;padding-left:18px}
+.masthead .warn li{margin-top:4px}
+.masthead .warn.ok{background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.35)}
+
+h2.sec{margin:52px 0 4px;font-size:23px;font-weight:800;letter-spacing:-.02em}
+p.lead{margin:0 0 24px;font-size:15px;color:var(--muted);max-width:82ch}
+p.lead b{color:var(--text);font-weight:600}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:40px 34px;align-items:start}
+.step{display:flex;flex-direction:column;gap:12px}
+.step-head{display:flex;align-items:flex-start;gap:11px}
+.step-num{flex:0 0 auto;width:29px;height:29px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800}
+.step-head h3{margin:0;font-size:16.5px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.step-head .sub{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.tag{display:inline-block;margin-top:6px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+.t-new{background:var(--emerald-bg);color:var(--emerald-deep)}
+.t-mod{background:#EAF1F6;color:var(--slate)}
+.t-warn{background:#FBF3E2;color:var(--warm-dp)}
+.t-no{background:var(--terracotta-bg);color:var(--terracotta)}
+.t-fut{background:#F1EEF6;color:var(--plum)}
+
+.note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--border);padding-left:13px}
+.note b{color:var(--text);font-weight:600}
+.note.ok{border-left-color:var(--emerald)}
+.note.warn{border-left-color:var(--warm-bd)}
+.note.no{border-left-color:var(--terracotta)}
+
+.phone{width:100%;max-width:392px;border:1px solid var(--border);border-radius:22px;background:var(--page);overflow:hidden;box-shadow:var(--shadow)}
+.scr{padding:15px;display:flex;flex-direction:column;gap:11px}
+.hdr{background:var(--navy);color:#fff;padding:13px 16px 15px}
+.hdr .bk{font-size:12px;color:rgba(255,255,255,.6)}
+.hdr h4{margin:5px 0 0;font-size:18px;font-weight:800;letter-spacing:-.02em}
+
+.tot{border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+.tot .dark{background:var(--navy);color:#fff;padding:15px 16px 13px}
+.tot .lbl{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.tot .pair{display:grid;grid-template-columns:1fr 1px 1fr;margin-top:11px}
+.tot .pair .divi{background:rgba(255,255,255,.15)}
+.tot .pair .h{text-align:center;padding:0 8px;font-size:22px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tot .pair .h s{text-decoration:none;font-size:.78em;font-weight:700;color:rgba(255,255,255,.5)}
+.tot .pair .h.zero{color:rgba(255,255,255,.42)}
+.tot .sup{margin:11px 0 0;font-size:11.5px;font-weight:600;color:rgba(255,255,255,.6);line-height:1.45}
+.tot .bar{display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff}
+.tot .bar div{padding:11px 4px;text-align:center;font-size:11.5px;font-weight:800;color:var(--text)}
+.tot .bar div + div{border-left:1px solid var(--border-soft)}
+
+.blk{display:flex;flex-direction:column;gap:9px}
+.blk .bh{display:flex;align-items:center;justify-content:space-between;padding:0 3px}
+.blk .bh h5{margin:0;font-size:14px;font-weight:800;letter-spacing:-.02em}
+.blk .bh .add{font-size:12px;font-weight:800;color:var(--emerald-deep)}
+
+.row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border-soft);border-radius:15px;padding:12px 13px}
+.row .ic{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;background:var(--tile)}
+.row .ic.g{background:#EAF1F6}.row .ic.p{background:#F1EEF6}.row .ic.e{background:var(--emerald-bg)}
+.row .nm{flex:1;min-width:0;font-size:14px;font-weight:800;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .nm em{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--soft);letter-spacing:0;margin-top:2px}
+.row .am{flex:0 0 auto;text-align:right}
+.row .am b{display:block;font-size:15.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.row .am s{display:block;text-decoration:none;font-size:11px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.row .chev{color:#C4CBD4;font-size:15px;flex:0 0 auto}
+
+.hint{display:flex;align-items:center;gap:7px;padding:2px 4px;font-size:11.5px;color:var(--soft);font-weight:600}
+.hint i{font-style:normal;font-size:11px}
+
+.ghostblk{border:1px dashed var(--border);border-radius:15px;padding:16px 14px;text-align:center;font-size:12.5px;color:#B6BFCA;font-weight:600;background:repeating-linear-gradient(135deg,#FAFBFC,#FAFBFC 8px,#F4F6F8 8px,#F4F6F8 16px)}
+.quiet{padding:3px 4px;font-size:12.5px;color:var(--muted);font-weight:600}
+.quiet a{color:var(--emerald-deep);text-decoration:none;font-weight:800}
+
+.c{background:#fff;border:1px solid var(--border-soft);border-radius:15px}
+.c.pad{padding:13px 14px}
+.dh{display:flex;align-items:flex-start;justify-content:space-between;padding:3px 2px 0}
+.dh .k{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.dh h6{margin:2px 0 0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+.dh .x{width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:14px}
+
+.fld{padding:11px 14px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:11px}
+.fld:first-child{border-top:0}
+.fld .k{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.fld .v{font-size:14.5px;font-weight:600;margin-top:1px}
+.fld .v.ph{color:#B6BFCA;font-weight:500}
+.fld .gr{flex:1;min-width:0}
+.fld .sq{flex:0 0 auto;width:32px;height:32px;border-radius:9px;background:var(--tile);display:grid;place-items:center;font-size:14px}
+.fld .sq.acc{background:var(--slate);color:#fff;font-size:11px;font-weight:800}
+.fld .chev{color:#C4CBD4;font-size:15px}
+
+.amt{padding:14px 15px 15px;position:relative}
+.amt .lbl{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.amt .cur{position:absolute;right:13px;top:12px;border:1px solid var(--border);border-radius:9px;padding:4px 9px;font-size:11.5px;font-weight:700}
+.amt .val{display:flex;align-items:baseline;gap:6px;margin-top:8px;justify-content:center}
+.amt .val .s{font-size:21px;font-weight:600;color:var(--soft)}
+.amt .val .n{font-size:34px;font-weight:700;letter-spacing:-.025em;line-height:1;font-variant-numeric:tabular-nums}
+
+.calc{padding:12px 14px}
+.calc div{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;padding:4px 0}
+.calc div span:first-child{color:var(--muted)}
+.calc div span:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.calc .rule{border-top:1px solid var(--border-soft);margin-top:5px;padding-top:8px}
+.calc .rule span:last-child{font-size:15.5px;font-weight:800}
+.calc .pos span:last-child{color:var(--emerald-deep)}
+.calc .neg span:last-child{color:var(--terracotta)}
+.calc .em span:first-child{color:var(--text);font-weight:700}
+
+.cta{background:var(--emerald);color:#fff;border-radius:12px;padding:14px;text-align:center;font-size:15px;font-weight:800}
+.cta.ghost{background:#fff;color:var(--muted);border:1px solid var(--border);font-weight:700}
+.acts{display:flex;gap:8px}
+.acts .cta{flex:1;padding:12px;font-size:13.5px;border-radius:11px}
+
+.ask{background:#fff;border:1px solid var(--border-soft);border-radius:15px;padding:13px 14px}
+.ask h6{margin:0 0 4px;font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.35}
+.ask p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45}
+.ask .opts{display:flex;gap:8px;margin-top:11px}
+.ask .opts div{flex:1;border:1px solid var(--border);border-radius:11px;padding:9px;text-align:center;font-size:13px;font-weight:700}
+.ask .opts div.on{border-color:var(--emerald);background:var(--emerald-bg);color:var(--emerald-deep)}
+.out{margin-top:11px;padding:11px 12px;border-radius:11px;font-size:12.5px;line-height:1.45}
+.out.si{background:#FBF3E2;color:var(--warm-tx);border:1px solid var(--warm-bd)}
+.out.no{background:var(--emerald-bg);color:#065F46;border:1px solid #A7F3D0}
+
+.month{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:14px 15px}
+.month .k{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);margin-bottom:9px}
+.month .l{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13.5px}
+.month .l span:first-child{color:var(--muted)}
+.month .l span:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.month .l.fin{border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);margin:5px 0;padding:7px 0}
+.month .l.fin span:first-child{color:var(--slate);font-weight:700}
+.month .l.fin span:last-child{color:var(--slate)}
+.month .l.tot{border-top:1px solid var(--border-soft);margin-top:6px;padding-top:9px}
+.month .l.tot span:last-child{font-size:15.5px;font-weight:800}
+.month .l.off span{color:#B6BFCA !important;font-weight:600}
+
+.mv{background:#fff;border:1px solid var(--border-soft);border-radius:15px;overflow:hidden}
+.mv .it{display:flex;align-items:center;gap:11px;padding:11px 13px;border-top:1px solid var(--border-soft)}
+.mv .it:first-child{border-top:0}
+.mv .av{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#EAF1F6;display:grid;place-items:center;font-size:14px}
+.mv .tx{flex:1;min-width:0;font-size:13.5px;font-weight:700}
+.mv .tx em{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--soft);margin-top:1px}
+.mv .n{font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.mv .n.pos{color:var(--emerald-deep)}
+.mv .n.neu{color:var(--slate)}
+
+ol.chk{counter-reset:c;list-style:none;padding:0;margin:16px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+ol.chk li{counter-increment:c;background:#fff;border:1px solid var(--border-soft);border-radius:14px;padding:13px 15px 13px 48px;position:relative;font-size:13.5px;line-height:1.5;box-shadow:var(--shadow)}
+ol.chk li::before{content:counter(c);position:absolute;left:14px;top:13px;width:22px;height:22px;border-radius:7px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800}
+ol.chk li b{font-weight:700}
+ol.chk li em{display:block;font-style:normal;margin-top:5px;color:var(--muted);font-size:12.5px}
+</style>
+<style>
+/* hero de cuenta, tomado de account-detail-header.tsx */
+.acc{background:var(--navy);color:#fff;border-radius:20px;padding:16px 17px;display:flex;flex-direction:column;gap:20px;min-height:150px;justify-content:space-between}
+.acc .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.acc .idt{display:flex;align-items:center;gap:10px;min-width:0}
+.acc .ava{flex:0 0 auto;width:42px;height:42px;border-radius:13px;background:var(--slate);display:grid;place-items:center;font-size:13px;font-weight:800}
+.acc h4{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+.acc .subt{margin:3px 0 0;font-size:12px;color:rgba(255,255,255,.55)}
+.acc .pen{flex:0 0 auto;width:32px;height:32px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);display:grid;place-items:center;font-size:13px}
+.acc .bl{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.acc .bn{margin-top:6px;font-size:31px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.door{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--border-soft);border-radius:14px;padding:11px 13px;font-size:13px;font-weight:700}
+.door .dt{flex:1;min-width:0}
+.door .dt em{display:block;font-style:normal;font-size:11.5px;font-weight:600;color:var(--soft);margin-top:2px}
+.door .sq{flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--tile);display:grid;place-items:center;font-size:14px}
+.door .chev{color:#C4CBD4;font-size:15px}
+.door.q{background:transparent;border:0;padding:6px 4px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.door.q b{color:var(--emerald-deep);font-weight:800}
+/* comparación de copy */
+.copyset{display:grid;gap:9px}
+.copyopt{border:1px solid var(--border-soft);border-radius:13px;background:#fff;padding:11px 13px}
+.copyopt .lb{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);margin-bottom:5px}
+.copyopt .tx{font-size:13.5px;font-weight:700}
+.copyopt .vd{margin-top:6px;font-size:12px;color:var(--muted);line-height:1.45}
+.copyopt.win{border-color:var(--emerald);background:var(--emerald-bg)}
+/* diferencia */
+.diff{border-radius:15px;padding:13px 14px;text-align:center}
+.diff .lb{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.diff .n{margin-top:5px;font-size:29px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.diff.pos{background:var(--emerald-bg);border:1px solid #A7F3D0}.diff.pos .n{color:var(--emerald-deep)}
+.diff.neg{background:var(--terracotta-bg);border:1px solid #E8C9C1}.diff.neg .n{color:var(--terracotta)}
+.diff.zero{background:var(--tile);border:1px solid var(--border-soft)}.diff.zero .n{color:var(--muted);font-size:22px}
+.diff .sb{margin-top:6px;font-size:12px;color:var(--muted);font-weight:600}
+/* opciones de causa */
+.cause{display:flex;flex-direction:column;gap:8px}
+.cz{display:flex;align-items:flex-start;gap:11px;border:1px solid var(--border);border-radius:13px;background:#fff;padding:11px 13px}
+.cz .rd{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:2px solid var(--border);margin-top:1px}
+.cz.on{border-color:var(--emerald);background:var(--emerald-bg)}
+.cz.on .rd{border-color:var(--emerald-deep);background:var(--emerald-deep);box-shadow:inset 0 0 0 3px var(--emerald-bg)}
+.cz .cg{flex:1;min-width:0}
+.cz .ct{font-size:13.5px;font-weight:800}
+.cz .cd{margin-top:2px;font-size:12px;color:var(--muted);line-height:1.45}
+.cz .sug{display:inline-block;margin-left:7px;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--emerald-deep);background:#fff;border:1px solid #A7F3D0;border-radius:999px;padding:2px 7px;vertical-align:2px}
+/* month fin agrupado */
+.month .l.fin.g1{border-bottom:0;margin-bottom:0;padding-bottom:3px}
+.month .l.fin.g2{border-top:0;margin-top:0;padding-top:3px}
+/* comparación AB */
+.ab{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start}
+@media (max-width:900px){.ab{grid-template-columns:1fr}}
+.abh{display:flex;align-items:center;gap:9px;padding:0 2px;margin-bottom:9px}
+.abh .bg{flex:0 0 auto;width:23px;height:23px;border-radius:7px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;background:var(--slate)}
+.abh.b .bg{background:var(--plum)}
+.abh h4{margin:0;font-size:14.5px;font-weight:800;letter-spacing:-.02em}
+/* antes / después de copy */
+.ba{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.ba{grid-template-columns:1fr}}
+.bx{border:1px solid var(--border-soft);border-radius:14px;background:#fff;padding:13px 15px}
+.bx .k{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}
+.bx.bad .k{color:var(--terracotta)}.bx.good .k{color:var(--emerald-deep)}
+.bx p{margin:0;font-size:13.5px;line-height:1.5}
+.bx .why{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.45}
+</style>
+<style>
+.will{background:var(--tile);border:1px solid var(--border-soft);border-radius:13px;padding:12px 13px}
+.will .k{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);margin-bottom:7px}
+.will .li{display:flex;gap:9px;font-size:12.5px;line-height:1.45;color:var(--muted);padding:3px 0}
+.will .li b{color:var(--text);font-weight:700}
+.will .li i{flex:0 0 auto;font-style:normal;color:var(--emerald-deep);font-weight:800}
+.will .li.no i{color:var(--soft)}
+.big{text-align:center;padding:15px 14px 13px}
+.big .lb{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.big .n{margin-top:6px;font-size:33px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1;color:var(--emerald-deep)}
+.big .sb{margin-top:5px;font-size:12.5px;color:var(--muted);font-weight:600}
+.state{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--border-soft);border-radius:15px;padding:12px 13px}
+.state .ic{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;background:var(--slate)}
+.state .nm{flex:1;min-width:0;font-size:14px;font-weight:800;letter-spacing:-.015em}
+.state .nm em{display:block;font-style:normal;font-size:11px;font-weight:600;letter-spacing:0;margin-top:2px;color:var(--soft)}
+.state .nm em.warm{color:var(--warm-dp)}
+.state .am{flex:0 0 auto;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.thr{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff;border:1px solid var(--border-soft);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);margin-top:16px}
+.thr th,.thr td{padding:10px 14px;border-top:1px solid var(--border-soft);text-align:left;vertical-align:top}
+.thr thead th{border-top:0;background:#FAFBFC;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);font-weight:800}
+.thr td:first-child{font-weight:700;width:30%}
+.dec{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff;border:1px solid var(--border-soft);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);margin-top:16px}
+.dec th,.dec td{padding:10px 14px;border-top:1px solid var(--border-soft);text-align:left;vertical-align:top}
+.dec thead th{border-top:0;background:#FAFBFC;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);font-weight:800}
+.dec td:first-child{width:44px;font-weight:800;color:var(--emerald-deep)}
+.dec td:nth-child(2){font-weight:700;width:34%}
+</style>
+</head>
+<body>
+<div class="masthead"><div class="in">
+  <p class="eyebrow">Flujo definitivo · interés acreditado en cuentas</p>
+  <h1>Tu cuenta rindió y Grana no se enteró</h1>
+  <p>El caso más cotidiano del país: una billetera que sigue contando entera para gastar, pero acredita
+     intereses sola. Diez pantallas, un solo camino, sin comparativas — las decisiones ya están tomadas.</p>
+  <div class="warn ok">
+    <b>Lo que ya está decidido y este flujo aplica</b>
+    <ul>
+      <li><b>Vive en Cuentas.</b> No es inversión, no es FCI, no es Guardado, no requiere rescate.</li>
+      <li><b>La cuenta sigue entera en «Para gastar»</b>, porque se puede usar directo.</li>
+      <li><b>La puerta nace de la diferencia de saldo</b>, nunca de «invertir».</li>
+      <li><b>El rótulo canónico es «Interés acreditado».</b> «Rindió» solo como copy de apoyo.</li>
+      <li><b>Card del mes, versión A:</b> el interés <b>entra en «Entró»</b>. Inicio no explica subtipos — la distinción vive en el desglose, en Movimientos y en la conciliación.</li>
+    </ul>
+  </div>
+  <div class="warn">
+    <b>Qué NO es esto.</b> No es código, no propone schema ni tablas, no hay SQL ni migraciones, y no
+    toca <b>extract-savings-module</b>, congelado hasta el QA visual nativo. Reemplaza a
+    <b>conciliacion-saldo-rendimiento.html</b> como flujo; aquel se conserva por el razonamiento —es
+    donde se descubrió la colisión que cambió el naming de instrumentos.
+  </div>
+</div></div>
+
+<div class="doc">
+
+<h2 class="sec">A · La puerta</h2>
+<p class="lead">Misma fila en todas las cuentas. Lo que cambia es <b>cuánto pesa</b>, y eso lo decide el
+historial de esa cuenta — no el producto.</p>
+
+<div class="grid">
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">1</div><div>
+      <h3>Cuenta normal</h3>
+      <p class="sub">Una cuenta sueldo, sin historial de diferencias.</p>
+      <span class="tag t-mod">Base</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="acc">
+        <div class="top">
+          <div class="idt"><span class="ava" style="background:#2A5C8A">BB</span><div><h4>BBVA sueldo</h4><p class="subt">BBVA · Cuenta bancaria</p></div></div>
+          <span class="pen">✎</span>
+        </div>
+        <div><div class="bl">Saldo</div><div class="bn">$ 340.000</div></div>
+      </div>
+      <div class="door q">¿Tu cuenta muestra otro saldo? <b>Revisar</b></div>
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);padding:2px 4px">Movimientos</div>
+      <div class="mv">
+        <div class="it"><span class="av">💼</span><span class="tx">Sueldo<em>Ingreso</em></span><span class="n pos">+$ 2.000.000</span></div>
+        <div class="it"><span class="av" style="background:#EAF1F6">⇄</span><span class="tx">Transferencia<em>BBVA → Mercado Pago</em></span><span class="n neu">−$ 1.800.000</span></div>
+      </div>
+    </div></div>
+    <div class="note ok"><b>Acá la puerta es una línea de texto</b>, sin card ni ícono ni chevron
+      grande. Esta cuenta no rinde, sus diferencias son raras, y cobrarle una fila entera a algo que
+      casi nunca pasa es cobrarle a todos por el caso de pocos.</div>
+    <div class="note"><b>Pero existe igual.</b> Cualquier cuenta puede desincronizarse —una comisión, un
+      débito olvidado— y no hay ningún otro lugar donde decirlo.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">2</div><div>
+      <h3>Cuenta que ya tuvo intereses</h3>
+      <p class="sub">Misma puerta, más presente. Y con la fecha de la última coincidencia.</p>
+      <span class="tag t-new">Puerta</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="acc">
+        <div class="top">
+          <div class="idt"><span class="ava">MP</span><div><h4>Mercado Pago</h4><p class="subt">Mercado Pago · Cuenta bancaria</p></div></div>
+          <span class="pen">✎</span>
+        </div>
+        <div><div class="bl">Saldo</div><div class="bn">$ 1.200.000</div></div>
+      </div>
+      <div class="door"><span class="sq">❓</span><div class="dt">¿Tu cuenta muestra otro saldo?<em>Coincidían el 2 de julio · hace 2 meses</em></div><span class="chev">›</span></div>
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);padding:2px 4px">Movimientos</div>
+      <div class="mv">
+        <div class="it"><span class="av">🍽</span><span class="tx">Almuerzo<em>Comida</em></span><span class="n">−$ 18.400</span></div>
+        <div class="it"><span class="av" style="background:#EAF1F6">↑</span><span class="tx">Interés acreditado<em>1 al 30 de junio</em></span><span class="n neu">+$ 21.300</span></div>
+      </div>
+    </div></div>
+    <div class="note ok"><b>Grana no dice que esta cuenta rinde</b> —no lo sabe y no lo va a deducir del
+      producto—. Dice que <b>acá ya aparecieron intereses antes</b>, que es un hecho del historial. Es el
+      mismo principio de comportamiento que ordena toda la capa de instrumentos.</div>
+    <div class="note ok"><b>Y «hace 2 meses» hace el trabajo del recordatorio sin ser uno.</b> Ninguna
+      notificación, ningún badge en el tab, ningún punto rojo. La escalada vive <b>adentro de la
+      pantalla</b> a la que el usuario ya entró.</div>
+    <div class="note warn"><b>A validar:</b> ¿la fila se ve? Es el riesgo principal de todo el diseño —
+      una puerta tan discreta que nadie encuentra equivale a no tenerla.</div>
+  </div>
+
+</div>
+
+<h2 class="sec">B · Cargar el saldo</h2>
+<p class="lead">Un solo campo. El número está en la otra app, delante del usuario: lo único que hay que
+pedirle es que lo copie.</p>
+
+<div class="grid">
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">3</div><div>
+      <h3>El sheet</h3>
+      <p class="sub">Grana pone su número primero. La resta es en vivo.</p>
+      <span class="tag t-new">Carga</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Mercado Pago</div><h6>¿Cuánto tenés?</h6></div><div class="x">✕</div></div>
+      <div class="c calc">
+        <div><span>Grana calcula</span><span>$ 1.200.000,00</span></div>
+      </div>
+      <div class="c amt">
+        <div class="lbl">Tu cuenta muestra</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">1.225.000</span></div>
+      </div>
+      <div class="diff pos">
+        <div class="lb">Diferencia</div>
+        <div class="n">+$ 25.000,00</div>
+        <div class="sb">Tenés $25.000 más de lo que Grana tenía anotado</div>
+      </div>
+      <div class="cta">Continuar</div>
+    </div></div>
+    <div class="note ok"><b>«Grana calcula» arriba del campo</b> convierte la pantalla en una comparación
+      en vez de un formulario, y explica sola para qué sirve el input.</div>
+    <div class="note ok"><b>La diferencia se dice dos veces:</b> con el número y con la frase. El signo
+      solo es ambiguo —<i>¿+$25.000 a favor de quién?</i>— y la frase lo cierra sin hacer pensar.</div>
+    <div class="note"><b>Antes de tipear, el bloque de diferencia no está.</b> Aparece con el primer
+      dígito. Y hasta acá <b>no se registró nada</b>: quien se equivocó cierra y no dejó rastro.</div>
+    <div class="note"><b>Bimoneda:</b> una cuenta con ARS y USD activos muestra el selector de moneda y
+      concilia <b>una moneda por vez</b>. Nunca una diferencia sola para las dos.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">4</div><div>
+      <h3>De dónde salió</h3>
+      <p class="sub">Sugerida por el signo y por el historial. Nunca impuesta.</p>
+      <span class="tag t-new">Causa +</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Diferencia · +$ 25.000</div><h6>¿De dónde salen?</h6></div><div class="x">←</div></div>
+      <div class="cause">
+        <div class="cz on"><span class="rd"></span><div class="cg">
+          <div class="ct">Interés acreditado<span class="sug">Sugerido</span></div>
+          <div class="cd">La cuenta te acreditó esa plata sola. No la ganaste ni te la transfirieron.</div>
+        </div></div>
+        <div class="cz"><span class="rd"></span><div class="cg">
+          <div class="ct">Movimiento que falta</div>
+          <div class="cd">Entró plata que no cargaste. Te ayudamos a cargarla.</div>
+        </div></div>
+        <div class="cz"><span class="rd"></span><div class="cg">
+          <div class="ct">Ajuste · no sé</div>
+          <div class="cd">Se corrige el saldo y listo. Podés averiguarlo después.</div>
+        </div></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        Lo marcamos así porque <b style="color:var(--text)">subió</b> el saldo y
+        <b style="color:var(--text)">acá ya aparecieron intereses antes</b>. Cambialo si no fue eso.
+      </div>
+      <div class="cta">Continuar</div>
+    </div></div>
+    <div class="note ok"><b>El chip dice «Sugerido», no «Recomendado».</b> Sugerido describe de dónde
+      salió la marca; recomendado sería Grana opinando sobre la plata del usuario.</div>
+    <div class="note ok"><b>Y la razón está escrita, en una línea.</b> Una preselección sin motivo es una
+      imposición disfrazada. Acá el motivo son dos hechos verificables —el signo y el historial—, ninguno
+      de los dos una suposición sobre el producto.</div>
+    <div class="note"><b>En una cuenta sin historial de intereses</b>, la sugerida pasa a ser
+      «Movimiento que falta»: sin antecedente, un positivo es más probablemente un ingreso sin registrar
+      que un interés.</div>
+  </div>
+
+</div>
+<h2 class="sec">C · Confirmar, y saber qué va a pasar</h2>
+<p class="lead">La pantalla que arregla el problema del Ajuste actual: en vez de prometer que «no crea un
+ingreso ni un gasto», dice <b>exactamente</b> dónde va a aparecer.</p>
+
+<div class="grid">
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">5</div><div>
+      <h3>Confirmación de interés acreditado</h3>
+      <p class="sub">El período sale de la última coincidencia. Nadie lo tipea.</p>
+      <span class="tag t-new">Confirmar</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Mercado Pago</div><h6>Interés acreditado</h6></div><div class="x">←</div></div>
+      <div class="c big">
+        <div class="lb">Se acreditaron</div>
+        <div class="n">+$ 25.000,00</div>
+        <div class="sb">Tu saldo pasa a $1.225.000</div>
+      </div>
+      <div class="c">
+        <div class="fld"><span class="sq">📅</span><div class="gr"><div class="k">Período</div><div class="v">2 de julio al 31 de agosto</div></div><span class="chev">›</span></div>
+        <div class="fld"><span class="sq">🗓</span><div class="gr"><div class="k">Se registra el</div><div class="v">Hoy · 31 de agosto</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="will">
+        <div class="k">Qué va a pasar</div>
+        <div class="li"><i>✓</i><div>El saldo de <b>Mercado Pago</b> pasa a <b>$1.225.000</b></div></div>
+        <div class="li"><i>✓</i><div>Aparece en <b>Movimientos</b>, con su período</div></div>
+        <div class="li"><i>✓</i><div>Suma a <b>«Para gastar»</b>: es plata que podés usar hoy</div></div>
+        <div class="li no"><i>✕</i><div><b>No</b> entra en «Entró» — no es un ingreso tuyo</div></div>
+        <div class="li no"><i>✕</i><div><b>No</b> entra en «En qué se fue» ni en tus categorías</div></div>
+      </div>
+      <div class="cta">Confirmar</div>
+    </div></div>
+    <div class="note ok"><b>El período viene calculado</b>, desde la última vez que los saldos
+      coincidieron hasta hoy. Es lo que convierte un número suelto en un hecho fechado — y la razón
+      concreta por la que conviene guardar esa fecha, más allá del recordatorio.</div>
+    <div class="note ok"><b>«Qué va a pasar» dice las cinco cosas, tres sí y dos no.</b> Es la corrección
+      del copy del Ajuste, que hoy promete «no crea un ingreso ni un gasto» y termina cayendo en «Entró».
+      Acá no hay nada que descubrir después.</div>
+    <div class="note"><b>Sin campo de motivo.</b> El usuario ya declaró qué fue en la pantalla anterior;
+      pedirle además que lo escriba es pedirle lo mismo dos veces. El Ajuste sin causa <b>sí</b> lo pide,
+      porque ahí «no sé» es literal y el texto es lo único que queda.</div>
+    <div class="note warn"><b>A validar:</b> ¿el bloque «Qué va a pasar» tranquiliza o abruma? Cinco
+      líneas es mucho para una confirmación, y es la primera vez que alguien las lee.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">6</div><div>
+      <h3>En Movimientos</h3>
+      <p class="sub">Aparece, y fuera de la analítica de gastos.</p>
+      <span class="tag t-mod">Lista</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);padding:2px 4px">31 de agosto</div>
+      <div class="mv">
+        <div class="it"><span class="av" style="background:#EAF1F6">↑</span><span class="tx">Interés acreditado<em>Mercado Pago · 2 de jul al 31 de ago</em></span><span class="n neu">+$ 25.000</span></div>
+        <div class="it"><span class="av">🍽</span><span class="tx">Almuerzo<em>Comida · Mercado Pago</em></span><span class="n">−$ 18.400</span></div>
+        <div class="it"><span class="av" style="background:#EAF1F6">⇄</span><span class="tx">Transferencia<em>BBVA → Mercado Pago</em></span><span class="n neu">$ 1.800.000</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">Fuera de:</b> «En qué se fue», la tira de ritmo, el promedio del mes
+        y la comparación contra el mes pasado. Se comporta como transferencia y cambio de moneda, que ya
+        existen. <b style="color:var(--text)">No es una excepción nueva.</b>
+      </div>
+    </div></div>
+    <div class="note ok"><b>Dice el período, no la fecha.</b> Un interés acumulado no pasó ese día: pasó
+      durante ese tiempo. Decirlo lo distingue de un ingreso puntual <b>sin explicar nada</b>.</div>
+    <div class="note"><b>Avatar gris azulado y monto en gris de neutro</b>, no en verde. Es un hecho
+      sobre la plata del usuario, no un logro — y el verde de «entró plata buena» es del sueldo.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">7</div><div>
+      <h3>En la card del mes</h3>
+      <p class="sub">Adentro de «Entró». Inicio no gana ninguna línea.</p>
+      <span class="tag t-new">Versión A</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="month">
+        <div class="k">Resumen del mes · agosto</div>
+        <div class="l"><span>Tenías</span><span>$ 1.200.000,00</span></div>
+        <div class="l"><span>Entró</span><span>+$ 2.025.000,00</span></div>
+        <div class="l"><span>Se fué</span><span>−$ 805.433,66</span></div>
+        <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
+        <div class="l tot"><span>Para gastar</span><span>$ 2.219.566,34</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        Los $25.000 están adentro de los $2.025.000.
+        <b style="color:var(--text)">Inicio no gana ninguna línea</b>, y no la va a ganar tampoco con la
+        próxima excepción financiera — que es exactamente el motivo.
+      </div>
+    </div></div>
+    <div class="note ok"><b>La card se queda en cuatro líneas, para siempre.</b> Ese es el punto: si se
+      abre una línea para intereses, después hay que abrirla para cada excepción financiera, y la card de
+      Inicio se convierte en una tabla de conciliación. <b>Inicio no tiene que explicar subtipos.</b></div>
+    <div class="note ok"><b>Y es coherente con lo que «Entró» ya significa:</b> liquidez, no sueldo.
+      Ya tiene adentro reembolsos y ajustes positivos, por diseño. Entró plata líquida a una cuenta
+      usable — entonces entra en «Entró», como todo lo demás que hace eso.</div>
+    <div class="note"><b>Sigue cerrando a ojo:</b> 1.200.000 + 2.025.000 − 805.433,66 − 200.000 =
+      <b>2.219.566,34</b>. El mismo número que con la línea aparte: lo que cambia es dónde se lee, no
+      cuánto da.</div>
+    <div class="note warn"><b>Lo que esto le exige al desglose:</b> «Entró» pasa a ser un número que
+      mezcla cosas distintas, así que <b>tiene que haber dónde abrirlo</b>. Es la pantalla 7b, y deja de
+      ser opcional.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">7b</div><div>
+      <h3>El desglose de «Entró»</h3>
+      <p class="sub">Donde sí se explica. Y el vocabulario ya existe: son los <b>tipos de movimiento</b>
+        que Grana ya usa.</p>
+      <span class="tag t-new">Nuevo</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Agosto</div><h6>Qué entró</h6></div><div class="x">✕</div></div>
+      <div class="c">
+        <div class="fld"><span class="sq">💼</span><div class="gr"><div class="v" style="font-weight:800">Ingresos</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">Sueldo · 1 movimiento</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 2.000.000</span></div>
+        <div class="fld"><span class="sq">↑</span><div class="gr"><div class="v" style="font-weight:800">Interés acreditado</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">Mercado Pago · 1 movimiento</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 25.000</span></div>
+        <div class="fld"><span class="sq">↩</span><div class="gr"><div class="v" style="font-weight:800">Reintegros</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">2 movimientos</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 34.200</span></div>
+        <div class="fld"><span class="sq">⚖</span><div class="gr"><div class="v" style="font-weight:800">Ajustes</div><div style="font-size:11.5px;color:var(--soft);font-weight:600;margin-top:2px">Efectivo · 1 movimiento</div></div><span style="font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums">+$ 5.000</span></div>
+      </div>
+      <div class="c calc">
+        <div class="rule em"><span>Entró</span><span>$ 2.064.200,00</span></div>
+      </div>
+      <div class="cta ghost">Ver los movimientos</div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">Solo aparecen las filas con monto.</b> Un mes con sueldo y nada más
+        muestra una sola — y la pantalla sigue valiendo la pena porque contesta «¿y esto qué es?» cuando
+        aparece la segunda.
+      </div>
+    </div></div>
+    <div class="note ok"><b>Esta pantalla es la contrapartida de la decisión.</b> Si «Entró» agrupa, tiene
+      que haber dónde desagrupar — y no es una función nueva que traen los intereses, sino la que ya
+      faltaba: <b>hoy «Entró» mezcla ingresos, reintegros y ajustes sin que nadie pueda abrirlo</b>.</div>
+    <div class="note ok"><b>Y el vocabulario ya está escrito.</b> «Ingresos», «Reintegros», «Ajustes»,
+      «Transferencias», «Cambios de moneda» son los <b>tipos de movimiento que la app ya nombra</b> en
+      Movimientos. <b>Lo único nuevo de esta capa es «Interés acreditado»</b> — el desglose no inventa un
+      idioma, usa el que hay.</div>
+    <div class="note"><b>Qué puede aparecer acá, en total:</b> ingresos, interés acreditado, reintegros
+      recibidos, ajustes positivos, liquidaciones a favor, la pierna destino de un cambio de moneda, y una
+      transferencia que entró desde afuera. Son <b>siete filas posibles y casi nunca más de dos</b>.</div>
+    <div class="note ok"><b>Y es donde escala cada excepción futura</b> sin tocar Inicio. Un reintegro, un
+      rescate, lo que venga: suma una fila acá, no una línea allá. <b>Ese es el valor real de la
+      decisión</b> — no ahorrar una línea hoy, sino no tener que discutirla nunca más.</div>
+    <div class="note warn"><b>A validar:</b> ¿se descubre? Una línea de la card que se toca no anuncia que
+      se toca. Un chevron chico al lado del monto puede alcanzar, y hay que dibujarlo al especificar.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">7c</div><div>
+      <h3>Cómo se anuncia que «Entró» se toca</h3>
+      <p class="sub">El riesgo de la decisión, en tres señales. Ninguna puede densificar Inicio.</p>
+      <span class="tag t-warn">A validar</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="copyset">
+        <div class="copyopt win">
+          <div class="lb">1 · Chevron después del monto</div>
+          <div class="month" style="box-shadow:none;border:0;padding:2px 0">
+            <div class="l"><span>Tenías</span><span>$ 1.200.000,00</span></div>
+            <div class="l"><span>Entró</span><span>+$ 2.025.000,00 <span style="color:#C4CBD4;font-weight:700">›</span></span></div>
+            <div class="l"><span>Se fué</span><span>−$ 805.433,66</span></div>
+          </div>
+          <div class="vd">Es el mismo signo que ya usan las filas de propósitos y de cuentas: en Grana un
+            chevron significa «esto se abre». <b>Cero altura nueva</b>, y solo lo lleva la línea que se abre.</div>
+        </div>
+        <div class="copyopt">
+          <div class="lb">2 · Monto subrayado punteado</div>
+          <div class="month" style="box-shadow:none;border:0;padding:2px 0">
+            <div class="l"><span>Tenías</span><span>$ 1.200.000,00</span></div>
+            <div class="l"><span>Entró</span><span style="border-bottom:1px dashed #B6BFCA;padding-bottom:1px">+$ 2.025.000,00</span></div>
+            <div class="l"><span>Se fué</span><span>−$ 805.433,66</span></div>
+          </div>
+          <div class="vd">Más sutil todavía, pero <b>no existe en ningún otro lado de la app</b>: habría que
+            enseñar un signo nuevo para una sola pantalla.</div>
+        </div>
+        <div class="copyopt">
+          <div class="lb">3 · «Ver detalle» debajo</div>
+          <div class="month" style="box-shadow:none;border:0;padding:2px 0">
+            <div class="l"><span>Tenías</span><span>$ 1.200.000,00</span></div>
+            <div class="l"><span>Entró</span><span>+$ 2.025.000,00</span></div>
+            <div style="text-align:right;font-size:11.5px;font-weight:800;color:var(--emerald-deep);padding-bottom:4px">Ver detalle</div>
+            <div class="l"><span>Se fué</span><span>−$ 805.433,66</span></div>
+          </div>
+          <div class="vd"><b>Descartada.</b> Es el más visible y el único que <b>agrega un renglón</b> — que
+            es exactamente lo que la decisión de arriba vino a evitar.</div>
+        </div>
+      </div>
+    </div></div>
+    <div class="note ok"><b>Propuesta: la 1.</b> Reusa un signo que el usuario ya aprendió en Propósitos y
+      en Cuentas, no ocupa altura, y deja las otras dos líneas exactamente como están hoy.</div>
+    <div class="note warn"><b>Y el riesgo se acepta con los ojos abiertos:</b> un chevron chico se puede
+      no ver. Si nadie toca «Entró», <b>el interés queda invisible</b> — y eso es peor que la línea que se
+      descartó, porque la línea al menos se veía. <b>Es lo único de esta decisión que puede salir
+      mal.</b></div>
+    <div class="note"><b>Lo que NO se va a hacer para arreglarlo:</b> agrandar la señal hasta que se vea,
+      poner un tooltip la primera vez, o destacar «Entró» cuando tiene más de un subtipo. Las tres
+      densifican Inicio, que es el costo que esta decisión existe para no pagar.</div>
+  </div>
+
+</div>
+<h2 class="sec">D · Los otros dos signos</h2>
+<p class="lead">El negativo y el cero. Los dos son más frecuentes que el positivo en una cuenta que no
+rinde, y ninguno puede tratarse como un caso menor.</p>
+
+<div class="grid">
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">8</div><div>
+      <h3>Diferencia negativa</h3>
+      <p class="sub">La cuenta muestra menos. Y Grana <b>no</b> asume que gastaste.</p>
+      <span class="tag t-no">Causa −</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Diferencia · −$ 8.400</div><h6>¿De dónde salen?</h6></div><div class="x">←</div></div>
+      <div class="cause">
+        <div class="cz on"><span class="rd"></span><div class="cg">
+          <div class="ct">Movimiento que falta<span class="sug">Sugerido</span></div>
+          <div class="cd">Un gasto, una comisión, un débito automático. Te ayudamos a cargarlo.</div>
+        </div></div>
+        <div class="cz"><span class="rd"></span><div class="cg">
+          <div class="ct">Ajuste · no sé</div>
+          <div class="cd">Se corrige el saldo y listo. Podés averiguarlo después.</div>
+        </div></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">No decimos que gastaste.</b> Puede ser una comisión, un débito
+        automático o una transferencia que no cargaste — y ninguna de las tres es un gasto tuyo.
+      </div>
+      <div class="cta">Continuar</div>
+    </div></div>
+    <div class="note ok"><b>«Interés acreditado» no aparece.</b> Una cuenta no acredita intereses en
+      negativo, y ofrecer una opción imposible es ruido. Quedan dos, no tres.</div>
+    <div class="note no"><b>Lo que este flujo se niega a hacer:</b> registrar la diferencia negativa como
+      gasto y meterla en «En qué se fue». Inventaría una categoría, ensuciaría la analítica y afirmaría
+      algo que Grana no sabe. <b>Un ajuste que no sabe qué fue, no es un gasto.</b></div>
+    <div class="note"><b>La rama «movimiento que falta» ofrece cargarlo</b>, con el monto y la cuenta ya
+      puestos, y deja la salida de escape en link y no en botón: quien no se acuerda no puede quedar
+      trabado sin poder cerrar sus números.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">9</div><div>
+      <h3>Diferencia cero</h3>
+      <p class="sub">El resultado más común. No crea nada, y aun así tiene que dejar algo.</p>
+      <span class="tag t-mod">Caso 0</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Mercado Pago</div><h6>¿Cuánto tenés?</h6></div><div class="x">✕</div></div>
+      <div class="c calc">
+        <div><span>Grana calcula</span><span>$ 1.200.000,00</span></div>
+      </div>
+      <div class="c amt">
+        <div class="lbl">Tu cuenta muestra</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">1.200.000</span></div>
+      </div>
+      <div class="diff zero">
+        <div class="lb">Diferencia</div>
+        <div class="n">Coinciden ✓</div>
+        <div class="sb">No hay nada que ajustar</div>
+      </div>
+      <div class="will">
+        <div class="k">Qué va a pasar</div>
+        <div class="li"><i>✓</i><div>Guardamos que hoy <b>coincidían</b></div></div>
+        <div class="li no"><i>✕</i><div><b>No</b> se crea ningún movimiento</div></div>
+      </div>
+      <div class="cta ghost">Listo</div>
+    </div></div>
+    <div class="note ok"><b>No registra un movimiento, pero sí la fecha.</b> Es lo que alimenta el
+      «coincidían el 2 de julio» de la puerta, lo que da el período de la próxima acreditación, y lo que
+      convierte una revisión sin hallazgos en algo que igual sirvió.</div>
+    <div class="note"><b>El botón dice «Listo», no «Confirmar».</b> No hay nada que confirmar: la
+      pantalla ya dio su respuesta.</div>
+    <div class="note warn"><b>A validar:</b> ¿la palomita alcanza, o quien tipeó ocho dígitos para que no
+      pase nada siente que perdió el tiempo? Es la pantalla que decide si el hábito se sostiene.</div>
+  </div>
+
+</div>
+
+<h2 class="sec">E · El estado periódico</h2>
+<p class="lead">Esto no es una corrección excepcional: en una billetera remunerada el drift
+<b>vuelve siempre</b>. Así que la puerta tiene que envejecer, y no todas al mismo ritmo.</p>
+
+<div class="grid">
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">10</div><div>
+      <h3>Tres cuentas, tres pesos</h3>
+      <p class="sub">La lista de Cuentas. La misma función, tres presencias distintas.</p>
+      <span class="tag t-new">Ritmo</span>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);padding:2px 4px">Cuentas bancarias</div>
+      <div class="state">
+        <span class="ic">MP</span>
+        <span class="nm">Mercado Pago<em>Sin revisar hace 2 meses · acá suele haber intereses</em></span>
+        <span class="am">$ 1.200.000</span>
+      </div>
+      <div class="state">
+        <span class="ic" style="background:#2A5C8A">BB</span>
+        <span class="nm">BBVA sueldo<em>Coincidían el 24 de agosto</em></span>
+        <span class="am">$ 340.000</span>
+      </div>
+      <div class="state">
+        <span class="ic" style="background:var(--plum)">UA</span>
+        <span class="nm">Ualá<em>Nunca revisada</em></span>
+        <span class="am">$ 80.000</span>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">Las tres en el mismo tono.</b> Solo cambia lo que dice el subtítulo:
+        la primera nombra su atraso porque ahí significa algo —ya tuvo intereses—, las otras dos solo
+        informan. <b style="color:var(--text)">Ninguna llama la atención.</b>
+      </div>
+    </div></div>
+    <div class="note ok"><b>El umbral lo decide el historial, no el producto.</b> Grana nunca dice «esta
+      cuenta rinde» —no lo sabe—: dice «acá suele haber intereses», que es un hecho verificable de lo
+      que el propio usuario cargó. Mismo principio de comportamiento que ordena la capa de instrumentos.</div>
+    <div class="note ok"><b>Y por eso el umbral debe ser más corto en una cuenta con historial.</b> El
+      drift por intereses es permanente y mensual; el de una caja de ahorro común es un accidente raro.
+      Tratarlas igual molesta a la mitad y abandona a la otra.</div>
+    <div class="note warn"><b>Corregido: en la lista no hay color.</b> Una versión anterior marcaba la
+      primera fila en tono cálido. Es lo más cerca de una alerta global que tenía la capa —<b>se ve sin
+      entrar a la cuenta</b>— y contradice la regla de producto: <b>Grana ofrece conciliación, pero no la
+      persigue</b>. El énfasis vive adentro del detalle; acá solo cambia el texto.</div>
+    <div class="note no"><b>Lo que este flujo NO hace:</b> notificaciones push, badges en el tab de
+      Cuentas, puntos rojos, ni bloquear nada. <b>Toda la escalada vive adentro de la pantalla</b> a la
+      que el usuario ya entró. Una app de finanzas que persigue al usuario para que haga tareas
+      administrativas se desinstala.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">10b</div><div>
+      <h3>Los umbrales propuestos</h3>
+      <p class="sub">Números para discutir, no para implementar.</p>
+      <span class="tag t-warn">A definir</span>
+    </div></div>
+    <table class="thr">
+      <thead><tr><th>Estado de la cuenta</th><th>Umbral</th><th>Cómo se ve</th></tr></thead>
+      <tbody>
+        <tr><td>Ya tuvo <b>interés acreditado</b> alguna vez</td><td><b>~1 mes</b></td><td>Fila con color cálido y la razón: «acá suele haber intereses»</td></tr>
+        <tr><td>Tuvo diferencias, pero nunca intereses</td><td><b>~3 meses</b></td><td>Fila neutra con la fecha</td></tr>
+        <tr><td>Nunca tuvo ninguna diferencia</td><td><b>~6 meses</b></td><td>Solo la fecha, sin destacar</td></tr>
+        <tr><td>Nunca se revisó</td><td>—</td><td>«Nunca revisada», sin urgencia: puede ser una cuenta recién creada</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>Un mes para la primera</b> porque es el ritmo al que el usuario mira su resumen,
+      y porque el período de la acreditación queda limpio: «del 1 al 31».</div>
+    <div class="note warn"><b>Lo que hay que medir antes de fijarlos:</b> cada umbral que se cumple sin
+      que el usuario actúe <b>gasta credibilidad</b>. Si la fila cálida está encendida seis meses seguidos
+      deja de significar algo, y conviene que se apague sola antes que quedar encendida para siempre.</div>
+  </div>
+
+</div>
+<h2 class="sec">F · El mes, con el interés adentro</h2>
+<p class="lead">Sueldo, gastos, guardado e interés acreditado. <b>Cuatro líneas</b>, las mismas de
+siempre — y esa es toda la validación que esta fase necesita.</p>
+
+<div class="ab">
+  <div>
+    <div class="abh"><span class="bg">✓</span><h4>Inicio no cambia</h4></div>
+    <div class="phone"><div class="scr">
+      <div class="month">
+        <div class="k">Resumen del mes · agosto</div>
+        <div class="l"><span>Tenías</span><span>$ 1.200.000,00</span></div>
+        <div class="l"><span>Entró</span><span>+$ 2.025.000,00</span></div>
+        <div class="l"><span>Se fué</span><span>−$ 805.433,66</span></div>
+        <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
+        <div class="l tot"><span>Para gastar</span><span>$ 2.219.566,34</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        Los $25.000 de interés están adentro de los <b style="color:var(--text)">$2.025.000</b>.
+        <b style="color:var(--text)">Ninguna línea nueva</b>, ni ahora ni cuando aparezca la próxima
+        excepción financiera. Se ven tocando «Entró» (pantalla 7b).
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        Cierra a ojo: 1.200.000 + 2.025.000 − 805.433,66 − 200.000 =
+        <b style="color:var(--text)">2.219.566,34</b>.
+      </div>
+    </div></div>
+  </div>
+  <div>
+    <div class="abh b"><span class="bg">✓</span><h4>Por qué esto cierra la pregunta</h4></div>
+    <div class="note ok"><b>El problema no era que la card aguantara una línea más.</b> Era que abrir una
+      para intereses obliga a abrir una para cada excepción que venga, y ahí Inicio se convierte en una
+      tabla de conciliación. <b>Con esta decisión la card no puede crecer por este lado, nunca.</b></div>
+    <div class="note ok"><b>Y es coherente con lo que «Entró» ya es:</b> liquidez, no sueldo. Hoy ya tiene
+      adentro reembolsos recibidos y ajustes positivos, sin que nadie pueda abrirlos. Entró plata líquida
+      a una cuenta usable — entonces entra en «Entró», como todo lo demás que hace eso.</div>
+    <div class="note ok"><b>Lo que la decisión mueve, no elimina:</b> la explicación pasa al desglose, que
+      además <b>ya hacía falta</b> por los reembolsos y los ajustes. Los intereses no lo inventan: lo
+      justifican.</div>
+    <div class="note warn"><b>Lo único que queda a validar</b> es que el desglose <b>se descubra</b>
+      (pantalla 7b). Si nadie toca «Entró», el interés queda invisible — y eso sería peor que la línea que
+      se descartó.</div>
+  </div>
+</div>
+
+<h2 class="sec">G · Decisiones que quedan cerradas</h2>
+<p class="lead">Listas para escribir spec. Ninguna necesita más pantalla.</p>
+
+<table class="dec">
+  <thead><tr><th>#</th><th>Decisión</th><th>Por qué queda cerrada</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Vive en <b>Cuentas</b>, en el detalle de cada cuenta</td><td>Es reconciliación de saldo, no colocación de plata. Nace donde el usuario compara</td></tr>
+    <tr><td>2</td><td>La puerta es <b>«¿Tu cuenta muestra otro saldo?»</b></td><td>Condicional: solo le habla a quien ya notó la diferencia. «Actualizar saldo» sugiere una tarea pendiente que el 90% no tiene</td></tr>
+    <tr><td>3</td><td>El flujo <b>arranca del saldo real</b>, no del interés</td><td>El usuario sabe cuánto tiene, no cuánto rindió. Y así cubre el drift entero, no solo intereses</td></tr>
+    <tr><td>4</td><td><b>Un solo campo:</b> cuánto muestra la cuenta</td><td>Cuenta, fecha y tipo salen del contexto. Nadie carga un formulario doce veces al año</td></tr>
+    <tr><td>5</td><td><b>Grana calcula la diferencia</b> y la dice con número y con frase</td><td>El signo solo es ambiguo</td></tr>
+    <tr><td>6</td><td><b>Tres causas</b>, sugeridas por signo <b>e historial</b>, nunca impuestas</td><td>El motivo de la sugerencia va escrito. Una preselección sin motivo es una imposición disfrazada</td></tr>
+    <tr><td>7</td><td><b>«Ajuste · no sé» siempre existe</b></td><td>Sin esa salida, la función obliga a inventar una causa — y contamina el dato con una certeza falsa</td></tr>
+    <tr><td>8</td><td>El negativo <b>nunca se asume gasto</b></td><td>Puede ser comisión o débito. Meterlo en «En qué se fue» inventaría una categoría</td></tr>
+    <tr><td>9</td><td>La confirmación dice <b>qué va a pasar</b>, incluido dónde NO aparece</td><td>Es la corrección del copy del Ajuste, que promete de más y sorprende en el dashboard</td></tr>
+    <tr><td>10</td><td>El <b>período</b> sale de la última coincidencia</td><td>Convierte un número suelto en un hecho fechado, sin pedir nada</td></tr>
+    <tr><td>11</td><td>Rótulo canónico <b>«Interés acreditado»</b></td><td>Nombra el hecho sin usar la raíz de «rendimiento», que la necesita la capa de instrumentos</td></tr>
+    <tr><td>12</td><td>En Movimientos: <b>período en vez de fecha</b>, avatar neutro, fuera de la analítica</td><td>Se comporta como transferencia y cambio de moneda. No es una excepción nueva</td></tr>
+    <tr><td>13</td><td>Card del mes: el interés <b>entra en «Entró»</b>. <b>Ninguna línea nueva</b> en Inicio</td><td>Inicio no explica subtipos. Una línea para intereses obliga a una por cada excepción futura, y la card se vuelve una tabla de conciliación</td></tr>
+    <tr><td>13b</td><td><b>«Entró» pasa a ser explorable.</b> Muestra el total agregado; al tocarlo se abre el desglose por subtipo</td><td>Y no es una función que traigan los intereses: hoy «Entró» ya mezcla ingresos, reintegros y ajustes <b>sin que nadie pueda abrirlo</b>. Los intereses no la inventan, la justifican</td></tr>
+    <tr><td>13c</td><td>El desglose usa <b>los tipos de movimiento que ya existen</b> —Ingresos, Reintegros, Ajustes, Transferencias, Cambios— más «Interés acreditado»</td><td>El desglose no inventa un idioma: usa el que la app ya habla en Movimientos. Solo aparecen las filas con monto</td></tr>
+    <tr><td>13d</td><td>La señal es un <b>chevron después del monto</b>, y nada más</td><td>Reusa el signo que el usuario ya aprendió en Propósitos y Cuentas. Cero altura nueva. Inicio no se densifica</td></tr>
+    <tr><td>14</td><td>Diferencia cero <b>guarda la fecha</b> y no crea movimiento</td><td>Alimenta la puerta y el período siguiente. Una revisión sin hallazgos igual sirvió</td></tr>
+    <tr><td>15</td><td>El <b>umbral depende del historial</b> de esa cuenta, no del producto</td><td>Grana no dice «esta cuenta rinde»: dice «acá suele haber intereses», que es un hecho</td></tr>
+    <tr><td>16</td><td><b>Grana ofrece conciliación, pero no persigue conciliación</b></td><td>Regla de producto que gobierna la capa. Hay gente que va a usar Grana sin que ninguna cuenta cierre contra el banco, y la app tiene que funcionar igual: sin banners en Inicio, sin alertas globales, sin contador de cuentas sin revisar, sin badges, sin tono de atraso. <b>El usuario puede ignorarla para siempre.</b> Ver <code style="font-family:inherit;font-weight:700">marca-cuenta-intereses.html</code></td></tr>
+    <tr><td>17</td><td>Bimoneda: <b>una moneda por vez</b></td><td>Invariante de todo el proyecto. Nunca una diferencia sola para las dos</td></tr>
+  </tbody>
+</table>
+
+<h2 class="sec">H · Lo que queda abierto para el spec</h2>
+<div class="grid">
+  <div class="step">
+    <div class="note warn"><b>Los umbrales exactos</b> (1 / 3 / 6 meses son una propuesta). Y qué pasa
+      cuando un umbral se cumple y el usuario no actúa: la fila cálida encendida seis meses deja de
+      significar algo.</div>
+    <div class="note no"><b>El riesgo principal de toda la decisión: que nadie perciba que «Entró» se
+      toca.</b> Si no se percibe, el interés queda <b>invisible</b> — y eso es peor que la línea propia
+      que se descartó, porque la línea al menos se veía. Hay que probar la señal mínima (pantalla 7c) con
+      alguien que nunca la vio, y el criterio de éxito no es que la encuentre buscándola: es que
+      <b>la toque sin que nadie le diga</b>.</div>
+    <div class="note warn"><b>Y el arreglo tiene un techo puesto de antemano:</b> nada que densifique
+      Inicio. Ni renglón extra, ni tooltip, ni destacar «Entró» cuando tiene más de un subtipo. Si con un
+      chevron no alcanza, la conversación vuelve a la decisión — no a la señal.</div>
+    <div class="note warn"><b>Si el bloque «Qué va a pasar» abruma.</b> Cinco líneas es mucho para una
+      confirmación — quizá se muestre entero la primera vez y plegado después.</div>
+  </div>
+  <div class="step">
+    <div class="note"><b>Si «Movimiento que falta» abre el alta precargada</b> con monto y cuenta. Es lo
+      correcto y es más pantalla.</div>
+    <div class="note"><b>Editar o borrar un interés ya cargado.</b> Debería comportarse como cualquier
+      movimiento, pero al borrarlo la fecha de última coincidencia queda mintiendo.</div>
+    <div class="note no"><b>Nada de schema, tablas, SQL ni migraciones.</b> Es el mismo orden que evitó
+      que el propósito naciera colgado de una fila, y que costó una migración aprender. Con estas
+      diecisiete decisiones cerradas, el spec ya tiene de dónde agarrarse.</div>
+    <div class="note ok"><b>Y nada se construye</b> antes del QA visual nativo de
+      <b>extract-savings-module</b>, que sigue siendo la compuerta vigente.</div>
+  </div>
+</div>
+
+
+<h2 class="sec" style="margin-top:64px;padding-top:30px;border-top:2px dashed var(--border)">Apéndice · Futuro: cuando exista «Plata colocada»</h2>
+<p class="lead"><b>Nada de acá gobierna esta fase.</b> Es una nota para cuando se retome FCI —una capa
+distinta, con plata que <b>sale</b> de las cuentas y deja de estar disponible—. Se guarda acá porque
+salió mientras se revisaba esta decisión, no porque forme parte de ella.</p>
+
+<div class="grid">
+  <div class="step">
+    <div class="note warn"><b>La pregunta que abre la decisión de arriba.</b> Si Inicio no explica
+      subtipos para los intereses, ¿los explicaría para una colocación? El mock de FCI le da línea propia
+      —«Colocaste»— y esa decisión fue tomada <b>antes</b> que ésta.</div>
+    <div class="note no"><b>Y el motivo que la sostiene es falso.</b> El mock de FCI dice que meterla en
+      «Se fué» diría que gastaste $100.000 que no gastaste, <b>y que ese número se propaga</b> a la tira
+      de ritmo, al promedio y a «En qué se fue». Verificado en el código: <b>no se propaga</b>. «Se fué»
+      (<code style="font-family:inherit;font-weight:700">seFue</code>) lo consume <b>únicamente la card
+      del balance</b>, en web y en nativa; la tira de ritmo y «En qué se fue» se calculan sobre gastos
+      propios, por otro camino. <b>Lo escribí yo y estaba mal.</b></div>
+    <div class="note"><b>Con la evidencia corregida</b>, al caso de FCI le queda un argumento de
+      significado y no de contaminación: «Se fué» se lee como <i>lo que gasté</i>, y una colocación no se
+      gastó — sigue siendo tuya, en otro lado. Que es <b>la simetría exacta</b> de lo que se acaba de
+      decidir para «Entró», donde el significado cedió ante la simplicidad de Inicio.</div>
+  </div>
+  <div class="step">
+    <div class="note ok"><b>Si se aplicara la misma regla</b>, la card quedaría en cuatro líneas para
+      siempre y la colocación se explicaría en un desglose de «Se fué», gemelo del de «Entró». Es la
+      opción coherente, y es la que este apéndice deja anotada.</div>
+    <div class="note warn"><b>Pero no se decide acá</b>, y hay una razón: una colocación <b>saca plata
+      del disponible</b> y un interés <b>la trae</b>. Los dos casos se parecen en la forma y no
+      necesariamente en el peso — que algo salga de «Para gastar» puede merecer más visibilidad que algo
+      que entra. Eso se mira con la capa de FCI delante, no con ésta.</div>
+    <div class="note no"><b>Lo que este apéndice NO hace:</b> cambiar el mock de FCI, reabrir su naming,
+      ni meter «Colocaste» en el flujo de arriba. La corrección del dato falso sí se aplica allá, porque
+      es un hecho verificable y no una decisión.</div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

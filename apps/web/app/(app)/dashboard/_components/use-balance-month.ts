@@ -2,8 +2,9 @@
 
 import { useQuery } from '@tanstack/react-query'
 import {
-  deriveMonthOpening,
+  deriveBalanceCardView,
   deriveMonthSummary,
+  getAvailableTotals,
   getDashboardHero,
   getMonthBalanceSeries,
   type DashboardHero,
@@ -19,8 +20,16 @@ import { useDashboardMonth, type DashboardMonth } from './dashboard-month-contex
  * navigating months moves it with the rest of the card. `get_account_balance_sums`
  * already took that cut as a parameter, so nothing changed in SQL.
  *
- * "Venía" is derived, not read: `saldo − (entró − se fue)`. One less round-trip,
- * and the three amounts add up to the balance above them by construction.
+ * "Venía" is derived, not read: `cierre − (entró − se fue − guardado)`. One less
+ * round-trip, and the amounts add up to the number above them by construction.
+ *
+ * The saved figures are fetched ONLY for the current month, and that is the same
+ * rule the label already follows: the reserve is netted exactly where the card
+ * says "disponible". At the close of a past month the question does not apply —
+ * the money was either spent or it was not, and a reserve is a stance about the
+ * future. Netting it there would also rewrite history on every save: look at May
+ * on Monday and it says one number, save on Tuesday and May says another,
+ * without anything having happened in May.
  */
 
 /** Last day of the month, or today when that month is the current one. */
@@ -63,8 +72,29 @@ export const useBalanceMonth = ({ todayISO, heroInitial, monthInitial }: Args) =
     staleTime: 60_000,
   })
 
+  // The real disponible: accounts minus what is set aside, per currency. It comes
+  // from `get_available_sums` already subtracted — the card never recomposes it
+  // from the account total it happens to be holding.
+  const availableQuery = useQuery({
+    queryKey: ['dashboard', 'available', cutISO],
+    queryFn: () => getAvailableTotals(createClient(), cutISO),
+    enabled: isCurrent,
+    staleTime: 60_000,
+  })
+
   const hero = heroQuery.data ?? null
   const summary = monthQuery.data ? deriveMonthSummary(monthQuery.data) : null
+
+  // What the card shows is decided ONCE, in `@grana/dashboard`, and native
+  // consumes the same function: which number the dark zone renders, which state
+  // the savings row is in, and what "Tenías" derives from are three rules that
+  // have to agree across platforms.
+  const { displayed, savings, venia } = deriveBalanceCardView({
+    isCurrent,
+    accounts: hero ? { ARS: hero.ars, USD: hero.usd } : null,
+    available: isCurrent ? (availableQuery.data ?? null) : null,
+    summary,
+  })
 
   return {
     hero,
@@ -78,12 +108,11 @@ export const useBalanceMonth = ({ todayISO, heroInitial, monthInitial }: Args) =
      * show zeros that were nobody's balance.
      */
     isLoading: heroQuery.isPending || monthQuery.isPending,
-    venia:
-      hero && summary
-        ? {
-            ARS: deriveMonthOpening(hero.ars, summary.ARS),
-            USD: deriveMonthOpening(hero.usd, summary.USD),
-          }
-        : null,
+    displayed,
+    savings,
+    // `venia` sale de `deriveBalanceCardView` y ya no se calcula acá: con el
+    // guardado en juego, "Tenías" tiene un término más y esa cuenta vive en un
+    // solo lugar para las dos plataformas.
+    venia,
   }
 }

@@ -11,6 +11,7 @@ import { DashboardMonthProvider } from '../../components/dashboard/DashboardMont
 import { EyeMaskProvider } from '../../components/dashboard/EyeMaskContext'
 import { SharedStrip } from '../../components/dashboard/SharedStrip'
 import { SpentCard } from '../../components/dashboard/SpentCard'
+import { SaveSuggestionStrip } from '../../components/savings/SaveSuggestionStrip'
 import { QuickAddFab } from '../../components/transactions/QuickAddFab'
 
 export default function DashboardScreen() {
@@ -75,6 +76,13 @@ export default function DashboardScreen() {
             {/* Same four blocks as web, in the same order, single column:
                 saldo → cuánto gastaste → compromisos → compartido. */}
             <View className="flex-col gap-3">
+              {/* La sugerencia de guardar, arriba de la card porque su momento es
+                  "acabás de cobrar". Si no corresponde ofrecerla no renderiza
+                  nada y la card sube sola: no es una tarea pendiente. */}
+              <SaveSuggestionStrip
+                year={today.getFullYear()}
+                month={today.getMonth() + 1}
+              />
               <BalanceCard todayISO={formatDateISO(today)} />
               <SpentCard />
               <CommittedSection />
