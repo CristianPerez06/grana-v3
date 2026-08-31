@@ -73,7 +73,7 @@ El registro va en la tarea **6.15** de `tasks.md`, con este bloque:
 - Nativo:       <archivo / componente>
 - Cambio:       <qué se aplicó, EN LAS DOS>
 - Divergencia:  <ninguna | cuál y por qué la impone la plataforma>
-- Runtime:      <no requiere | requiere `expo start -c` | requiere rebuild>
+- Runtime:      <no requiere | requiere arranque limpio de Metro | requiere rebuild>
 - Cierra:       <caso N del QA>
 ```
 
@@ -107,8 +107,12 @@ y se corta en el primer paso que falle:
 
 3. **El repo está bien y la app igual no cambia** → es runtime. Frenar Expo y arrancar limpio:
    ```
-   npx expo start -c
+   pnpm --filter mobile exec expo start --dev-client -c
    ```
+   Desde la raíz del repo, y con `--dev-client` porque es lo que usa el script `dev` de `apps/mobile`.
+   Un `npx expo start` suelto no sirve: desde la raíz no hay `expo`, y sin `--dev-client` apunta a Expo
+   Go, que no es donde corre esta app.
+
    `watchFolders` hace que Metro mire `packages/`, pero el transformer cache se indexa por archivo y
    un cambio fuera de `apps/mobile` es justo el caso que se pierde. Una `r` recarga la app y **no**
    limpia esa caché: por eso se ve un estado mezclado, con la mitad de un commit aplicada.

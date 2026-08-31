@@ -20,7 +20,7 @@ Lo que queda abierto es de **cuatro** clases, y ninguna es implementación pendi
 | **QA visual nativo** | 2.9 · 6.5 · 6.13 · 6.15 | **6.5 y 6.13 cerrados**: 13 de 14 casos en verde, dieciséis hallazgos corregidos. El caso 11 quedó aceptado sin correr, por escrito. Faltan las preguntas de 2.9 |
 | **Diferido a monetización** | 4b.1–4b.4 | Apagar el módulo solo tiene sentido con sistema de planes, que no existe (E10) |
 | **Backlog no bloqueante** | 4c.12 · 6.7b | Anotado para no perderlo; no frena nada |
-| **Compuertas** | 7.1 · 7.2 | No archivar hasta el QA visual nativo; la fase 3A viene después |
+| **Compuertas** | 7.1 · 7.2 | **7.1 levantada**: el QA visual nativo se corrió (13/14, el 11 por excepción escrita). La fase 3A viene después |
 | **Deuda destapada** | 8.2 · 8.3 | Cuatro hallazgos del barrido posterior, más dos del QA visual nativo. Ninguno bloquea, ninguno es de este change |
 
 **Nada de esto se toca hasta mirar la app nativa corriendo**: lo que el QA visual encuentre puede
@@ -324,7 +324,7 @@ definición.
   recorte de «Destinar» que entró en un archivo y no en el otro, el techo de chips que era distinto
   en cada superficie, y dos vueltas enteras reportando como roto un fix que estaba bien pero corría
   contra un bundle viejo. Y el protocolo que separa un caso del otro —hash, `grep` del código viejo,
-  `expo start -c`, reinstalar, rebuild— con su señal: un problema de implementación deja ver algunos
+  arranque limpio de Metro, reinstalar, rebuild— con su señal: un problema de implementación deja ver algunos
   cambios y otros no; cero cambios sobre varios commits es runtime
 - [ ] 6.15 **Hallazgos del QA visual nativo, corregidos sobre la marcha.** El QA está corriendo (6.5)
   y lo que fue apareciendo se arregló y se volvió a mirar. Nueve hasta acá, en tres tandas:
@@ -384,7 +384,7 @@ definición.
                   `min-h-[44px]`, o sea alto real. Pasan a `hitSlop`, que es el
                   equivalente nativo. El de los chips es solo vertical: uno
                   horizontal los solaparía entre sí.
-  - Runtime:      requiere `expo start -c` — el cambio toca `packages/savings`.
+  - Runtime:      requiere arranque limpio de Metro — el cambio toca `packages/savings`.
   - Cierra:       caso 8.
   ```
 
@@ -406,7 +406,7 @@ definición.
   - Divergencia:  los 44px táctiles, otra vez: web los saca de un `after:h-11`
                   que no ocupa lugar y nativo no tiene pseudo-elementos.
                   `hitSlop` es el equivalente; queda como divergencia aceptada.
-  - Runtime:      requiere `expo start -c`.
+  - Runtime:      requiere arranque limpio de Metro (ver el protocolo del QA).
   - Cierra:       caso 3.
   ```
 
@@ -433,7 +433,7 @@ definición.
                   de 54 a 46, que para una cifra de 27px sigue holgada.
   - Divergencia:  ninguna. Los mismos valores en las dos superficies; en web se
                   cayeron los `sm:` que ya no aportaban nada.
-  - Runtime:      requiere `expo start -c`.
+  - Runtime:      requiere arranque limpio de Metro (ver el protocolo del QA).
   - Cierra:       casos 6, 7 y 8 (la parte de ritmo; el scroll ya estaba cerrado).
   ```
 
@@ -470,7 +470,7 @@ definición.
                   Consecuencia asumida: el héroe de «Guardar» ya NO es el mismo
                   que el del alta de movimientos NATIVA, que sigue con la cifra
                   centrada. La regla de este QA es la paridad web ↔ nativo.
-  - Runtime:      requiere `expo start -c`.
+  - Runtime:      requiere arranque limpio de Metro (ver el protocolo del QA).
   - Cierra:       casos 6, 7 y 8.
   ```
 
@@ -498,7 +498,7 @@ definición.
                   navegador permite que el glifo se salga de su caja de línea;
                   RN la recorta. Queda anotada como tal.
                   Siguen las dos de la séptima (ícono del calendario, tracking).
-  - Runtime:      requiere `expo start -c`.
+  - Runtime:      requiere arranque limpio de Metro (ver el protocolo del QA).
   - Cierra:       casos 6, 7 y 8.
   ```
 
@@ -558,8 +558,13 @@ definición.
 
 ## 7. Compuertas
 
-- [ ] 7.1 **No archivar** hasta el **QA visual nativo**, como las fases 1 y 2. La compuerta no es
-  «que mobile esté implementado» —ya lo está— sino que alguien lo haya visto correr
+- [x] 7.1 **La compuerta del QA visual nativo está LEVANTADA.** Era «que alguien lo haya visto
+  correr», y se corrió: 13 de los 14 casos de `docs/qa-savings-nativo.md` en verde, en simulador y en
+  un iPhone 16 Pro real. El caso 11 —el teclado sobre el botón de confirmar— quedó **aceptado sin
+  correr, por excepción escrita** en ese doc, con las cuatro cosas que una excepción necesita para no
+  ser un sello: por qué no se pudo probar, qué se lleva puesto si falla, por qué el riesgo es bajo y
+  qué la reabre. Lo único que queda abierto de este bloque son las cuatro preguntas de sensación de
+  **2.9**, que son de producto y se responden usando la app, no mirándola
 - [ ] 7.2 **La fase 3A (plazo fijo) se construye adentro de este módulo** y por eso va después. El
   mock `fase-3a-plazo-fijo.html` hay que redibujarlo con la cuenta como **atajo contextual** y no
   como arquitectura

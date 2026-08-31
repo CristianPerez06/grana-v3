@@ -304,7 +304,7 @@ Total en pesos                      $ 8.441.212
 ├─ Por función
 │    Para gastar        $ 7.541.212
 │    Guardado           $   200.000
-│    Puesto a trabajar  $   700.000
+│    Plata colocada     $   700.000
 └─ Por ubicación
      Mercado Pago       $ 6.741.212
      Galicia            $ 1.000.000

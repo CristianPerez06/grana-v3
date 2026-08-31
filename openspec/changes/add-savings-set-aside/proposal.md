@@ -5,6 +5,11 @@
 > 1. **No se archiva** hasta que pase el QA en la app nativa ([#58](https://github.com/CristianPerez06/grana-v3/issues/58)). Todo lo que se probó de mobile fue el viewport angosto del navegador, que corre el código de `apps/web`: el `BottomSheet`, el teclado sobre el input de monto y el picker nativo de fecha no se ejercieron una sola vez. Archivar es declarar la fase terminada, y está probada a medias.
 > 2. **No se mergea con la fase 1 sola.** Sola le da al usuario un *disponible* real pero ningún lugar donde decir para qué guardó. Sube a producción junto con las fases que la completan, y esas fases se construyen sobre esta branch.
 >
+> **Compuerta 1 LEVANTADA (29-ago-2026).** El QA nativo se corrió: 13 de los 14 casos en verde, en
+> simulador y en un iPhone 16 Pro real. El `BottomSheet`, el picker de fecha y la fila del dashboard
+> quedaron ejercidos; el teclado sobre el input de monto —el caso 11— quedó **aceptado sin correr,
+> por excepción escrita** en `docs/qa-savings-nativo.md`.
+>
 > Detalle en `tasks.md` 9.5, 9.6 y 9.7.
 
 ## Why

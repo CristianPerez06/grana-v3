@@ -2,6 +2,19 @@
 --
 -- Run AFTER 0056_reactivate_verduleria.sql.
 --
+-- ===================================================================
+-- OJO: la definición de `get_available_sums` que está acá abajo quedó
+-- OBSOLETA. Omite el saldo inicial de las cuentas, que es el bug crítico
+-- que la 0060_available_sums_initial_balance.sql corrigió.
+--
+-- Aplicar las migraciones EN ORDEN queda bien: la 0060 va después y la
+-- redefine. Re-ejecutar ESTA SOLA reintroduce el bug — «Para gastar»
+-- vuelve a mostrar un número más chico que el real, y como «Tenías» se
+-- deriva de él, se corren todos los términos de la card sin dejar de
+-- cerrar. Si hay que reaplicar esta, correr la 0060 inmediatamente
+-- después.
+-- ===================================================================
+--
 -- Hasta acá Grana no tenía forma de expresar la decisión más básica del ahorro:
 -- "esto que tengo, decidí que no lo voy a gastar". El usuario que aparta plata
 -- mentalmente seguía viendo ese dinero contado como disponible.

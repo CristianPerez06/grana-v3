@@ -105,6 +105,10 @@ export const SavingsLedger = ({
                 .filter((c) => monthNet(c) !== 0)
                 .map((c) => (
                   <View key={c} className="flex-row justify-between">
+                    {/* Los MISMOS verdes y terracotas que web, y no `positive`
+                        con `text-muted`: eran dos verdes distintos, y el negativo
+                        pintado de gris apagado no se leía como negativo sino como
+                        deshabilitado. */}
                     <Text className="text-[13px] text-text-muted">
                       {t(
                         monthNet(c) < 0
@@ -114,7 +118,7 @@ export const SavingsLedger = ({
                     </Text>
                     <Text
                       className={`text-[13px] font-extrabold ${
-                        monthNet(c) >= 0 ? 'text-positive' : 'text-text-muted'
+                        monthNet(c) >= 0 ? 'text-emerald-deep' : 'text-terracotta-deep'
                       }`}
                     >
                       {money(Math.abs(monthNet(c)), c)}
@@ -140,7 +144,7 @@ export const SavingsLedger = ({
                 </Text>
                 <Text
                   className={`text-[14px] font-extrabold ${
-                    entry.amount >= 0 ? 'text-positive' : 'text-text-muted'
+                    entry.amount >= 0 ? 'text-emerald-deep' : 'text-terracotta-deep'
                   }`}
                 >
                   {entry.amount >= 0 ? '+' : '−'}
@@ -188,7 +192,7 @@ const BankBridge = ({ currency, sums }: { currency: Currency; sums: AvailableSum
       </View>
       <View className="flex-row justify-between py-0.5">
         <Text className="text-[13px] text-text-muted">{t('savings.saved_in_grana')}</Text>
-        <Text className="text-[13px] font-semibold text-positive">
+        <Text className="text-[13px] font-semibold text-emerald-deep">
           {`−${money(sums.reserved, currency)}`}
         </Text>
       </View>

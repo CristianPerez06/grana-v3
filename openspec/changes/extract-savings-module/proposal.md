@@ -6,6 +6,12 @@
 > compuertas de las fases 1 y 2 siguen valiendo: no se archiva hasta el QA nativo
 > ([#58](https://github.com/CristianPerez06/grana-v3/issues/58)) y no se mergea hasta que las fases
 > completen el modelo.
+>
+> **QA nativo CORRIDO (29-ago-2026).** 13 de los 14 casos de `docs/qa-savings-nativo.md` en verde,
+> en simulador y en un iPhone 16 Pro real. El caso 11 —el teclado sobre el botón de confirmar— quedó
+> **aceptado sin correr, por excepción escrita** en ese doc: se explica por qué no se pudo probar, qué
+> se estaría llevando puesto si falla, por qué el riesgo es bajo y qué lo reabre. La compuerta de QA
+> queda **levantada**; la de mergear con el modelo completo sigue valiendo.
 
 ## Why
 

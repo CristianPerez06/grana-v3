@@ -216,6 +216,7 @@ export function PurposeAllocate({
               )
             }
             disabled={currencies.length < 2}
+            aria-label={t('currency_label')}
             className="inline-flex items-center gap-1 rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
           >
             {currency}
