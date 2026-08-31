@@ -9,6 +9,22 @@
 > Son las verificaciones que quedaron abiertas en `tasks.md` §7 y 4.3/4.4. Es lo único que separa a
 > esta change de poder archivarse.
 
+## Resultado (29-ago-2026)
+
+**Los siete de navegador, en verde**, corridos en Chrome DevTools a 390×844 (iPhone 12 Pro). Ninguno
+destapó un hallazgo: el chrome nativo espejado en web-mobile funciona como se especificó.
+
+Los dos que más riesgo tenían pasaron limpio:
+
+- **el selector de banco y la calculadora** (caso 5) se dibujan los dos **adentro** del sheet, con su
+  scroll propio. Era el único punto que hasta hoy se había verificado **leyendo el código**: el panel
+  lateral alto se volvió un sheet bajo, y eso es justo lo que podía romperlos;
+- **la acción de crear** (caso 7) está en el header en las cinco rutas que corresponden, y el botón
+  flotante quedó solo donde tiene que quedar.
+
+**Quedan los tres de teléfono** —el teclado (8), la PWA en iPhone (9) y Android (10)— más `6.1`, que
+son los deltas de spec y se aplican **al** archivar.
+
 ## Antes de empezar
 
 - Chrome DevTools en **390px** de ancho (iPhone 14 Pro en el selector de dispositivos).

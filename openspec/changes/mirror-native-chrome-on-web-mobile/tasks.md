@@ -38,7 +38,7 @@
 
 - [x] 4.1 `apps/web/components/ui/drawer.tsx` presenta el panel como bottom sheet bajo `md`: anclado abajo, `rounded-t-[20px]`, alto que hugea el contenido con tope en 90dvh, grabber arriba. `side` y `widthPx` inertes bajo `md`; en `md+` nada cambia. Dos detalles: (a) `widthPx` pasó de `style={{ width }}` a la variable `--drawer-width`, porque un width inline le gana a la media query y dejaría el sheet de 528px en un teléfono; (b) la animación se cambia en `globals.css` sobreescribiendo solo el `animation-name` bajo 767px, así que duración, easing y los hooks `[data-state]` siguen compartidos y el elemento conserva su clase de lado
 - [x] 4.2 Confirmar por lectura que ninguno de los 17 consumidores necesita editarse: `DrawerProps` no cambia
-- [ ] 4.3 Verificar **en navegador** `accounts/_components/bank-selector.tsx` y `components/ui/money-calculator-popover.tsx`, los dos que portalean adentro del panel vía `useDrawerContainer()` (decisión 6 del design). Por lectura no requieren cambios: los dos son collision-aware y acotan su alto con `--radix-popover-content-available-height`, así que un contenedor más bajo los hace flipear hacia arriba en vez de recortarse. El panel ya tenía un `transform` persistente (`animation-fill-mode: both`) antes de este change, así que el containing block de los descendientes `fixed` no cambia. **Queda por confirmar a ojo** → ver 7.8
+- [x] 4.3 Verificar **en navegador** `accounts/_components/bank-selector.tsx` y `components/ui/money-calculator-popover.tsx`, los dos que portalean adentro del panel vía `useDrawerContainer()` (decisión 6 del design). Por lectura no requieren cambios: los dos son collision-aware y acotan su alto con `--radix-popover-content-available-height`, así que un contenedor más bajo los hace flipear hacia arriba en vez de recortarse. El panel ya tenía un `transform` persistente (`animation-fill-mode: both`) antes de este change, así que el containing block de los descendientes `fixed` no cambia. **Queda por confirmar a ojo** → ver 7.8
 - [ ] 4.4 Verificar **en navegador** el `MovementDrawer` con el teclado abierto: el sheet tapa la barra y sube con el viewport (decisión 7 del design). No se puede confirmar sin un teclado virtual real → ver 7.4
 - [x] 4.5 `drawer.stories.tsx` suma `SheetShort` y `SheetTall`, que fijan el viewport `grana` y muestran los dos casos que importan: contenido corto que el sheet hugea, y contenido que llega al tope de 90dvh y scrollea adentro
 - [x] 4.6 `pnpm typecheck` y `pnpm lint` sin errores
@@ -54,14 +54,14 @@
 
 ## 7. Verificación en navegador (la corre el usuario)
 
-- [ ] 7.1 Chrome DevTools a 390px → `/transactions`: header navy pegado al tope, tab bar fija abajo con Movimientos marcado, FAB sin apoyarse sobre la barra
-- [ ] 7.2 Tocar `⋯` → el sheet sube por encima de la barra, muestra identidad y los cuatro ítems, cierra al tocar el scrim
-- [ ] 7.3 Navegar a Cuentas desde el menú → sin tab bar, con back-link a Inicio que funciona
+- [x] 7.1 Chrome DevTools a 390px → `/transactions`: header navy pegado al tope, tab bar fija abajo con Movimientos marcado, FAB sin apoyarse sobre la barra
+- [x] 7.2 Tocar `⋯` → el sheet sube por encima de la barra, muestra identidad y los cuatro ítems, cierra al tocar el scrim
+- [x] 7.3 Navegar a Cuentas desde el menú → sin tab bar, con back-link a Inicio que funciona
 - [ ] 7.4 `/transactions` → abrir el alta y enfocar el monto: la barra se esconde, el sheet queda por encima del teclado, y la barra vuelve al cerrarlo
-- [ ] 7.5 Redimensionar a 800px → sidebar de vuelta, sin tab bar, sin FAB, headers en el flujo del contenido
+- [x] 7.5 Redimensionar a 800px → sidebar de vuelta, sin tab bar, sin FAB, headers en el flujo del contenido
 - [ ] 7.6 Instalar la PWA en un iPhone real → el navy llega hasta el notch y la barra respeta la home indicator. Es lo único que el DevTools no puede verificar
 - [ ] 7.7 Repetir 7.1 y 7.4 en Android
-- [ ] 7.8 A 390px, abrir el alta de cuenta → el selector de banco despliega su lista dentro del sheet y scrollea con el dedo; ídem la calculadora de monto. Son los dos únicos consumidores que portalean adentro del panel (tarea 4.3)
-- [ ] 7.9 A 390px, abrir cualquier drawer con poco contenido (ej. editar nombre del hogar) → el sheet hugea su alto en vez de ocupar la pantalla entera
+- [x] 7.8 A 390px, abrir el alta de cuenta → el selector de banco despliega su lista dentro del sheet y scrollea con el dedo; ídem la calculadora de monto. Son los dos únicos consumidores que portalean adentro del panel (tarea 4.3)
+- [x] 7.9 A 390px, abrir cualquier drawer con poco contenido (ej. editar nombre del hogar) → el sheet hugea su alto en vez de ocupar la pantalla entera
 
-- [ ] 7.10 A 390px, recorrer `/accounts`, `/cards`, `/settings/categories`, `/transactions/recurring` y `/cards/[id]`: la acción de crear está en el header arriba a la derecha, en verde, y no hay ningún botón flotante. En `/dashboard`, `/transactions` y `/shared` el `QuickAddFab` sigue estando
+- [x] 7.10 A 390px, recorrer `/accounts`, `/cards`, `/settings/categories`, `/transactions/recurring` y `/cards/[id]`: la acción de crear está en el header arriba a la derecha, en verde, y no hay ningún botón flotante. En `/dashboard`, `/transactions` y `/shared` el `QuickAddFab` sigue estando
