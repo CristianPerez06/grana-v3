@@ -37,6 +37,7 @@ sección G. Lo demás está en `docs/exploracion-instrumentos.md` §5.2d.
 | `fase-3a-fci-naming.html` | 3A · FCI | **Histórico.** La primera comparativa de naming (A «Puesto a trabajar» · B «Plata colocada» · C «Inversiones» de control). Cumplió: sacó la discusión de la prosa. De acá salió «En rendimiento» —una cuarta que ninguna de las tablas iba a encontrar—, que después se cayó; **el ganador final terminó siendo su opción B**. Su razonamiento está en `docs/exploracion-instrumentos.md` |
 | `fase-3a-plazo-fijo.html` | 3B · Plazo fijo | **Cambió de número: ahora es 3B.** El orden de fases se corrigió y la primera es FCI, no plazo fijo. Su razonamiento contable —stock vs. flujo, los tres desenlaces, el interés que no es ingreso— **sigue vigente y es de donde sale medio el documento de exploración**; lo que cambia es cuándo se construye. La navegación hay que redibujarla: la cuenta pasa a ser **atajo contextual**, no la puerta principal |
 | `fase-3-posiciones.html` | 3 · Posiciones | **Superado por `fase-3a`.** Se conserva por el razonamiento contable —stock vs. flujo, el bucket, los tres desenlaces—, pero su circuito de once pantallas repetía el patrón que la fase 2 desarmó |
+| `fase-3-hub-mi-plata.html` | 3 · Hub | **Vigente.** Los dos cortes del hub «Mi plata / Dónde está» y las **tres formas del corte por ubicación** —custodio obligatorio, custodio opcional con fila «Sin ubicación», y ubicación como contenedor— con la misma plata en las tres y la suma verificada. Existe para cerrar **§9.2-E** de `exploracion-instrumentos.md` (¿el custodio es obligatorio?), y la respuesta es que **el hub no lo necesita**: el ejemplo del propio modelo ya dibujaba la lista de contenedores. Incluye la fila que mezcla liquidez, la regla 15 contra el residual, y lo que ninguno de los tres arregla |
 | — | 4 y 5 | No se mockean todavía: dibujar el detalle de una meta o la pantalla de patrimonio sería inventar decisiones que no están tomadas, y un mock convincente de algo no decidido termina implementándose tal cual |
 
 **Un mock deja de ser la referencia el día que la fase se construye.** Las fases 1 y 2 están hechas: lo
@@ -169,5 +170,20 @@ Y "Rendimiento" no es la ganancia del mes: es **la ganancia que se hizo líquida
 capitalizado no entró a ninguna cuenta, así que el mes no lo nombra — vive en la posición, que vale
 más. El **rescate parcial** ya no queda abierto acá: lo cierra `fase-3a-fci-v1.html`, arriba.
 
-**Fase 3 — el hub "Mi plata".** Se dibuja último: es lectura pura, y sale bien recién cuando sabemos
-qué hay para leer.
+**~~Fase 3 — el hub "Mi plata".~~ Dibujado en `fase-3-hub-mi-plata.html`, y resolvió una que no era suya.**
+Se decía que se dibujaba último —*es lectura pura, y sale bien recién cuando sabemos qué hay para
+leer*—, y eso sigue valiendo para su **contenido**. Lo que no podía esperar era su **forma**, porque de
+ella dependía si el hub obligaba a pedir un custodio en el alta de una posición (§9.2-E de
+`exploracion-instrumentos.md`, abierta con el motivo *«depende de si el corte por ubicación entra en
+3A»*).
+
+**No lo obliga.** Puesto el corte por entidad al lado del corte por contenedor, gana el segundo, y ni
+siquiera por costo: agrupar por entidad pliega una posición adentro de la fila de su banco, y esa fila
+pasa a mezclar plata gastable con plata que necesita un rescate — **la misma confusión que la capa de
+instrumentos existe para disolver**. La fila «Sin ubicación» que salvaría al corte por entidad con
+custodio opcional falla las tres pruebas de la regla 15.
+
+Y el ejemplo del modelo (§5) ya lo había dibujado así: en su corte por ubicación **Galicia aparece dos
+veces** —la cuenta y el plazo fijo—, que es una lista de contenedores y no un agrupamiento por
+entidad. Queda abierto lo que solo contesta mirar a alguien usarlo: si los dos cortes se leen como dos
+vistas de lo mismo, y cuántas filas aguanta la lista plana.

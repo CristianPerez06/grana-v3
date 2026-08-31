@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fase 3 · Hub «Mi plata» — el corte por ubicación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --navy:#0B1A2B; --page:#F6F7F9; --card:#FFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+  --text:#0B1A2B; --muted:#6B7683; --soft:#8A94A3; --neutral:#7A8494;
+  --emerald:#10B981; --emerald-deep:#059669; --emerald-bg:#ECFDF5;
+  --terracotta:#B56A5A; --terracotta-bg:#FBEDEA; --slate:#3A6B8A; --plum:#8A6E98; --warning:#C49A3C;
+  --warm-bg:#F8EFDA; --warm-bd:#DFCCA4; --warm-tx:#6B4E14; --warm-dp:#8A5A16;
+  --tile:#F1F3F6;
+  --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(11,26,43,.05),0 6px 18px rgba(11,26,43,.05);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+.doc{max-width:1320px;margin:0 auto;padding:0 28px 110px}
+.masthead{background:var(--navy);color:#fff;padding:52px 28px 44px;margin-bottom:40px}
+.masthead .in{max-width:1320px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.62);margin:0 0 12px;font-weight:600}
+.masthead h1{margin:0 0 12px;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.masthead p{margin:0;max-width:72ch;color:rgba(255,255,255,.68);font-size:16px}
+.masthead .warn{margin-top:22px;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:14px;color:rgba(255,255,255,.8);max-width:86ch}
+.masthead .warn b{color:#fff;font-weight:700}
+.masthead .warn ul{margin:9px 0 0;padding-left:18px}
+.masthead .warn li{margin-top:4px}
+.masthead .warn.ok{background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.35)}
+
+h2.sec{margin:52px 0 4px;font-size:23px;font-weight:800;letter-spacing:-.02em}
+p.lead{margin:0 0 24px;font-size:15px;color:var(--muted);max-width:82ch}
+p.lead b{color:var(--text);font-weight:600}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:40px 34px;align-items:start}
+.step{display:flex;flex-direction:column;gap:12px}
+.step-head{display:flex;align-items:flex-start;gap:11px}
+.step-num{flex:0 0 auto;width:29px;height:29px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800}
+.step-head h3{margin:0;font-size:16.5px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.step-head .sub{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.tag{display:inline-block;margin-top:6px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+.t-new{background:var(--emerald-bg);color:var(--emerald-deep)}
+.t-mod{background:#EAF1F6;color:var(--slate)}
+.t-warn{background:#FBF3E2;color:var(--warm-dp)}
+.t-no{background:var(--terracotta-bg);color:var(--terracotta)}
+.t-fut{background:#F1EEF6;color:var(--plum)}
+
+.note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--border);padding-left:13px}
+.note b{color:var(--text);font-weight:600}
+.note.ok{border-left-color:var(--emerald)}
+.note.warn{border-left-color:var(--warm-bd)}
+.note.no{border-left-color:var(--terracotta)}
+
+.phone{width:100%;max-width:392px;border:1px solid var(--border);border-radius:22px;background:var(--page);overflow:hidden;box-shadow:var(--shadow)}
+.scr{padding:15px;display:flex;flex-direction:column;gap:11px}
+.hdr{background:var(--navy);color:#fff;padding:13px 16px 15px}
+.hdr .bk{font-size:12px;color:rgba(255,255,255,.6)}
+.hdr h4{margin:5px 0 0;font-size:18px;font-weight:800;letter-spacing:-.02em}
+
+.tot{border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+.tot .dark{background:var(--navy);color:#fff;padding:15px 16px 13px}
+.tot .lbl{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.tot .pair{display:grid;grid-template-columns:1fr 1px 1fr;margin-top:11px}
+.tot .pair .divi{background:rgba(255,255,255,.15)}
+.tot .pair .h{text-align:center;padding:0 8px;font-size:22px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tot .pair .h s{text-decoration:none;font-size:.78em;font-weight:700;color:rgba(255,255,255,.5)}
+.tot .pair .h.zero{color:rgba(255,255,255,.42)}
+.tot .sup{margin:11px 0 0;font-size:11.5px;font-weight:600;color:rgba(255,255,255,.6);line-height:1.45}
+.tot .bar{display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff}
+.tot .bar div{padding:11px 4px;text-align:center;font-size:11.5px;font-weight:800;color:var(--text)}
+.tot .bar div + div{border-left:1px solid var(--border-soft)}
+
+.blk{display:flex;flex-direction:column;gap:9px}
+.blk .bh{display:flex;align-items:center;justify-content:space-between;padding:0 3px}
+.blk .bh h5{margin:0;font-size:14px;font-weight:800;letter-spacing:-.02em}
+.blk .bh .add{font-size:12px;font-weight:800;color:var(--emerald-deep)}
+
+.row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border-soft);border-radius:15px;padding:12px 13px}
+.row .ic{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;background:var(--tile)}
+.row .ic.g{background:#EAF1F6}.row .ic.p{background:#F1EEF6}.row .ic.e{background:var(--emerald-bg)}
+.row .nm{flex:1;min-width:0;font-size:14px;font-weight:800;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .nm em{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--soft);letter-spacing:0;margin-top:2px}
+.row .am{flex:0 0 auto;text-align:right}
+.row .am b{display:block;font-size:15.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.row .am s{display:block;text-decoration:none;font-size:11px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.row .chev{color:#C4CBD4;font-size:15px;flex:0 0 auto}
+
+.hint{display:flex;align-items:center;gap:7px;padding:2px 4px;font-size:11.5px;color:var(--soft);font-weight:600}
+.hint i{font-style:normal;font-size:11px}
+
+.ghostblk{border:1px dashed var(--border);border-radius:15px;padding:16px 14px;text-align:center;font-size:12.5px;color:#B6BFCA;font-weight:600;background:repeating-linear-gradient(135deg,#FAFBFC,#FAFBFC 8px,#F4F6F8 8px,#F4F6F8 16px)}
+.quiet{padding:3px 4px;font-size:12.5px;color:var(--muted);font-weight:600}
+.quiet a{color:var(--emerald-deep);text-decoration:none;font-weight:800}
+
+.c{background:#fff;border:1px solid var(--border-soft);border-radius:15px}
+.c.pad{padding:13px 14px}
+.dh{display:flex;align-items:flex-start;justify-content:space-between;padding:3px 2px 0}
+.dh .k{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.dh h6{margin:2px 0 0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+.dh .x{width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:14px}
+
+.fld{padding:11px 14px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:11px}
+.fld:first-child{border-top:0}
+.fld .k{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.fld .v{font-size:14.5px;font-weight:600;margin-top:1px}
+.fld .v.ph{color:#B6BFCA;font-weight:500}
+.fld .gr{flex:1;min-width:0}
+.fld .sq{flex:0 0 auto;width:32px;height:32px;border-radius:9px;background:var(--tile);display:grid;place-items:center;font-size:14px}
+.fld .sq.acc{background:var(--slate);color:#fff;font-size:11px;font-weight:800}
+.fld .chev{color:#C4CBD4;font-size:15px}
+
+.amt{padding:14px 15px 15px;position:relative}
+.amt .lbl{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.amt .cur{position:absolute;right:13px;top:12px;border:1px solid var(--border);border-radius:9px;padding:4px 9px;font-size:11.5px;font-weight:700}
+.amt .val{display:flex;align-items:baseline;gap:6px;margin-top:8px;justify-content:center}
+.amt .val .s{font-size:21px;font-weight:600;color:var(--soft)}
+.amt .val .n{font-size:34px;font-weight:700;letter-spacing:-.025em;line-height:1;font-variant-numeric:tabular-nums}
+
+.calc{padding:12px 14px}
+.calc div{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;padding:4px 0}
+.calc div span:first-child{color:var(--muted)}
+.calc div span:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.calc .rule{border-top:1px solid var(--border-soft);margin-top:5px;padding-top:8px}
+.calc .rule span:last-child{font-size:15.5px;font-weight:800}
+.calc .pos span:last-child{color:var(--emerald-deep)}
+.calc .neg span:last-child{color:var(--terracotta)}
+.calc .em span:first-child{color:var(--text);font-weight:700}
+
+.cta{background:var(--emerald);color:#fff;border-radius:12px;padding:14px;text-align:center;font-size:15px;font-weight:800}
+.cta.ghost{background:#fff;color:var(--muted);border:1px solid var(--border);font-weight:700}
+.acts{display:flex;gap:8px}
+.acts .cta{flex:1;padding:12px;font-size:13.5px;border-radius:11px}
+
+.ask{background:#fff;border:1px solid var(--border-soft);border-radius:15px;padding:13px 14px}
+.ask h6{margin:0 0 4px;font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.35}
+.ask p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45}
+.ask .opts{display:flex;gap:8px;margin-top:11px}
+.ask .opts div{flex:1;border:1px solid var(--border);border-radius:11px;padding:9px;text-align:center;font-size:13px;font-weight:700}
+.ask .opts div.on{border-color:var(--emerald);background:var(--emerald-bg);color:var(--emerald-deep)}
+.out{margin-top:11px;padding:11px 12px;border-radius:11px;font-size:12.5px;line-height:1.45}
+.out.si{background:#FBF3E2;color:var(--warm-tx);border:1px solid var(--warm-bd)}
+.out.no{background:var(--emerald-bg);color:#065F46;border:1px solid #A7F3D0}
+
+.month{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:14px 15px}
+.month .k{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);margin-bottom:9px}
+.month .l{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13.5px}
+.month .l span:first-child{color:var(--muted)}
+.month .l span:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.month .l.fin{border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);margin:5px 0;padding:7px 0}
+.month .l.fin span:first-child{color:var(--slate);font-weight:700}
+.month .l.fin span:last-child{color:var(--slate)}
+.month .l.tot{border-top:1px solid var(--border-soft);margin-top:6px;padding-top:9px}
+.month .l.tot span:last-child{font-size:15.5px;font-weight:800}
+.month .l.off span{color:#B6BFCA !important;font-weight:600}
+
+.mv{background:#fff;border:1px solid var(--border-soft);border-radius:15px;overflow:hidden}
+.mv .it{display:flex;align-items:center;gap:11px;padding:11px 13px;border-top:1px solid var(--border-soft)}
+.mv .it:first-child{border-top:0}
+.mv .av{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#EAF1F6;display:grid;place-items:center;font-size:14px}
+.mv .tx{flex:1;min-width:0;font-size:13.5px;font-weight:700}
+.mv .tx em{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--soft);margin-top:1px}
+.mv .n{font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.mv .n.pos{color:var(--emerald-deep)}
+.mv .n.neu{color:var(--slate)}
+
+ol.chk{counter-reset:c;list-style:none;padding:0;margin:16px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+ol.chk li{counter-increment:c;background:#fff;border:1px solid var(--border-soft);border-radius:14px;padding:13px 15px 13px 48px;position:relative;font-size:13.5px;line-height:1.5;box-shadow:var(--shadow)}
+ol.chk li::before{content:counter(c);position:absolute;left:14px;top:13px;width:22px;height:22px;border-radius:7px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800}
+ol.chk li b{font-weight:700}
+ol.chk li em{display:block;font-style:normal;margin-top:5px;color:var(--muted);font-size:12.5px}
+
+/* ── propios de este mock ─────────────────────────────────────────── */
+.cut{background:#fff;border:1px solid var(--border-soft);border-radius:15px;overflow:hidden}
+.cut .ch{padding:10px 13px 8px;font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);border-bottom:1px solid var(--border-soft)}
+.cut .li{display:flex;align-items:center;gap:11px;padding:11px 13px;border-top:1px solid var(--border-soft)}
+.cut .li:first-of-type{border-top:0}
+.cut .li .ic{flex:0 0 auto;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:15px;background:var(--tile)}
+.cut .li .ic.g{background:#EAF1F6;color:var(--slate);font-size:11px;font-weight:800}
+.cut .li .ic.e{background:var(--emerald-bg)}
+.cut .li .ic.p{background:#F1EEF6}
+.cut .li .ic.q{background:#FBF3E2;color:var(--warm-dp)}
+.cut .li .nm{flex:1;min-width:0;font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+.cut .li .nm em{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--soft);margin-top:2px;letter-spacing:0}
+.cut .li .am{flex:0 0 auto;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.cut .li.mix{background:#FDF9F0}
+.cut .li.res{background:#FDF9F0}
+.cut .sum{display:flex;justify-content:space-between;align-items:baseline;padding:10px 13px;border-top:1px solid var(--border);background:#FAFBFC;font-size:12px}
+.cut .sum span:first-child{color:var(--muted);font-weight:700}
+.cut .sum span:last-child{font-weight:800;font-variant-numeric:tabular-nums;color:var(--emerald-deep)}
+.ident{background:var(--navy);color:#fff;border-radius:16px;padding:20px 22px;margin:18px 0 0}
+.ident .k{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:12px}
+.ident .ln{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:14px;color:rgba(255,255,255,.78)}
+.ident .ln span:last-child{font-weight:700;font-variant-numeric:tabular-nums;color:#fff}
+.ident .ln.tot{border-top:1px solid rgba(255,255,255,.18);margin-top:8px;padding-top:11px;font-weight:800;color:#fff}
+.ident .ln.tot span:last-child{font-size:17px}
+.ident .cols{display:grid;grid-template-columns:1fr 1fr;gap:34px}
+@media(max-width:760px){.ident .cols{grid-template-columns:1fr;gap:18px}}
+.split{background:#fff;border:1px solid var(--warm-bd);border-radius:14px;padding:14px 15px;font-size:13px}
+.split .t{font-weight:800;font-size:13.5px;margin-bottom:9px}
+.split .s{display:flex;justify-content:space-between;padding:4px 0;color:var(--muted)}
+.split .s b{font-variant-numeric:tabular-nums;font-weight:700;color:var(--text)}
+.split .s.bad b{color:var(--terracotta)}
+.split .s.ok b{color:var(--emerald-deep)}
+table.cmp{width:100%;border-collapse:collapse;margin-top:18px;background:#fff;border:1px solid var(--border-soft);border-radius:14px;overflow:hidden;font-size:13.5px}
+table.cmp th,table.cmp td{padding:11px 13px;text-align:left;border-top:1px solid var(--border-soft);vertical-align:top}
+table.cmp thead th{background:#FAFBFC;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);font-weight:800;border-top:0}
+table.cmp td:first-child{font-weight:700;color:var(--text)}
+table.cmp td.y{color:var(--emerald-deep);font-weight:700}
+table.cmp td.n{color:var(--terracotta);font-weight:700}
+table.cmp td.m{color:var(--warm-dp);font-weight:700}
+.tests{width:100%;border-collapse:collapse;margin-top:16px;background:#fff;border:1px solid var(--border-soft);border-radius:14px;overflow:hidden;font-size:13.5px}
+.tests th,.tests td{padding:11px 14px;text-align:left;border-top:1px solid var(--border-soft)}
+.tests thead th{background:#FAFBFC;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);font-weight:800;border-top:0}
+.tests td:last-child{color:var(--terracotta);font-weight:700}
+.verdict{display:inline-block;margin-top:8px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
+.v-no{background:var(--terracotta-bg);color:var(--terracotta)}
+.v-si{background:var(--emerald-bg);color:var(--emerald-deep)}
+.v-mid{background:#FBF3E2;color:var(--warm-dp)}
+</style>
+</head>
+<body>
+
+<div class="masthead"><div class="in">
+  <p class="eyebrow">Mock exploratorio · fase 3 · el hub</p>
+  <h1>Mi plata — los dos cortes, y la pregunta del custodio</h1>
+  <p>El hub que cruza <b>qué función cumple</b> la plata con <b>dónde está</b>. Tres formas de armar
+     el corte por ubicación, con la misma plata en las tres, para decidir si el hub obliga a pedir un
+     custodio en el alta de una posición.</p>
+  <div class="warn ok">
+    <b>Lo que este mock da por cerrado</b>
+    <ul>
+      <li><b>El requisito duro del hub</b> (<b>modelo §5</b>): los dos cortes son <b>dos descomposiciones del mismo total</b>, por moneda. Si no suman igual, el hub muestra dos totales que no reconcilian — justo lo que el modelo viene evitando.</li>
+      <li><b>El corte por función NO se desglosa por cuenta; el por ubicación sí.</b> Colgarle las cuentas a «Para gastar» contaría el guardado dos veces y afirmaría una disponibilidad por cuenta que no existe.</li>
+      <li><b>El guardado solo aparece en el corte por función.</b> Es una <b>decisión</b>, no un lugar: no vive en ninguna cuenta. Una <b>posición</b> sí puede aparecer en los dos.</li>
+      <li><b>Vocabulario vigente:</b> «Para gastar», «Guardado», <b>«Plata colocada»</b>. La fila de una posición dice su <b>estado</b> —«con rescate», «vence el…»—, no el nombre de la sección.</li>
+      <li><b>Todo por moneda.</b> ARS y USD nunca se suman ni se convierten.</li>
+    </ul>
+  </div>
+  <div class="warn">
+    <b>Qué NO es esto.</b> No es código de producción, no propone schema ni tablas, no hay SQL ni
+    migraciones y no hay ninguna change activa. Es exploración visual para cerrar <b>§9.2-E</b> de
+    <b>docs/exploracion-instrumentos.md</b> —«¿el custodio es obligatorio u opcional?»—, que quedó
+    abierta con el motivo <i>«depende de si el corte por ubicación entra en 3A»</i>.
+  </div>
+</div></div>
+
+<div class="doc">
+
+<h2 class="sec">0 · Una sola plata para los tres casos</h2>
+<p class="lead">Los números salen de <b>fase-3a-fci-v1.html</b> para que el mock sea continuo con el de
+la fase: Guardado $200.000, FCI Mercado Pago $350.000, Plazo fijo Comafi $700.000 y «Para gastar»
+$4.885.748,17. Lo único que agrego son los saldos por cuenta, que ese mock no necesitaba.</p>
+
+<div class="ident">
+  <div class="cols">
+    <div>
+      <div class="k">Cuentas propias</div>
+      <div class="ln"><span>Mercado Pago</span><span>$ 3.845.748,17</span></div>
+      <div class="ln"><span>Galicia</span><span>$ 1.200.000,00</span></div>
+      <div class="ln"><span>Billetera · efectivo</span><span>$ 40.000,00</span></div>
+      <div class="ln tot"><span>Suma de cuentas</span><span>$ 5.085.748,17</span></div>
+      <div class="ln" style="padding-top:10px;font-size:12.5px"><span>↳ adentro viven los $200.000 guardados</span><span></span></div>
+    </div>
+    <div>
+      <div class="k">Posiciones</div>
+      <div class="ln"><span>FCI Mercado Pago · con rescate</span><span>$ 350.000,00</span></div>
+      <div class="ln"><span>Plazo fijo Comafi · vence 24/9</span><span>$ 700.000,00</span></div>
+      <div class="ln tot"><span>Plata colocada</span><span>$ 1.050.000,00</span></div>
+      <div class="ln tot" style="margin-top:14px"><span>TOTAL EN PESOS</span><span>$ 6.135.748,17</span></div>
+    </div>
+  </div>
+</div>
+
+<p class="lead" style="margin-top:20px"><b>El corte por función es el mismo en los tres casos</b> y no
+se discute acá: Para gastar $4.885.748,17 + Guardado $200.000 + Plata colocada $1.050.000 =
+$6.135.748,17. Lo que cambia es el de abajo.</p>
+
+<h2 class="sec">A · Las tres formas del corte por ubicación</h2>
+<p class="lead">Misma pantalla, mismo total, mismo corte de arriba. <b>Las tres cierran la
+aritmética</b> — así que la aritmética no es lo que decide.</p>
+
+<div class="grid">
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">A</div><div>
+      <h3>Custodio obligatorio</h3>
+      <p class="sub">Ubicación = <b>entidad</b>. Cada posición se pliega dentro de su custodio.</p>
+      <span class="tag t-mod">Campo nuevo, obligatorio</span>
+    </div></div>
+    <div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Mi plata</h4></div>
+      <div class="scr">
+        <div class="tot"><div class="dark">
+          <div class="lbl">Todo lo que tenés</div>
+          <div class="pair">
+            <div class="h">$ 6.135.748<s>,17</s></div>
+            <div class="divi"></div>
+            <div class="h zero">US$ 0</div>
+          </div>
+          <p class="sup">Dos formas de mirar la misma plata.</p>
+        </div></div>
+
+        <div class="cut">
+          <div class="ch">Por función</div>
+          <div class="li"><div class="ic e">💸</div><div class="nm">Para gastar</div><div class="am">$ 4.885.748,17</div></div>
+          <div class="li"><div class="ic">🔒</div><div class="nm">Guardado</div><div class="am">$ 200.000,00</div></div>
+          <div class="li"><div class="ic p">📄</div><div class="nm">Plata colocada</div><div class="am">$ 1.050.000,00</div></div>
+          <div class="sum"><span>Suma</span><span>$ 6.135.748,17</span></div>
+        </div>
+
+        <div class="cut">
+          <div class="ch">Dónde está</div>
+          <div class="li mix"><div class="ic g">MP</div><div class="nm">Mercado Pago<em>cuenta + FCI</em></div><div class="am">$ 4.195.748,17</div></div>
+          <div class="li"><div class="ic g">GA</div><div class="nm">Galicia</div><div class="am">$ 1.200.000,00</div></div>
+          <div class="li"><div class="ic g">CO</div><div class="nm">Comafi<em>plazo fijo</em></div><div class="am">$ 700.000,00</div></div>
+          <div class="li"><div class="ic">👛</div><div class="nm">Efectivo</div><div class="am">$ 40.000,00</div></div>
+          <div class="sum"><span>Suma</span><span>$ 6.135.748,17</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="note no"><b>La fila resaltada mezcla dos naturalezas de liquidez adentro de un mismo
+      número.</b> $3.845.748 se pueden gastar hoy; $350.000 necesitan un rescate.</div>
+    <div class="note"><b>Lo que gana:</b> contesta «si Galicia se cae, cuánto mío hay ahí», y colapsa
+      cinco plazos fijos del mismo banco en una línea.</div>
+    <span class="verdict v-no">Reconstruye la confusión que la capa existe para disolver</span>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">B</div><div>
+      <h3>Custodio opcional + «Sin ubicación»</h3>
+      <p class="sub">Ubicación = entidad, con fila residual. Acá el FCI se cargó sin custodio.</p>
+      <span class="tag t-warn">Campo opcional + residual</span>
+    </div></div>
+    <div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Mi plata</h4></div>
+      <div class="scr">
+        <div class="tot"><div class="dark">
+          <div class="lbl">Todo lo que tenés</div>
+          <div class="pair">
+            <div class="h">$ 6.135.748<s>,17</s></div>
+            <div class="divi"></div>
+            <div class="h zero">US$ 0</div>
+          </div>
+          <p class="sup">Dos formas de mirar la misma plata.</p>
+        </div></div>
+
+        <div class="cut">
+          <div class="ch">Por función</div>
+          <div class="li"><div class="ic e">💸</div><div class="nm">Para gastar</div><div class="am">$ 4.885.748,17</div></div>
+          <div class="li"><div class="ic">🔒</div><div class="nm">Guardado</div><div class="am">$ 200.000,00</div></div>
+          <div class="li"><div class="ic p">📄</div><div class="nm">Plata colocada</div><div class="am">$ 1.050.000,00</div></div>
+          <div class="sum"><span>Suma</span><span>$ 6.135.748,17</span></div>
+        </div>
+
+        <div class="cut">
+          <div class="ch">Dónde está</div>
+          <div class="li"><div class="ic g">MP</div><div class="nm">Mercado Pago</div><div class="am">$ 3.845.748,17</div></div>
+          <div class="li"><div class="ic g">GA</div><div class="nm">Galicia</div><div class="am">$ 1.200.000,00</div></div>
+          <div class="li mix"><div class="ic g">CO</div><div class="nm">Comafi<em>plazo fijo</em></div><div class="am">$ 700.000,00</div></div>
+          <div class="li res"><div class="ic q">❓</div><div class="nm">Sin ubicación<em>Decinos dónde está para verlo acá ›</em></div><div class="am">$ 350.000,00</div></div>
+          <div class="sum"><span>Suma</span><span>$ 6.135.748,17</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="note warn"><b>La aritmética no es el problema: el residual es justamente lo que la
+      salva.</b> El problema es que esa fila reclama algo.</div>
+    <div class="note no"><b>Hereda todo el costo de A</b> —la fila de Comafi sigue plegando una
+      posición dentro de una entidad— <b>y además</b> agrega una fila de deuda.</div>
+    <span class="verdict v-no">Falla las tres pruebas de la regla 15 · ver sección C</span>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">C</div><div>
+      <h3>Ubicación = contenedor</h3>
+      <p class="sub">Lista plana. Cada cuenta y cada posición, una fila. <b>Es lo que dibuja el ejemplo del propio modelo.</b></p>
+      <span class="tag t-new">Ningún campo nuevo</span>
+    </div></div>
+    <div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Mi plata</h4></div>
+      <div class="scr">
+        <div class="tot"><div class="dark">
+          <div class="lbl">Todo lo que tenés</div>
+          <div class="pair">
+            <div class="h">$ 6.135.748<s>,17</s></div>
+            <div class="divi"></div>
+            <div class="h zero">US$ 0</div>
+          </div>
+          <p class="sup">Dos formas de mirar la misma plata.</p>
+        </div></div>
+
+        <div class="cut">
+          <div class="ch">Por función</div>
+          <div class="li"><div class="ic e">💸</div><div class="nm">Para gastar</div><div class="am">$ 4.885.748,17</div></div>
+          <div class="li"><div class="ic">🔒</div><div class="nm">Guardado</div><div class="am">$ 200.000,00</div></div>
+          <div class="li p"><div class="ic p">📄</div><div class="nm">Plata colocada</div><div class="am">$ 1.050.000,00</div></div>
+          <div class="sum"><span>Suma</span><span>$ 6.135.748,17</span></div>
+        </div>
+
+        <div class="cut">
+          <div class="ch">Dónde está</div>
+          <div class="li"><div class="ic g">MP</div><div class="nm">Mercado Pago</div><div class="am">$ 3.845.748,17</div></div>
+          <div class="li"><div class="ic g">GA</div><div class="nm">Galicia</div><div class="am">$ 1.200.000,00</div></div>
+          <div class="li"><div class="ic">👛</div><div class="nm">Billetera</div><div class="am">$ 40.000,00</div></div>
+          <div class="li"><div class="ic p">📄</div><div class="nm">FCI Mercado Pago<em>con rescate</em></div><div class="am">$ 350.000,00</div></div>
+          <div class="li"><div class="ic p">🔒</div><div class="nm">Plazo fijo Comafi<em>vence el 24 de sep</em></div><div class="am">$ 700.000,00</div></div>
+          <div class="sum"><span>Suma</span><span>$ 6.135.748,17</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="note ok"><b>Cada fila tiene una sola naturaleza de liquidez.</b> Y la fila de posición
+      reusa el estado ya cerrado en el mock de 3A: el hub no inventa vocabulario, muestra la misma
+      fila en otro contexto.</div>
+    <div class="note"><b>Galicia aparecería dos veces</b> si tuviera un plazo fijo. Y está bien: son
+      dos cosas distintas — una la gastás, la otra no.</div>
+    <span class="verdict v-si">Cierra sin campo nuevo, y no mezcla</span>
+  </div>
+
+</div>
+
+<h2 class="sec">B · Lo que cada fila mete adentro de un número</h2>
+<p class="lead">Es lo que separa a los tres, y no se ve en la suma. <b>Las tres cierran; solo una no
+obliga al usuario a desarmar una fila mentalmente antes de usarla.</b></p>
+
+<div class="grid">
+  <div class="step">
+    <div class="split">
+      <div class="t">A · «Mercado Pago $ 4.195.748,17»</div>
+      <div class="s ok"><span>Gastable hoy, sin hacer nada</span><b>$ 3.845.748,17</b></div>
+      <div class="s bad"><span>Requiere pedir un rescate</span><b>$ 350.000,00</b></div>
+      <div class="s" style="border-top:1px solid var(--border-soft);margin-top:7px;padding-top:8px"><span>Lo que la fila dice</span><b>un solo número</b></div>
+    </div>
+    <div class="note no"><b>El usuario que lee esa fila y sale a gastar</b> cae exactamente en la
+      confusión que §0 de <b>exploracion-instrumentos.md</b> pone como razón de existir de toda la
+      capa: <i>«el que tiene plata en un fondo cree que la tiene disponible»</i>.</div>
+  </div>
+
+  <div class="step">
+    <div class="split" style="border-color:var(--border-soft)">
+      <div class="t">C · las dos filas, separadas</div>
+      <div class="s ok"><span>Mercado Pago · cuenta</span><b>$ 3.845.748,17</b></div>
+      <div class="s"><span>FCI Mercado Pago · con rescate</span><b>$ 350.000,00</b></div>
+      <div class="s" style="border-top:1px solid var(--border-soft);margin-top:7px;padding-top:8px"><span>Lo que dicen las filas</span><b>su estado</b></div>
+    </div>
+    <div class="note ok">La entidad se repite en el nombre y eso alcanza. <b>El estado de la fila
+      hace el trabajo que en A tendría que hacer un desglose.</b></div>
+  </div>
+
+  <div class="step">
+    <div class="split" style="border-color:var(--border-soft);background:#FAFBFC">
+      <div class="t">Y en los tres, lo mismo con las cuentas</div>
+      <div class="s"><span>Mercado Pago · fila de cuenta</span><b>$ 3.845.748,17</b></div>
+      <div class="s"><span>↳ de eso, guardado</span><b>una parte</b></div>
+      <div class="s"><span>¿en qué cuenta está el guardado?</span><b>en ninguna</b></div>
+    </div>
+    <div class="note warn"><b>El guardado está adentro de las filas de cuenta, en silencio, en los
+      tres casos.</b> Es inevitable —no vive en ninguna cuenta (<b>modelo §7-2</b>)—, pero el hub es
+      donde más se nota. La diferencia con A: acá es forzoso, allá es <b>elegido</b>.</div>
+  </div>
+</div>
+
+<h2 class="sec">C · La fila «Sin ubicación» contra la regla 15</h2>
+<p class="lead">La regla nació para conciliación —<b>«Grana ofrece conciliación, pero no persigue
+conciliación»</b>— y trae tres pruebas explícitas. La fila residual del caso B las falla las tres.</p>
+
+<table class="tests">
+  <thead><tr><th>Prueba de la regla 15</th><th>«Sin ubicación $ 350.000»</th><th></th></tr></thead>
+  <tbody>
+    <tr><td>si se ve <b>sin haber entrado a una cuenta</b>, no va</td><td>Se ve en el hub, que es pantalla de entrada del módulo</td><td>falla</td></tr>
+    <tr><td>si suena a que el usuario está <b>atrasado</b>, no va</td><td>«Decinos dónde está para verlo acá» es literalmente eso</td><td>falla</td></tr>
+    <tr><td>si <b>se puede contar</b>, no va</td><td>Es un monto, con su propia fila y su propio ícono</td><td>falla</td></tr>
+  </tbody>
+</table>
+
+<div class="note warn" style="margin-top:16px"><b>La regla está escrita para conciliación, sí.</b> Pero
+su fundamento es general y ya está aplicado y QA-eado en este mismo módulo como <b>regla E8</b>:
+<i>«un usuario que ve un bloque apagado esperando que él haga algo aprende a ignorar la pantalla, y
+esa lección no se revierte cuando la funcionalidad llega»</i>.</div>
+
+<h2 class="sec">D · Los tres, al lado</h2>
+
+<table class="cmp">
+  <thead><tr><th></th><th>A · custodio obligatorio</th><th>B · opcional + residual</th><th>C · contenedor</th></tr></thead>
+  <tbody>
+    <tr><td>Cierra la aritmética</td><td class="y">sí</td><td class="y">sí</td><td class="y">sí</td></tr>
+    <tr><td>Campo nuevo en el alta</td><td class="n">obligatorio, con fallback a texto libre</td><td class="m">opcional</td><td class="y">ninguno</td></tr>
+    <tr><td>Naturaleza de liquidez por fila</td><td class="n">mezclada</td><td class="n">mezclada</td><td class="y">una sola</td></tr>
+    <tr><td>Fila que reclama algo</td><td class="y">no</td><td class="n">sí</td><td class="y">no</td></tr>
+    <tr><td>Contesta «exposición a un banco»</td><td class="y">sí</td><td class="m">parcial</td><td class="n">no</td></tr>
+    <tr><td>Escala al comitente (3C)</td><td class="y">sí</td><td class="y">sí</td><td class="n">lista larga</td></tr>
+    <tr><td>Efecto sobre §9.2-E</td><td>la cierra en «obligatorio»</td><td>la cierra en «opcional»</td><td class="y">la disuelve: el hub no la necesita</td></tr>
+  </tbody>
+</table>
+
+<div class="note ok" style="margin-top:18px"><b>El ejemplo del modelo ya elegía C, y conviene leerlo
+de nuevo.</b> En <b>modelo §5</b> el corte por ubicación dice «Mercado Pago · Galicia · <b>Plazo fijo
+Galicia</b>»: <b>Galicia aparece dos veces</b>. Eso no es un corte por entidad — es una lista de
+contenedores donde el custodio solo aporta parte del nombre de la fila.</div>
+
+<div class="note" style="margin-top:12px">La frase del modelo <i>«una posición se puede desglosar en
+los dos cortes <b>porque tiene custodio</b>»</i> se lee como si pidiera un campo. Con el ejemplo al
+lado, lo que pide es más barato: que la posición <b>tenga una identidad propia como lugar</b>, cosa
+que su nombre ya le da.</div>
+
+<h2 class="sec">E · Qué cambia esto para la decisión de alcance</h2>
+
+<ol class="chk">
+  <li><b>El hub NO fuerza el custodio.</b> Bajo C, <b>§9.2-E</b> se queda donde estaba: opcional,
+    informativo, sin bloquear nada. Se cae la razón principal para dejar el hub fuera de 3A.
+    <em>El campo «Dónde está · opcional» del alta A (pantalla 5 del mock de 3A) sigue igual.</em></li>
+  <li><b>Queda una razón, más débil, y es del propio modelo:</b> <i>«se dibuja último: es lectura
+    pura, y sale bien recién cuando sabemos qué hay para leer»</i>. Con una sola clase de posición el
+    corte por ubicación tiene una fila de posición y el hub se parece bastante al módulo que ya
+    existe.
+    <em>Su valor real aparece con 3B, cuando conviven dos naturalezas — que es justo el caso dibujado acá.</em></li>
+  <li><b>El nombre de la posición es texto libre.</b> Con C, «Fondo 1 $350.000» es una respuesta
+    pobre a «dónde está».
+    <em>Es calidad de respuesta, no aritmética. Mucho más barato que un campo obligatorio, pero existe.</em></li>
+  <li><b>¿Cuántas filas aguanta la lista plana?</b> §10 ya lo pregunta para el bloque; el hub lo
+    hereda amplificado, porque suma cuentas + posiciones en una sola lista.
+    <em>Y es lo que vuelve a traer A el día que aparezca el comitente, en 3C (§9.2-H).</em></li>
+  <li><b>Lo que ninguno de los tres arregla:</b> el guardado sigue adentro de las filas de cuenta del
+    corte por ubicación, sin nombrarse.
+    <em>Es la pregunta 2 de «lo que queda abierto» del modelo, y el hub es la pantalla donde más se ve.</em></li>
+</ol>
+
+<h2 class="sec">F · Lo que este mock NO contesta</h2>
+<p class="lead">Se contestan mirando a alguien usarlo, no leyéndolo — igual que las ocho de §11 de
+<b>exploracion-instrumentos.md</b>.</p>
+
+<div class="grid">
+  <div class="step"><div class="note"><b>¿Los dos cortes se leen como dos vistas de lo mismo,</b> o
+    como dos listas que casualmente suman igual? El total arriba es la única pista que tienen.</div></div>
+  <div class="step"><div class="note"><b>¿Alguien suma las filas para chequear?</b> Si nadie lo hace,
+    el requisito duro protege contra un error que el usuario nunca iba a detectar — y sigue valiendo,
+    pero por corrección y no por confianza.</div></div>
+  <div class="step"><div class="note"><b>¿«Dónde está» invita a tocar las filas?</b> Si sí, ¿a dónde
+    van? Cuenta → detalle de cuenta; posición → detalle de posición. El hub sería la segunda puerta a
+    las dos.</div></div>
+</div>
+
+</div>
+</body>
+</html>
