@@ -70,29 +70,35 @@ export const SharedStrip = () => {
       </View>
       {/* The household's own name says whose money this is; the two member
           initials said it a third time, in the width where there is least room
-          for any of them. This block shrinks first so the amount never does. */}
+          for any of them. This block shrinks first so the amount never does —
+          which is exactly why every text node in it is capped at one line. */}
       <View className="min-w-0 flex-1">
-        <Text className="text-[13px] font-extrabold text-text">
+        <Text numberOfLines={1} className="text-[13px] font-extrabold text-text">
           {t('dashboard.shared_strip.title')}
         </Text>
         <Text numberOfLines={1} className="text-[11px] font-medium text-text-soft">
           {data.householdName}
         </Text>
       </View>
+      {/* Stacked, not inline — same as web below `sm`. "Te deben $225.450" on
+          one line is ~160px of a row that has ~290px total; it left the identity
+          block too little to hold even its own title, and what a block that may
+          shrink below its content does with the overflow is paint it over its
+          neighbour. The number gets the line; the direction goes under it. */}
       <View className="shrink-0 flex-row items-center gap-1.5">
-        <Text
-          className={`text-[13.5px] font-extrabold ${credit ? 'text-positive' : 'text-terracotta'}`}
-        >
-          {credit
-            ? t('dashboard.shared_strip.they_owe_you')
-            : t('dashboard.shared_strip.you_owe')}{' '}
-        </Text>
-        <MaskedAmount
-          amount={primary.amount}
-          currency={primary.currency}
-          showCentsOverride={primary.currency === 'USD'}
-          className={`text-[13.5px] font-extrabold ${credit ? 'text-positive' : 'text-terracotta'}`}
-        />
+        <View className="items-end">
+          <MaskedAmount
+            amount={primary.amount}
+            currency={primary.currency}
+            showCentsOverride={primary.currency === 'USD'}
+            className={`text-[13.5px] font-extrabold ${credit ? 'text-positive' : 'text-terracotta'}`}
+          />
+          <Text numberOfLines={1} className="text-[11px] font-medium text-text-soft">
+            {credit
+              ? t('dashboard.shared_strip.they_owe_you')
+              : t('dashboard.shared_strip.you_owe')}
+          </Text>
+        </View>
         <ChevronRight size={15} color={colors.textSoft} />
       </View>
     </Pressable>

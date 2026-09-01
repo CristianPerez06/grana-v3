@@ -115,8 +115,8 @@
   },
   "dashboard": {
     "title": "Home",
-    "welcome": "Hi, {name}.",
-    "welcome_anon": "Hi.",
+    "welcome": "Hi, {name}",
+    "welcome_anon": "Hi",
     "new_movement": "New movement",
     "mask_show": "Show amounts",
     "mask_hide": "Hide amounts",

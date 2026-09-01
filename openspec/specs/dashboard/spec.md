@@ -75,26 +75,30 @@ Por debajo del ancho máximo de contenido, el layout SHALL colapsar a **una sola
 
 ### Requirement: El header del dashboard saluda al usuario y muestra la fecha de hoy
 
-El header del dashboard SHALL mostrar un saludo `Hola, {name}.` usando el nombre del perfil (key `dashboard.welcome`), con fallback a `dashboard.welcome_anon` ("Hola.") cuando el perfil no tiene nombre. El header SHALL mostrar la fecha del día calculada desde la zona horaria financiera del usuario vía `getTodayAR()`; NO SHALL usar `new Date()` directo del navegador/servidor. El `eye toggle` siempre vive en este header; el botón "Nuevo movimiento" vive en este header **solo en desktop-web** (viewport `≥sm`) — en mobile-web el acceso primario para registrar es el FAB definido en la spec de `transactions` y NO se renderiza en el header. En desktop el saludo es el título grande del header; en la app nativa el saludo se pinta dentro del header navy.
+El header del dashboard SHALL mostrar un saludo `Hola, {name}` usando el nombre del perfil (key `dashboard.welcome`), con fallback a `dashboard.welcome_anon` ("Hola") cuando el perfil no tiene nombre. El saludo NO SHALL llevar punto final: lo que cierra la frase es el nombre de la persona, y un punto detrás lo hacía leer como un dato pegado desde el perfil en vez de como el saludo que es. El header SHALL mostrar la fecha del día calculada desde la zona horaria financiera del usuario vía `getTodayAR()`; NO SHALL usar `new Date()` directo del navegador/servidor. El `eye toggle` siempre vive en este header; el botón "Nuevo movimiento" vive en este header **solo en desktop-web** (viewport `≥sm`) — en mobile-web el acceso primario para registrar es el FAB definido en la spec de `transactions` y NO se renderiza en el header. En desktop el saludo es el título grande del header; en la app nativa el saludo se pinta dentro del header navy.
 
 En **web**, el header SHALL incluir además el navegador mensual compartido (ver requirement "El selector de mes del header gobierna las secciones mensuales (web)"). El subtítulo del header SHALL mostrar únicamente la fecha; el neto del mes en curso ("vas {neto} este mes") NO vive en el header sino en el header de la card "Balance del mes" (decisión de QA del rediseño: junto a la fecha competía con el saludo).
 
 En **web**, el header SHALL renderizarse desde el primer paint sin esperar al fetch del contenido del dashboard. Para lograrlo, el header y sus providers de estado (`EyeMaskProvider`, `DashboardMonthProvider`) SHALL montarse desde `apps/web/app/(app)/dashboard/layout.tsx` (Variant C del spec `route-loading-and-errors`), no desde `page.tsx`. El layout SHALL ser un Server Component async que lee las preferencias server-side necesarias para inicializar los providers (ej. `getEyeMasked()`, el mes actual vía `getTodayAR()`); el `page.tsx` SHALL ser sync para no suspender el segmento. Como el chrome vive en el layout, queda persistente entre cualquier transición de `{children}` (loading, error, navegación a hijos), garantizando el primer paint inmediato del header.
 
-Como el nombre del perfil se resuelve client-side (vía el cliente browser de Supabase), el header SHALL exhibir un **estado de carga** mientras esa query no resuelve: el saludo SHALL usar el fallback `dashboard.welcome_anon` ("Hola.") aunque exista un perfil con nombre, y los controles que sí vivan en el header en el viewport activo SHALL renderizarse en estado disabled (ver sus respectivos requirements). En desktop-web esto cubre el `eye toggle`, el navegador mensual y el botón "Nuevo movimiento"; en mobile-web cubre el `eye toggle` y el navegador mensual. Cuando la query del perfil resuelve, el header SHALL actualizarse al saludo personalizado y habilitar los controles del header. Si la query falla, el header SHALL permanecer indefinidamente en el saludo anon pero los controles SHALL pasar a estado habilitado para no bloquear al usuario.
+Como el nombre del perfil se resuelve client-side (vía el cliente browser de Supabase), el header SHALL exhibir un **estado de carga** mientras esa query no resuelve: el saludo SHALL usar el fallback `dashboard.welcome_anon` ("Hola") aunque exista un perfil con nombre, y los controles que sí vivan en el header en el viewport activo SHALL renderizarse en estado disabled (ver sus respectivos requirements). En desktop-web esto cubre el `eye toggle`, el navegador mensual y el botón "Nuevo movimiento"; en mobile-web cubre el `eye toggle` y el navegador mensual. Cuando la query del perfil resuelve, el header SHALL actualizarse al saludo personalizado y habilitar los controles del header. Si la query falla, el header SHALL permanecer indefinidamente en el saludo anon pero los controles SHALL pasar a estado habilitado para no bloquear al usuario.
 
 La fecha del header NO SHALL depender de esa query: SHALL calcularse en el server o en el primer render con `getTodayAR()` y mantenerse estable entre el estado disabled y el habilitado.
+
+El header SHALL resolverse en **dos filas**, y lo que cambia con el ancho es qué comparte fila con qué. Debajo de `sm` en web, y siempre en la app nativa, el saludo SHALL ocupar la primera fila **entero**, y el selector de mes junto al eye toggle SHALL bajar a la fila de la fecha. Al lado del saludo esos controles son ~190px de una línea de ~330px y le dejaban ~130px: "Hola, Julieta." se partía en dos renglones, y un nombre es justamente lo que no se debe apretar. Al lado de la fecha —~105px con el mes en tres letras— entran de sobra, y ninguna de las dos filas cuesta un renglón que el header no estuviera gastando ya. Desde `sm` el saludo SHALL compartir su fila con los controles y la fecha SHALL quedar sola en la segunda: el arreglo de desktop, sin cambios. Las tres piezas SHALL vivir en un único DOM que reordena por breakpoint, no en dos bloques duplicados.
+
+La fecha SHALL ocupar **una sola línea en todo ancho**. En el viewport angosto la fecha comparte su fila con el selector de mes y el eye toggle, y "Martes, 1 de septiembre" se partía en dos renglones: dos filas de chrome para una fecha, en la pantalla donde el alto es el recurso escaso. Debajo de `sm` en web, y siempre en la app nativa, el nombre del mes SHALL acortarse a sus tres primeras letras ("Martes, 1 de sep") — el mismo canje que ya hace el `MonthNavigator` al lado. Como piso, la fecha SHALL truncar con elipsis antes que envolver. El acortado SHALL vivir en una única función compartida por ambas plataformas (`formatTodayLine` en `@grana/dashboard`), no duplicada por app.
 
 #### Scenario: Saludo con nombre del perfil
 
 - **WHEN** el usuario con nombre "Cristian" carga `/dashboard`
-- **THEN** el header termina mostrando "Hola, Cristian."
+- **THEN** el header termina mostrando "Hola, Cristian" (sin punto final)
 - **AND** muestra la fecha de hoy en la zona horaria financiera (AR)
 
 #### Scenario: Saludo sin nombre usa fallback
 
 - **WHEN** el usuario no tiene nombre cargado en el perfil
-- **THEN** el header muestra "Hola."
+- **THEN** el header muestra "Hola"
 
 #### Scenario: La fecha de hoy se calcula desde la zona financiera
 
@@ -107,17 +111,29 @@ La fecha del header NO SHALL depender de esa query: SHALL calcularse en el serve
 - **THEN** el subtítulo del header muestra la fecha de hoy sin el neto del mes
 - **AND** el neto del mes en curso aparece en el header de la card "Balance del mes"
 
+#### Scenario: La fecha ocupa una sola fila en mobile
+
+- **WHEN** el usuario abre el dashboard en un viewport angosto (mobile-web debajo de `sm`, o la app nativa) el 1 de septiembre
+- **THEN** el subtítulo del header muestra "Martes, 1 de sep" en un solo renglón
+- **AND** si aún así no entra, trunca con elipsis en lugar de envolver a un segundo renglón
+
+#### Scenario: El saludo no se parte por culpa de los controles
+
+- **WHEN** el usuario "Julieta" abre el dashboard en un viewport angosto
+- **THEN** "Hola, Julieta." ocupa la primera fila entera, en un solo renglón
+- **AND** el selector de mes y el eye toggle se renderizan en la fila de abajo, a la derecha de la fecha
+
 #### Scenario: El header se ve antes de que resuelva la query del perfil (desktop-web)
 
 - **WHEN** un usuario web en viewport `≥sm` navega a `/dashboard` y la query del nombre del perfil todavía no resolvió
-- **THEN** el header ya está montado con el saludo "Hola." (fallback `dashboard.welcome_anon`)
+- **THEN** el header ya está montado con el saludo "Hola" (fallback `dashboard.welcome_anon`)
 - **AND** muestra la fecha de hoy correctamente
 - **AND** sus controles (`eye toggle`, navegador mensual, "Nuevo movimiento") están visibles pero disabled
 
 #### Scenario: El header se ve antes de que resuelva la query del perfil (mobile-web)
 
 - **WHEN** un usuario web en viewport `<sm` navega a `/dashboard` y la query del nombre del perfil todavía no resolvió
-- **THEN** el header ya está montado con el saludo "Hola." (fallback `dashboard.welcome_anon`)
+- **THEN** el header ya está montado con el saludo "Hola" (fallback `dashboard.welcome_anon`)
 - **AND** muestra la fecha de hoy correctamente
 - **AND** el `eye toggle` y el navegador mensual están visibles pero disabled
 - **AND** el botón "Nuevo movimiento" NO se renderiza en el header (su lugar lo ocupa el FAB)
@@ -125,13 +141,13 @@ La fecha del header NO SHALL depender de esa query: SHALL calcularse en el serve
 #### Scenario: Resolver la query actualiza el saludo y habilita los controles (web)
 
 - **WHEN** la query del perfil resuelve con `full_name = "Cristian Perez"` después de mostrar el estado disabled inicial
-- **THEN** el saludo del header pasa a "Hola, Cristian."
+- **THEN** el saludo del header pasa a "Hola, Cristian"
 - **AND** los controles que vivan en el header en el viewport activo se habilitan
 
 #### Scenario: Fallo de la query no deja el header bloqueado (web)
 
 - **WHEN** la query del perfil falla
-- **THEN** el saludo se mantiene en "Hola." (fallback anon)
+- **THEN** el saludo se mantiene en "Hola" (fallback anon)
 - **AND** los controles del header se habilitan igual para no bloquear al usuario
 
 #### Scenario: El header persiste durante navegación entre rutas hermanas del shell (web)
@@ -154,7 +170,7 @@ La fecha del header NO SHALL depender de esa query: SHALL calcularse en el serve
 
 ### Requirement: El selector de mes del dashboard gobierna las secciones mensuales
 
-El dashboard SHALL exponer un navegador mensual `‹ Mes Año ›` (`MonthNavigator`) cuyo estado vive en un context client-side compartido (`DashboardMonthProvider` en web; su espejo nativo en mobile), inicializado en el mes actual derivado de `getTodayAR()`. Su ubicación es específica de cada plataforma: en **web** vive en el header de la página (junto al eye toggle y "Nuevo movimiento"); en **nativo** vive dentro del header navy de la pantalla, debajo del saludo, ocupando el ancho (pill blanca sobre navy).
+El dashboard SHALL exponer un navegador mensual `‹ Mes Año ›` (`MonthNavigator`) cuyo estado vive en un context client-side compartido (`DashboardMonthProvider` en web; su espejo nativo en mobile), inicializado en el mes actual derivado de `getTodayAR()`. Su ubicación es la misma en las dos plataformas: en el header del dashboard, junto al eye toggle (y a "Nuevo movimiento" en desktop-web). En el viewport angosto —web debajo de `sm` y siempre en nativo, donde el header es la banda navy— ese par SHALL vivir en la fila de la fecha, debajo del saludo, con el ancho de la pill dado por su contenido y el mes en tres letras (pill blanca sobre navy). NO SHALL ocupar el ancho en una fila propia: eso costaba ~44px de la pantalla donde el alto es el recurso escaso, para un control que entra al lado de la fecha.
 
 Cambiar el mes seleccionado SHALL actualizar **en simultáneo la card de saldo completa** —el saldo, el desglose "Dónde está" y "Resumen del mes"—, la card **"Cuánto gastaste"** y la card **"Compromisos del próximo mes"**. El saldo deja de ser "de hoy": se corta al último día del mes seleccionado. Es lo que permite que los tres montos del resumen cierren contra él; dejar el saldo de hoy encima de los flujos de otro mes rompía la única verificación que la card ofrece al usuario.
 
@@ -199,7 +215,8 @@ La navegación de mes NO SHALL modificar la URL/ruta ni provocar una navegación
 #### Scenario: El navegador vive en el header navy (mobile)
 
 - **WHEN** el usuario abre el dashboard en la app nativa
-- **THEN** el `MonthNavigator` se renderiza dentro del header navy, debajo del saludo, ocupando el ancho
+- **THEN** el `MonthNavigator` se renderiza dentro del header navy, debajo del saludo, en la fila de la fecha y junto al eye toggle
+- **AND** el saludo queda solo en su fila, en un renglón
 - **AND** salir del tab y volver resetea la selección al mes actual
 
 
@@ -1223,6 +1240,10 @@ El dashboard SHALL renderizar al pie una tira "Compartido" —una sola línea cl
 
 En pantallas angostas la tira SHALL mantenerse en **una sola fila**, y SHALL ganarse ese lugar soltando justamente esos dos agregados. El nombre del propio Hogar ya dice de quién es esa plata, y las iniciales lo dicen por tercera vez justo donde menos lugar hay para decirlo una. El bloque de identidad SHALL ser el que se achica; el monto NO SHALL ser nunca el que cede.
 
+En el viewport angosto la dirección ("Te deben" / "Debés") NO SHALL ir delante del número sino **debajo de él**, en la bajada. "Te deben $ 225.450" en una línea se lleva más de la mitad del ancho útil de la fila y deja al bloque de identidad sin lugar ni para su propio título. En ese mismo viewport, la bajada del monto SHALL decir la dirección en lugar de "Saldo a tu favor" / "Saldo en contra": son el mismo hecho dicho dos veces, y sobrevive el que además reemplaza lo que la línea del monto soltó.
+
+Todo nodo de texto del bloque de identidad SHALL estar truncado a una línea. Ese bloque puede achicarse por debajo de su contenido —es lo que mantiene entero al monto—, y un hijo sin truncado se derrama fuera de la caja que le tocó y **se pinta encima del monto** en lugar de ser recortado por ella.
+
 La tira SHALL renderizarse **únicamente cuando hay actividad compartida**. Sin actividad, NO SHALL renderizarse ni dejar espacio reservado.
 
 #### Scenario: Hogar con saldo a favor del usuario
@@ -1230,6 +1251,12 @@ La tira SHALL renderizarse **únicamente cuando hay actividad compartida**. Sin 
 - **WHEN** el hogar tiene actividad y el neto favorece al usuario
 - **THEN** la tira muestra "Te deben" con el monto en verde
 - **AND** se renderiza tanto en web como en la app nativa
+
+#### Scenario: La tira entra en una fila en mobile sin superponer texto
+
+- **WHEN** el usuario abre el dashboard en un viewport angosto y el hogar tiene un neto a su favor
+- **THEN** la tira ocupa una sola fila: identidad a la izquierda, monto a la derecha con la dirección debajo
+- **AND** el título "Compartido" y el monto no se superponen a ningún ancho: si falta lugar, el que trunca es el bloque de identidad
 
 #### Scenario: Usuario sin actividad compartida
 

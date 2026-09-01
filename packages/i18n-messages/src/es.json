@@ -115,8 +115,8 @@
   },
   "dashboard": {
     "title": "Inicio",
-    "welcome": "Hola, {name}.",
-    "welcome_anon": "Hola.",
+    "welcome": "Hola, {name}",
+    "welcome_anon": "Hola",
     "new_movement": "Nuevo movimiento",
     "mask_show": "Mostrar importes",
     "mask_hide": "Ocultar importes",

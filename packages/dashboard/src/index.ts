@@ -48,6 +48,8 @@ export {
 
 export { deriveMonthOpening } from './month-opening'
 
+export { formatTodayLine } from './today-line'
+
 export { deriveBalanceCardView, type BalanceCardView } from './balance-card-view'
 
 export {
