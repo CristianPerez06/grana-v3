@@ -155,16 +155,32 @@ export async function getAccountMovementsAscending(
 // ── getPendingReimbursements ───────────────────────────────────────────────────
 // Pending reimbursements (expected, not yet received nor cancelled), surfaced in
 // the "A confirmar" block. Optionally scoped to one account (its account detail).
+//
+// OWNERSHIP: the block is a list of the user's OWN pending reimbursements —
+// every row it shows must be confirmable and cancellable by her. RLS alone does
+// not give that: migration 0023 widened the `transactions` SELECT policy to the
+// household's shared rows, so a reintegro of the other member (which inherits
+// `is_shared` + `household_id` from a shared expense) passes it, while
+// `confirmReimbursement` / `cancelReimbursement` scope their write to
+// `user_id = userId` and answer "Reintegro no encontrado.". The owner filter
+// therefore lives HERE, in the one read both web and mobile call, so the read
+// and the write cannot drift apart again (bug #95).
 
 export async function getPendingReimbursements(
   supabase: GranaSupabaseClient,
   accountId?: string,
 ): Promise<PendingReimbursementVM[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
   let query = supabase
     .from('transactions')
     .select(
       'id, reimbursement_target, estimated_amount, currency_code, account_id, card_period_id, linked_transaction_id, source_account:accounts!transactions_account_id_fkey(name)',
     )
+    .eq('user_id', user.id)
     .eq('type', 'reimbursement')
     .is('received_at', null)
     .is('cancelled_at', null)
