@@ -85,6 +85,8 @@ Como el nombre del perfil se resuelve client-side (vía el cliente browser de Su
 
 La fecha del header NO SHALL depender de esa query: SHALL calcularse en el server o en el primer render con `getTodayAR()` y mantenerse estable entre el estado disabled y el habilitado.
 
+El header SHALL resolverse en **dos filas**, y lo que cambia con el ancho es qué comparte fila con qué. Debajo de `sm` en web, y siempre en la app nativa, el saludo SHALL ocupar la primera fila **entero**, y el selector de mes junto al eye toggle SHALL bajar a la fila de la fecha. Al lado del saludo esos controles son ~190px de una línea de ~330px y le dejaban ~130px: "Hola, Julieta." se partía en dos renglones, y un nombre es justamente lo que no se debe apretar. Al lado de la fecha —~105px con el mes en tres letras— entran de sobra, y ninguna de las dos filas cuesta un renglón que el header no estuviera gastando ya. Desde `sm` el saludo SHALL compartir su fila con los controles y la fecha SHALL quedar sola en la segunda: el arreglo de desktop, sin cambios. Las tres piezas SHALL vivir en un único DOM que reordena por breakpoint, no en dos bloques duplicados.
+
 La fecha SHALL ocupar **una sola línea en todo ancho**. En el viewport angosto la fecha comparte su fila con el selector de mes y el eye toggle, y "Martes, 1 de septiembre" se partía en dos renglones: dos filas de chrome para una fecha, en la pantalla donde el alto es el recurso escaso. Debajo de `sm` en web, y siempre en la app nativa, el nombre del mes SHALL acortarse a sus tres primeras letras ("Martes, 1 de sep") — el mismo canje que ya hace el `MonthNavigator` al lado. Como piso, la fecha SHALL truncar con elipsis antes que envolver. El acortado SHALL vivir en una única función compartida por ambas plataformas (`formatTodayLine` en `@grana/dashboard`), no duplicada por app.
 
 #### Scenario: Saludo con nombre del perfil
@@ -114,6 +116,12 @@ La fecha SHALL ocupar **una sola línea en todo ancho**. En el viewport angosto 
 - **WHEN** el usuario abre el dashboard en un viewport angosto (mobile-web debajo de `sm`, o la app nativa) el 1 de septiembre
 - **THEN** el subtítulo del header muestra "Martes, 1 de sep" en un solo renglón
 - **AND** si aún así no entra, trunca con elipsis en lugar de envolver a un segundo renglón
+
+#### Scenario: El saludo no se parte por culpa de los controles
+
+- **WHEN** el usuario "Julieta" abre el dashboard en un viewport angosto
+- **THEN** "Hola, Julieta." ocupa la primera fila entera, en un solo renglón
+- **AND** el selector de mes y el eye toggle se renderizan en la fila de abajo, a la derecha de la fecha
 
 #### Scenario: El header se ve antes de que resuelva la query del perfil (desktop-web)
 
@@ -162,7 +170,7 @@ La fecha SHALL ocupar **una sola línea en todo ancho**. En el viewport angosto 
 
 ### Requirement: El selector de mes del dashboard gobierna las secciones mensuales
 
-El dashboard SHALL exponer un navegador mensual `‹ Mes Año ›` (`MonthNavigator`) cuyo estado vive en un context client-side compartido (`DashboardMonthProvider` en web; su espejo nativo en mobile), inicializado en el mes actual derivado de `getTodayAR()`. Su ubicación es específica de cada plataforma: en **web** vive en el header de la página (junto al eye toggle y "Nuevo movimiento"); en **nativo** vive dentro del header navy de la pantalla, debajo del saludo, ocupando el ancho (pill blanca sobre navy).
+El dashboard SHALL exponer un navegador mensual `‹ Mes Año ›` (`MonthNavigator`) cuyo estado vive en un context client-side compartido (`DashboardMonthProvider` en web; su espejo nativo en mobile), inicializado en el mes actual derivado de `getTodayAR()`. Su ubicación es la misma en las dos plataformas: en el header del dashboard, junto al eye toggle (y a "Nuevo movimiento" en desktop-web). En el viewport angosto —web debajo de `sm` y siempre en nativo, donde el header es la banda navy— ese par SHALL vivir en la fila de la fecha, debajo del saludo, con el ancho de la pill dado por su contenido y el mes en tres letras (pill blanca sobre navy). NO SHALL ocupar el ancho en una fila propia: eso costaba ~44px de la pantalla donde el alto es el recurso escaso, para un control que entra al lado de la fecha.
 
 Cambiar el mes seleccionado SHALL actualizar **en simultáneo la card de saldo completa** —el saldo, el desglose "Dónde está" y "Resumen del mes"—, la card **"Cuánto gastaste"** y la card **"Compromisos del próximo mes"**. El saldo deja de ser "de hoy": se corta al último día del mes seleccionado. Es lo que permite que los tres montos del resumen cierren contra él; dejar el saldo de hoy encima de los flujos de otro mes rompía la única verificación que la card ofrece al usuario.
 
@@ -207,7 +215,8 @@ La navegación de mes NO SHALL modificar la URL/ruta ni provocar una navegación
 #### Scenario: El navegador vive en el header navy (mobile)
 
 - **WHEN** el usuario abre el dashboard en la app nativa
-- **THEN** el `MonthNavigator` se renderiza dentro del header navy, debajo del saludo, ocupando el ancho
+- **THEN** el `MonthNavigator` se renderiza dentro del header navy, debajo del saludo, en la fila de la fecha y junto al eye toggle
+- **AND** el saludo queda solo en su fila, en un renglón
 - **AND** salir del tab y volver resetea la selección al mes actual
 
 
