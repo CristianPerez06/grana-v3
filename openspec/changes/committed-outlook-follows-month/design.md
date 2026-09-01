@@ -191,7 +191,13 @@ La forma de las lecturas es la misma en las tres posiciones (accounts credit →
 
 `computePeriodAmounts` (hoy en `packages/cards/src/period-amounts.ts`) es la pieza que ya resuelve la parte difícil: de qué lado —pendiente o pagado— se descuenta el reintegro "en resumen" según si el resumen está pago. `aggregateCardDebtAsOf` la necesita y NO SHALL re-derivarla.
 
-Nota sobre la partición: con `.lte('due_date', window.end)` en las dos lentes, el read trae la ventana **más** todo lo anterior, y se parte en dos conjuntos disjuntos — ventana (`due_date` dentro) y arrastre (`due_date < snapshotDate` e impago al corte). Bajo `snapshot` la partición además es **exhaustiva**, porque `window.start = snapshotDate + 1 día` no deja ningún resumen en el medio; el KNOWN GAP de un resumen que vence entre hoy y la apertura de la ventana existe sólo en la lente `live`.
+Nota sobre la partición: con `.lte('due_date', window.end)` en las dos lentes, el read trae la ventana **más** todo lo anterior, y se parte en dos conjuntos disjuntos — ventana (`due_date` dentro) y arrastre (`due_date < snapshotDate` e impago al corte).
+
+La partición es disjunta pero **no exhaustiva**, ni siquiera bajo `snapshot`: queda afuera el resumen que vence **exactamente** el `snapshotDate`. No es un agujero nuevo — es el KNOWN GAP que la card ya tiene ("un resumen que vence más adelante este mismo mes no está en ninguno de los dos conjuntos"), evaluado al corte en vez de a hoy. Lo que cambia es su tamaño: bajo `live` el hueco es todo lo que resta del mes en curso; bajo `snapshot` se angosta a **un solo día**.
+
+El `<` estricto no es una elección de este change: es la definición de "vencido" que ya tiene la app. `derivePeriodStatus` (`@grana/money-logic`, consumida por toda la UI de tarjetas) resuelve `todayStr <= due_date → 'closed'`, y sólo después `'overdue'`. Un resumen que vence el 31/08, mirado al 31/08, está **cerrado esperando pago**, no vencido. Ablandarlo a `<=` cerraría el hueco de un día a cambio de que la card del dashboard llame "vencido" a un resumen que el módulo de tarjetas, en la pantalla de al lado, rotula "Cerrado, esperando pago" — dos definiciones de vencido en la misma app, que es exactamente la clase de drift que este repo evita.
+
+Si algún día se quiere cerrar el hueco de verdad, el remedio es el que el propio KNOWN GAP ya nombra —una banda "este mes, todavía por delante"— y no un predicado de vencido bifurcado por lente.
 
 Pero `@grana/dashboard` **no puede importar `@grana/cards`**: el grafo actual es `@grana/cards → @grana/transactions → @grana/dashboard`, así que la arista nueva cerraría el ciclo `dashboard → cards → transactions → dashboard`.
 

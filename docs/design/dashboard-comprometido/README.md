@@ -2,6 +2,13 @@
 
 Handoff de diseño para el rediseño de la card **Comprometido** del dashboard.
 
+> **Modelo de lectura vigente.** Este documento es el handoff visual original. El
+> modelo de *lectura* de la card —qué ventana mira según el mes seleccionado en el
+> navegador— vive en el change `openspec/changes/committed-outlook-follows-month/`.
+> `tres-posiciones-del-navegador.html`, en esta misma carpeta, recorre ese modelo con
+> un caso concreto: los mismos datos leídos desde el mes actual, el anterior y uno
+> más atrás, con el detalle de qué entra, qué queda afuera y por qué.
+
 ## Por qué
 
 Dos problemas en producción/UX:

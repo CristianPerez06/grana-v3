@@ -1,0 +1,480 @@
+<title>Tres Posiciones del Navegador</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #F4F7F9;
+    --surface: #FFFFFF;
+    --sunken: #EDF2F5;
+    --ink: #0B1A2B;
+    --ink-soft: #43586B;
+    --ink-muted: #6B7F90;
+    --line: #D9E3EA;
+    --line-soft: #E8EEF2;
+    --slate: #3A6B8A;
+    --plum: #8A6E98;
+    --good: #059669;
+    --bad: #B56A5A;
+    --bad-soft: rgba(181, 106, 90, 0.10);
+    --good-soft: rgba(5, 150, 105, 0.10);
+    --chip: #E4ECF1;
+    --shadow: 0 1px 2px rgba(11, 26, 43, .05), 0 8px 24px -12px rgba(11, 26, 43, .18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1A2B;
+      --surface: #12253A;
+      --sunken: #0E1E31;
+      --ink: #E9F0F5;
+      --ink-soft: #B3C4D1;
+      --ink-muted: #8298A9;
+      --line: rgba(255, 255, 255, .14);
+      --line-soft: rgba(255, 255, 255, .08);
+      --slate: #6FA3C4;
+      --plum: #B497C1;
+      --good: #34D399;
+      --bad: #E0937F;
+      --bad-soft: rgba(224, 147, 127, 0.13);
+      --good-soft: rgba(52, 211, 153, 0.13);
+      --chip: rgba(255, 255, 255, .09);
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px -12px rgba(0, 0, 0, .6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1A2B;
+    --surface: #12253A;
+    --sunken: #0E1E31;
+    --ink: #E9F0F5;
+    --ink-soft: #B3C4D1;
+    --ink-muted: #8298A9;
+    --line: rgba(255, 255, 255, .14);
+    --line-soft: rgba(255, 255, 255, .08);
+    --slate: #6FA3C4;
+    --plum: #B497C1;
+    --good: #34D399;
+    --bad: #E0937F;
+    --bad-soft: rgba(224, 147, 127, 0.13);
+    --good-soft: rgba(52, 211, 153, 0.13);
+    --chip: rgba(255, 255, 255, .09);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px -12px rgba(0, 0, 0, .6);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: Archivo, ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 3.5rem 1.5rem 6rem; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  h1, h2, h3 { font-family: "Bricolage Grotesque", Archivo, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.1rem, 5vw, 3.1rem); font-weight: 700; letter-spacing: -.028em; line-height: 1.04; }
+  h2 { font-size: 1.55rem; font-weight: 600; letter-spacing: -.02em; }
+  h3 { font-size: 1.02rem; font-weight: 600; letter-spacing: -.01em; }
+  p { margin: 0; }
+  a { color: inherit; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace; font-size: .7rem; font-weight: 600;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--ink-muted);
+  }
+
+  header.masthead { display: flex; flex-direction: column; gap: 1.1rem; padding-bottom: 2.25rem; border-bottom: 1px solid var(--line); }
+  .lede { max-width: 40rem; color: var(--ink-soft); font-size: 1.02rem; }
+  .today {
+    display: inline-flex; align-items: center; gap: .55rem; align-self: flex-start;
+    background: var(--chip); border-radius: 999px; padding: .3rem .8rem;
+    font-family: "IBM Plex Mono", monospace; font-size: .76rem; font-weight: 500; color: var(--ink-soft);
+  }
+  .today::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+
+  section { margin-top: 3.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+  .sec-head { display: flex; flex-direction: column; gap: .4rem; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; padding: 1.25rem 1.35rem; box-shadow: var(--shadow);
+  }
+
+  .setup { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+  @media (min-width: 46rem) { .setup { grid-template-columns: 1fr 1fr; } }
+  .setup h3 { margin-bottom: .7rem; }
+  .facts { display: flex; flex-direction: column; gap: .5rem; }
+  .fact { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; font-size: .875rem; }
+  .fact span:first-child { color: var(--ink-soft); }
+  .fact span:last-child { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
+  .note { font-size: .82rem; color: var(--ink-muted); margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed var(--line); }
+
+  /* ── position blocks ─────────────────────────────────────────── */
+  .pos { display: flex; flex-direction: column; gap: 1rem; }
+  .pos-head { display: flex; align-items: baseline; gap: .9rem; flex-wrap: wrap; }
+  .pos-n {
+    font-family: "Bricolage Grotesque", sans-serif; font-size: 2.5rem; font-weight: 700;
+    line-height: .85; letter-spacing: -.04em; color: var(--line); flex: none;
+  }
+  .derived { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .kv {
+    font-family: "IBM Plex Mono", monospace; font-size: .74rem; font-weight: 500;
+    background: var(--sunken); border: 1px solid var(--line-soft);
+    border-radius: 7px; padding: .28rem .55rem; color: var(--ink-soft); white-space: nowrap;
+  }
+  .kv b { color: var(--ink); font-weight: 600; }
+
+  .cols { display: grid; gap: 1rem; grid-template-columns: 1fr; align-items: start; }
+  @media (min-width: 52rem) { .cols { grid-template-columns: 1.25fr 1fr; } }
+
+  .ledger { display: flex; flex-direction: column; gap: .1rem; }
+  .row {
+    display: grid; grid-template-columns: 1.1rem 1fr auto; gap: .6rem; align-items: baseline;
+    padding: .5rem 0; border-bottom: 1px solid var(--line-soft); font-size: .875rem;
+  }
+  .row:last-child { border-bottom: 0; }
+  .mark { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: .82rem; line-height: 1.5; }
+  .in .mark { color: var(--good); }
+  .out .mark { color: var(--bad); }
+  .out .label, .out .amt { color: var(--ink-muted); }
+  .out .amt { text-decoration: line-through; }
+  .label b { font-weight: 600; }
+  .why { display: block; color: var(--ink-muted); font-size: .78rem; line-height: 1.45; margin-top: .1rem; }
+  .amt { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-size: .84rem; white-space: nowrap; }
+  .subtotal {
+    display: flex; justify-content: space-between; gap: 1rem; margin-top: .6rem; padding-top: .6rem;
+    border-top: 1.5px solid var(--line); font-size: .85rem; font-weight: 600;
+  }
+  .subtotal span:last-child { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+  .group-title { margin: 1rem 0 .1rem; }
+  .group-title:first-child { margin-top: 0; }
+
+  /* ── the card mock ───────────────────────────────────────────── */
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 1.15rem; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: .9rem;
+  }
+  .card-head { display: flex; flex-direction: column; gap: .1rem; }
+  .card-title { font-size: 1rem; font-weight: 700; letter-spacing: -.012em; }
+  .card-sub { font-size: .78rem; font-weight: 600; color: var(--ink-muted); }
+  .total-box { background: var(--sunken); border: 1px solid var(--line-soft); border-radius: 12px; padding: .9rem; }
+  .total-label { font-size: .63rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--ink-muted); }
+  .total-amt {
+    font-family: "Bricolage Grotesque", sans-serif; font-size: 1.85rem; font-weight: 700;
+    letter-spacing: -.035em; line-height: 1.05; margin-top: .2rem; font-variant-numeric: tabular-nums;
+  }
+  .bar { display: flex; height: 9px; border-radius: 5px; overflow: hidden; background: var(--line-soft); margin-top: .75rem; }
+  .bar span { height: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin-top: .55rem; font-size: .74rem; font-weight: 600; color: var(--ink-soft); }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: .35rem; vertical-align: baseline; }
+  .foot {
+    display: flex; align-items: baseline; gap: .4rem; margin-top: .7rem;
+    font-size: .76rem; font-weight: 700; color: var(--bad); line-height: 1.4;
+  }
+  .foot .num { white-space: nowrap; }
+
+  /* ── proof table ─────────────────────────────────────────────── */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; min-width: 40rem; font-size: .855rem; }
+  th, td { text-align: left; padding: .68rem .95rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  thead th {
+    font-family: "IBM Plex Mono", monospace; font-size: .68rem; font-weight: 600;
+    letter-spacing: .11em; text-transform: uppercase; color: var(--ink-muted);
+    background: var(--sunken); border-bottom: 1px solid var(--line);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.rule { font-weight: 600; }
+  td code, .inline-code {
+    font-family: "IBM Plex Mono", monospace; font-size: .82em;
+    background: var(--chip); border-radius: 4px; padding: .08em .34em;
+  }
+
+  .callout {
+    border: 1px solid var(--bad); border-left-width: 4px; background: var(--bad-soft);
+    border-radius: 12px; padding: 1.15rem 1.3rem; display: flex; flex-direction: column; gap: .7rem;
+  }
+  .callout .eyebrow { color: var(--bad); }
+  .callout h3 { color: var(--ink); }
+  .callout p { color: var(--ink-soft); font-size: .92rem; }
+  .callout .fixed { font-size: .85rem; color: var(--ink-soft); border-top: 1px solid var(--bad); padding-top: .7rem; }
+  .callout .fixed b { color: var(--ink); }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Compromisos · modelo de lectura</p>
+    <h1>Tres posiciones del navegador</h1>
+    <p class="lede">Los mismos datos, leídos desde tres lugares distintos. Sirve para verificar que <span class="inline-code">lens</span> y <span class="inline-code">windowElapsed</span> hacen lo que dicen — y para ver dónde el modelo todavía fallaba.</p>
+    <span class="today">hoy = 2026-09-01</span>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">El caso</p>
+      <h2>Con qué datos trabajamos</h2>
+    </div>
+
+    <div class="setup">
+      <div class="panel">
+        <h3>Tarjetas</h3>
+        <div class="facts">
+          <div class="fact"><span>Visa — cierra 25, vence 10 del mes siguiente</span><span>—</span></div>
+          <div class="fact"><span>Amex — cierra 12, vence 28 del mismo mes</span><span>—</span></div>
+          <div class="fact"><span>Compra en cuotas con Amex, 05/05/2026</span><span>12 × $50.000</span></div>
+        </div>
+        <p class="note">Las 12 cuotas se insertaron el 05/05, fechadas <span class="mono">05/05</span>, <span class="mono">05/06</span>, <span class="mono">05/07</span>… Cada una ya vive dentro del resumen que le toca. Esto es lo que rompía el corte de consumos.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Recurrencias</h3>
+        <div class="facts">
+          <div class="fact"><span>Alquiler — día 5, débito</span><span>$400.000</span></div>
+          <div class="fact"><span>Expensas — día 15, débito</span><span>$65.000</span></div>
+          <div class="fact"><span>Gimnasio — día 10, débito</span><span>$30.000</span></div>
+          <div class="fact"><span>Netflix — día 15, <b>debitado de Amex</b></span><span>$8.000</span></div>
+        </div>
+        <p class="note">Netflix nunca suma en Gastos fijos: se paga con tarjeta, así que llega dentro del resumen de Amex y contarlo dos veces sería contarlo dos veces.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Estado de los resúmenes</h3>
+      <div class="facts" style="margin-top:.7rem">
+        <div class="fact"><span>Amex vence <span class="mono">28/06</span> — se pagó el <span class="mono">03/07</span></span><span>$58.000</span></div>
+        <div class="fact"><span>Visa vence <span class="mono">10/07</span> — se pagó el <span class="mono">28/06</span>, antes de vencer</span><span>$210.000</span></div>
+        <div class="fact"><span>Amex vence <span class="mono">28/07</span> — sigue impaga hoy</span><span>$143.000</span></div>
+        <div class="fact"><span>Visa vence <span class="mono">10/09</span> — abierta</span><span>$95.000</span></div>
+        <div class="fact"><span>Amex vence <span class="mono">28/09</span> — abierta</span><span>$58.000</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── POSICIÓN 1 ─────────────── -->
+  <section class="pos">
+    <div class="pos-head">
+      <span class="pos-n">1</span>
+      <div class="sec-head">
+        <p class="eyebrow">Parado en septiembre · el mes en curso</p>
+        <h2>La card mira octubre</h2>
+      </div>
+    </div>
+    <div class="derived">
+      <span class="kv">snapshotDate <b>2026-09-01</b> (hoy)</span>
+      <span class="kv">window <b>2026-10-01 → 2026-10-31</b></span>
+      <span class="kv">lens <b>live</b></span>
+      <span class="kv">windowElapsed <b>false</b></span>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <h3 class="group-title">Tarjetas — resúmenes que vencen en octubre</h3>
+        <div class="ledger">
+          <div class="row in"><span class="mark">+</span><span class="label">Visa, vence 10/10<span class="why">Período 26/08–25/09, abierto. Aporta lo acumulado y puede crecer.</span></span><span class="amt">$12.000</span></div>
+          <div class="row in"><span class="mark">+</span><span class="label">Amex, vence 28/10<span class="why">El período 13/09–12/10 ni empezó, pero la cuota 6/12 del 05/10 ya existe desde mayo.</span></span><span class="amt">$50.000</span></div>
+        </div>
+        <div class="subtotal"><span>Tarjetas</span><span>$62.000</span></div>
+
+        <h3 class="group-title">Gastos fijos — proyección sobre octubre</h3>
+        <div class="ledger">
+          <div class="row in"><span class="mark">+</span><span class="label">Alquiler 05/10</span><span class="amt">$400.000</span></div>
+          <div class="row in"><span class="mark">+</span><span class="label">Gimnasio 10/10</span><span class="amt">$30.000</span></div>
+          <div class="row in"><span class="mark">+</span><span class="label">Expensas 15/10</span><span class="amt">$65.000</span></div>
+          <div class="row out"><span class="mark">−</span><span class="label">Netflix 15/10<span class="why">Se debita de Amex: llega dentro de ese resumen.</span></span><span class="amt">$8.000</span></div>
+        </div>
+        <div class="subtotal"><span>Gastos fijos</span><span>$495.000</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <p class="card-title">Compromisos del próximo mes</p>
+          <p class="card-sub">Octubre 2026</p>
+        </div>
+        <div class="total-box">
+          <p class="total-label">Ya comprometido</p>
+          <p class="total-amt">$557.000</p>
+          <div class="bar"><span style="width:11%;background:var(--slate)"></span><span style="width:89%;background:var(--plum)"></span></div>
+          <div class="legend">
+            <span><i style="background:var(--slate)"></i>Tarjetas 11%</span>
+            <span><i style="background:var(--plum)"></i>Gastos fijos 89%</span>
+          </div>
+          <p class="foot">⚠ Vencido <span class="num">$143.000</span> sin pagar</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── POSICIÓN 2 ─────────────── -->
+  <section class="pos">
+    <div class="pos-head">
+      <span class="pos-n">2</span>
+      <div class="sec-head">
+        <p class="eyebrow">Parado en agosto · el mes anterior</p>
+        <h2>La card mira septiembre, con el corte al 31/08</h2>
+      </div>
+    </div>
+    <div class="derived">
+      <span class="kv">snapshotDate <b>2026-08-31</b></span>
+      <span class="kv">window <b>2026-09-01 → 2026-09-30</b></span>
+      <span class="kv">lens <b>snapshot</b></span>
+      <span class="kv">windowElapsed <b>false</b></span>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <h3 class="group-title">Tarjetas — resúmenes que vencen en septiembre</h3>
+        <div class="ledger">
+          <div class="row in"><span class="mark">+</span><span class="label">Visa, vence 10/09<span class="why">Al 31/08 seguía impaga. Contenido completo del período.</span></span><span class="amt">$95.000</span></div>
+          <div class="row in"><span class="mark">+</span><span class="label">Amex, vence 28/09<span class="why">Cuota 4/12 del 05/09 más Netflix del 15/08.</span></span><span class="amt">$58.000</span></div>
+        </div>
+        <div class="subtotal"><span>Tarjetas</span><span>$153.000</span></div>
+
+        <h3 class="group-title">Gastos fijos — proyección, porque septiembre no terminó</h3>
+        <div class="ledger">
+          <div class="row in"><span class="mark">+</span><span class="label">Alquiler 05/09</span><span class="amt">$400.000</span></div>
+          <div class="row in"><span class="mark">+</span><span class="label">Gimnasio 10/09</span><span class="amt">$30.000</span></div>
+          <div class="row in"><span class="mark">+</span><span class="label">Expensas 15/09</span><span class="amt">$65.000</span></div>
+        </div>
+        <div class="subtotal"><span>Gastos fijos</span><span>$495.000</span></div>
+        <p class="note">Cuando el 20/09 el alquiler ya esté confirmado, sigue contando: bajo <span class="inline-code">lens: snapshot</span> entran <span class="inline-code">confirmed</span> y <span class="inline-code">pending</span>. Con el filtro de <span class="inline-code">live</span> este total iría encogiendo día a día.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <p class="card-title">Lo que tenías por delante</p>
+          <p class="card-sub">Al cierre de agosto 2026 · septiembre</p>
+        </div>
+        <div class="total-box">
+          <p class="total-label">Ya comprometido</p>
+          <p class="total-amt">$648.000</p>
+          <div class="bar"><span style="width:24%;background:var(--slate)"></span><span style="width:76%;background:var(--plum)"></span></div>
+          <div class="legend">
+            <span><i style="background:var(--slate)"></i>Tarjetas 24%</span>
+            <span><i style="background:var(--plum)"></i>Gastos fijos 76%</span>
+          </div>
+          <p class="foot">⚠ Vencido <span class="num">$143.000</span> sin pagar</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── POSICIÓN 3 ─────────────── -->
+  <section class="pos">
+    <div class="pos-head">
+      <span class="pos-n">3</span>
+      <div class="sec-head">
+        <p class="eyebrow">Parado en junio · dos meses atrás</p>
+        <h2>La card mira julio, con el corte al 30/06</h2>
+      </div>
+    </div>
+    <div class="derived">
+      <span class="kv">snapshotDate <b>2026-06-30</b></span>
+      <span class="kv">window <b>2026-07-01 → 2026-07-31</b></span>
+      <span class="kv">lens <b>snapshot</b></span>
+      <span class="kv">windowElapsed <b>true</b></span>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <h3 class="group-title">Tarjetas — resúmenes que vencen en julio</h3>
+        <div class="ledger">
+          <div class="row out"><span class="mark">−</span><span class="label">Visa, vence 10/07<span class="why">Pagada el 28/06, <b>antes</b> del corte. Al 30/06 ya no era un compromiso pendiente.</span></span><span class="amt">$210.000</span></div>
+          <div class="row in"><span class="mark">+</span><span class="label">Amex, vence 28/07<span class="why">Al 30/06 seguía impaga. Incluye la cuota 3/12 fechada 05/07 — que ya existía al corte.</span></span><span class="amt">$143.000</span></div>
+        </div>
+        <div class="subtotal"><span>Tarjetas</span><span>$143.000</span></div>
+
+        <h3 class="group-title">Gastos fijos — instancias materializadas, sin proyección</h3>
+        <div class="ledger">
+          <div class="row in"><span class="mark">+</span><span class="label">Alquiler 05/07 · <span class="mono">confirmed</span></span><span class="amt">$400.000</span></div>
+          <div class="row in"><span class="mark">+</span><span class="label">Expensas 15/07 · <span class="mono">pending</span><span class="why">Nunca se resolvió. Seguía siendo algo que había que pagar.</span></span><span class="amt">$65.000</span></div>
+          <div class="row out"><span class="mark">−</span><span class="label">Gimnasio 10/07 · <span class="mono">skipped</span><span class="why">El usuario declaró que no ocurrió. Esa plata nunca tuvo que salir.</span></span><span class="amt">$30.000</span></div>
+        </div>
+        <div class="subtotal"><span>Gastos fijos</span><span>$465.000</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <p class="card-title">Lo que hubo que pagar</p>
+          <p class="card-sub">Julio 2026 · foto al 30/06</p>
+        </div>
+        <div class="total-box">
+          <p class="total-label">Ya comprometido</p>
+          <p class="total-amt">$608.000</p>
+          <div class="bar"><span style="width:24%;background:var(--slate)"></span><span style="width:76%;background:var(--plum)"></span></div>
+          <div class="legend">
+            <span><i style="background:var(--slate)"></i>Tarjetas 24%</span>
+            <span><i style="background:var(--plum)"></i>Gastos fijos 76%</span>
+          </div>
+          <p class="foot">⚠ Vencido <span class="num">$58.000</span> sin pagar</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Verificación</p>
+      <h2>Dónde disparó cada regla</h2>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Regla</th><th>Dónde se ve</th><th>Qué habría pasado sin ella</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="rule">Ventana = mes seleccionado + 1</td>
+            <td>Las tres cards nombran meses distintos</td>
+            <td>Las tres decían “Octubre”</td>
+          </tr>
+          <tr>
+            <td class="rule"><code>lens</code> separado de <code>windowElapsed</code></td>
+            <td>Posición 2: <code>snapshot</code> con <code>windowElapsed:&nbsp;false</code></td>
+            <td>El corte al 31/08 se descartaba y el pago se evaluaba a hoy</td>
+          </tr>
+          <tr>
+            <td class="rule">Pago evaluado al corte</td>
+            <td>Posición 3: la Visa pagada el 28/06 queda afuera</td>
+            <td>Entraba una deuda que al 30/06 ya no existía</td>
+          </tr>
+          <tr>
+            <td class="rule">Sin corte de consumos</td>
+            <td>Posición 3: la cuota del 05/07 suma; posición 1: la del 05/10 suma</td>
+            <td>Amex caía de $143.000 a $93.000 y octubre perdía $50.000</td>
+          </tr>
+          <tr>
+            <td class="rule"><code>confirmed</code> + <code>pending</code> bajo snapshot</td>
+            <td>Posición 3: alquiler confirmado y expensas pendiente, ambos cuentan</td>
+            <td>El total de julio era $65.000, no $465.000</td>
+          </tr>
+          <tr>
+            <td class="rule"><code>skipped</code> nunca cuenta</td>
+            <td>Posición 3: el gimnasio queda afuera</td>
+            <td>$30.000 que nunca hubo que pagar</td>
+          </tr>
+          <tr>
+            <td class="rule">Proyección sólo si la ventana no terminó</td>
+            <td>Posiciones 1 y 2 proyectan; la 3 no</td>
+            <td>Septiembre mostraba casi $0 de gastos fijos</td>
+          </tr>
+          <tr>
+            <td class="rule">Recurrencia con tarjeta, excluida</td>
+            <td>Netflix, en las tres posiciones</td>
+            <td>Contado dos veces: suelto y dentro del resumen</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="callout">
+      <p class="eyebrow">Lo que el ejemplo encontró</p>
+      <h3>El arrastre de vencidos no podía desaparecer al navegar</h3>
+      <p>El spec decía que bajo <span class="inline-code">lens: snapshot</span> “no hay arrastre que mostrar, porque todo vencimiento de la ventana es posterior al corte”. Eso confunde dos conjuntos: el arrastre nunca fue sobre los resúmenes <em>de</em> la ventana, sino sobre los <strong>anteriores</strong> a ella.</p>
+      <p>En la posición 2 se ve solo: la Amex venció el 28/07 y seguía impaga. Al 31/08 estaba vencida hacía 34 días, y la card de ese día lo decía. Con la regla anterior desaparecía de la pantalla al navegar un mes atrás — y en su lugar se mostraba “cuánto de esa ventana sigue impago <em>hoy</em>”, que mezclaba dos horizontes dentro de una misma lectura.</p>
+      <p class="fixed"><b>Corregido:</b> una sola regla en las tres posiciones — vencidos e impagos <b>al <span class="mono">snapshotDate</span></b>. Con <span class="inline-code">lens: live</span> el snapshot es hoy, así que el comportamiento actual sale sin caso especial. Y la partición queda exhaustiva bajo snapshot: como la ventana abre al día siguiente del corte, ningún resumen puede quedar en el medio — el hueco conocido existe sólo en la posición 1.</p>
+    </div>
+  </section>
+
+</div>
