@@ -92,7 +92,13 @@ Las dos fuentes NO SHALL superponerse: la proyección avanza desde `last_generat
 
 **La ventana bajo lente `snapshot` es un registro reconstruido, no un replay de la pantalla.** El generador materializa una sola instancia pendiente por regla y sólo cuando la fecha ya llegó, de modo que al cierre del mes seleccionado los gastos fijos de la ventana eran **proyección no persistida**. Esa proyección no se puede reconstruir: las reglas no tienen versionado histórico. La card SHALL presentar la ventana pasada como lo que efectivamente hubo que pagar, y el sistema NO SHALL prometer fidelidad a lo que la pantalla mostraba ese día.
 
-**Lo ya vencido SHALL mostrarse, marcado aparte, y su significado depende de `lens`.** En `lens: 'live'`, un resumen cuyo vencimiento ya pasó y sigue impago es plata que se debe y desaparecería de la pantalla si la card se limitara a su ventana: SHALL sumarse con su **propia etiqueta explícita** —nombrando que está vencido— y NO SHALL confundirse dentro del monto de la ventana. En `lens: 'snapshot'` no hay arrastre que mostrar (todo vencimiento de la ventana es posterior al corte), y el mismo slot SHALL reusarse para declarar **cuánto de esa ventana sigue impago hoy**. En ambos casos el aviso SHALL ocupar **una sola línea**: la card comparte fila con "Cuánto gastaste" y todo lo que crece acá aparece como hueco en la card vecina.
+**Lo ya vencido SHALL mostrarse, marcado aparte, con UNA sola regla en las tres posiciones.** Un resumen cuyo vencimiento ya había pasado **al `snapshotDate`** y que a esa fecha seguía impago es plata que se debía y desaparecería de la pantalla si la card se limitara a su ventana: SHALL sumarse con su **propia etiqueta explícita** —nombrando que está vencido— y NO SHALL confundirse dentro del monto de la ventana.
+
+El arrastre NO SHALL evaluarse contra `hoy_AR` cuando la lente es `snapshot`: mezclaría dos horizontes dentro de una misma lectura. Con `lens: 'live'` el `snapshotDate` **es** hoy, así que la regla se reduce al comportamiento actual sin caso especial.
+
+El arrastre se refiere a resúmenes vencidos **antes** de que la ventana abra, no a los de la ventana: los de la ventana vencen todos después del corte, y por eso los dos conjuntos son disjuntos por construcción. Que un resumen anterior a la ventana estuviera vencido al corte es un hecho perfectamente reconstruible y NO SHALL descartarse por estar mirando un mes pasado — al cierre de agosto, un resumen que venció el 28/07 y seguía impago estaba vencido, y la card de ese día lo decía.
+
+El aviso SHALL ocupar **una sola línea**: la card comparte fila con "Cuánto gastaste" y todo lo que crece acá aparece como hueco en la card vecina.
 
 Lo que **NO** entra: los consumos de tarjeta cuyo resumen vence fuera de la ventana, las recurrencias fuera de la ventana, y cualquier gasto que todavía no exista como compromiso.
 
@@ -177,11 +183,18 @@ Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el
 - **THEN** la card lo muestra con su etiqueta de vencido, en una sola línea
 - **AND** ese monto no se confunde con el de la ventana
 
-#### Scenario: Una ventana pasada con saldo impago
+#### Scenario: El arrastre de vencidos también existe bajo la lente snapshot
 
-- **WHEN** el usuario mira una ventana pasada de la que un resumen sigue sin pagarse hoy
-- **THEN** el mismo slot de una línea declara cuánto de esa ventana sigue impago
-- **AND** la card no cambia de alto respecto de la ventana actual
+- **WHEN** un resumen venció el 28/07, siguió impago, y el usuario mira agosto 2026
+- **THEN** la card lo muestra como vencido, porque al 31/08 ya lo estaba
+- **AND** no se confunde con el monto de la ventana de septiembre
+
+#### Scenario: El arrastre se evalúa al corte, no a hoy
+
+- **WHEN** un resumen venció el 28/07, se pagó el 15/08, y el usuario mira julio 2026
+- **THEN** figura como vencido, porque al 31/07 estaba vencido e impago
+- **WHEN** el mismo usuario mira agosto 2026
+- **THEN** NO figura, porque al 31/08 ya estaba pago
 
 #### Scenario: Usuario sin compromisos de ningún tipo
 
@@ -195,7 +208,7 @@ Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el
 
 Cada bloque del dashboard SHALL llevar un título que nombre la pregunta que responde, en el lenguaje del usuario y no en el del dominio: "Saldo disponible total" y "Dónde está" para cuánto tengo y dónde, "Resumen del mes" para qué pasó este mes, "Cuánto gastaste" para en qué se me fue y cuánto debo todavía, "Compromisos del próximo mes" para qué se viene, y "Compartido" para cómo estoy con el hogar.
 
-El título de la card de compromisos SHALL depender de la posición del navegador, en tres estados y no dos. Con `lens: 'live'` SHALL seguir siendo "Compromisos del próximo mes": es un pronóstico. Con `lens: 'snapshot'` y `windowElapsed: false` SHALL nombrar lo que el usuario tenía por delante al cierre de ese mes, porque la ventana todavía está transcurriendo. Con `windowElapsed: true` SHALL rotular lo que hubo que pagar en esa ventana, porque ya no anticipa nada. Los dos títulos SHALL salir del catálogo i18n, sin string hardcodeado, y ninguna plataforma SHALL derivar el mes del rótulo de su propio reloj.
+El título de la card de compromisos SHALL depender de la posición del navegador, en tres estados y no dos. Con `lens: 'live'` SHALL seguir siendo "Compromisos del próximo mes": es un pronóstico. Con `lens: 'snapshot'` y `windowElapsed: false` SHALL nombrar lo que el usuario tenía por delante al cierre de ese mes, porque la ventana todavía está transcurriendo. Con `windowElapsed: true` SHALL rotular lo que hubo que pagar en esa ventana, porque ya no anticipa nada. Los títulos SHALL salir del catálogo i18n, sin string hardcodeado, y ninguna plataforma SHALL derivar el mes del rótulo de su propio reloj.
 
 Los rótulos de los tres tiles de "Cuánto gastaste" SHALL ser verbos en pasado dirigidos al usuario (Gastaste / Pagaste / Te queda por pagar), y cada uno SHALL ir acompañado de un sub-bloque que desambigüe qué mide, porque los tres son montos de gasto y sin esa aclaración se confunden entre sí.
 

@@ -90,7 +90,7 @@ Bajo A, `snapshotDate < window.start` **por construcción** (el snapshot es el �
 Aplicada:
 
 - `resolved_at > snapshotDate` sobre `recurrence_instances` — **inerte**. El único insert de instancias es el generador (`recurrences/src/queries.ts`), gateado por `decideRecurrenceInstance`, que devuelve `not_due` si `nextDate > today`. Entonces no existe instancia con `scheduled_date` futuro, de donde `resolved_at ≥ created_at ≥ scheduled_date ≥ window.start > snapshotDate`, siempre.
-- `due_date < snapshotDate` para "vencido" — **inerte**, por el mismo motivo: los `due_date` de la ventana son todos posteriores al snapshot.
+- `due_date < snapshotDate` aplicado **a los resúmenes de la ventana** — **inerte**, por el mismo motivo: sus `due_date` son todos posteriores al snapshot. De ahí se sigue algo que la primera versión de este design leyó al revés: como ningún resumen de la ventana puede estar vencido al corte, el arrastre de vencidos **necesariamente** se compone de resúmenes **anteriores** a la ventana — y sobre ésos el predicado no es inerte en absoluto. Ver Decisión 8.
 - **Pago anticipado de un resumen** — **sobrevive**. `pay-card-period.ts` sólo exige que el período esté `closed` u `overdue` (`today > end_date`); **no** exige que haya vencido. Un resumen que cierra el 20/6 y vence el 5/7, pagado el 25/6, es un flujo soportado: al 30/6 ya estaba pago y no debe entrar en la foto de junio.
 - **Acumulación de consumos** — **podría morder** (un resumen que vence el 31/7 cierra alrededor del 15/7, y al 30/6 contenía sólo lo acumulado hasta ahí), pero se descarta por un motivo distinto: rompe las compras en cuotas. Ver Decisión 5.
 
@@ -168,7 +168,7 @@ Hoy `committed-section-container.tsx` y `CommittedSection.tsx` calculan el mes c
 | `lens: 'snapshot'`, `windowElapsed: false` | lo que tenías por delante al cierre de ese mes — la ventana todavía transcurre |
 | `windowElapsed: true` | lo que hubo que pagar en esa ventana — ya no anticipa nada |
 
-La nota al pie reusa **el mismo slot de una línea** —el spec es tajante con que la card no cambie de alto, porque comparte fila con "Cuánto gastaste" y todo lo que crece acá aparece como hueco allá—: arrastre de vencidos en `current`, "todavía impago" en `past`.
+La nota al pie reusa **el mismo slot de una línea** —el spec es tajante con que la card no cambie de alto, porque comparte fila con "Cuánto gastaste" y todo lo que crece acá aparece como hueco allá— y conserva **un solo significado** en las tres posiciones: el arrastre de resúmenes vencidos e impagos **al `snapshotDate`**. Con `lens: 'live'` el snapshot es hoy y la regla se reduce al comportamiento actual.
 
 ## Decisión 8 — Una función parametrizada, no dos queries paralelas
 
@@ -176,11 +176,11 @@ La forma de las lecturas es la misma en las tres posiciones (accounts credit →
 
 | | `lens: 'live'` | `lens: 'snapshot'` |
 |---|---|---|
-| `card_periods` | `.lte('due_date', window.end)` (trae el arrastre de vencidos) | `.gte(window.start).lte(window.end)`, sin arrastre |
+| `card_periods` | `.lte('due_date', window.end)` | `.lte('due_date', window.end)` — igual: el arrastre existe en las dos lentes |
 | ¿pagado? | existe `period_payment` hoy | existe con `transactions.date <= snapshotDate` |
 | consumos | todos los del período | **todos los del período** (Decisión 5) |
 | agregación | `aggregateCardDebt` (Σ `pending`) | `aggregateCardDebtAsOf` (Σ consumos de cualquier status − reintegros recibidos) |
-| vencido | `due_date < todayISO` | n/a — el slot muestra "todavía impago" |
+| vencido | `due_date < snapshotDate` e impago al snapshot (con `snapshotDate` = hoy) | `due_date < snapshotDate` e impago al snapshot — **la misma regla** |
 | instancias | status `pending` | status `confirmed` + `pending` |
 
 | | `windowElapsed: false` | `windowElapsed: true` |
@@ -190,6 +190,8 @@ La forma de las lecturas es la misma en las tres posiciones (accounts credit →
 ### La primitiva compartida va a `@grana/money-logic`, no se importa de `@grana/cards`
 
 `computePeriodAmounts` (hoy en `packages/cards/src/period-amounts.ts`) es la pieza que ya resuelve la parte difícil: de qué lado —pendiente o pagado— se descuenta el reintegro "en resumen" según si el resumen está pago. `aggregateCardDebtAsOf` la necesita y NO SHALL re-derivarla.
+
+Nota sobre la partición: con `.lte('due_date', window.end)` en las dos lentes, el read trae la ventana **más** todo lo anterior, y se parte en dos conjuntos disjuntos — ventana (`due_date` dentro) y arrastre (`due_date < snapshotDate` e impago al corte). Bajo `snapshot` la partición además es **exhaustiva**, porque `window.start = snapshotDate + 1 día` no deja ningún resumen en el medio; el KNOWN GAP de un resumen que vence entre hoy y la apertura de la ventana existe sólo en la lente `live`.
 
 Pero `@grana/dashboard` **no puede importar `@grana/cards`**: el grafo actual es `@grana/cards → @grana/transactions → @grana/dashboard`, así que la arista nueva cerraría el ciclo `dashboard → cards → transactions → dashboard`.
 

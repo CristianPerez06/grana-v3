@@ -9,13 +9,13 @@
 
 ## 2. Tarjetas: reconstrucción as-of
 
-- [ ] 2.1 `card_periods`: en `lens: 'snapshot'` acotar a `due_date` dentro de la ventana (sin el superset `lte(window.end)` que hoy trae el arrastre de vencidos)
+- [ ] 2.1 `card_periods`: mantener `.lte('due_date', window.end)` en **las dos** lentes — el arrastre de vencidos existe en ambas. Partir el resultado en ventana (`due_date` dentro) y arrastre (`due_date < snapshotDate` e impago al corte)
 - [ ] 2.2 Leer la fecha financiera del pago (`period_payments` → `transactions.date`) en vez de la mera existencia del pago; un pago posterior al `snapshotDate` deja el resumen como pendiente en esa foto
 - [ ] 2.3 NO cortar los consumos por fecha; dejar comentado el motivo (las cuotas se insertan en la compra fechadas hacia adelante, un corte por `date` las perdería)
 - [ ] 2.4 Promover `computePeriodAmounts` de `packages/cards/src/period-amounts.ts` a `@grana/money-logic` y reexportarla desde `@grana/cards`. Sin esto `@grana/dashboard` no puede consumirla: cerraría el ciclo `dashboard → cards → transactions → dashboard`
 - [ ] 2.5 `packages/dashboard/src/aggregations.ts`: `aggregateCardDebtAsOf`, que suma los consumos del período sin mirar `status` y descuenta los reintegros recibidos, apoyada en `computePeriodAmounts` — NO re-derivar ese tratamiento
 - [ ] 2.6 `aggregateCardDebtByCard`: misma normalización, para que las filas por tarjeta sigan sumando el headline
-- [ ] 2.7 "Vencido": `lens: 'live'` mantiene `due_date < todayISO`; `lens: 'snapshot'` calcula en su lugar cuánto de la ventana sigue impago hoy
+- [ ] 2.7 "Vencido": una sola regla en las dos lentes — `due_date < snapshotDate` e impago **al snapshot**. Con `lens: 'live'` el snapshot es hoy, así que el comportamiento actual sale sin caso especial
 
 ## 3. Gastos fijos: registro en ventana pasada
 
@@ -39,7 +39,7 @@
 
 ## 6. i18n
 
-- [ ] 6.1 Dos keys de título nuevas (ventana en curso vista desde su cierre, y ventana ya terminada) más la variante de la nota al pie ("todavía impago"), en `es.json` y `en.json`
+- [ ] 6.1 Dos keys de título nuevas (ventana en curso vista desde su cierre, y ventana ya terminada) en `es.json` y `en.json`. La nota al pie NO necesita variante: conserva un solo significado en las tres posiciones
 - [ ] 6.2 Confirmar que ninguna plataforma arma el nombre del mes por su cuenta
 
 ## 7. Tests
