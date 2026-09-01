@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computePeriodAmounts, type PeriodAmountRow } from '../period-amounts'
+import { computePeriodAmounts, type PeriodAmountRow } from '@grana/money-logic'
 
 const consumo = (
   amount: number,
