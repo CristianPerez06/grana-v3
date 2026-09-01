@@ -56,7 +56,7 @@ windowElapsed = window.end < todayISO
 
 Los dos lados de la card parten esas tres posiciones **por lugares distintos**:
 
-- **Tarjetas** distinguen 1 de {2, 3}: en `live` el estado de pago es el de hoy y hay arrastre de vencidos; en `snapshot` el pago se evalúa al corte y no hay arrastre. La posición 2 y la 3 se leen idéntico.
+- **Tarjetas** distinguen 1 de {2, 3}: en `live` el estado de pago es el de hoy; en `snapshot` se evalúa al corte, y además el conjunto de tarjetas se abre a las archivadas (ver Decisión 8). El arrastre de vencidos existe en **las dos** lentes, con una sola regla — vencidos e impagos al `snapshotDate` (Decisión 4). Las posiciones 2 y 3 se leen idéntico.
 - **Gastos fijos** distinguen {1, 2} de 3: la proyección de reglas activas sigue siendo válida mientras la ventana no haya terminado (el cursor `last_generated_date` todavía no la pasó), y deja de servir cuando sí.
 
 Un campo único `mode: 'current' | 'past'` derivado de `window.end < todayISO` colapsaba mal esas dos particiones: el 1/9, mirando agosto, la ventana es septiembre y todavía no terminó, así que el campo daba `'current'` y la lectura descartaba el `snapshotDate` del 31/8 que ella misma había calculado. Por eso son dos campos.
@@ -140,6 +140,10 @@ El filtro de status lo decide la **lente**, no si la ventana terminó, y ahí ha
 
 La proyección la decide `windowElapsed`, no la lente: mientras la ventana no haya terminado el cursor `last_generated_date` todavía no la pasó y la proyección sigue devolviendo las ocurrencias que aún no se materializaron. Las dos fuentes no se pisan por la misma razón de siempre: la proyección arranca después del cursor, así que una instancia ya confirmada nunca vuelve a emitirse.
 
+**Y esto tiene un costo en la posición 2 que conviene decir con todas las letras.** Ahí conviven lente `snapshot` y proyección, y la proyección se hace sobre las reglas **de hoy**: una regla creada DESPUÉS del corte aporta ocurrencias a una foto que se declara tomada antes de que existiera, y una cuyo monto se editó después las aporta al monto nuevo. No es el gap general de "las reglas no tienen versionado" — es ese gap **mordiendo en una posición concreta y frecuente**, la que el usuario navega primero.
+
+Se acepta igual, porque la alternativa es peor: no proyectar en la posición 2 dejaría la ventana del mes en curso mostrando casi $0 de gastos fijos, ya que el generador todavía no materializó casi ninguna instancia. Un monto ligeramente desactualizado es mejor que un monto ausente. El residuo se angosta solo: a medida que el mes avanza las instancias se materializan y la proyección aporta cada vez menos.
+
 Residuo aceptado: si el usuario corrigió el monto al confirmar una instancia, el total de esa ventana se mueve un poco. Es correcto —es lo que se pagó de verdad— y no se compensa.
 
 Consecuencia asumida: **la card queda as-of del lado tarjetas y registro del lado gastos fijos.** No por elección de diseño sino por disponibilidad del dato, y por eso va dicho acá y en el spec.
@@ -154,7 +158,9 @@ Consecuencia asumida: **la card queda as-of del lado tarjetas y registro del lad
 
 2. **El registro materializado tiene agujeros, y no son raros.** El índice `recurrence_instances_one_pending_per_rule` permite **una sola** instancia pendiente por regla, y el generador no produce mientras haya una (`has_pending`). Una regla trabada en una instancia de julio que el usuario nunca resolvió **no generó nada para agosto ni para septiembre**: la foto de agosto muestra $0 de esa regla aunque estuviera comprometida. Afecta justo a quien no confirma sus recurrencias al día. Se acepta: taparlo requeriría reproyectar con montos de hoy, que es el remedio peor que la enfermedad.
 
-3. **Herencia del gap ya documentado.** Los reads de la ventana siguen sin `.range()`, igual que antes de este change. Acotados por la ventana, que es una observación sobre los datos y no una propiedad del código. Mismo tratamiento que en `fix-balance-read-path-defects`.
+3. **Bajo `live`, una tarjeta archivada con resumen impago no se nombra.** El universo de `live` son las activas, que es el comportamiento vigente; una tarjeta archivada con un resumen todavía impago en la ventana es plata que se debe y la card no la menciona. Ensanchar `live` movería números en producción y es su propio change. Bajo `snapshot` no aplica: ahí el universo ya incluye las archivadas.
+
+4. **Herencia del gap ya documentado.** Los reads de la ventana siguen sin `.range()`, igual que antes de este change. Acotados por la ventana, que es una observación sobre los datos y no una propiedad del código. Mismo tratamiento que en `fix-balance-read-path-defects`.
 
 ## Decisión 7 — El label sale del dato, no de `new Date()`
 
@@ -176,6 +182,7 @@ La forma de las lecturas es la misma en las tres posiciones (accounts credit →
 
 | | `lens: 'live'` | `lens: 'snapshot'` |
 |---|---|---|
+| universo de tarjetas | sólo activas | activas **y archivadas** |
 | `card_periods` | `.lte('due_date', window.end)` | `.lte('due_date', window.end)` — igual: el arrastre existe en las dos lentes |
 | ¿pagado? | existe `period_payment` hoy | existe con `transactions.date <= snapshotDate` |
 | consumos | todos los del período | **todos los del período** (Decisión 5) |

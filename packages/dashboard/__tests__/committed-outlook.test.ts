@@ -787,3 +787,39 @@ describe('getCommittedOutlookForMonth — the reading describes itself', () => {
     })
   })
 })
+
+describe('getCommittedOutlookForMonth — archiving a card is not retroactive', () => {
+  const archived: FakeAccount = { id: 'old', name: 'Amex', type: 'credit', is_active: false }
+  const db = {
+    accounts: [archived, bank],
+    card_periods: [
+      { id: 'p-old', account_id: 'old', start_date: '2026-05-26', end_date: '2026-06-25', due_date: '2026-07-10' },
+    ],
+    transactions: [consumo('p-old', 77000)],
+  }
+
+  it('counts an archived card’s statement inside a past window', async () => {
+    // The card was live through the window being read; putting it away later
+    // cannot remove a commitment that existed then — and if it did, the total
+    // would move on a day nothing was paid.
+    const out = await getCommittedOutlookForMonth(makeSupabase(db), ELAPSED_MONTH)
+    expect(out.ARS.debt).toBe(77000)
+    expect(out.ARS.cards.map((c) => c.id)).toEqual(['old'])
+  })
+
+  it('still lists only active cards under the live lens', async () => {
+    // Guard on the pre-existing behaviour: widening `live` would move
+    // production numbers and is out of this change's scope.
+    const out = await getCommittedOutlookForMonth(
+      makeSupabase({
+        ...db,
+        card_periods: [
+          { id: 'p-now', account_id: 'old', start_date: '2026-08-01', end_date: '2026-08-25', due_date: '2026-09-10' },
+        ],
+        transactions: [consumo('p-now', 77000)],
+      }),
+      CURRENT_MONTH,
+    )
+    expect(out.ARS.debt).toBe(0)
+  })
+})

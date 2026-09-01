@@ -661,10 +661,10 @@ export async function getCommittedOutlookForMonth(
     windowElapsed,
   }
 
-  // Every credit account, archived ones included. The ACTIVE ones are the cards
-  // the outlook lists; the full set is what the "paid by card" exclusion below
-  // tests against — a recurrence pointing at a card that was archived is still
-  // not money leaving an account this month.
+  // Every credit account, archived ones included. The full set is what the "paid
+  // by card" exclusion below tests against — a recurrence pointing at a card that
+  // was archived is still not money leaving an account this month — and, under a
+  // snapshot lens, it is also the set whose statements the outlook lists.
   const { data: creditAccounts, error: cardsErr } = await supabase
     .from('accounts')
     .select('id, name, is_active, institution:institutions(name)')
@@ -678,7 +678,19 @@ export async function getCommittedOutlookForMonth(
   }
   const creditRows = (creditAccounts ?? []) as unknown as CardAccountRow[]
   const creditAccountIds = new Set(creditRows.map((c) => c.id))
-  const cardRows = creditRows.filter((c) => c.is_active)
+  // WHICH cards the outlook lists depends on the lens. Under `live` it is the
+  // active ones: an archived card is one the user has put away, and that is the
+  // current behaviour. Under `snapshot` archiving is not retroactive — a card
+  // archived in August was live through June's window, and its statement was a
+  // real commitment then. Filtering it out would silently drop part of a past
+  // window's total, and the number would change on a day nothing was paid,
+  // breaking the stability the snapshot lens is for.
+  //
+  // KNOWN GAP (pre-existing, unchanged here): under `live` an archived card with
+  // a still-unpaid statement due inside the window is money owed that the card
+  // does not name. Widening `live` would move production numbers and belongs to
+  // its own change.
+  const cardRows = lens === 'snapshot' ? creditRows : creditRows.filter((c) => c.is_active)
   const cardIds = cardRows.map((c) => c.id)
 
   if (cardIds.length > 0) {
