@@ -2,32 +2,33 @@
 
 ## 1. La lectura: dos fechas, dos roles
 
-- [ ] 1.1 `packages/dashboard/src/types.ts`: `CommittedOutlook` gana `window: { start: string; end: string }`, `snapshotDate: string` y `mode: 'current' | 'past'`
-- [ ] 1.2 `packages/dashboard/src/queries.ts`: reemplazar `nextMonthWindow(todayISO)` por un derivador puro `resolveCommittedWindow({ year, month, todayISO })` que devuelva `{ window, snapshotDate, mode }`, con `snapshotDate = todayISO` sólo cuando `(year, month)` es el mes en curso
+- [ ] 1.1 `packages/dashboard/src/types.ts`: `CommittedOutlook` gana `window: { start: string; end: string }`, `snapshotDate: string`, `lens: 'live' | 'snapshot'` y `windowElapsed: boolean`
+- [ ] 1.2 `packages/dashboard/src/queries.ts`: reemplazar `nextMonthWindow(todayISO)` por un derivador puro `resolveCommittedWindow({ year, month, todayISO })` que devuelva los cuatro campos. `lens` sale de si `(year, month)` es el mes en curso; `windowElapsed` de si la ventana terminó. NO derivar uno del otro
 - [ ] 1.3 Renombrar `getCommittedOutlook` → `getCommittedOutlookForMonth(supabase, { year, month, todayISO })`; actualizar el export de `packages/dashboard/src/index.ts`
 - [ ] 1.4 Reescribir el comentario de cabecera del read: hoy afirma que la ventana es fija relativa a hoy y que no sigue al navegador
 
 ## 2. Tarjetas: reconstrucción as-of
 
-- [ ] 2.1 `card_periods`: en `mode: 'past'` acotar a `due_date` dentro de la ventana (sin el superset `lte(window.end)` que hoy trae el arrastre de vencidos)
+- [ ] 2.1 `card_periods`: en `lens: 'snapshot'` acotar a `due_date` dentro de la ventana (sin el superset `lte(window.end)` que hoy trae el arrastre de vencidos)
 - [ ] 2.2 Leer la fecha financiera del pago (`period_payments` → `transactions.date`) en vez de la mera existencia del pago; un pago posterior al `snapshotDate` deja el resumen como pendiente en esa foto
-- [ ] 2.3 Cortar los consumos del período en `date <= snapshotDate`
-- [ ] 2.4 `packages/dashboard/src/aggregations.ts`: `aggregateCardDebtAsOf`, que normaliza los consumos `paid` a pendientes cuando el pago es posterior al snapshot. Apoyarse en `computePeriodAmounts` (`@grana/cards`) para el tratamiento del reintegro "en resumen" — NO re-derivarlo
-- [ ] 2.5 `aggregateCardDebtByCard`: misma normalización, para que las filas por tarjeta sigan sumando el headline
-- [ ] 2.6 "Vencido": `mode: 'current'` mantiene `due_date < todayISO`; `mode: 'past'` calcula en su lugar cuánto de la ventana sigue impago hoy
+- [ ] 2.3 NO cortar los consumos por fecha; dejar comentado el motivo (las cuotas se insertan en la compra fechadas hacia adelante, un corte por `date` las perdería)
+- [ ] 2.4 Promover `computePeriodAmounts` de `packages/cards/src/period-amounts.ts` a `@grana/money-logic` y reexportarla desde `@grana/cards`. Sin esto `@grana/dashboard` no puede consumirla: cerraría el ciclo `dashboard → cards → transactions → dashboard`
+- [ ] 2.5 `packages/dashboard/src/aggregations.ts`: `aggregateCardDebtAsOf`, que suma los consumos del período sin mirar `status` y descuenta los reintegros recibidos, apoyada en `computePeriodAmounts` — NO re-derivar ese tratamiento
+- [ ] 2.6 `aggregateCardDebtByCard`: misma normalización, para que las filas por tarjeta sigan sumando el headline
+- [ ] 2.7 "Vencido": `lens: 'live'` mantiene `due_date < todayISO`; `lens: 'snapshot'` calcula en su lugar cuánto de la ventana sigue impago hoy
 
 ## 3. Gastos fijos: registro en ventana pasada
 
-- [ ] 3.1 `mode: 'current'`: sin cambios (instancias `pending` + proyección de reglas activas)
-- [ ] 3.2 `mode: 'past'`: leer `recurrence_instances` de la ventana con status `confirmed` o `pending`; excluir `skipped`
-- [ ] 3.3 `mode: 'past'`: NO proyectar reglas activas — dejarlo comentado con el motivo (montos actuales, reglas dadas de baja, reglas creadas después)
+- [ ] 3.1 Filtro de status por `lens`: `live` → sólo `pending`; `snapshot` → `confirmed` + `pending`. `skipped` nunca
+- [ ] 3.2 Proyección por `windowElapsed`: aporta mientras la ventana no haya terminado (incluida la posición "mes anterior"), no aporta después — comentar el motivo (montos actuales, reglas dadas de baja, reglas creadas después)
+- [ ] 3.3 Verificar que instancias y proyección no se solapan en la posición "mes anterior", donde conviven las dos fuentes
 - [ ] 3.4 Mantener la exclusión "pagado con tarjeta" en los dos modos
 
 ## 4. Web
 
 - [ ] 4.1 Nuevo `apps/web/app/(app)/dashboard/_components/use-committed-month.ts`: `useQuery` con key `['dashboard', 'committed', year, month]` e `initialData` sólo cuando el mes seleccionado es el actual — el patrón de `use-balance-month.ts`
 - [ ] 4.2 `committed-section-container.tsx`: pasa a resolver el mes actual server-side y entregarlo como `initialData`; se elimina el `new Date()` que arma el label
-- [ ] 4.3 `committed-section.tsx`: rotula desde `window`/`mode` del resultado; título y nota al pie condicionales
+- [ ] 4.3 `committed-section.tsx`: rotula desde `window`/`lens`/`windowElapsed` del resultado; título en tres estados y nota al pie condicional
 - [ ] 4.4 Estado de carga in-card al navegar a un mes no cacheado (reusar `CommittedSkeleton`, chrome visible), y error compacto que no tumbe la fila
 
 ## 5. Mobile (mismo commit)
@@ -38,17 +39,18 @@
 
 ## 6. i18n
 
-- [ ] 6.1 `dashboard.committed.title_past` (título de ventana pasada) y la variante de la nota al pie ("todavía impago"), en `es.json` y `en.json`
+- [ ] 6.1 Dos keys de título nuevas (ventana en curso vista desde su cierre, y ventana ya terminada) más la variante de la nota al pie ("todavía impago"), en `es.json` y `en.json`
 - [ ] 6.2 Confirmar que ninguna plataforma arma el nombre del mes por su cuenta
 
 ## 7. Tests
 
 - [ ] 7.1 Migrar los 15 casos de `packages/dashboard/__tests__/committed-outlook.test.ts` a la firma nueva (mes actual → mismos resultados que hoy: es la garantía de no-regresión)
 - [ ] 7.2 Casos de ventana pasada: resumen pagado después del corte (entra), pagado antes del corte (no entra), sin pagar (entra)
-- [ ] 7.3 Caso de consumos: resumen que al corte no había cerrado aporta sólo lo acumulado hasta el `snapshotDate`
+- [ ] 7.3 Caso de cuotas: una compra en N cuotas hecha antes del corte, con hijos fechados dentro de la ventana, suma completa en la foto — el test que clava que NO hay corte de consumos
+- [ ] 7.3b Caso de resumen abierto al corte: aporta su contenido completo, y el total no cambia al cerrarse
 - [ ] 7.4 Casos de gastos fijos en ventana pasada: `confirmed` entra, `pending` entra, `skipped` no; la proyección no aporta nada
-- [ ] 7.5 Test de estabilidad: el total de una ventana pasada no cambia al registrarse un pago con fecha posterior al corte
-- [ ] 7.6 Test del derivador puro `resolveCommittedWindow`, incluidos los bordes (mes actual, mes actual −1, diciembre → enero del año siguiente)
+- [ ] 7.5 Tests de estabilidad: (a) el total no cambia al registrarse un pago con fecha posterior al corte; (b) el total de gastos fijos de la posición "mes anterior" no encoge a medida que se confirman instancias de la ventana
+- [ ] 7.6 Test del derivador puro `resolveCommittedWindow`: las tres posiciones del navegador con su `lens` y su `windowElapsed`, el 1º de mes mirando el mes anterior (el caso que rompía el campo único), y diciembre → enero del año siguiente
 - [ ] 7.7 Verificar que los tests nuevos fallan sin el fix
 
 ## 8. Cierre

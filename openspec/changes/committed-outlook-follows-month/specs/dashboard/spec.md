@@ -62,28 +62,37 @@ La card SHALL responder una sola pregunta: **cuánta plata ya se sabe que hay qu
 
 - `window`: el mes calendario siguiente al mes seleccionado. Define **qué** se cuenta.
 - `snapshotDate`: el último día del mes seleccionado, o `hoy_AR` cuando el mes seleccionado es el mes en curso. Define **desde cuándo** se evalúa el estado de cada compromiso.
-- `mode`: `'past'` cuando la ventana terminó antes de `hoy_AR`, `'current'` en caso contrario.
+- `lens`: `'live'` cuando el mes seleccionado **es** el mes en curso, `'snapshot'` en cualquier otro caso. Gobierna cómo se evalúa el estado de pago de los resúmenes.
+- `windowElapsed`: verdadero cuando la ventana ya terminó antes de `hoy_AR`. Gobierna si la proyección de reglas de recurrencia sigue aportando.
+
+`lens` y `windowElapsed` SHALL ser campos **separados**: son hechos ortogonales y las dos mitades de la card parten las posiciones del navegador por lugares distintos. Un único campo derivado de "¿la ventana ya terminó?" NO alcanza — el 1º de septiembre, mirando agosto, la ventana es septiembre y todavía no terminó, pero el estado de pago SHALL evaluarse al 31/8 igual.
 
 Las dos NO SHALL colapsarse en un único parámetro: una ventana pasada evaluada con el estado de hoy no es ninguna de las dos lecturas. Parado en junio 2026 la card lee `snapshotDate = 2026-06-30` y `window = 2026-07-01..2026-07-31`.
 
-**El estado de pago es un atributo, no un filtro, en ventana pasada.** En `mode: 'current'` la pregunta es "cuánto me va a salir" y lo ya pagado SHALL excluirse. En `mode: 'past'` la pregunta es "qué había que pagar ese mes": que se haya pagado después es el desenlace y NO SHALL sacar el compromiso de la ventana. En consecuencia el monto de un mes pasado SHALL ser **estable**: no SHALL cambiar porque el usuario pague algo hoy.
+**El estado de pago es un atributo, no un filtro, bajo la lente `snapshot`.** En `lens: 'live'` la pregunta es "cuánto me va a salir" y lo ya pagado SHALL excluirse. En `lens: 'snapshot'` la pregunta es "qué había que pagar ese mes": que se haya pagado después del corte es el desenlace y NO SHALL sacar el compromiso de la ventana. En consecuencia el monto de un mes pasado SHALL ser **estable**: no SHALL cambiar porque el usuario pague algo hoy.
 
 **Tarjetas** SHALL contar los resúmenes cuyo **vencimiento** cae dentro de la ventana. El criterio es la fecha de vencimiento, no la de cierre: un resumen que cierra el 28/09 pero vence el 10/10 se paga en octubre y NO es un compromiso de septiembre.
 
 Su estado de pago SHALL evaluarse a la **fecha financiera del pago** —`period_payments.transaction_id → transactions.date`—, nunca al estado actual del resumen ni a `period_payments.created_at` (que es cuándo se registró en la app, no cuándo salió la plata). Un resumen pagado **después** del `snapshotDate` SHALL contar en esa foto; uno pagado **en o antes** NO SHALL contar, porque a esa fecha ya no era un compromiso pendiente. Pagar un resumen ya cerrado antes de su vencimiento es un flujo soportado por el sistema, así que este caso NO es hipotético.
 
-Los consumos de un resumen SHALL cortarse en `date <= snapshotDate`. Un resumen que al corte todavía no había cerrado aporta **lo acumulado hasta esa fecha** y ese monto puede crecer hasta el cierre; la card NO SHALL presentarlo como definitivo. Es la misma regla que ya rige para el resumen abierto, con el `snapshotDate` en el rol de "hoy". El corte de consumos y el de pagos SHALL aplicarse juntos: reconstruir uno sin el otro produce un monto que no corresponde a ninguna lectura.
+**Los consumos de un resumen NO SHALL cortarse por fecha.** El resumen aporta su contenido completo; el `snapshotDate` decide únicamente si a esa fecha seguía siendo un compromiso pendiente.
+
+El motivo es que un corte por `transactions.date` rompe las compras en cuotas, que son el contenido dominante de un resumen en este mercado: las N cuotas se insertan **en el momento de la compra**, fechadas `fechaCompra + i meses`, así que una compra de mayo en 12 cuotas ya tiene desde mayo un hijo fechado en julio. Al cierre de junio ese consumo existía y el usuario lo conocía — es exactamente el compromiso que la card está para anticipar — y un corte por fecha lo dejaba afuera. Tampoco SHALL usarse `created_at` en su lugar: ataría un monto de plata al momento de carga en la app, el mismo acoplamiento que esta card rechaza al fechar un pago por `transactions.date` y no por `period_payments.created_at`.
+
+En consecuencia, para un resumen que al corte todavía no había cerrado la card muestra **más** de lo que la pantalla mostraba ese día. Es deliberado: la card responde qué hubo que pagar en la ventana, no qué decía la pantalla el día del corte. A cambio, el monto de una ventana pasada SHALL quedar **estable** una vez cerrados sus resúmenes.
 
 **Gastos fijos** SHALL contar las recurrencias que caen dentro de la ventana y que **NO se pagan con tarjeta de crédito**. Una recurrencia debitada de una tarjeta no saca plata de la cuenta ese mes: entra al resumen de esa tarjeta y se paga cuando ese resumen vence, que es otra ventana. Contarla acá y otra vez dentro de su resumen sería contarla dos veces.
 
-La fuente SHALL depender del `mode`:
+La fuente SHALL componerse de dos partes gobernadas por campos distintos:
 
-- En `mode: 'current'`, el conjunto SHALL componerse de las instancias **ya generadas** con fecha dentro de la ventana y todavía sin resolver, más las ocurrencias **proyectadas** de las reglas activas sobre esa misma ventana. Las dos fuentes NO SHALL superponerse: la proyección avanza desde `last_generated_date`, de modo que nunca devuelve una ocurrencia ya generada.
-- En `mode: 'past'`, la fuente SHALL ser **únicamente** las `recurrence_instances` materializadas de la ventana, con status `confirmed` o `pending`. Las instancias `skipped` NO SHALL contarse: saltear es el usuario declarando que ese gasto no ocurrió, y esa plata nunca tuvo que salir. NO SHALL reproyectarse las reglas sobre una ventana pasada: la proyección usaría los montos actuales de las reglas, perdería las dadas de baja e inventaría las creadas después.
+- **Qué instancias materializadas cuentan** lo decide `lens`. En `lens: 'live'`, sólo las que siguen `pending`. En `lens: 'snapshot'`, las `confirmed` **y** las `pending`: al corte todas seguían sin resolver, y filtrar por `pending` haría que el monto de esa ventana **encogiera** a medida que el usuario confirma, rompiendo la estabilidad exigida más arriba. Las instancias `skipped` NO SHALL contarse en ningún caso: saltear es el usuario declarando que ese gasto no ocurrió, y esa plata nunca tuvo que salir.
+- **Si la proyección aporta** lo decide `windowElapsed`. Mientras la ventana no haya terminado, las ocurrencias **proyectadas** de las reglas activas SHALL sumarse a las instancias; una vez terminada, NO SHALL proyectarse: la proyección usaría los montos actuales de las reglas, perdería las dadas de baja e inventaría las creadas después.
 
-**La ventana pasada es un registro reconstruido, no un replay de la pantalla.** El generador materializa una sola instancia pendiente por regla y sólo cuando la fecha ya llegó, de modo que al cierre del mes seleccionado los gastos fijos de la ventana eran **proyección no persistida**. Esa proyección no se puede reconstruir: las reglas no tienen versionado histórico. La card SHALL presentar la ventana pasada como lo que efectivamente hubo que pagar, y el sistema NO SHALL prometer fidelidad a lo que la pantalla mostraba ese día.
+Las dos fuentes NO SHALL superponerse: la proyección avanza desde `last_generated_date`, de modo que nunca devuelve una ocurrencia ya generada.
 
-**Lo ya vencido SHALL mostrarse, marcado aparte, y su significado depende del `mode`.** En `mode: 'current'`, un resumen cuyo vencimiento ya pasó y sigue impago es plata que se debe y desaparecería de la pantalla si la card se limitara a su ventana: SHALL sumarse con su **propia etiqueta explícita** —nombrando que está vencido— y NO SHALL confundirse dentro del monto de la ventana. En `mode: 'past'` no hay arrastre que mostrar (todo vencimiento de la ventana es posterior al corte), y el mismo slot SHALL reusarse para declarar **cuánto de esa ventana sigue impago hoy**. En ambos casos el aviso SHALL ocupar **una sola línea**: la card comparte fila con "Cuánto gastaste" y todo lo que crece acá aparece como hueco en la card vecina.
+**La ventana bajo lente `snapshot` es un registro reconstruido, no un replay de la pantalla.** El generador materializa una sola instancia pendiente por regla y sólo cuando la fecha ya llegó, de modo que al cierre del mes seleccionado los gastos fijos de la ventana eran **proyección no persistida**. Esa proyección no se puede reconstruir: las reglas no tienen versionado histórico. La card SHALL presentar la ventana pasada como lo que efectivamente hubo que pagar, y el sistema NO SHALL prometer fidelidad a lo que la pantalla mostraba ese día.
+
+**Lo ya vencido SHALL mostrarse, marcado aparte, y su significado depende de `lens`.** En `lens: 'live'`, un resumen cuyo vencimiento ya pasó y sigue impago es plata que se debe y desaparecería de la pantalla si la card se limitara a su ventana: SHALL sumarse con su **propia etiqueta explícita** —nombrando que está vencido— y NO SHALL confundirse dentro del monto de la ventana. En `lens: 'snapshot'` no hay arrastre que mostrar (todo vencimiento de la ventana es posterior al corte), y el mismo slot SHALL reusarse para declarar **cuánto de esa ventana sigue impago hoy**. En ambos casos el aviso SHALL ocupar **una sola línea**: la card comparte fila con "Cuánto gastaste" y todo lo que crece acá aparece como hueco en la card vecina.
 
 Lo que **NO** entra: los consumos de tarjeta cuyo resumen vence fuera de la ventana, las recurrencias fuera de la ventana, y cualquier gasto que todavía no exista como compromiso.
 
@@ -95,7 +104,7 @@ El detalle de Tarjetas SHALL agregarse **por tarjeta** —una fila por tarjeta c
 
 Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el grupo Tarjetas muestra su vacío; sin gastos fijos, el grupo Gastos fijos muestra el suyo; sin ninguno de los dos, la card muestra un vacío único en lugar de dos vacíos apilados.
 
-**El mes rotulado SHALL derivarse del resultado de la lectura**, que SHALL exponer su `window`, su `snapshotDate` y su `mode`. Ninguna plataforma SHALL recalcular el mes por su cuenta a partir del reloj: dos relojes independientes es exactamente lo que hacía que la card ignorara el navegador.
+**El mes rotulado SHALL derivarse del resultado de la lectura**, que SHALL exponer su `window`, su `snapshotDate`, su `lens` y su `windowElapsed`. Ninguna plataforma SHALL recalcular el mes por su cuenta a partir del reloj: dos relojes independientes es exactamente lo que hacía que la card ignorara el navegador.
 
 #### Scenario: La card sigue al mes seleccionado
 
@@ -123,8 +132,25 @@ Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el
 #### Scenario: Un resumen que al corte todavía no había cerrado
 
 - **WHEN** el usuario mira junio 2026 y un resumen de la ventana cerraba el 15/07
-- **THEN** ese resumen aporta únicamente los consumos con fecha hasta el 30/06
-- **AND** la card no lo presenta como un monto definitivo
+- **THEN** ese resumen aporta su contenido completo, no sólo lo acumulado al 30/06
+- **AND** el monto de esa foto no cambia una vez cerrado el resumen
+
+#### Scenario: Cuotas futuras ya conocidas al corte
+
+- **WHEN** el usuario compró en mayo 2026 en 12 cuotas y mira junio 2026
+- **THEN** la cuota fechada en julio suma en la foto de junio, porque al 30/06 ya existía y era un compromiso conocido
+- **AND** el sistema NO filtra los consumos por `transactions.date` ni por `created_at`
+
+#### Scenario: El mes anterior usa el corte de su cierre aunque su ventana no haya terminado
+
+- **WHEN** hoy es el 01/09/2026 y el usuario mira agosto 2026
+- **THEN** la ventana es septiembre 2026 y el estado de pago se evalúa al 31/08
+- **AND** la proyección de reglas activas sigue aportando, porque septiembre todavía no terminó
+
+#### Scenario: El monto de una ventana no encoge mientras se confirman recurrencias
+
+- **WHEN** el usuario mira agosto 2026 el 01/09 y vuelve a mirarlo el 20/09, habiendo confirmado entretanto varias recurrencias de septiembre
+- **THEN** el total de gastos fijos de esa ventana es el mismo en las dos visitas
 
 #### Scenario: Una recurrencia que se paga con tarjeta
 
@@ -138,7 +164,7 @@ Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el
 - **THEN** la ventana cuenta esa instancia una sola vez
 - **AND** la proyección no la vuelve a agregar
 
-#### Scenario: Gastos fijos de una ventana pasada
+#### Scenario: Gastos fijos de una ventana ya terminada
 
 - **WHEN** el usuario mira junio 2026 y en julio hubo tres instancias: una confirmada, una salteada y una que quedó pendiente
 - **THEN** la card cuenta la confirmada y la pendiente
@@ -169,7 +195,7 @@ Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el
 
 Cada bloque del dashboard SHALL llevar un título que nombre la pregunta que responde, en el lenguaje del usuario y no en el del dominio: "Saldo disponible total" y "Dónde está" para cuánto tengo y dónde, "Resumen del mes" para qué pasó este mes, "Cuánto gastaste" para en qué se me fue y cuánto debo todavía, "Compromisos del próximo mes" para qué se viene, y "Compartido" para cómo estoy con el hogar.
 
-El título de la card de compromisos SHALL depender del `mode` de su lectura. En `mode: 'current'` SHALL seguir siendo "Compromisos del próximo mes": es un pronóstico. En `mode: 'past'` SHALL rotular lo que el número efectivamente es —lo que hubo que pagar en ese mes—, porque en esa posición del navegador ya no anticipa nada. Los dos títulos SHALL salir del catálogo i18n, sin string hardcodeado, y ninguna plataforma SHALL derivar el mes del rótulo de su propio reloj.
+El título de la card de compromisos SHALL depender de la posición del navegador, en tres estados y no dos. Con `lens: 'live'` SHALL seguir siendo "Compromisos del próximo mes": es un pronóstico. Con `lens: 'snapshot'` y `windowElapsed: false` SHALL nombrar lo que el usuario tenía por delante al cierre de ese mes, porque la ventana todavía está transcurriendo. Con `windowElapsed: true` SHALL rotular lo que hubo que pagar en esa ventana, porque ya no anticipa nada. Los dos títulos SHALL salir del catálogo i18n, sin string hardcodeado, y ninguna plataforma SHALL derivar el mes del rótulo de su propio reloj.
 
 Los rótulos de los tres tiles de "Cuánto gastaste" SHALL ser verbos en pasado dirigidos al usuario (Gastaste / Pagaste / Te queda por pagar), y cada uno SHALL ir acompañado de un sub-bloque que desambigüe qué mide, porque los tres son montos de gasto y sin esa aclaración se confunden entre sí.
 
@@ -183,5 +209,7 @@ Los rótulos de los tres tiles de "Cuánto gastaste" SHALL ser verbos en pasado 
 
 - **WHEN** el usuario está en el mes actual
 - **THEN** la card se titula "Compromisos del próximo mes"
-- **WHEN** el usuario navega a un mes pasado
-- **THEN** el título nombra lo que hubo que pagar en la ventana de ese mes
+- **WHEN** el usuario navega al mes anterior, cuya ventana todavía transcurre
+- **THEN** el título nombra lo que tenía por delante al cierre de ese mes
+- **WHEN** el usuario navega a un mes cuya ventana ya terminó
+- **THEN** el título nombra lo que hubo que pagar en esa ventana
