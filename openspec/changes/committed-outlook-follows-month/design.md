@@ -172,11 +172,15 @@ Hoy `committed-section-container.tsx` y `CommittedSection.tsx` calculan el mes c
 
 `CommittedOutlook` pasa a devolver `window { start, end }`, `snapshotDate`, `lens` y `windowElapsed`, y las dos plataformas rotulan desde ahí. El copy tiene **tres** estados, uno por posición del navegador:
 
-| Posición | Título |
-|---|---|
-| `lens: 'live'` | "Compromisos del próximo mes" — es un pronóstico |
-| `lens: 'snapshot'`, `windowElapsed: false` | lo que tenías por delante al cierre de ese mes — la ventana todavía transcurre |
-| `windowElapsed: true` | lo que hubo que pagar en esa ventana — ya no anticipa nada |
+| Posición | Título | Bajada |
+|---|---|---|
+| `lens: 'live'` | "Compromisos del próximo mes" — un pronóstico | el mes de la ventana |
+| `lens: 'snapshot'`, `windowElapsed: false` | "Compromisos de septiembre" — nombra la ventana | "Al cierre de agosto" — el punto de observación |
+| `windowElapsed: true` | "Lo que hubo que pagar" — afirmación de registro | el mes de la ventana |
+
+**El título de la posición intermedia se decidió contra datos reales.** La primera versión decía "Lo que tenías por delante", que afirma conocimiento al corte — precisamente lo que un registro reconstruido no puede sostener. Verificando el change sobre la base de producción apareció el caso: en una cuenta, el 77% de los gastos fijos de esa posición ($1,68M de $2,18M) venía de dos reglas creadas el día siguiente al corte, cuando a esa fecha el usuario conocía $9.311. El número es correcto como registro; el rótulo no lo era. Nombrar la ventana y mover el corte a la bajada dice lo mismo sin prometer previsión.
+
+También se corrigió la bajada del grupo de gastos fijos: bajo `snapshot` cuenta instancias `confirmed`, así que "N pendientes" pasó a ser falso y se reemplaza por un rótulo neutro.
 
 La nota al pie reusa **el mismo slot de una línea** —el spec es tajante con que la card no cambie de alto, porque comparte fila con "Cuánto gastaste" y todo lo que crece acá aparece como hueco allá— y conserva **un solo significado** en las tres posiciones: el arrastre de resúmenes vencidos e impagos **al `snapshotDate`**. Con `lens: 'live'` el snapshot es hoy y la regla se reduce al comportamiento actual.
 

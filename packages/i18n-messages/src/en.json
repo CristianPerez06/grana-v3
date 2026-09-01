@@ -158,7 +158,8 @@
       "loading": "Loading what's coming…",
       "error": "We couldn't load what's coming.",
       "title_next_month": "Next month commitments",
-      "title_ahead": "What was ahead of you",
+      "title_ahead": "Commitments for {month}",
+      "subtitle_ahead": "At the close of {month}",
       "title_past": "What had to be paid",
       "committed_label": "Already committed",
       "overdue_prefix": "Plus",
@@ -172,6 +173,7 @@
       "cards_empty": "No cards with a balance to pay.",
       "recurring_group": "Fixed expenses",
       "recurring_group_sub": "{count, plural, =0 {no fixed expenses} one {# pending} other {# pending}}",
+      "recurring_group_sub_snapshot": "{count, plural, =0 {no fixed expenses} one {# fixed expense} other {# fixed expenses}}",
       "recurring_empty": "No pending fixed expenses.",
       "view_fixed": "View my fixed expenses"
     },

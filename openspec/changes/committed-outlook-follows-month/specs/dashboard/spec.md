@@ -88,6 +88,8 @@ La fuente SHALL componerse de dos partes gobernadas por campos distintos:
 - **Qué instancias materializadas cuentan** lo decide `lens`. En `lens: 'live'`, sólo las que siguen `pending`. En `lens: 'snapshot'`, las `confirmed` **y** las `pending`: al corte todas seguían sin resolver, y filtrar por `pending` haría que el monto de esa ventana **encogiera** a medida que el usuario confirma, rompiendo la estabilidad exigida más arriba. Las instancias `skipped` NO SHALL contarse en ningún caso: saltear es el usuario declarando que ese gasto no ocurrió, y esa plata nunca tuvo que salir.
 - **Si la proyección aporta** lo decide `windowElapsed`. Mientras la ventana no haya terminado, las ocurrencias **proyectadas** de las reglas activas SHALL sumarse a las instancias; una vez terminada, NO SHALL proyectarse: la proyección usaría los montos actuales de las reglas, perdería las dadas de baja e inventaría las creadas después.
 
+  La bajada del grupo NO SHALL llamar "pendientes" a sus filas bajo `lens: 'snapshot'`: ahí el conjunto incluye instancias `confirmed`, que es justamente lo que impide que una ventana pasada encoja, y llamarlas pendientes describe mal un gasto ya pagado. SHALL usar un rótulo neutro ("N gastos fijos"). Bajo `live` el conjunto sí es sólo `pending` y el rótulo original SHALL conservarse.
+
   Cuando `lens: 'snapshot'` y `windowElapsed: false` conviven —el mes anterior, cuya ventana es el mes en curso— la proyección se hace sobre las reglas **vigentes hoy**, de modo que una regla creada o editada después del corte aporta a esa lectura con sus valores actuales. Se acepta explícitamente: no proyectar ahí dejaría la ventana en casi cero, porque el generador todavía no materializó sus instancias, y un monto levemente desactualizado informa más que uno ausente.
 
 Las dos fuentes NO SHALL superponerse: la proyección avanza desde `last_generated_date`, de modo que nunca devuelve una ocurrencia ya generada.
@@ -210,7 +212,9 @@ Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el
 
 Cada bloque del dashboard SHALL llevar un título que nombre la pregunta que responde, en el lenguaje del usuario y no en el del dominio: "Saldo disponible total" y "Dónde está" para cuánto tengo y dónde, "Resumen del mes" para qué pasó este mes, "Cuánto gastaste" para en qué se me fue y cuánto debo todavía, "Compromisos del próximo mes" para qué se viene, y "Compartido" para cómo estoy con el hogar.
 
-El título de la card de compromisos SHALL depender de la posición del navegador, en tres estados y no dos. Con `lens: 'live'` SHALL seguir siendo "Compromisos del próximo mes": es un pronóstico. Con `lens: 'snapshot'` y `windowElapsed: false` SHALL nombrar lo que el usuario tenía por delante al cierre de ese mes, porque la ventana todavía está transcurriendo. Con `windowElapsed: true` SHALL rotular lo que hubo que pagar en esa ventana, porque ya no anticipa nada. Los títulos SHALL salir del catálogo i18n, sin string hardcodeado, y ninguna plataforma SHALL derivar el mes del rótulo de su propio reloj.
+El título de la card de compromisos SHALL depender de la posición del navegador, en tres estados y no dos. Con `lens: 'live'` SHALL seguir siendo "Compromisos del próximo mes": es un pronóstico. Con `lens: 'snapshot'` y `windowElapsed: false` SHALL **nombrar la ventana** ("Compromisos de septiembre") y NO SHALL afirmar qué sabía el usuario al corte; la bajada SHALL declarar el punto de observación ("Al cierre de agosto"), que es lo que distingue esa posición. Con `windowElapsed: true` SHALL rotular lo que hubo que pagar en esa ventana, porque ya no anticipa nada y ahí la afirmación de registro sí es la correcta.
+
+**El título de la posición intermedia NO SHALL prometer previsión**, y la razón es estructural, no estética: una ventana bajo lente `snapshot` es un registro reconstruido, así que una regla creada DESPUÉS del corte alimenta esa lectura. Medido sobre datos reales durante la verificación de este change: en una cuenta, **el 77% del monto de gastos fijos de esa posición provenía de dos reglas nacidas el día siguiente al corte** — la card habría afirmado que el usuario tenía $2,18M por delante cuando a esa fecha conocía $9.311. El número es correcto como registro; la afirmación de conocimiento no lo es. Los títulos SHALL salir del catálogo i18n, sin string hardcodeado, y ninguna plataforma SHALL derivar el mes del rótulo de su propio reloj.
 
 Los rótulos de los tres tiles de "Cuánto gastaste" SHALL ser verbos en pasado dirigidos al usuario (Gastaste / Pagaste / Te queda por pagar), y cada uno SHALL ir acompañado de un sub-bloque que desambigüe qué mide, porque los tres son montos de gasto y sin esa aclaración se confunden entre sí.
 
@@ -223,8 +227,9 @@ Los rótulos de los tres tiles de "Cuánto gastaste" SHALL ser verbos en pasado 
 #### Scenario: El título de compromisos cambia con la posición del navegador
 
 - **WHEN** el usuario está en el mes actual
-- **THEN** la card se titula "Compromisos del próximo mes"
+- **THEN** la card se titula "Compromisos del próximo mes" y la bajada nombra el mes de la ventana
 - **WHEN** el usuario navega al mes anterior, cuya ventana todavía transcurre
-- **THEN** el título nombra lo que tenía por delante al cierre de ese mes
+- **THEN** el título nombra la ventana ("Compromisos de septiembre")
+- **AND** la bajada declara el corte ("Al cierre de agosto"), sin afirmar qué sabía el usuario ese día
 - **WHEN** el usuario navega a un mes cuya ventana ya terminó
 - **THEN** el título nombra lo que hubo que pagar en esa ventana

@@ -18,16 +18,17 @@ import { MaskedAmount } from './MaskedAmount'
 // total it explicitly is not part of, and three lines for a one-line fact push
 // the whole card down.
 
-// The window's month, named from the read's own `window` — never from a local
+// Every label is named from the read's own window and cut — never from a local
 // clock. Web and native each used to recompute it from their own `new Date()`,
 // which is exactly why the card kept naming the month after the real today no
 // matter where the navigator stood.
+const monthAt = (iso: string, locale: string): string => {
+  const [year, month] = iso.split('-').map(Number)
+  return new Date(year!, month! - 1, 1).toLocaleDateString(locale, { month: 'long' })
+}
+
 const monthLabel = (windowStart: string, locale: string): string => {
-  const [year, month] = windowStart.split('-').map(Number)
-  const label = new Date(year!, month! - 1, 1).toLocaleDateString(locale, {
-    month: 'long',
-    year: 'numeric',
-  })
+  const label = `${monthAt(windowStart, locale)} de ${windowStart.slice(0, 4)}`
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
@@ -38,16 +39,19 @@ export const CommittedSection = () => {
   const query = useCommittedOutlook(selected)
   const data = query.data
 
-  // Three headings, one per navigator position: a forecast on the current month,
-  // what was ahead of you at a past month's close while that window still runs,
-  // and what had to be paid once it ended.
+  // Three headings, three claims. The middle one names the WINDOW rather than
+  // asserting what the user knew at the cut: a past window is a reconstructed
+  // record, so a rule created after the cut feeds it — verified on real data,
+  // where one account read 77% of that figure from rules born the day after.
+  // The subtitle carries the vantage point instead.
+  const isAhead = data != null && data.lens === 'snapshot' && !data.windowElapsed
   const title = !data
     ? t('dashboard.committed.title_next_month')
     : data.lens === 'live'
       ? t('dashboard.committed.title_next_month')
       : data.windowElapsed
         ? t('dashboard.committed.title_past')
-        : t('dashboard.committed.title_ahead')
+        : t('dashboard.committed.title_ahead', { month: monthAt(data.window.start, 'es-AR') })
 
   // The header does not depend on the read — title, month and link — so it
   // renders from the first paint in all three states: loading, error and loaded.
@@ -62,7 +66,13 @@ export const CommittedSection = () => {
             breathing room for free from the header's leading and `CardContent`
             padding. */}
         <Text className="mt-1 text-[11.5px] font-semibold text-text-soft">
-          {data ? monthLabel(data.window.start, 'es-AR') : ''}
+          {!data
+            ? ''
+            : isAhead
+              ? t('dashboard.committed.subtitle_ahead', {
+                  month: monthAt(data.snapshotDate, 'es-AR'),
+                })
+              : monthLabel(data.window.start, 'es-AR')}
         </Text>
       </View>
       <Pressable onPress={() => router.push('/cards')} accessibilityRole="button" hitSlop={12}>
@@ -127,7 +137,14 @@ export const CommittedSection = () => {
       icon: <Receipt size={17} color={colors.plum} />,
       iconBackground: 'rgba(138,110,152,0.14)',
       label: t('dashboard.committed.recurring_group'),
-      sub: t('dashboard.committed.recurring_group_sub', { count: recurring.length }),
+      // Under `snapshot` the group counts `confirmed` instances too, so calling
+      // them "pendientes" stopped being true. Only the lens knows.
+      sub:
+        data.lens === 'live'
+          ? t('dashboard.committed.recurring_group_sub', { count: recurring.length })
+          : t('dashboard.committed.recurring_group_sub_snapshot', {
+              count: recurring.length,
+            }),
       ars: data.ARS.recurringExpense,
       usd: data.USD.recurringExpense,
       rows: recurring.map((item, index) => ({

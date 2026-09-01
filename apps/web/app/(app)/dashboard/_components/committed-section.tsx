@@ -43,24 +43,37 @@ export const CommittedSection = ({ initialData }: Props) => {
   const format = useFormatter()
   const { data, isLoading, isError } = useCommittedMonth(initialData)
 
-  // The window's month, named from the read's own window — not recomputed here.
+  // Every label below is named from the read's own window and cut — never from a
+  // clock of this component's. `monthAt` gives the bare month name for the
+  // sentences that embed one; `monthLabel` the capitalized "Mes de AAAA".
+  const monthAt = (iso: string) => {
+    const [y, m] = iso.split('-').map(Number)
+    return format.dateTime(new Date(y!, m! - 1, 1), { month: 'long' })
+  }
   const monthLabel = data
     ? (() => {
-        const [y, m] = data.window.start.split('-').map(Number)
-        const label = format.dateTime(new Date(y!, m! - 1, 1), {
-          month: 'long',
-          year: 'numeric',
-        })
+        const label = `${monthAt(data.window.start)} de ${data.window.start.slice(0, 4)}`
         return label.charAt(0).toUpperCase() + label.slice(1)
       })()
     : ''
+
+  // Three headings, three claims, and the middle one is the reason this is not
+  // one string with a month in it. "Lo que tenías por delante" asserted what the
+  // user KNEW at the cut, and a past window cannot support that: it is a
+  // reconstructed record, so a rule created after the cut feeds it. Verified on
+  // real data — one account read 77% of that figure from rules born the day
+  // after. Naming the window ("Compromisos de septiembre") states the same
+  // number without claiming foresight, and the subtitle carries the vantage
+  // point, which is what actually distinguishes this position.
+  const isAhead = data != null && data.lens === 'snapshot' && !data.windowElapsed
   const title = !data
     ? t('title_next_month')
     : data.lens === 'live'
       ? t('title_next_month')
       : data.windowElapsed
         ? t('title_past')
-        : t('title_ahead')
+        : t('title_ahead', { month: monthAt(data.window.start) })
+  const subtitle = isAhead ? t('subtitle_ahead', { month: monthAt(data.snapshotDate) }) : monthLabel
 
   // The chrome (title, month, link) does not depend on the read, so it paints
   // from the first frame in all three states and the card does not assemble in
@@ -69,7 +82,7 @@ export const CommittedSection = ({ initialData }: Props) => {
     <CardHeader className="flex-row items-center justify-between gap-3">
       <div className="min-w-0">
         <h2 className="truncate text-lg font-semibold tracking-tight text-text">{title}</h2>
-        <p className="text-[12.5px] font-semibold text-text-soft">{monthLabel}</p>
+        <p className="text-[12.5px] font-semibold text-text-soft">{subtitle}</p>
       </div>
       <Link
         href="/cards"
@@ -139,7 +152,13 @@ export const CommittedSection = ({ initialData }: Props) => {
       icon: <Receipt size={18} strokeWidth={2} aria-hidden />,
       iconClassName: 'bg-plum-soft text-plum-deep',
       label: t('recurring_group'),
-      sub: t('recurring_group_sub', { count: recurring.length }),
+      // Under `snapshot` the group counts `confirmed` instances too (that is what
+      // keeps a past window from shrinking as the user resolves it), so calling
+      // them "pendientes" stopped being true. Only the lens knows.
+      sub:
+        data.lens === 'live'
+          ? t('recurring_group_sub', { count: recurring.length })
+          : t('recurring_group_sub_snapshot', { count: recurring.length }),
       ars: data.ARS.recurringExpense,
       usd: data.USD.recurringExpense,
       rows: recurring.map((item, index) => ({
