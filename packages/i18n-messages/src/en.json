@@ -158,6 +158,8 @@
       "loading": "Loading what's coming…",
       "error": "We couldn't load what's coming.",
       "title_next_month": "Next month commitments",
+      "title_ahead": "What was ahead of you",
+      "title_past": "What had to be paid",
       "committed_label": "Already committed",
       "overdue_prefix": "Plus",
       "overdue_suffix": "overdue",

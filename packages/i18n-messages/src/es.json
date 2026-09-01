@@ -158,6 +158,8 @@
       "loading": "Cargando lo que se viene…",
       "error": "No pudimos cargar lo que se viene.",
       "title_next_month": "Compromisos del próximo mes",
+      "title_ahead": "Lo que tenías por delante",
+      "title_past": "Lo que hubo que pagar",
       "committed_label": "Ya comprometido",
       "overdue_prefix": "Además,",
       "overdue_suffix": "vencido sin pagar",

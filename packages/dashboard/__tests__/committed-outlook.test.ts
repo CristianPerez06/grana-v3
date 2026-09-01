@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getCommittedOutlook } from '../src/queries'
+import { getCommittedOutlookForMonth } from '../src/queries'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // "Compromisos del próximo mes" — the window is the NEXT CALENDAR MONTH.
@@ -17,7 +17,17 @@ import { getCommittedOutlook } from '../src/queries'
 //   · overdue money is carried apart, never folded into the month's total
 // ═══════════════════════════════════════════════════════════════════════════
 
-const TODAY = '2026-08-20' // → window is September 2026 [09-01, 09-30]
+const TODAY = '2026-08-20'
+
+// Standing on the CURRENT month: window September 2026 [09-01, 09-30], lens
+// 'live', snapshot = today. Identical to what the old single-argument signature
+// produced, which is what makes the cases below a regression net rather than a
+// rewrite: same inputs, same expectations, new signature.
+const CURRENT_MONTH = { year: 2026, month: 8, todayISO: TODAY }
+/** Standing on the PREVIOUS month: window August, snapshot 31/07, still running. */
+const PREVIOUS_MONTH = { year: 2026, month: 7, todayISO: TODAY }
+/** Standing further back: window July, snapshot 30/06, already elapsed. */
+const ELAPSED_MONTH = { year: 2026, month: 6, todayISO: TODAY }
 
 type FakeAccount = { id: string; name: string; type: string; is_active: boolean }
 type FakePeriod = {
@@ -67,7 +77,8 @@ type FakeInstance = {
 type Db = {
   accounts?: FakeAccount[]
   card_periods?: FakePeriod[]
-  period_payments?: Array<{ period_id: string }>
+  /** `paid_on` is the payment movement's financial date; omit for 'no date'. */
+  period_payments?: Array<{ period_id: string; paid_on?: string }>
   transactions?: FakeTx[]
   recurrences?: FakeRule[]
   recurrence_instances?: FakeInstance[]
@@ -109,7 +120,13 @@ function makeSupabase(db: Db) {
         case 'card_periods':
           return { data: keep(db.card_periods ?? []), error: null }
         case 'period_payments':
-          return { data: keep(db.period_payments ?? []), error: null }
+          return {
+            data: keep(db.period_payments ?? []).map((p) => ({
+              period_id: p.period_id,
+              transaction: { date: p.paid_on ?? null },
+            })),
+            error: null,
+          }
         case 'transactions':
           return {
             data: keep(
@@ -199,7 +216,7 @@ const consumo = (period: string, amount: number): FakeTx => ({
 
 // ── Tarjetas: the window is decided by the DUE date ──────────────────────────
 
-describe('getCommittedOutlook — statements belong to the window by due date', () => {
+describe('getCommittedOutlookForMonth — statements belong to the window by due date', () => {
   it('excludes a statement that closes inside the window but is due after it', async () => {
     const supabase = makeSupabase({
       accounts: [visa, bank],
@@ -210,7 +227,7 @@ describe('getCommittedOutlook — statements belong to the window by due date', 
       transactions: [consumo('p-oct', 100_000)],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.debt).toBe(0)
     expect(out.ARS.cards).toEqual([])
   })
@@ -224,7 +241,7 @@ describe('getCommittedOutlook — statements belong to the window by due date', 
       transactions: [consumo('p-sep', 100_000)],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.debt).toBe(100_000)
     expect(out.ARS.cards).toEqual([
       // Closes 28/08, still ahead of today → that is the next close.
@@ -242,7 +259,7 @@ describe('getCommittedOutlook — statements belong to the window by due date', 
       transactions: [consumo('p-sep', 100_000)],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.debt).toBe(0)
   })
 
@@ -265,14 +282,14 @@ describe('getCommittedOutlook — statements belong to the window by due date', 
       ],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.debt).toBe(70_000)
   })
 })
 
 // ── Overdue: carried apart, never inside the month's total ───────────────────
 
-describe('getCommittedOutlook — overdue is disjoint from the window', () => {
+describe('getCommittedOutlookForMonth — overdue is disjoint from the window', () => {
   it('reports an overdue statement under `overdue` and keeps it out of `debt`', async () => {
     const supabase = makeSupabase({
       accounts: [visa],
@@ -283,7 +300,7 @@ describe('getCommittedOutlook — overdue is disjoint from the window', () => {
       transactions: [consumo('p-late', 40_000), consumo('p-sep', 100_000)],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.overdue).toBe(40_000)
     expect(out.ARS.debt).toBe(100_000)
     // The by-card rows add up to `debt`: the late money has its own line.
@@ -299,7 +316,7 @@ describe('getCommittedOutlook — overdue is disjoint from the window', () => {
       transactions: [consumo('p-aug', 55_000)],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.debt).toBe(0)
     expect(out.ARS.overdue).toBe(0)
   })
@@ -307,7 +324,7 @@ describe('getCommittedOutlook — overdue is disjoint from the window', () => {
 
 // ── Gastos fijos ─────────────────────────────────────────────────────────────
 
-describe('getCommittedOutlook — fixed expenses in the window', () => {
+describe('getCommittedOutlookForMonth — fixed expenses in the window', () => {
   it('excludes a recurrence debited from a credit card', async () => {
     const supabase = makeSupabase({
       accounts: [visa, bank],
@@ -333,7 +350,7 @@ describe('getCommittedOutlook — fixed expenses in the window', () => {
       ],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.recurringExpense).toBe(500_000)
     expect(out.ARS.topRecurring.map((i) => i.description)).toEqual(['Alquiler'])
   })
@@ -367,7 +384,7 @@ describe('getCommittedOutlook — fixed expenses in the window', () => {
       ],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.recurringExpense).toBe(500_000)
     expect(out.ARS.topRecurring).toHaveLength(1)
   })
@@ -390,7 +407,7 @@ describe('getCommittedOutlook — fixed expenses in the window', () => {
       ],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.recurringExpense).toBe(0)
   })
 
@@ -422,7 +439,7 @@ describe('getCommittedOutlook — fixed expenses in the window', () => {
       ],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.recurringExpense).toBe(0)
   })
 
@@ -451,7 +468,7 @@ describe('getCommittedOutlook — fixed expenses in the window', () => {
       ],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.recurringExpense).toBe(500_000)
     expect(out.USD.recurringExpense).toBe(120)
   })
@@ -459,7 +476,7 @@ describe('getCommittedOutlook — fixed expenses in the window', () => {
 
 // ── Recurring income: context, never a commitment ────────────────────────────
 
-describe('getCommittedOutlook — recurring income', () => {
+describe('getCommittedOutlookForMonth — recurring income', () => {
   it('projects income into the window without the credit-card exclusion', async () => {
     const supabase = makeSupabase({
       accounts: [visa, bank],
@@ -476,7 +493,7 @@ describe('getCommittedOutlook — recurring income', () => {
       ],
     })
 
-    const out = await getCommittedOutlook(supabase, TODAY)
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.recurringIncome).toBe(2_000_000)
     // Income is context: it never enters the committed side.
     expect(out.ARS.recurringExpense).toBe(0)
@@ -484,9 +501,9 @@ describe('getCommittedOutlook — recurring income', () => {
   })
 })
 
-describe('getCommittedOutlook — nothing committed', () => {
+describe('getCommittedOutlookForMonth — nothing committed', () => {
   it('returns zeros for both currencies', async () => {
-    const out = await getCommittedOutlook(makeSupabase({ accounts: [bank] }), TODAY)
+    const out = await getCommittedOutlookForMonth(makeSupabase({ accounts: [bank] }), CURRENT_MONTH)
     for (const cur of ['ARS', 'USD'] as const) {
       expect(out[cur]).toEqual({
         debt: 0,
@@ -497,5 +514,276 @@ describe('getCommittedOutlook — nothing committed', () => {
         topRecurring: [],
       })
     }
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// The SNAPSHOT lens: the window is the month after a PAST selected month, and
+// each commitment's state is evaluated at that month's close.
+//
+// Every case below reads zero under the old implementation — not by one rule but
+// by four stacked ones (payment filtered by today's state, consumos summed only
+// while `pending`, instances filtered to `pending`, projection cursor already
+// past the window). That is the point: a past window needed a different lens,
+// not a different date.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** A consumo on a statement that has since been paid: `payCardPeriod` flips these. */
+const paidConsumo = (period: string, amount: number): FakeTx => ({
+  card_period_id: period,
+  type: 'expense',
+  amount,
+  currency_code: 'ARS',
+  status: 'paid',
+})
+
+/** July's statement: closes 25/06, due 10/07 — inside the window, closed at the cut. */
+const julyPeriod: FakePeriod = {
+  id: 'p-jul',
+  account_id: 'visa',
+  start_date: '2026-05-26',
+  end_date: '2026-06-25',
+  due_date: '2026-07-10',
+}
+
+describe('getCommittedOutlookForMonth — payment is evaluated at the snapshot', () => {
+  it('counts a statement of the window that was never paid', async () => {
+    const out = await getCommittedOutlookForMonth(
+      makeSupabase({
+        accounts: [visa, bank],
+        card_periods: [julyPeriod],
+        transactions: [consumo('p-jul', 143000)],
+      }),
+      ELAPSED_MONTH,
+    )
+    expect(out.ARS.debt).toBe(143000)
+  })
+
+  it('counts a statement paid AFTER the cut: at the cut it was still owed', async () => {
+    const out = await getCommittedOutlookForMonth(
+      makeSupabase({
+        accounts: [visa, bank],
+        card_periods: [julyPeriod],
+        // Paid on 12/07 — the consumos are 'paid' today, which is exactly the
+        // state the status-based sum reads as zero.
+        period_payments: [{ period_id: 'p-jul', paid_on: '2026-07-12' }],
+        transactions: [paidConsumo('p-jul', 143000)],
+      }),
+      ELAPSED_MONTH,
+    )
+    expect(out.ARS.debt).toBe(143000)
+  })
+
+  it('excludes a statement paid BEFORE the cut: by then it was not a commitment', async () => {
+    const out = await getCommittedOutlookForMonth(
+      makeSupabase({
+        accounts: [visa, bank],
+        card_periods: [julyPeriod],
+        // Closed 25/06, due 10/07, settled 25/06 — a supported flow.
+        period_payments: [{ period_id: 'p-jul', paid_on: '2026-06-25' }],
+        transactions: [paidConsumo('p-jul', 210000)],
+      }),
+      ELAPSED_MONTH,
+    )
+    expect(out.ARS.debt).toBe(0)
+  })
+
+  it('is stable: paying after the cut does not move the number', async () => {
+    const base = {
+      accounts: [visa, bank],
+      card_periods: [julyPeriod],
+    }
+    const beforePaying = await getCommittedOutlookForMonth(
+      makeSupabase({ ...base, transactions: [consumo('p-jul', 143000)] }),
+      ELAPSED_MONTH,
+    )
+    const afterPaying = await getCommittedOutlookForMonth(
+      makeSupabase({
+        ...base,
+        period_payments: [{ period_id: 'p-jul', paid_on: '2026-07-12' }],
+        transactions: [paidConsumo('p-jul', 143000)],
+      }),
+      ELAPSED_MONTH,
+    )
+    expect(afterPaying.ARS.debt).toBe(beforePaying.ARS.debt)
+  })
+})
+
+describe('getCommittedOutlookForMonth — consumos are never cut by date', () => {
+  it('counts an installment dated inside the window but committed long before', async () => {
+    // A May purchase in 12 instalments inserts every child at purchase time,
+    // dated `fechaCompra + i meses`. The child below is dated 05/07 — AFTER the
+    // 30/06 cut — and belongs to a statement due 28/07. Cutting consumos by
+    // `transactions.date` would drop exactly this row, and these are the bulk of
+    // a statement here.
+    const out = await getCommittedOutlookForMonth(
+      makeSupabase({
+        accounts: [visa, bank],
+        card_periods: [
+          { id: 'p-amex', account_id: 'visa', start_date: '2026-06-13', end_date: '2026-07-12', due_date: '2026-07-28' },
+        ],
+        transactions: [{ ...consumo('p-amex', 50000), date: '2026-07-05' }],
+      }),
+      ELAPSED_MONTH,
+    )
+    expect(out.ARS.debt).toBe(50000)
+  })
+
+  it('a statement still open at the cut contributes its full content', async () => {
+    // Closes 12/07, after the 30/06 cut: at the cut it held only part of this.
+    // The card reports what had to be paid, not what the screen showed that day,
+    // so the total does not change once the statement closes.
+    const out = await getCommittedOutlookForMonth(
+      makeSupabase({
+        accounts: [visa, bank],
+        card_periods: [
+          { id: 'p-open', account_id: 'visa', start_date: '2026-06-13', end_date: '2026-07-12', due_date: '2026-07-28' },
+        ],
+        transactions: [
+          { ...consumo('p-open', 85000), date: '2026-06-20' },
+          { ...consumo('p-open', 50000), date: '2026-07-05' },
+        ],
+      }),
+      ELAPSED_MONTH,
+    )
+    expect(out.ARS.debt).toBe(135000)
+  })
+})
+
+describe('getCommittedOutlookForMonth — fixed expenses over an elapsed window', () => {
+  const rule: FakeRule = {
+    id: 'r-1',
+    movement_type: 'expense',
+    account_id: 'bank',
+    amount: 400000,
+    currency_code: 'ARS',
+    description: 'Alquiler',
+    start_date: '2026-01-05',
+    last_generated_date: '2026-07-05',
+  }
+
+  it('counts confirmed and pending instances, never skipped', async () => {
+    const out = await getCommittedOutlookForMonth(
+      makeSupabase({
+        accounts: [bank],
+        recurrences: [rule],
+        recurrence_instances: [
+          { recurrence_id: 'r-1', account_id: 'bank', amount: 400000, currency_code: 'ARS', description: 'Alquiler', scheduled_date: '2026-07-05', status: 'confirmed' },
+          { recurrence_id: 'r-1', account_id: 'bank', amount: 65000, currency_code: 'ARS', description: 'Expensas', scheduled_date: '2026-07-15', status: 'pending' },
+          { recurrence_id: 'r-1', account_id: 'bank', amount: 30000, currency_code: 'ARS', description: 'Gimnasio', scheduled_date: '2026-07-10', status: 'skipped' },
+        ],
+      }),
+      ELAPSED_MONTH,
+    )
+    // 400.000 confirmada + 65.000 pendiente; la salteada no ocurrió.
+    expect(out.ARS.recurringExpense).toBe(465000)
+  })
+
+  it('does not project active rules over a window that already ended', async () => {
+    const out = await getCommittedOutlookForMonth(
+      makeSupabase({
+        accounts: [bank],
+        // Cursor before the window, so the projection WOULD emit July occurrences
+        // — priced at today's amount, and blind to rules retired since.
+        recurrences: [{ ...rule, last_generated_date: '2026-06-05' }],
+      }),
+      ELAPSED_MONTH,
+    )
+    expect(out.ARS.recurringExpense).toBe(0)
+  })
+})
+
+describe('getCommittedOutlookForMonth — the previous month, whose window is still running', () => {
+  // The position that broke a single `mode` field: on 20/08, looking at July,
+  // the window is August — not elapsed — but the cut is still 31/07.
+  const augustRule: FakeRule = {
+    id: 'r-ago',
+    movement_type: 'expense',
+    account_id: 'bank',
+    amount: 400000,
+    currency_code: 'ARS',
+    description: 'Alquiler',
+    start_date: '2026-01-05',
+    // Cursor already inside the window: the projection adds nothing, so these
+    // cases isolate the instances.
+    last_generated_date: '2026-08-05',
+  }
+  const instance = (status: string) => ({
+    recurrence_id: 'r-ago',
+    account_id: 'bank',
+    amount: 400000,
+    currency_code: 'ARS',
+    description: 'Alquiler',
+    scheduled_date: '2026-08-05',
+    status,
+  })
+
+  it('evaluates payment at the previous month’s close, not at today', async () => {
+    const out = await getCommittedOutlookForMonth(
+      makeSupabase({
+        accounts: [visa, bank],
+        card_periods: [
+          { id: 'p-ago', account_id: 'visa', start_date: '2026-07-01', end_date: '2026-07-25', due_date: '2026-08-10' },
+        ],
+        // Paid on 15/08 — after the 31/07 cut, so it was still owed then.
+        period_payments: [{ period_id: 'p-ago', paid_on: '2026-08-15' }],
+        transactions: [paidConsumo('p-ago', 95000)],
+      }),
+      PREVIOUS_MONTH,
+    )
+    expect(out.ARS.debt).toBe(95000)
+  })
+
+  it('does not shrink as the window’s instances get confirmed', async () => {
+    const pending = await getCommittedOutlookForMonth(
+      makeSupabase({ accounts: [bank], recurrences: [augustRule], recurrence_instances: [instance('pending')] }),
+      PREVIOUS_MONTH,
+    )
+    const confirmed = await getCommittedOutlookForMonth(
+      makeSupabase({ accounts: [bank], recurrences: [augustRule], recurrence_instances: [instance('confirmed')] }),
+      PREVIOUS_MONTH,
+    )
+    expect(pending.ARS.recurringExpense).toBe(400000)
+    expect(confirmed.ARS.recurringExpense).toBe(pending.ARS.recurringExpense)
+  })
+
+  it('still projects rules, because the window has not ended', async () => {
+    const out = await getCommittedOutlookForMonth(
+      makeSupabase({
+        accounts: [bank],
+        recurrences: [{ ...augustRule, last_generated_date: '2026-07-05' }],
+      }),
+      PREVIOUS_MONTH,
+    )
+    expect(out.ARS.recurringExpense).toBe(400000)
+  })
+})
+
+describe('getCommittedOutlookForMonth — the reading describes itself', () => {
+  it('carries its window, cut and lens so the UI never recomputes them', async () => {
+    const db = { accounts: [bank] }
+    const live = await getCommittedOutlookForMonth(makeSupabase(db), CURRENT_MONTH)
+    expect(live).toMatchObject({
+      window: { start: '2026-09-01', end: '2026-09-30' },
+      snapshotDate: TODAY,
+      lens: 'live',
+      windowElapsed: false,
+    })
+
+    const previous = await getCommittedOutlookForMonth(makeSupabase(db), PREVIOUS_MONTH)
+    expect(previous).toMatchObject({
+      window: { start: '2026-08-01', end: '2026-08-31' },
+      snapshotDate: '2026-07-31',
+      lens: 'snapshot',
+      windowElapsed: false,
+    })
+
+    const elapsed = await getCommittedOutlookForMonth(makeSupabase(db), ELAPSED_MONTH)
+    expect(elapsed).toMatchObject({
+      window: { start: '2026-07-01', end: '2026-07-31' },
+      snapshotDate: '2026-06-30',
+      lens: 'snapshot',
+      windowElapsed: true,
+    })
   })
 })

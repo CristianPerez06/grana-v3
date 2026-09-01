@@ -1,29 +1,30 @@
-import { getFormatter, getTranslations } from 'next-intl/server'
-import { getCommittedOutlook, type CommittedOutlook } from '@grana/dashboard'
+import { getCommittedOutlookForMonth, type CommittedOutlook } from '@grana/dashboard'
+import { getTodayAR } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
 import { CommittedSection } from './committed-section'
 
-// "Compromisos del próximo mes" — the window is the NEXT CALENDAR MONTH, fixed
-// relative to today, so it is fully server-rendered once and does NOT follow the
-// month navigator. Sits next to "Cuánto gastaste".
+// "Compromisos" — resolves the CURRENT month server-side and hands it to the
+// card as initial data. Everything else (navigating months) is client-side, the
+// same split "Saldo disponible total" uses.
+//
+// The month label is NOT computed here any more. It travels on the read's result
+// (`window`, `lens`, `windowElapsed`) so web and native cannot drift: each used
+// to derive it from its own `new Date()`, which is why the card kept naming the
+// month after the real today while the navigator said otherwise.
 export const CommittedSectionContainer = async () => {
-  const supabase = await createClient()
-  let data: CommittedOutlook
+  const today = getTodayAR()
+  let initial: CommittedOutlook | null = null
   try {
-    data = await getCommittedOutlook(supabase)
+    const supabase = await createClient()
+    initial = await getCommittedOutlookForMonth(supabase, {
+      year: today.getFullYear(),
+      month: today.getMonth() + 1,
+    })
   } catch {
-    const t = await getTranslations('dashboard.committed')
-    return (
-      <div className="flex h-full min-h-[15rem] items-center justify-center rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-text-muted shadow-sm">
-        {t('error')}
-      </div>
-    )
+    // The card renders its own error state from the client query; a failed
+    // server pass just means no initial data.
+    initial = null
   }
-  // The commitments are next month's, so the subtitle names that month.
-  const format = await getFormatter()
-  const today = new Date()
-  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1)
-  const monthLabel = format.dateTime(nextMonth, { month: 'long', year: 'numeric' })
 
-  return <CommittedSection data={data} monthLabel={monthLabel} />
+  return <CommittedSection initialData={initial} />
 }

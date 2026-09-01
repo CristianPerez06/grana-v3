@@ -1,4 +1,5 @@
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
+import type { CommittedLens } from './committed-window'
 
 export type HeroAccountBalance = {
   id: string
@@ -114,7 +115,8 @@ export type CommittedCurrency = {
    */
   debt: number
   /**
-   * Unpaid statements whose due date ALREADY PASSED (`due_date < today`).
+   * Unpaid statements whose due date ALREADY PASSED at the snapshot
+   * (`due_date < snapshotDate`, unpaid as of it).
    * DISJOINT from `debt`: what is late and what is merely coming are two
    * different facts, and the UI labels this one as overdue instead of blurring
    * it into the next month's amount. 0 when nothing is overdue.
@@ -163,6 +165,17 @@ export type CommittedCardRow = {
 export type CommittedOutlook = {
   ARS: CommittedCurrency
   USD: CommittedCurrency
+  /**
+   * The window this reading covers and the cut it was evaluated at, carried on
+   * the result so the UI labels itself from the data. Web and native each used
+   * to recompute the month from their own `new Date()`, which is exactly why the
+   * card kept naming the month after the real today no matter where the
+   * navigator stood. See `committed-window.ts`.
+   */
+  window: { start: string; end: string }
+  snapshotDate: string
+  lens: CommittedLens
+  windowElapsed: boolean
 }
 
 /**

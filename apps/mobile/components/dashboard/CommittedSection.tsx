@@ -5,6 +5,7 @@ import { deriveCommittedSplit } from '@grana/dashboard'
 import { useT } from '../../lib/locale-context'
 import { colors } from '../../lib/colors'
 import { useCommittedOutlook } from '../../lib/dashboard/queries'
+import { useDashboardMonth } from './DashboardMonthContext'
 import { CommittedBody, type CommittedDetailGroup } from './CommittedBody'
 import { CommittedSkeleton } from './CommittedSkeleton'
 import { MaskedAmount } from './MaskedAmount'
@@ -17,18 +18,36 @@ import { MaskedAmount } from './MaskedAmount'
 // total it explicitly is not part of, and three lines for a one-line fact push
 // the whole card down.
 
-const monthLabel = (locale: string): string => {
-  const today = new Date()
-  const next = new Date(today.getFullYear(), today.getMonth() + 1, 1)
-  const label = next.toLocaleDateString(locale, { month: 'long', year: 'numeric' })
+// The window's month, named from the read's own `window` — never from a local
+// clock. Web and native each used to recompute it from their own `new Date()`,
+// which is exactly why the card kept naming the month after the real today no
+// matter where the navigator stood.
+const monthLabel = (windowStart: string, locale: string): string => {
+  const [year, month] = windowStart.split('-').map(Number)
+  const label = new Date(year!, month! - 1, 1).toLocaleDateString(locale, {
+    month: 'long',
+    year: 'numeric',
+  })
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 export const CommittedSection = () => {
   const t = useT()
   const router = useRouter()
-  const query = useCommittedOutlook()
+  const { selected } = useDashboardMonth()
+  const query = useCommittedOutlook(selected)
   const data = query.data
+
+  // Three headings, one per navigator position: a forecast on the current month,
+  // what was ahead of you at a past month's close while that window still runs,
+  // and what had to be paid once it ended.
+  const title = !data
+    ? t('dashboard.committed.title_next_month')
+    : data.lens === 'live'
+      ? t('dashboard.committed.title_next_month')
+      : data.windowElapsed
+        ? t('dashboard.committed.title_past')
+        : t('dashboard.committed.title_ahead')
 
   // The header does not depend on the read — title, month and link — so it
   // renders from the first paint in all three states: loading, error and loaded.
@@ -37,15 +56,13 @@ export const CommittedSection = () => {
   const header = (
     <View className="flex-row items-start justify-between">
       <View className="min-w-0 flex-1">
-        <Text className="text-[15px] font-extrabold text-text">
-          {t('dashboard.committed.title_next_month')}
-        </Text>
+        <Text className="text-[15px] font-extrabold text-text">{title}</Text>
         {/* RN gives a `Text` a tight line box, so the month sat flush against
             the title above it and the summary box below. Web gets the same
             breathing room for free from the header's leading and `CardContent`
             padding. */}
         <Text className="mt-1 text-[11.5px] font-semibold text-text-soft">
-          {monthLabel('es-AR')}
+          {data ? monthLabel(data.window.start, 'es-AR') : ''}
         </Text>
       </View>
       <Pressable onPress={() => router.push('/cards')} accessibilityRole="button" hitSlop={12}>
