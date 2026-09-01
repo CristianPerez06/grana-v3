@@ -1,16 +1,19 @@
+'use client'
+
 import Link from 'next/link'
 import { AlertTriangle, CreditCard, Receipt } from 'lucide-react'
-import { getFormatter, getTranslations } from 'next-intl/server'
+import { useFormatter, useTranslations } from 'next-intl'
 import { deriveCommittedSplit, type CommittedOutlook } from '@grana/dashboard'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { CommittedBody, type CommittedDetailGroup } from './committed-body'
+import { CommittedBodySkeleton } from './committed-body-skeleton'
 import { MaskedAmount } from './masked-amount'
 import { MaskedAmountDisplay } from './masked-amount-display'
+import { useCommittedMonth } from './use-committed-month'
 
 type Props = {
-  data: CommittedOutlook
-  /** Label of the month the commitments belong to (e.g. "Septiembre 2026"). */
-  monthLabel: string
+  /** The current month, server-rendered. Null when that read failed. */
+  initialData: CommittedOutlook | null
 }
 
 /**
@@ -22,6 +25,12 @@ type Props = {
  * proportions. Cards are grouped BY CARD, not by consumo: the user asks "how
  * much is coming from Visa", not "which twenty charges are pending".
  *
+ * The heading has THREE states, one per navigator position, because the same
+ * number answers a different question in each: a forecast on the current month,
+ * what was ahead of you at a past month's close while that window is still
+ * running, and what had to be paid once it ended. All three read `lens` and
+ * `windowElapsed` off the query result — never a clock of their own.
+ *
  * NOTHING in this card changes its height. Row 2's two cards share a height and
  * "Cuánto gastaste" has no content to fill extra space with, so every pixel this
  * card grows shows up as a hole in its neighbour. Hence the two-faced body
@@ -29,9 +38,80 @@ type Props = {
  * total block: it is a footnote to that total — it says outright that it is not
  * part of it — not a block competing with it.
  */
-export const CommittedSection = async ({ data, monthLabel }: Props) => {
-  const t = await getTranslations('dashboard.committed')
-  const format = await getFormatter()
+export const CommittedSection = ({ initialData }: Props) => {
+  const t = useTranslations('dashboard.committed')
+  const format = useFormatter()
+  const { data, isLoading, isError } = useCommittedMonth(initialData)
+
+  // Every label below is named from the read's own window and cut — never from a
+  // clock of this component's. `monthAt` gives the bare month name for the
+  // sentences that embed one; `monthLabel` the capitalized "Mes de AAAA".
+  const monthAt = (iso: string) => {
+    const [y, m] = iso.split('-').map(Number)
+    return format.dateTime(new Date(y!, m! - 1, 1), { month: 'long' })
+  }
+  const monthLabel = data
+    ? (() => {
+        const label = `${monthAt(data.window.start)} de ${data.window.start.slice(0, 4)}`
+        return label.charAt(0).toUpperCase() + label.slice(1)
+      })()
+    : ''
+
+  // Three headings, three claims, and the middle one is the reason this is not
+  // one string with a month in it. "Lo que tenías por delante" asserted what the
+  // user KNEW at the cut, and a past window cannot support that: it is a
+  // reconstructed record, so a rule created after the cut feeds it. Verified on
+  // real data — one account read 77% of that figure from rules born the day
+  // after. Naming the window ("Compromisos de septiembre") states the same
+  // number without claiming foresight, and the subtitle carries the vantage
+  // point, which is what actually distinguishes this position.
+  const isAhead = data != null && data.lens === 'snapshot' && !data.windowElapsed
+  const title = !data
+    ? t('title_next_month')
+    : data.lens === 'live'
+      ? t('title_next_month')
+      : data.windowElapsed
+        ? t('title_past')
+        : t('title_ahead', { month: monthAt(data.window.start) })
+  const subtitle = isAhead ? t('subtitle_ahead', { month: monthAt(data.snapshotDate) }) : monthLabel
+
+  // The chrome (title, month, link) does not depend on the read, so it paints
+  // from the first frame in all three states and the card does not assemble in
+  // jumps when navigating to an uncached month.
+  const header = (
+    <CardHeader className="flex-row items-center justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className="truncate text-lg font-semibold tracking-tight text-text">{title}</h2>
+        <p className="text-[12.5px] font-semibold text-text-soft">{subtitle}</p>
+      </div>
+      <Link
+        href="/cards"
+        className="shrink-0 whitespace-nowrap rounded text-[13px] font-bold text-emerald-deep transition-colors hover:text-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {t('view_all')} ›
+      </Link>
+    </CardHeader>
+  )
+
+  if (isLoading || !data) {
+    return (
+      // Same floor the Suspense fallback carries (`committed-skeleton.tsx`), so
+      // navigating to an uncached month cannot shrink the card mid-flight and
+      // leave a hole in "Cuánto gastaste" beside it.
+      <Card className="flex min-h-[15rem] flex-col">
+        {header}
+        <CardContent className="flex flex-1 flex-col gap-3">
+          {isError ? (
+            <p className="py-6 text-center text-[13.5px] font-semibold text-text-soft">
+              {t('error')}
+            </p>
+          ) : (
+            <CommittedBodySkeleton />
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
 
   const split = deriveCommittedSplit(data.ARS.debt, data.ARS.recurringExpense)
   const usdSplit = deriveCommittedSplit(data.USD.debt, data.USD.recurringExpense)
@@ -72,7 +152,13 @@ export const CommittedSection = async ({ data, monthLabel }: Props) => {
       icon: <Receipt size={18} strokeWidth={2} aria-hidden />,
       iconClassName: 'bg-plum-soft text-plum-deep',
       label: t('recurring_group'),
-      sub: t('recurring_group_sub', { count: recurring.length }),
+      // Under `snapshot` the group counts `confirmed` instances too (that is what
+      // keeps a past window from shrinking as the user resolves it), so calling
+      // them "pendientes" stopped being true. Only the lens knows.
+      sub:
+        data.lens === 'live'
+          ? t('recurring_group_sub', { count: recurring.length })
+          : t('recurring_group_sub_snapshot', { count: recurring.length }),
       ars: data.ARS.recurringExpense,
       usd: data.USD.recurringExpense,
       rows: recurring.map((item, index) => ({
@@ -144,20 +230,7 @@ export const CommittedSection = async ({ data, monthLabel }: Props) => {
     <Card className="flex flex-col">
       {/* One row at every width: the link belongs beside the title, not stacked
           under it. The title block shrinks; the link never wraps. */}
-      <CardHeader className="flex-row items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold tracking-tight text-text">
-            {t('title_next_month')}
-          </h2>
-          <p className="text-[12.5px] font-semibold text-text-soft">{monthLabel}</p>
-        </div>
-        <Link
-          href="/cards"
-          className="shrink-0 whitespace-nowrap rounded text-[13px] font-bold text-emerald-deep transition-colors hover:text-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {t('view_all')} ›
-        </Link>
-      </CardHeader>
+      {header}
 
       <CardContent className="flex flex-1 flex-col">
         {isEmpty ? (

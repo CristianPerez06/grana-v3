@@ -1,6 +1,6 @@
 export {
   getAvailableTotals,
-  getCommittedOutlook,
+  getCommittedOutlookForMonth,
   getDashboardHero,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
@@ -39,6 +39,12 @@ export {
   type MonthSpending,
   type SpendingPace,
 } from './spending'
+
+export {
+  resolveCommittedWindow,
+  type CommittedLens,
+  type CommittedWindow,
+} from './committed-window'
 
 export { deriveMonthOpening } from './month-opening'
 

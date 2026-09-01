@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  getCommittedOutlook,
+  getCommittedOutlookForMonth,
   getDashboardHero,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
@@ -33,11 +33,16 @@ export function useMonthBalanceSeries(year: number, month: number) {
   })
 }
 
-// "Comprometido" — static "from today" (does NOT follow the month navigator).
-export function useCommittedOutlook() {
+/**
+ * "Comprometido" for the SELECTED month. The window is the month AFTER it, and
+ * each commitment's state is evaluated at that month's close (today for the
+ * current one). Both travel on the result so the card labels itself from the
+ * data instead of from a clock of its own.
+ */
+export function useCommittedOutlook({ year, month }: { year: number; month: number }) {
   return useQuery({
-    queryKey: ['dashboard', 'committed'] as const,
-    queryFn: () => getCommittedOutlook(supabase),
+    queryKey: ['dashboard', 'committed', year, month] as const,
+    queryFn: () => getCommittedOutlookForMonth(supabase, { year, month }),
   })
 }
 

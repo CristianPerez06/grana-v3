@@ -1,5 +1,9 @@
 import { Money, type MoneyType } from '@grana/validation'
-import { projectUpcomingOccurrences, type RuleForProjection } from '@grana/money-logic'
+import {
+  computePeriodAmounts,
+  projectUpcomingOccurrences,
+  type RuleForProjection,
+} from '@grana/money-logic'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type {
   CommittedCardRow,
@@ -426,6 +430,46 @@ export function aggregateCardDebt(rows: CardDebtRow[]): Record<OutlookCurrency, 
   return { ARS: Money.toNumber(debt.ARS), USD: Money.toNumber(debt.USD) }
 }
 
+/**
+ * The same statement total as `aggregateCardDebt`, but AS OF a past snapshot.
+ *
+ * `aggregateCardDebt` sums only `status === 'pending'` rows, which is exact while
+ * the statement is still owed. Once it is paid, `payCardPeriod` flips every
+ * consumo to `'paid'` — so for a window being reconstructed from a past cut, where
+ * a statement may well have been settled since, that sum reads zero. Here the
+ * consumos count regardless of status: what the snapshot decides is whether the
+ * statement was still owed, not what it contained.
+ *
+ * The reimbursement rule is NOT re-derived — `computePeriodAmounts` already owns
+ * which side ("pending" or "paid") a received "en resumen" reintegro comes off,
+ * and the two totals add up to the same figure either way, so the `hasPayment`
+ * flag does not affect this sum. Pending and cancelled reimbursements are dropped
+ * first, which is the input contract that function documents.
+ */
+export function aggregateCardDebtAsOf(rows: CardDebtRow[]): Record<OutlookCurrency, number> {
+  const settled = rows.filter(
+    (row) =>
+      row.type !== 'reimbursement' || (row.received_at != null && row.cancelled_at == null),
+  )
+  const amounts = computePeriodAmounts(
+    settled.map((row) => ({
+      type: row.type,
+      amount: row.amount,
+      currency_code: row.currency_code,
+      status: row.status,
+    })),
+    false,
+  )
+  return {
+    ARS: Money.toNumber(
+      Money.add(Money.from(amounts.pendingAmountARS), Money.from(amounts.paidAmountARS)),
+    ),
+    USD: Money.toNumber(
+      Money.add(Money.from(amounts.pendingAmountUSD), Money.from(amounts.paidAmountUSD)),
+    ),
+  }
+}
+
 /** Minimal card identity the by-card aggregation needs to label its rows. */
 export type CommittedCardMeta = {
   id: string
@@ -446,11 +490,17 @@ export type CommittedCardMeta = {
  *
  * Cards that end up at zero or below (fully reimbursed) are dropped: the list
  * answers "what do I owe on each card", and a card owing nothing is not an item.
+ *
+ * `countPaidConsumos` mirrors `aggregateCardDebtAsOf`: under a past snapshot the
+ * statements may have been paid since, and their rows are all `'paid'`. Without
+ * it the per-card rows would read zero while the headline (which does use the
+ * as-of sum) did not, and the two would stop adding up.
  */
 export function aggregateCardDebtByCard(
   rows: Array<CardDebtRow & { card_period_id?: string | null }>,
   periodToCard: Map<string, string>,
   cards: CommittedCardMeta[],
+  countPaidConsumos = false,
 ): Record<OutlookCurrency, CommittedCardRow[]> {
   const byCard = new Map<string, Record<OutlookCurrency, MoneyType>>()
   const ensure = (id: string) => {
@@ -474,7 +524,7 @@ export function aggregateCardDebtByCard(
       if (row.received_at != null && row.cancelled_at == null) {
         entry[cur] = Money.subtract(entry[cur], Money.from(row.amount))
       }
-    } else if (row.status === 'pending') {
+    } else if (row.status === 'pending' || (countPaidConsumos && row.status === 'paid')) {
       entry[cur] = Money.add(entry[cur], Money.from(row.amount))
     }
   }

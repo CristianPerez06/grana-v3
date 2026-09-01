@@ -75,11 +75,14 @@ export {
   type CardNetwork,
 } from './detail-queries'
 
+// Re-exported from `@grana/money-logic`, where the primitive now lives (see
+// `period-amounts.ts` there for why). Kept here so consumers of `@grana/cards`
+// did not have to move with it.
 export {
   computePeriodAmounts,
   type PeriodAmountRow,
   type PeriodAmounts,
-} from './period-amounts'
+} from '@grana/money-logic'
 
 export {
   resolveCardDetailState,

@@ -158,6 +158,9 @@
       "loading": "Cargando lo que se viene…",
       "error": "No pudimos cargar lo que se viene.",
       "title_next_month": "Compromisos del próximo mes",
+      "title_ahead": "Compromisos de {month}",
+      "subtitle_ahead": "Al cierre de {month}",
+      "title_past": "Lo que hubo que pagar",
       "committed_label": "Ya comprometido",
       "overdue_prefix": "Además,",
       "overdue_suffix": "vencido sin pagar",
@@ -170,6 +173,7 @@
       "cards_empty": "No tenés tarjetas con saldo a pagar.",
       "recurring_group": "Gastos fijos",
       "recurring_group_sub": "{count, plural, =0 {sin gastos fijos} one {# pendiente} other {# pendientes}}",
+      "recurring_group_sub_snapshot": "{count, plural, =0 {sin gastos fijos} one {# gasto fijo} other {# gastos fijos}}",
       "recurring_empty": "No tenés gastos fijos pendientes.",
       "view_fixed": "Ver mis gastos fijos"
     },

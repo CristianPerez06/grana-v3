@@ -1,8 +1,7 @@
 import type { Database, GranaSupabaseClient } from '@grana/supabase'
-import { derivePeriodVariant, sumMoneyValues } from '@grana/money-logic'
+import { computePeriodAmounts, derivePeriodVariant, sumMoneyValues } from '@grana/money-logic'
 import { getCardPeriodsWithStatus } from '@grana/transactions-mutations'
 import { derivePeriodAlert, getCreditCardDebtCheck } from './queries'
-import { computePeriodAmounts } from './period-amounts'
 import type {
   CardPeriodWithPayment,
   PeriodVariant,

@@ -1,9 +1,15 @@
-import { sumMoneyValues, subtractMoneyValues } from '@grana/money-logic'
+import { sumMoneyValues, subtractMoneyValues } from './cards'
 
 // Pure derivation of a card statement's per-currency pending/paid totals from its
 // transactions. Extracted from the detail read layer so the accounting rule lives
 // in one testable place instead of being hand-duplicated by `getCardPeriods` and
 // `getCardPeriodDetail`. No I/O: same input → same output.
+//
+// Lives in money-logic rather than in `@grana/cards`, where it started, because
+// `@grana/dashboard` needs it too: the committed-outlook read totals a statement
+// the same way when reconstructing a past window. Importing it from `cards` would
+// close the cycle `dashboard → cards → transactions → dashboard`. Nothing else
+// moved with it — its only dependencies were already here.
 
 /**
  * Minimal transaction shape needed to total a statement. Consumos carry a

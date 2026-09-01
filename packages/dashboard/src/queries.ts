@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { GranaSupabaseClient } from '@grana/supabase'
 import { Money } from '@grana/validation'
+import { resolveCommittedWindow } from './committed-window'
 import {
   balanceSumsFromRows,
   cajaCutOrFilter,
@@ -17,6 +18,7 @@ import {
 } from '@grana/money-logic'
 import {
   aggregateCardDebt,
+  aggregateCardDebtAsOf,
   aggregateCardDebtByCard,
   aggregateHero,
   buildMonthBalanceSeries,
@@ -540,40 +542,80 @@ export async function getMonthCategoryBreakdown(
   }
 }
 
-// ── getCommittedOutlook (COMPROMISO lens) ──────────────────────────────────────
-// "Cuánta plata ya se sabe que hay que pagar el mes que viene."
+// ── getCommittedOutlookForMonth (COMPROMISO lens) ─────────────────────────────
+// "Cuánta plata ya se sabe que hay que pagar el mes siguiente al que estoy
+// mirando."
 //
-// The window is the NEXT CALENDAR MONTH, day 1 to last day — not "from today",
-// not "the next 30 days". The card is titled by that month, so the number has to
-// be that month's. It used to read "from today" (statements already STARTED,
-// recurrence instances already PENDING, i.e. ones whose date had already passed)
-// while the title promised the next month: the title said one thing and the
-// amount showed another.
+// The window is the calendar month AFTER the SELECTED one, day 1 to last day —
+// not "from today", not "the next 30 days". Standing on the current month it is
+// next month, exactly as before; standing on June it is July. That offset is
+// what keeps this card and the balance card above it comparable: the balance
+// cuts at the selected month's last day and this window opens the next, so in
+// every navigator position the two amounts on screen are disjoint and
+// contiguous. See `committed-window.ts` for the three positions.
+//
+// Two dates, two roles. `snapshotDate` says WHEN each commitment's state is
+// evaluated; the window says WHAT is counted. `lens` follows the first,
+// `windowElapsed` the second, and neither is derived from the other.
 //
 // Two sources, per currency, never combined across currencies:
 //
-//  · Tarjetas — statements whose DUE DATE falls in the window and are unpaid.
-//    The criterion is the due date, not the close date: a statement that closes
-//    28/09 but is due 10/10 is paid in October and is not a September
-//    commitment. A statement that has not closed yet contributes what it has
-//    accrued so far and can still grow — the UI must not sell it as final.
+//  · Tarjetas — statements whose DUE DATE falls in the window. The criterion is
+//    the due date, not the close date: a statement that closes 28/09 but is due
+//    10/10 is paid in October and is not a September commitment.
+//
+//    Whether it was still owed is evaluated AT THE SNAPSHOT, by the payment
+//    movement's financial date (`period_payments → transactions.date`), never by
+//    today's state and never by `period_payments.created_at` (which is when the
+//    payment was entered in the app, not when the money left). Paying a closed
+//    statement before it comes due is a supported flow, so a statement due in
+//    the window can legitimately have been settled before the cut.
+//
+//    Consumos are NOT cut by date. Installment children are inserted at purchase
+//    time dated months ahead, so a May purchase already carries a July-dated row
+//    inside July's statement — money the user knew about at the June cut. A cut
+//    by `transactions.date` would drop exactly those, and they are the bulk of a
+//    statement here. The statement contributes its full content; the snapshot
+//    only decides whether it was still owed.
 //
 //  · Gastos fijos — recurrences falling in the window that are NOT paid by a
-//    credit card. One debited from a card does not take money out of the
-//    account that month: it lands in that card's statement and is paid when the
+//    credit card. One debited from a card does not take money out of the account
+//    that month: it lands in that card's statement and is paid when the
 //    statement comes due, which is another window. Counting it here AND inside
 //    its statement would count it twice.
 //
-// Overdue statements (due date already past, still unpaid) are money that is
-// owed and would fall off the screen if the card only ever showed its window,
-// so they are carried with their OWN label. `overdue` is DISJOINT from `debt`:
-// what is late and what is merely coming are two different facts and the
-// headline total must not blur them.
+//    Under `live` the set is the still-`pending` instances plus the projection of
+//    active rules. Under `snapshot` it is the materialized instances, `confirmed`
+//    and `pending` both — at the cut none of them was resolved, and filtering to
+//    `pending` would make a past window SHRINK as the user confirms. `skipped` is
+//    never counted: that is the user saying the expense did not happen.
 //
-// KNOWN GAP (accepted, follows from the window): a statement due LATER THIS
-// MONTH — after today, before the window opens — is in neither set. It is a
-// commitment the card does not name. The window is the next calendar month by
-// decision; a "this month, still ahead" band is a separate change.
+//    A past window is a RECONSTRUCTED RECORD, not a replay. The generator
+//    materializes one pending instance per rule and only once its date arrives,
+//    so at the cut the window's fixed expenses were unpersisted projection, and
+//    rules carry no history to rebuild it from. Re-projecting today's rules over
+//    an elapsed window would use today's amounts, lose the rules since retired
+//    and invent the ones created after — worse than not reconstructing.
+//
+// Overdue statements are carried with their OWN label under BOTH lenses, by one
+// rule: due before the snapshot and unpaid as of it. Under `live` the snapshot
+// is today, so that is the current behaviour with no special case. The carryover
+// is never about the window's own statements — those all fall due after the cut
+// — but about the ones BEFORE it, which is why it survives navigating back: a
+// statement due 28/07 and still unpaid on 31/08 was overdue that day.
+//
+// KNOWN GAP (accepted, unchanged by this read): a statement due after the
+// snapshot but before the window opens is in neither set. Under `live` that is
+// the rest of the current month; under `snapshot` it narrows to statements due
+// exactly ON the cut, since the window opens the next day. The threshold stays
+// strictly `<` because that is `derivePeriodStatus`'s definition of overdue —
+// softening it here would have this card call a statement overdue while the
+// cards module calls the same one "closed, awaiting payment".
+//
+// KNOWN GAP: the materialized record has holes. `recurrence_instances` allows
+// one pending instance per rule and the generator produces none while one is
+// open, so a rule left unresolved in July generated nothing for August or
+// September, and those windows read $0 for it.
 //
 // KNOWN GAP: same as getMonthCategoryBreakdown — the reads below have no
 // `.range()`. They are bounded by the window, which is an observation about the
@@ -594,31 +636,35 @@ function emptyCommittedCurrency(): CommittedCurrency {
   }
 }
 
-/** Next calendar month as [first day, last day], ISO, derived from a date string. */
-function nextMonthWindow(todayISO: string): { start: string; end: string } {
-  const [year, month] = todayISO.split('-').map(Number)
-  // `month` is 1-based, so `month` as a 0-based index is already the NEXT month.
-  return {
-    start: formatDateISO(new Date(year, month, 1)),
-    end: formatDateISO(new Date(year, month + 1, 0)),
-  }
-}
-
-export async function getCommittedOutlook(
+export async function getCommittedOutlookForMonth(
   supabase: SupabaseClient,
-  todayISO: string = formatDateISO(getTodayAR()),
+  {
+    year,
+    month,
+    todayISO = formatDateISO(getTodayAR()),
+  }: { year: number; month: number; todayISO?: string },
 ): Promise<CommittedOutlook> {
+  const { window, snapshotDate, lens, windowElapsed } = resolveCommittedWindow({
+    year,
+    month,
+    todayISO,
+  })
+  const windowStart = window.start
+  const windowEnd = window.end
+
   const result: CommittedOutlook = {
     ARS: emptyCommittedCurrency(),
     USD: emptyCommittedCurrency(),
+    window,
+    snapshotDate,
+    lens,
+    windowElapsed,
   }
 
-  const { start: windowStart, end: windowEnd } = nextMonthWindow(todayISO)
-
-  // Every credit account, archived ones included. The ACTIVE ones are the cards
-  // the outlook lists; the full set is what the "paid by card" exclusion below
-  // tests against — a recurrence pointing at a card that was archived is still
-  // not money leaving an account this month.
+  // Every credit account, archived ones included. The full set is what the "paid
+  // by card" exclusion below tests against — a recurrence pointing at a card that
+  // was archived is still not money leaving an account this month — and, under a
+  // snapshot lens, it is also the set whose statements the outlook lists.
   const { data: creditAccounts, error: cardsErr } = await supabase
     .from('accounts')
     .select('id, name, is_active, institution:institutions(name)')
@@ -632,7 +678,19 @@ export async function getCommittedOutlook(
   }
   const creditRows = (creditAccounts ?? []) as unknown as CardAccountRow[]
   const creditAccountIds = new Set(creditRows.map((c) => c.id))
-  const cardRows = creditRows.filter((c) => c.is_active)
+  // WHICH cards the outlook lists depends on the lens. Under `live` it is the
+  // active ones: an archived card is one the user has put away, and that is the
+  // current behaviour. Under `snapshot` archiving is not retroactive — a card
+  // archived in August was live through June's window, and its statement was a
+  // real commitment then. Filtering it out would silently drop part of a past
+  // window's total, and the number would change on a day nothing was paid,
+  // breaking the stability the snapshot lens is for.
+  //
+  // KNOWN GAP (pre-existing, unchanged here): under `live` an archived card with
+  // a still-unpaid statement due inside the window is money owed that the card
+  // does not name. Widening `live` would move production numbers and belongs to
+  // its own change.
+  const cardRows = lens === 'snapshot' ? creditRows : creditRows.filter((c) => c.is_active)
   const cardIds = cardRows.map((c) => c.id)
 
   if (cardIds.length > 0) {
@@ -649,22 +707,40 @@ export async function getCommittedOutlook(
     const candidateIds = candidates.map((p) => p.id)
 
     if (candidateIds.length > 0) {
+      // The payment's FINANCIAL date, not merely that a payment row exists and
+      // not `period_payments.created_at` (which records when it was entered in
+      // the app). A statement settled AFTER the snapshot was still owed at the
+      // snapshot and belongs in that reading.
       const { data: payments, error: payErr } = await supabase
         .from('period_payments')
-        .select('period_id')
+        .select('period_id, transaction:transactions!period_payments_transaction_id_fkey(date)')
         .in('period_id', candidateIds)
       if (payErr) throw payErr
-      const paidPeriodIds = new Set((payments ?? []).map((p) => p.period_id))
-      const unpaid = candidates.filter((p) => !paidPeriodIds.has(p.id))
+      type PaymentRow = {
+        period_id: string
+        transaction: { date: string | null } | { date: string | null }[] | null
+      }
+      const paymentDateOf = (t: PaymentRow['transaction']): string | null =>
+        Array.isArray(t) ? (t[0]?.date ?? null) : (t?.date ?? null)
+      // Paid as of the snapshot. A payment with no readable date is treated as
+      // paid — the conservative reading, and the shape today's behaviour has.
+      const paidAtSnapshot = new Set(
+        ((payments ?? []) as unknown as PaymentRow[])
+          .filter((row) => {
+            const date = paymentDateOf(row.transaction)
+            return date == null || date <= snapshotDate
+          })
+          .map((row) => row.period_id),
+      )
+      const unpaid = candidates.filter((p) => !paidAtSnapshot.has(p.id))
 
-      // Disjoint by construction: the window opens on the 1st of NEXT month, so
-      // nothing due before today can also be due inside it. A statement due
-      // between today and the window is in neither (see KNOWN GAP above).
+      // Disjoint by construction: the window opens the day after the snapshot,
+      // so nothing due before the snapshot can also fall inside it.
       const windowPeriods = unpaid.filter(
         (p) => p.due_date >= windowStart && p.due_date <= windowEnd,
       )
       const overduePeriodIds = new Set(
-        unpaid.filter((p) => p.due_date < todayISO).map((p) => p.id),
+        unpaid.filter((p) => p.due_date < snapshotDate).map((p) => p.id),
       )
       const windowPeriodIds = new Set(windowPeriods.map((p) => p.id))
       const readIds = [...windowPeriodIds, ...overduePeriodIds]
@@ -687,8 +763,13 @@ export async function getCommittedOutlook(
         const inSet = (set: Set<string>) => (t: CardTxRow) =>
           t.card_period_id != null && set.has(t.card_period_id)
 
-        const toPay = aggregateCardDebt(txs.filter(inSet(windowPeriodIds)))
-        const overdue = aggregateCardDebt(txs.filter(inSet(overduePeriodIds)))
+        // Under `live` a statement still owed has all its consumos `pending`, so
+        // the status-based sum is exact. Under `snapshot` a statement paid after
+        // the cut has flipped them all to `paid`, and summing only `pending`
+        // would read zero — hence the as-of aggregation.
+        const totalFor = lens === 'live' ? aggregateCardDebt : aggregateCardDebtAsOf
+        const toPay = totalFor(txs.filter(inSet(windowPeriodIds)))
+        const overdue = totalFor(txs.filter(inSet(overduePeriodIds)))
         result.ARS.debt = toPay.ARS
         result.USD.debt = toPay.USD
         result.ARS.overdue = overdue.ARS
@@ -698,12 +779,14 @@ export async function getCommittedOutlook(
         // statements only, so the rows add up to the headline. Overdue money
         // has its own line and does not hide inside a card's row.
         //
-        // The next close is the earliest end_date still ahead of today among the
-        // statements we read; null once every one of them has closed.
+        // The next close is the earliest end_date still ahead of the SNAPSHOT
+        // among the statements we read; null once every one of them had closed
+        // by then. Reading it against today would date a past window's card rows
+        // with a close that had not happened yet at the cut.
         const periodToCard = new Map(windowPeriods.map((p) => [p.id, p.account_id]))
         const nextCloseByCard = new Map<string, string>()
         for (const period of unpaid) {
-          if (period.end_date < todayISO) continue
+          if (period.end_date < snapshotDate) continue
           const current = nextCloseByCard.get(period.account_id)
           if (current === undefined || period.end_date < current) {
             nextCloseByCard.set(period.account_id, period.end_date)
@@ -717,6 +800,7 @@ export async function getCommittedOutlook(
             label: embedName(card.institution) || card.name,
             nextClose: nextCloseByCard.get(card.id) ?? null,
           })),
+          lens === 'snapshot',
         )
         result.ARS.cards = byCard.ARS
         result.USD.cards = byCard.USD
@@ -724,24 +808,37 @@ export async function getCommittedOutlook(
     }
   }
 
-  // ── Gastos fijos: the window's recurrence occurrences, from BOTH sources.
+  // ── Gastos fijos: the window's recurrence occurrences, from both sources.
   //
-  //  · Instances the generator has ALREADY created for the window and nobody
-  //    has resolved yet (`status = 'pending'`).
-  //  · Occurrences of the active rules PROJECTED over the window.
+  //  · Instances the generator has ALREADY created for the window. Which of them
+  //    count depends on the LENS, not on whether the window ended. Under `live`
+  //    only the still-`pending` ones are a commitment — a confirmed one is money
+  //    already spent. Under `snapshot` the `confirmed` ones count too: at the cut
+  //    none of them was resolved yet, and filtering to `pending` would make the
+  //    total SHRINK day by day as the user works through them, which is the
+  //    opposite of the stability a past reading owes. `skipped` never counts
+  //    under either lens.
   //
-  // They cannot overlap: the projection advances from `last_generated_date`, so
-  // it never returns an occurrence that has already been generated. Without both
-  // the card would be wrong in opposite directions — projection alone would
-  // double-count what exists, instances alone would miss everything the
-  // generator has not reached yet, which for a next-month window is most of it.
+  //  · Occurrences of the active rules PROJECTED over the window, which depends
+  //    on `windowElapsed` and NOT on the lens. While the window has not ended the
+  //    `last_generated_date` cursor has not passed it, so the projection still
+  //    returns what has not materialized — true for the current month AND for the
+  //    previous one, whose window is the month now running. Once the window has
+  //    ended the projection is dropped: it would price occurrences at the rules'
+  //    CURRENT amounts (confirm propagates a corrected amount back to the rule),
+  //    lose the rules retired since, and invent the ones created after.
+  //
+  // The two never overlap: the projection advances from `last_generated_date`, so
+  // it never returns an occurrence already generated — including one already
+  // confirmed, which moved the cursor past itself.
+  const instanceStatuses = lens === 'live' ? ['pending'] : ['pending', 'confirmed']
   const [instancesResult, rulesResult] = await Promise.all([
     supabase
       .from('recurrence_instances')
       .select(
         'amount, currency_code, description, scheduled_date, account_id, recurrence:recurrences(movement_type), category:categories(name), subcategory:subcategories(name)',
       )
-      .eq('status', 'pending')
+      .in('status', instanceStatuses)
       .gte('scheduled_date', windowStart)
       .lte('scheduled_date', windowEnd),
     supabase
@@ -797,13 +894,15 @@ export async function getCommittedOutlook(
     description: r.description || embedName(r.subcategory) || embedName(r.category),
   })
 
-  const projectedExpenses = projectRecurrenceItems(
-    ruleRows
-      .filter((r) => r.movement_type === 'expense' && !paidByCard(r.account_id))
-      .map(labelled),
-    windowStart,
-    windowEnd,
-  )
+  const projectedExpenses = windowElapsed
+    ? []
+    : projectRecurrenceItems(
+        ruleRows
+          .filter((r) => r.movement_type === 'expense' && !paidByCard(r.account_id))
+          .map(labelled),
+        windowStart,
+        windowEnd,
+      )
 
   const fixedExpenses: CommittedItemRow[] = [...generatedExpenses, ...projectedExpenses]
   const fixedTotals = sumByCurrency(fixedExpenses)
@@ -816,12 +915,16 @@ export async function getCommittedOutlook(
   //    band. Income is never summed into the committed total. Card-paid rules
   //    are NOT excluded here: the exclusion is about double-counting an outflow,
   //    and an income does not land in a statement.
+  // Same gate as the expenses: over an elapsed window the projection would price
+  // income at the rules' current amounts.
   const income = sumByCurrency(
-    projectRecurrenceItems(
-      ruleRows.filter((r) => r.movement_type === 'income').map(labelled),
-      windowStart,
-      windowEnd,
-    ),
+    windowElapsed
+      ? []
+      : projectRecurrenceItems(
+          ruleRows.filter((r) => r.movement_type === 'income').map(labelled),
+          windowStart,
+          windowEnd,
+        ),
   )
   result.ARS.recurringIncome = income.ARS
   result.USD.recurringIncome = income.USD
