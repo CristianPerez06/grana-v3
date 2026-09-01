@@ -35,7 +35,7 @@
 
 - [x] 5.1 `apps/mobile/lib/dashboard/queries.ts`: `useCommittedOutlook({ year, month })` con el mes en la `queryKey`; borrar el comentario "static from today"
 - [x] 5.2 `apps/mobile/components/dashboard/CommittedSection.tsx`: consumir el mes del `DashboardMonthContext`, eliminar `monthLabel()` con `new Date()`, rotular desde el resultado
-- [ ] 5.3 Verificar paridad de copy y de alto de card entre web a viewport de teléfono y app nativa
+- [ ] 5.3 Paridad **nativa** sin verificar visualmente: no hubo simulador disponible. El código comparte contrato y tipa limpio, y los tres estados de copy son los mismos, pero nadie abrió la app nativa. Pendiente para quien la levante
 
 ## 6. i18n
 
@@ -56,5 +56,5 @@
 ## 8. Cierre
 
 - [x] 8.1 `pnpm typecheck` + `pnpm typecheck:mobile` + `pnpm lint` + `pnpm test` + `pnpm --filter dashboard test` en verde
-- [ ] 8.2 Verificación manual en las dos plataformas: navegar 3 meses hacia atrás y comprobar que el encabezado y los montos se mueven, y que el mes actual muestra exactamente lo mismo que antes del cambio
-- [ ] 8.3 Actualizar los specs base desde el delta al archivar el change (flujo `opsx:archive` habitual)
+- [x] 8.2 Verificación manual **en web**: 3 usuarios reales × 4 posiciones del navegador, contrastados contra una auditoría SQL de los insumos. 12/12 sin discrepancias numéricas (tarjetas, gastos fijos, total, barra, vencido, línea USD y conteo de tarjetas). El mes actual coincide con producción
+- [x] 8.3 Specs base actualizados desde el delta al archivar (3 requirements MODIFIED integrados en `openspec/specs/dashboard/spec.md`)
