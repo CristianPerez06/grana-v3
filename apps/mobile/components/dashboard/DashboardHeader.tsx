@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { formatTodayLine } from '@grana/dashboard'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useProfileFirstName } from '../../lib/dashboard/queries'
 import { useDashboardMonth } from './DashboardMonthContext'
@@ -9,16 +10,6 @@ import { MonthNavigator } from '../ui/MonthNavigator'
 type Props = {
   /** Today's accounting date as `YYYY-MM-DD`, derived from `getTodayAR()`. */
   todayISO: string
-}
-
-function formatToday(todayISO: string, localeCode: string): string {
-  const [y, m, d] = todayISO.split('-').map(Number)
-  const formatted = new Date(y, m - 1, d).toLocaleDateString(localeCode, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  })
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
 export const DashboardHeader = ({ todayISO }: Props) => {
@@ -48,8 +39,13 @@ export const DashboardHeader = ({ todayISO }: Props) => {
         <View className="flex-row items-start justify-between gap-3">
           <View className="min-w-0 flex-1">
             <Text className="text-2xl font-semibold text-white">{greeting}</Text>
-            <Text className="mt-1 text-sm text-navy-muted">
-              {formatToday(todayISO, localeCode)}
+            {/* ONE ROW, always — same as web below `sm`. The left block is
+                ~130px here and "Martes, 1 de septiembre" wrapped onto a second
+                row; the month drops to three letters, the same trade the
+                selector beside it already makes. `numberOfLines` is the floor
+                (web's `truncate`): one line or an ellipsis, never a paragraph. */}
+            <Text numberOfLines={1} className="mt-1 text-sm text-navy-muted">
+              {formatTodayLine(todayISO, localeCode, { shortMonth: true })}
             </Text>
           </View>
           <View className="shrink-0 flex-row items-center gap-1.5">

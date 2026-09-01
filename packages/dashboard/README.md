@@ -14,6 +14,7 @@ Las agregaciones (`aggregate*`/`build*`) son **puras** y testeables sin DB; las 
 |---|---|
 | Queries (reciben un client) | `getDashboardHero`, `getUpcomingFortnight`, `getMonthBalanceSeries`, `hasUserMovements`. |
 | Agregaciones puras | `aggregateHero`, `buildUpcomingFortnight`, `buildMonthBalanceSeries`, `calculateTransactionSums`. |
+| Presentación pura | `formatTodayLine` — la línea de fecha del header (`shortMonth` la deja en una fila en mobile). |
 | Tipos | `DashboardHero`, `UpcomingFortnight`, `UpcomingItem`, `MonthBalanceSeries`, `MonthBalanceDay`, … |
 
 ## Reglas

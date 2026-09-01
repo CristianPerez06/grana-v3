@@ -85,6 +85,8 @@ Como el nombre del perfil se resuelve client-side (vía el cliente browser de Su
 
 La fecha del header NO SHALL depender de esa query: SHALL calcularse en el server o en el primer render con `getTodayAR()` y mantenerse estable entre el estado disabled y el habilitado.
 
+La fecha SHALL ocupar **una sola línea en todo ancho**. En el viewport angosto la fecha comparte su fila con el selector de mes y el eye toggle, y "Martes, 1 de septiembre" se partía en dos renglones: dos filas de chrome para una fecha, en la pantalla donde el alto es el recurso escaso. Debajo de `sm` en web, y siempre en la app nativa, el nombre del mes SHALL acortarse a sus tres primeras letras ("Martes, 1 de sep") — el mismo canje que ya hace el `MonthNavigator` al lado. Como piso, la fecha SHALL truncar con elipsis antes que envolver. El acortado SHALL vivir en una única función compartida por ambas plataformas (`formatTodayLine` en `@grana/dashboard`), no duplicada por app.
+
 #### Scenario: Saludo con nombre del perfil
 
 - **WHEN** el usuario con nombre "Cristian" carga `/dashboard`
@@ -106,6 +108,12 @@ La fecha del header NO SHALL depender de esa query: SHALL calcularse en el serve
 - **WHEN** el usuario carga `/dashboard` en web
 - **THEN** el subtítulo del header muestra la fecha de hoy sin el neto del mes
 - **AND** el neto del mes en curso aparece en el header de la card "Balance del mes"
+
+#### Scenario: La fecha ocupa una sola fila en mobile
+
+- **WHEN** el usuario abre el dashboard en un viewport angosto (mobile-web debajo de `sm`, o la app nativa) el 1 de septiembre
+- **THEN** el subtítulo del header muestra "Martes, 1 de sep" en un solo renglón
+- **AND** si aún así no entra, trunca con elipsis en lugar de envolver a un segundo renglón
 
 #### Scenario: El header se ve antes de que resuelva la query del perfil (desktop-web)
 
@@ -1223,6 +1231,10 @@ El dashboard SHALL renderizar al pie una tira "Compartido" —una sola línea cl
 
 En pantallas angostas la tira SHALL mantenerse en **una sola fila**, y SHALL ganarse ese lugar soltando justamente esos dos agregados. El nombre del propio Hogar ya dice de quién es esa plata, y las iniciales lo dicen por tercera vez justo donde menos lugar hay para decirlo una. El bloque de identidad SHALL ser el que se achica; el monto NO SHALL ser nunca el que cede.
 
+En el viewport angosto la dirección ("Te deben" / "Debés") NO SHALL ir delante del número sino **debajo de él**, en la bajada. "Te deben $ 225.450" en una línea se lleva más de la mitad del ancho útil de la fila y deja al bloque de identidad sin lugar ni para su propio título. En ese mismo viewport, la bajada del monto SHALL decir la dirección en lugar de "Saldo a tu favor" / "Saldo en contra": son el mismo hecho dicho dos veces, y sobrevive el que además reemplaza lo que la línea del monto soltó.
+
+Todo nodo de texto del bloque de identidad SHALL estar truncado a una línea. Ese bloque puede achicarse por debajo de su contenido —es lo que mantiene entero al monto—, y un hijo sin truncado se derrama fuera de la caja que le tocó y **se pinta encima del monto** en lugar de ser recortado por ella.
+
 La tira SHALL renderizarse **únicamente cuando hay actividad compartida**. Sin actividad, NO SHALL renderizarse ni dejar espacio reservado.
 
 #### Scenario: Hogar con saldo a favor del usuario
@@ -1230,6 +1242,12 @@ La tira SHALL renderizarse **únicamente cuando hay actividad compartida**. Sin 
 - **WHEN** el hogar tiene actividad y el neto favorece al usuario
 - **THEN** la tira muestra "Te deben" con el monto en verde
 - **AND** se renderiza tanto en web como en la app nativa
+
+#### Scenario: La tira entra en una fila en mobile sin superponer texto
+
+- **WHEN** el usuario abre el dashboard en un viewport angosto y el hogar tiene un neto a su favor
+- **THEN** la tira ocupa una sola fila: identidad a la izquierda, monto a la derecha con la dirección debajo
+- **AND** el título "Compartido" y el monto no se superponen a ningún ancho: si falta lugar, el que trunca es el bloque de identidad
 
 #### Scenario: Usuario sin actividad compartida
 

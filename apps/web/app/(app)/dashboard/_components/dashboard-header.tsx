@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
+import { formatTodayLine } from '@grana/dashboard'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
@@ -13,16 +14,6 @@ import { MonthNavigator } from './month-navigator'
 type Props = {
   /** Today's accounting date as `YYYY-MM-DD`, derived from `getTodayAR()`. */
   todayISO: string
-}
-
-function formatToday(todayISO: string, localeCode: string): string {
-  const [y, m, d] = todayISO.split('-').map(Number)
-  const formatted = new Date(y, m - 1, d).toLocaleDateString(localeCode, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  })
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
 export const DashboardHeader = ({ todayISO }: Props) => {
@@ -88,8 +79,16 @@ export const DashboardHeader = ({ todayISO }: Props) => {
             <h1 className="text-2xl font-semibold tracking-tight text-white md:text-text">
               {greeting}
             </h1>
-            <p className="mt-1 text-sm text-navy-muted md:text-text-muted">
-              {formatToday(todayISO, localeCode)}
+            {/* ONE ROW, always. Below `sm` the left block is ~130px wide and
+                "Martes, 1 de septiembre" wrapped onto a second row — the same
+                squeeze the month selector beside it answers with three letters,
+                answered the same way here. `truncate` is the floor: at any
+                width the date is one line or an ellipsis, never a paragraph. */}
+            <p className="mt-1 truncate text-sm text-navy-muted md:text-text-muted">
+              <span className="sm:hidden">
+                {formatTodayLine(todayISO, localeCode, { shortMonth: true })}
+              </span>
+              <span className="hidden sm:inline">{formatTodayLine(todayISO, localeCode)}</span>
             </p>
           </div>
 

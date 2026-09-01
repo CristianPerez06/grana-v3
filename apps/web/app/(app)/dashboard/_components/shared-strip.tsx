@@ -37,12 +37,20 @@ const Avatar = ({ initials, className }: { initials: string; className?: string 
 // direction (te deben / debés), per currency. Read-only: the whole strip links
 // to /shared. Rendered only when the container resolves a non-settled net.
 // ONE ROW at every width. On narrow it earns that room by dropping what is not
-// load-bearing: the stacked member avatars and the "vos y {other}" half of the
-// caption. The household's own name already says whose money this is, and the
-// two initials say it a third time — three ways to name the same two people, in
-// the width where there is least room for any of them. What survives the squeeze
-// is the identity on the left and the amount on the right, and the left block is
-// the one that truncates, so the number never does.
+// load-bearing: the stacked member avatars, the "vos y {other}" half of the
+// caption, and the direction word in front of the number. The household's own
+// name already says whose money this is, and the two initials say it a third
+// time — three ways to name the same two people, in the width where there is
+// least room for any of them. "Te deben" and "Saldo a tu favor" are likewise the
+// same fact twice; below `sm` only the first survives, on the sub-line, and the
+// amount line is the number alone. What survives the squeeze is the identity on
+// the left and the amount on the right, and the left block is the one that
+// truncates, so the number never does.
+//
+// Every text node in the left block truncates. `min-w-0` lets that block shrink
+// below its content, which is what keeps the number whole — but a child without
+// `truncate` then spills out of the box it was given and paints over the amount
+// instead of being clipped by it.
 export const SharedStrip = async ({
   householdName,
   otherName,
@@ -72,8 +80,8 @@ export const SharedStrip = async ({
             <Users size={18} strokeWidth={2.25} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[14px] font-bold text-text">{t('title')}</span>
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-[14px] font-bold text-text">{t('title')}</span>
               <span className="hidden -space-x-1.5 sm:flex">
                 <Avatar initials={selfInitials} />
                 <Avatar initials={otherInitials} />
@@ -98,7 +106,7 @@ export const SharedStrip = async ({
                 creditTone ? 'text-emerald-deep' : 'text-expense',
               )}
             >
-              {dirLabel(primary.direction)}{' '}
+              <span className="hidden sm:inline">{dirLabel(primary.direction)} </span>
               <MaskedAmount
                 amount={primary.amount}
                 currency={primary.currency}
@@ -106,7 +114,12 @@ export const SharedStrip = async ({
               />
             </p>
             <p className="text-[11.5px] font-medium text-text-soft">
-              {creditTone ? t('sub_credit') : t('sub_debit')}
+              {/* Narrow: the direction the amount line gave up. Wide: the same
+                  fact said in balance language, under the inline direction. */}
+              <span className="sm:hidden">{dirLabel(primary.direction)}</span>
+              <span className="hidden sm:inline">
+                {creditTone ? t('sub_credit') : t('sub_debit')}
+              </span>
               {rest.map((n) => (
                 <span key={n.currency}>
                   {' · '}
