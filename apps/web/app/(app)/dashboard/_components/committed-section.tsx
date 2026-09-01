@@ -82,7 +82,10 @@ export const CommittedSection = ({ initialData }: Props) => {
 
   if (isLoading || !data) {
     return (
-      <Card className="flex flex-col">
+      // Same floor the Suspense fallback carries (`committed-skeleton.tsx`), so
+      // navigating to an uncached month cannot shrink the card mid-flight and
+      // leave a hole in "Cuánto gastaste" beside it.
+      <Card className="flex min-h-[15rem] flex-col">
         {header}
         <CardContent className="flex flex-1 flex-col gap-3">
           {isError ? (

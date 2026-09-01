@@ -16,17 +16,21 @@ Se evaluaron tres modelos:
 | **B** | el mes seleccionado mismo | en el mes en curso mezcla lo ya pagado con lo que falta |
 | **B'** | mes seleccionado, cortado en hoy | ídem, y se pisa con "Te queda por pagar" de la card vecina |
 
-Se elige **A**, y el argumento decisivo no es de copy sino de **contigüidad**: la card de saldo corta en el último día del mes seleccionado (`balanceCutISO`) y la ventana de compromisos abre al día siguiente. En toda posición del navegador los dos números de la pantalla son **disjuntos y contiguos**: sin solape y sin hueco.
+Se elige **A**, y el argumento decisivo no es de copy sino de **no solapamiento**: la card de saldo corta en el último día del mes seleccionado (`balanceCutISO`) y la ventana de compromisos abre después de ese corte. En **toda** posición del navegador los dos números de la pantalla son disjuntos — ningún movimiento alimenta los dos —, que es la propiedad que hace que se puedan leer como par.
 
-| Parado en | Saldo corta en | Ventana |
-|---|---|---|
-| mes actual | hoy | 1º al último día del mes siguiente |
-| agosto | 31/8 | 1/9 – 30/9 |
-| junio | 30/6 | 1/7 – 31/7 |
+La **contigüidad** es más fuerte y no vale en todas partes:
+
+| Parado en | Saldo corta en | Ventana | ¿Contiguos? |
+|---|---|---|---|
+| mes actual | hoy | 1º al último día del mes siguiente | no: queda lo que resta del mes en curso |
+| agosto | 31/8 | 1/9 – 30/9 | sí, la ventana abre al día siguiente |
+| junio | 30/6 | 1/7 – 31/7 | sí |
+
+En las posiciones `snapshot` el corte y la ventana se tocan; en la posición `live` queda entre medio lo que resta del mes en curso. Ese residuo es exactamente el KNOWN GAP de la card, y se trata como tal.
 
 Bajo B, en el mes en curso, los resúmenes ya pagados **ya salieron del saldo**: la card diría "comprometido $X" al lado de un saldo del que parte de $X ya se descontó. Los dos números dejan de ser comparables justo en la vista donde aterriza el 90% de las sesiones.
 
-Efecto lateral bienvenido: A **cierra el KNOWN GAP** que hoy documenta `queries.ts` (un resumen que vence más adelante este mismo mes no cae en ninguna ventana). Navegando al mes anterior, esa ventana aparece.
+Efecto lateral bienvenido: A **no cierra el KNOWN GAP, pero lo vuelve alcanzable.** Hoy un resumen que vence más adelante este mismo mes no cae en ninguna ventana y no hay forma de verlo desde la card. Con A sigue sin figurar en la lectura del mes en curso, pero aparece navegando al mes anterior, cuya ventana es justamente el mes que corre. El agujero deja de ser ciego y pasa a ser una posición del navegador; dentro de **una** lectura puntual sigue existiendo, angostado a un solo día bajo `snapshot` (ver Decisión 4).
 
 ## Decisión 2 — `anchor` y `today` son dos parámetros, no uno
 
