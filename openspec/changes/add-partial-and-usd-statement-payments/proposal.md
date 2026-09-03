@@ -86,6 +86,33 @@ $225.805*.
 - **No convierte nunca ARS y USD en un solo número.** Bimoneda no se relaja en ningún lado: el
   resumen sigue mostrando dos deudas, y el pago, dos patas.
 
+## La barra: que no sea deuda técnica disfrazada de feature
+
+Esta change no se mide por "el caso que la originó funciona". Se mide por si el modelo queda mejor
+que antes, y por si lo que ya andaba sigue andando. Lo que la sostiene no es una promesa, es dónde
+está enforced cada cosa:
+
+| Lo que no puede pasar | Qué lo impide |
+|---|---|
+| Que un pago viejo se lea distinto | `settlement_known = false` satura el resumen (D9). Sin recálculo hacia atrás ni adivinanza de montos |
+| Que diez pantallas hagan cuentas parecidas | El pendiente sale solo de `computePeriodAmounts` (D2). Ningún call site recalcula la regla |
+| Que se pague de más | Trigger `BEFORE INSERT` con `FOR UPDATE` (D11). Vale para REST, web, mobile y concurrencia por igual |
+| Que se borre o edite una pata suelta | `period_payments` sin policies de escritura; solo por RPC (D13) |
+| Que un pago quede a medias | Todo el dinero en un RPC atómico (D12), sin cadena de rollbacks manuales |
+| Que un parcial esconda deuda en Compromisos | El as-of computa cobertura, no existencia (D14), con test de regresión propio |
+| Que un pago de tarjeta pase a verse como gasto común | Una pata por gasto como mínimo: el tipo `card_payment` y el FK `RESTRICT` siguen resolviendo sin tocar `get_movements_page` (D7) |
+| Que deshacer deje estados intermedios | Reversión atómica por grupo, en el mismo RPC que hoy (D8) |
+| Que quede "andando en web, mobile después" | Bloque 7 de tasks: las dos shells sobre las mismas mutaciones y los mismos schemas |
+| Que aparezca deuda inventada | No hay "saldo anterior" sintético: el remanente vive en su resumen (D3). Los intereses entran como cargos reales cuando el banco los cobra |
+
+Y el criterio que ordena todo el diseño, por si hay que resolver una duda que este documento no
+cubre: esto **no es "agregar pagos parciales"**. Es separar cuatro cosas que hoy están fusionadas —
+**el resumen** (la deuda original, por moneda), **la transacción real** (de dónde salió la plata),
+**la imputación** (qué parte de esa plata cancela qué deuda) y **el estado derivado** (impago,
+parcial, saldado). Cada caso que aparezca después —mitad de los dólares en dólares, intereses del mes
+siguiente, deshacer el anteúltimo pago— tiene que caer en su lugar sin inventar una excepción. Si
+para resolver algo hay que mezclar dos de esas cuatro cosas, la respuesta está mal.
+
 ## Impact
 
 - **Specs:** `cards` (8 requirements nuevos, 7 modificados) y `dashboard` (1 nuevo: la cobertura

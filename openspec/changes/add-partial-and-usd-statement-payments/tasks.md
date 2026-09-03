@@ -8,11 +8,12 @@
 - [ ] 1.3b Índice sobre `(period_id, payment_group_id)` y sobre `(period_id, created_at, id)` para el orden determinístico de reversión
 - [ ] 1.4 Backfill único: `settlement_known = false` en todas las filas existentes (sin backfill de montos — D9), y `payment_group_id = id` en cada fila, para poder declararla `NOT NULL`
 - [ ] 1.5 `card_periods.minimum_payment_ars` / `minimum_payment_usd`, nullables, sin default
-- [ ] 1.6 `trg_fn_period_payment_coverage`: trigger `BEFORE INSERT` por fila — `FOR UPDATE` sobre el `card_periods`, cobertura por moneda, cruce de monedas contra `transactions.currency_code`, y pertenencia (las patas que comparten `transaction_id` comparten `period_id` y `payment_group_id`) — D1, D11
+- [ ] 1.6 `trg_fn_period_payment_coverage`: trigger `BEFORE INSERT` por fila — `FOR UPDATE` sobre el `card_periods`, cobertura por moneda, cruce de monedas contra `transactions.currency_code`, pertenencia (las patas que comparten `transaction_id` comparten `period_id` y `payment_group_id`) y coherencia de cotización (la de la pata coincide con la de su transacción, y todas las patas pesificadas de un mismo gasto comparten cotización) — D1, D11
 - [ ] 1.6a `trg_fn_period_payment_amount_matches`: `CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED` con la identidad `transactions.amount = Σ round(settles_amount × fx_rate_to_ars, 2)`. Diferida a propósito: fila por fila, la primera pata de un gasto de dos nunca llega al total (D11)
 - [ ] 1.6b `period_payments` sin policies de escritura: solo `SELECT`. Los dos RPC pasan a `SECURITY DEFINER` con verificación de propiedad adentro, y el self-check de la `0050` que exige INVOKER se actualiza con el motivo escrito (D13)
 - [ ] 1.6c `pay_card_period_legs(...)`, `SECURITY DEFINER`, recibe pagos anidados (`payments[] → allocations[]`, D18) y corre en este orden exacto (D16): congelar base del sello → insertar sello → recalcular pendiente **con** el sello → validar e insertar transacciones y patas → barrido `pending → paid` solo si queda saldado. Todo en una transacción (D12); el calendario NO entra
-- [ ] 1.6e `confirm_running_cycle(...)`: función SQL corta que toma el lock del período pagado, aplica el plan de fechas ya resuelto en TS y **no hace nada si el período ya tiene patas**. Existe porque un `FOR UPDATE` desde TS no sobrevive al round-trip de PostgREST (D17)
+- [ ] 1.6e `confirm_running_cycle(...)`: función SQL corta que toma el lock del período pagado y aplica el plan de fechas ya resuelto en TS. Existe porque un `FOR UPDATE` desde TS no sobrevive al round-trip de PostgREST (D17)
+- [ ] 1.6f Revalidación de anclajes dentro de `confirm_running_cycle` antes de escribir: propiedad, identidad del período siguiente, fechas esperadas y `hasAnyPayment = false`. Si algo cambió, no-op controlado o error — nunca pisar con un plan stale (D17)
 - [ ] 1.6d `revert_card_period_payment(p_period_id, p_group_id default null)`: reversión de todas las patas o del grupo más reciente completo, con el barrido `paid → pending` condicionado a que el resumen estuviera saldado y el borrado del sello atado al grupo que lo registró
 - [ ] 1.7 Guarda cronológica: bloquea si un resumen posterior tiene **cualquier** pata (antes: "está pagado"); mantiene `GRN02` y el `DETAIL` con la fecha
 - [ ] 1.8 Summary del RPC por moneda (`reverted` como lista de `{ amount, currency, account_name }`) en vez del escalar actual
@@ -72,7 +73,7 @@
 - [ ] 6.1 Detalle de período: lista de patas (fecha, cuenta, monto en su moneda, cotización cuando hubo) y remanente por moneda
 - [ ] 6.2 Badge de resumen parcial y CTA "Registrar otro pago" en el detalle y en el hero de la tarjeta
 - [ ] 6.3 Detalle de movimiento de pago: qué deuda canceló esa pata y el estado del resumen (`pagado X de Y`), reemplazando la composición actual
-- [ ] 6.4 Verificar que las dos patas se muestran como "Pago de resumen" en el listado y que las dos siguen protegidas contra borrado (sin tocar `get_movements_page` — D7)
+- [ ] 6.4 Verificar que los débitos de pago se muestran como "Pago de resumen" y siguen protegidos contra borrado, sin tocar `get_movements_page`: dos débitos reales → dos filas (una por moneda); un débito con dos patas → **una** fila, con sus dos imputaciones en el detalle (D7)
 
 ## 7. Paridad nativa
 

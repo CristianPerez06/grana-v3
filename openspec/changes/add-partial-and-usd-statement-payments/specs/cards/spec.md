@@ -17,6 +17,10 @@ Cada pata SHALL persistir:
 El sistema NO SHALL deducir qué deuda cancela una pata a partir del monto de su transacción: la
 imputación SHALL ser un dato declarado, nunca inferido.
 
+La cotización de una pata que pesifica SHALL coincidir con la que persiste su transacción, y todas
+las patas pesificadas de una **misma** transacción SHALL compartir la misma cotización: un débito
+ocurre un día y a un tipo de cambio.
+
 **Los cruces de moneda SHALL ser una lista cerrada**, no una regla general: la transacción en ARS
 cancelando deuda ARS (sin cotización), en USD cancelando deuda USD (sin cotización), y en ARS
 cancelando deuda USD (**con** cotización obligatoria). El sistema NO SHALL aceptar una transacción
@@ -64,6 +68,12 @@ las patas de un período con una lectura de fila única.
 - **WHEN** llega una pata con `settles_currency='ARS'` cuya transacción está en USD
 - **THEN** el sistema la rechaza y no registra nada
 - **AND** el mensaje remite al movimiento de canje de moneda
+
+#### Scenario: Dos cotizaciones distintas dentro del mismo gasto se rechazan
+
+- **WHEN** se intenta registrar dos patas pesificadas sobre una misma transacción con cotizaciones distintas
+- **THEN** el sistema rechaza la operación
+- **AND** tampoco acepta una pata cuya cotización difiera de la que persiste su transacción
 
 #### Scenario: Un gasto imputado a dos resúmenes distintos se rechaza
 
@@ -267,9 +277,20 @@ antes, y un fallo intermedio dejaría un resumen que nadie puede reconstruir.
 
 El lado del **calendario** —la confirmación de las fechas del ciclo en curso, la creación o
 re-proyección del período estimado siguiente y la reasignación de consumos entre períodos— NO SHALL
-formar parte de esa transacción, y SHALL ejecutarse antes. Esas fechas son hechos leídos del resumen
+formar parte de esa transacción, y SHALL ejecutarse antes, en su propia operación atómica.
+
+Esa operación SHALL revalidar, antes de escribir, los anclajes que la decisión da por ciertos: la
+propiedad de la tarjeta, la identidad del período siguiente, las fechas que la decisión esperaba
+encontrar y que el período pagado siga sin patas. Si el estado cambió desde que la decisión se
+calculó, el sistema NO SHALL aplicarla: SHALL no operar o fallar explícitamente. Esas fechas son hechos leídos del resumen
 de papel: valen independientemente de que el pago se registre bien, y revertirlas por un error de
 monto degradaría períodos ya confirmados.
+
+#### Scenario: Un plan de fechas calculado sobre un estado que ya cambió no se aplica
+
+- **WHEN** las fechas del período siguiente cambiaron entre el cálculo de la confirmación y su escritura
+- **THEN** el sistema no las pisa con las del plan
+- **AND** informa que el estado cambió, sin dejar el calendario a medias
 
 #### Scenario: Un fallo en el registro del dinero no deja nada a medias
 

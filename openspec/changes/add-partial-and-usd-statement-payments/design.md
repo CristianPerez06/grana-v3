@@ -49,6 +49,13 @@ cruces que no queremos):
 Pagar deuda en pesos con dólares no es un pago: es un canje, y Grana ya tiene el movimiento
 `exchange` para eso. Habilitarlo acá sería esconder una conversión dentro de un pago de tarjeta.
 
+**La cotización tiene que ser coherente en los dos lados.** Cuando una pata pesifica, su
+`fx_rate_to_ars` debe coincidir con el `fx_rate_to_ars` que persiste su transacción — que ya se
+guarda hoy para trazabilidad—, y si una misma transacción tiene **varias** allocations pesificadas,
+todas deben compartir la misma cotización: es un solo débito, hecho un solo día, a un solo tipo de
+cambio. Dos cotizaciones distintas dentro del mismo gasto no describen nada real, y dejan un detalle
+que se puede auditar solo a medias.
+
 **Esa tabla NO se puede validar con un `CHECK`.** Decidir el cruce exige leer
 `transactions.currency_code`, que vive en otra tabla, y un `CHECK` no cruza tablas. El `CHECK` local
 cubre lo que se ve desde la fila —nullability, `settlement_known`, montos positivos—; el cruce lo
@@ -376,6 +383,17 @@ secuencia de updates sueltos.
 La lógica pura de decisión —`planRunningCycleConfirmation`, que decide confirmar, re-proyectar o
 rechazar— **se queda en TS**, testeada como está hoy. La función SQL ejecuta un plan ya resuelto; no
 lo vuelve a calcular.
+
+**Pero no lo aplica a ciegas.** El plan se calculó a partir de una lectura previa, y entre esa
+lectura y la llamada puede haber cambiado cualquier cosa. Antes de escribir, `confirm_running_cycle`
+revalida los **anclajes** que el plan da por ciertos: que el período pagado sea del usuario, que el
+período siguiente siga siendo el que el plan nombra, que sus fechas actuales sean las que el plan
+esperaba encontrar, y que el período pagado siga sin patas. Si algo no coincide, no pisa: no-op
+controlado o error explícito, nunca un plan stale aplicado sobre un estado que ya no es el que lo
+generó.
+
+La división queda entonces: TS **decide** (con toda la lógica de bordes y cascadas, testeada como
+función pura), SQL **verifica que la decisión sigue siendo aplicable** y escribe.
 
 **KNOWN GAP declarado:** entre el commit de `confirm_running_cycle` y el arranque del RPC de dinero
 queda una ventana en la que un segundo pedido todavía ve el período sin patas. No se cierra en esta
