@@ -48,14 +48,19 @@
 
 - [x] 8.1 **Mobile-web**: abrir el dashboard a 320, 360, 375, 390 y 430px y confirmar que la línea entra en un renglón en los siete días de la semana, con especial atención a miércoles y domingo. *(Verificado por el owner sobre varios modelos de teléfono; falta todavía el barrido de los siete días.)*
 - [x] 8.2 **App nativa**: lo mismo en un dispositivo o simulador real, recordando que el header nativo tiene 32px menos de ancho útil (`px-6` contra `px-4`). *(Verificado por el owner en un iPhone 16 Pro real: la lente en un renglón, la hoja con la grilla y los apagados correctos, "Volver a hoy", el ojito en la card, y los montos idénticos a los de web mes por mes. Cubre un jueves; el barrido de los siete días sigue sin hacerse, igual que en 8.1.)*
-- [ ] 8.3 **Fuente del sistema agrandada**: repetir 8.1 y 8.2 con el escalado en "grande" y "más grande", y confirmar que la degradación cae a "30 de septiembre" y después a elipsis, en ese orden, sin envolver nunca.
-- [ ] 8.4 Confirmar que la hoja nativa no tiene el defecto de scroll parcial que el spec `mobile-app-shell` describe: arrastrar empezando sobre un mes de la grilla y verificar que la hoja entera responde igual.
+- [ ] 8.3 **Fuente del sistema agrandada**: repetir 8.1 y 8.2 con el escalado en "grande" y "más grande", y confirmar que la degradación cae a "30 de septiembre" y después a elipsis, en ese orden, sin envolver nunca. **NO EJERCITADA — riesgo abierto, no verificación pendiente de hacer.** El owner decidió no correrla. La aritmética dice que la fila deja de entrar cerca de 1.40× a 320px en nativo; los dispositivos donde se probó (iPhone 16 Pro, 402px) no llegan a ese punto ni con el escalado al máximo, así que el caso malo es un teléfono chico con la fuente agrandada y sigue sin mirarse.
+- [x] 8.4 Confirmar que la hoja nativa no tiene el defecto de scroll parcial que el spec `mobile-app-shell` describe: arrastrar empezando sobre un mes de la grilla y verificar que la hoja entera responde igual. *(Sin síntomas según el owner. Vale como "no se observó el defecto", no como prueba dirigida: la grilla entra entera en un iPhone 16 Pro, así que puede no haber habido scroll que ejercitar.)*
 - [ ] 8.5 Mirar a alguien que no participó del diseño abrir el dashboard y pedirle que cambie de mes, para saber si la línea se lee como un control. Es el riesgo declarado de este change y esta es su única verificación real.
 
 ## 8b. Presentación en desktop — salió de la verificación
 
 - [x] 8b.1 La grilla se presentaba como panel lateral de alto completo en `≥md`, porque `Drawer` se presenta así en ese viewport. Pasa a popover anclado bajo la línea de la fecha (`Popover`, ya existente), conservando el bottom sheet debajo de `md`.
 - [x] 8b.2 Confirmar en desktop real que el popover ancla, hace flip por colisión cerca del borde inferior y cierra con `Escape` y con click afuera. *(Verificado por el owner: ancla bajo la línea, cierra con `Escape` y con click afuera, y en ninguno de los dos casos cambia el mes. El flip por colisión no se ejercitó — depende de tener la fecha cerca del borde inferior.)*
+
+## 8c. Posición del caret en nativo — salió de la verificación
+
+- [x] 8c.1 El caret quedaba pegado al borde derecho de la pantalla en lugar de al lado de la fecha: el contenedor de medición de `FittingText` era `flex-1` y se estiraba a toda la fila. Pasa a `flexShrink: 1`, que además mantiene honesta la medición (la caja es el contenido cuando entra y el ancho apretado cuando no, igual que el `clientWidth` de web).
+- [ ] 8c.2 Confirmar en el dispositivo que el caret quedó junto a la fecha, en los dos estados de la línea.
 
 ## 9. Cierre
 

@@ -33,8 +33,15 @@ export const FittingText = ({ variants, className }: Props) => {
   const index = pick(variants, widths, available)
 
   return (
+    // `flexShrink`, NOT `flex-1`. Filling the row would push whatever follows
+    // the text — the lens caret — to the far right edge, while on web the
+    // equivalent `<span>` shrinks to its content and the caret stays glued to
+    // the date. Shrinking also keeps the measurement honest: the box is the
+    // content's width when it fits and the squeezed width when it does not,
+    // which is exactly what `clientWidth` reports on the web side.
+    // RN defaults `flexShrink` to 0, unlike the web, so it has to be explicit.
     <View
-      className="min-w-0 flex-1"
+      style={{ flexShrink: 1, minWidth: 0 }}
       onLayout={(event) => setAvailable(event.nativeEvent.layout.width)}
     >
       <Text numberOfLines={1} className={className}>
