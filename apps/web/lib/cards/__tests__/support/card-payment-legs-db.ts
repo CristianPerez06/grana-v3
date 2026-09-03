@@ -45,6 +45,13 @@ export function legStatements(): string[] {
     at(/drop trigger if exists trg_period_payment_row_invariants[\s\S]*?row_invariants\(\);/i, 'the row invariants trigger'),
     at(/create or replace function public\.trg_fn_period_payment_amount_matches[\s\S]*?\$amount_inv\$;/i, 'the amount identity function'),
     at(/drop trigger if exists trg_period_payment_amount_matches[\s\S]*?amount_matches\(\);/i, 'the amount identity trigger'),
+    at(/create or replace function public\.pay_card_period_legs[\s\S]*?\$pay\$;/i, 'pay_card_period_legs'),
+    at(/create or replace function public\.confirm_running_cycle[\s\S]*?\$confirm\$;/i, 'confirm_running_cycle'),
+    at(/drop function if exists public\.revert_card_period_payment\(uuid\);/i, 'the old revert drop'),
+    at(/create or replace function public\.revert_card_period_payment[\s\S]*?\$revert\$;/i, 'revert_card_period_payment'),
+    at(/drop policy if exists "users insert own period_payments"[\s\S]*?"users delete own period_payments" on public\.period_payments;/i, 'the write policy drops'),
+    // El self-check corre acá: una guarda que nunca se ejecuta no protege nada.
+    statement(sql, /DO \$check\$[\s\S]*?\$check\$;/i, 'the self-check', '0061'),
   ]
 }
 
@@ -58,6 +65,13 @@ function periodPaymentsStatements(): string[] {
     statement(base, /CREATE TABLE public\.period_payments[\s\S]*?\n\);/i, 'period_payments', '0010'),
     statement(revert, /alter table public\.period_payments\s+add column if not exists stamp_tax_transaction_id[\s\S]*?;/i, 'the stamp tax link', '0050'),
     statement(revert, /alter table public\.period_payments\s+add column if not exists stamp_tax_link_known[\s\S]*?;/i, 'the stamp tax link flag', '0050'),
+    // Las policies de escritura que 0061 quita: sin ellas el drop y el self-check de la
+    // sección 7 no probarían nada.
+    'alter table public.period_payments enable row level security;',
+    statement(base, /CREATE POLICY "users select own period_payments"[\s\S]*?\n  \);/i, 'the select policy', '0010'),
+    statement(base, /CREATE POLICY "users insert own period_payments"[\s\S]*?\n  \);/i, 'the insert policy', '0010'),
+    statement(base, /CREATE POLICY "users update own period_payments"[\s\S]*?\n  \);/i, 'the update policy', '0010'),
+    statement(base, /CREATE POLICY "users delete own period_payments"[\s\S]*?\n  \);/i, 'the delete policy', '0010'),
   ]
 }
 
@@ -74,8 +88,26 @@ const STUBS = `
     stamp_tax_rate numeric(10,6)
   );
   create type transaction_type as enum ('income', 'expense', 'reimbursement', 'transfer', 'adjustment', 'settlement');
+  create table public.account_currencies (
+    account_id uuid not null references public.accounts(id) on delete cascade,
+    currency_code text not null references public.currencies(code),
+    is_active boolean not null default true,
+    primary key (account_id, currency_code)
+  );
+  create table public.categories (
+    id uuid primary key, user_id uuid, canonical_name text not null
+  );
+  create table public.subcategories (
+    id uuid primary key, user_id uuid, canonical_name text not null
+  );
+  -- auth.uid() en PGlite: lee el mismo GUC que PostgREST setea por request, así que
+  -- los tests pueden cambiar de usuario con: set request.jwt.claim.sub.
+  create or replace function auth.uid() returns uuid
+    language sql stable
+    as $uid$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $uid$;
   create table public.transactions (
-    id uuid primary key,
+    -- El default va acá porque la tabla real lo tiene: los RPC insertan sin id.
+    id uuid primary key default gen_random_uuid(),
     user_id uuid not null,
     account_id uuid,
     type transaction_type not null,
@@ -84,6 +116,10 @@ const STUBS = `
     date date not null default '2026-09-01',
     status text,
     card_period_id uuid,
+    due_date date,
+    category_id uuid,
+    subcategory_id uuid,
+    description text,
     fx_rate_to_ars numeric(18,6),
     received_at timestamptz,
     cancelled_at timestamptz,
