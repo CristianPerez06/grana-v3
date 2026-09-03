@@ -47,7 +47,7 @@
 ## 8. Verificación en dispositivos — NO delegable a CI
 
 - [x] 8.1 **Mobile-web**: abrir el dashboard a 320, 360, 375, 390 y 430px y confirmar que la línea entra en un renglón en los siete días de la semana, con especial atención a miércoles y domingo. *(Verificado por el owner sobre varios modelos de teléfono; falta todavía el barrido de los siete días.)*
-- [ ] 8.2 **App nativa**: lo mismo en un dispositivo o simulador real, recordando que el header nativo tiene 32px menos de ancho útil (`px-6` contra `px-4`).
+- [x] 8.2 **App nativa**: lo mismo en un dispositivo o simulador real, recordando que el header nativo tiene 32px menos de ancho útil (`px-6` contra `px-4`). *(Verificado por el owner en un iPhone 16 Pro real: la lente en un renglón, la hoja con la grilla y los apagados correctos, "Volver a hoy", el ojito en la card, y los montos idénticos a los de web mes por mes. Cubre un jueves; el barrido de los siete días sigue sin hacerse, igual que en 8.1.)*
 - [ ] 8.3 **Fuente del sistema agrandada**: repetir 8.1 y 8.2 con el escalado en "grande" y "más grande", y confirmar que la degradación cae a "30 de septiembre" y después a elipsis, en ese orden, sin envolver nunca.
 - [ ] 8.4 Confirmar que la hoja nativa no tiene el defecto de scroll parcial que el spec `mobile-app-shell` describe: arrastrar empezando sobre un mes de la grilla y verificar que la hoja entera responde igual.
 - [ ] 8.5 Mirar a alguien que no participó del diseño abrir el dashboard y pedirle que cambie de mes, para saber si la línea se lee como un control. Es el riesgo declarado de este change y esta es su única verificación real.
