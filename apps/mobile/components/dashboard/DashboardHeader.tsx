@@ -42,10 +42,13 @@ export const DashboardHeader = ({ todayISO }: Props) => {
             on the surface where vertical room is the scarce resource. */}
         <Text className="text-2xl font-semibold text-white">{greeting}</Text>
         <View className="mt-1 flex-row items-center justify-between gap-3">
-          {/* ONE ROW, always. `numberOfLines` is web's `truncate`: one line or
-              an ellipsis, never a paragraph. */}
+          {/* ONE ROW, always — the weekday AND the month both go to three
+              letters, sized against "Miércoles", the longest weekday there is,
+              and not against whichever day the change was written on.
+              `numberOfLines` is web's `truncate`: one line or an ellipsis,
+              never a paragraph. */}
           <Text numberOfLines={1} className="min-w-0 flex-1 text-sm text-navy-muted">
-            {formatTodayLine(todayISO, localeCode, { shortMonth: true })}
+            {formatTodayLine(todayISO, localeCode, { short: true })}
           </Text>
           <View className="shrink-0 flex-row items-center gap-1.5">
             <MonthNavigator

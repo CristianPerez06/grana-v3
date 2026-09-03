@@ -89,14 +89,16 @@ export const DashboardHeader = ({ todayISO }: Props) => {
             {greeting}
           </h1>
 
-          {/* ONE ROW, always. Below `sm` the month goes to three letters — the
-              same squeeze the selector beside it makes — because even with the
-              row to share, "Martes, 1 de septiembre" and the controls do not
-              both fit. `truncate` is the floor: at any width the date is one
-              line or an ellipsis, never a paragraph. */}
+          {/* ONE ROW, always. Below `sm` the weekday AND the month go to three
+              letters, because even with the row to share, the full date and the
+              controls do not both fit. Trimming the month alone was not enough:
+              it was sized against "Martes" (92px) and the line truncated on
+              "Miércoles" (109px), the longest weekday there is. `truncate` is
+              the floor: at any width the date is one line or an ellipsis, never
+              a paragraph. */}
           <p className="min-w-0 flex-1 truncate text-sm text-navy-muted sm:order-3 sm:w-full sm:flex-none md:text-text-muted">
             <span className="sm:hidden">
-              {formatTodayLine(todayISO, localeCode, { shortMonth: true })}
+              {formatTodayLine(todayISO, localeCode, { short: true })}
             </span>
             <span className="hidden sm:inline">{formatTodayLine(todayISO, localeCode)}</span>
           </p>
