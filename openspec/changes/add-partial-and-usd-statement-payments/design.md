@@ -62,7 +62,13 @@ muestra una. Al revés funciona: un gasto, dos patas, y el detalle del movimient
 imputación por moneda.
 
 De ahí sale una identidad que hoy no existe: **el monto de la transacción es igual a la suma de sus
-patas, expresadas en su moneda** (una pata que pesifica aporta `settles_amount × fx_rate_to_ars`).
+patas, expresadas en su moneda**. Una pata que pesifica aporta exactamente
+`round(settles_amount × fx_rate_to_ars, 2)`, y el redondeo NO es un detalle: `fx_rate_to_ars` es
+`numeric(18,6)` y el producto tiene que aterrizar en los `numeric(18,2)` del monto, o la igualdad es
+inalcanzable por centavos fantasma. La regla se fija a la del sistema: `Money.multiply` es
+`toDecimalPlaces(2)` sobre decimal.js sin configuración global, o sea `ROUND_HALF_UP`, y el
+`round(numeric, 2)` de Postgres redondea medio hacia afuera del cero — para montos positivos, que es
+todo lo que hay acá, son la misma función. TS y SQL dan el mismo centavo.
 Hoy el "monto a pagar" es un campo libre que puede no coincidir con nada: se sugiere el total y el
 usuario puede editarlo a un número que no corresponde a ninguna deuda. Con patas, el monto pasa a
 estar **derivado** de lo que se declara cancelar, que es lo que lo vuelve auditable. Pagar de menos
@@ -173,14 +179,18 @@ El invariante I-CRED-11 ya lo admite tal como está (migración `0027`): un gast
 Vale registrarlo porque fue lo que descartó la alternativa "una columna `usd_transaction_id`".
 
 `get_movements_page` resuelve el tipo `card_payment` y la protección de borrado con
-`period_payments.transaction_id = t.id`. Con **una fila por pata**, cada gasto —el de pesos y el de
-dólares— tiene la suya: los dos se muestran como "Pago de resumen" y los dos quedan protegidos por
-el FK `RESTRICT`, sin tocar el RPC. Con una segunda columna, en cambio, había que agregar
+`period_payments.transaction_id = t.id`. Con una tabla de patas, **todo gasto de pago tiene al menos
+una fila que lo señala** —el de pesos y el de dólares por igual—: los dos se muestran como "Pago de
+resumen" y los dos quedan protegidos por el FK `RESTRICT`, sin tocar el RPC. Con una segunda columna, en cambio, había que agregar
 `or xp.usd_transaction_id = t.id` en tres lugares, y olvidarse de uno dejaba la pata en dólares como
 un gasto suelto sin categoría **y borrable**.
 
-En el listado, un pago con dos patas aparece como dos filas el mismo día, una por moneda. Es lo que
-Bimoneda pide: nunca un número que mezcle las dos.
+**En el listado, una fila es una transacción, no una pata.** Los dos casos se leen distinto y está
+bien que así sea: pagar los pesos desde la cuenta en pesos y los dólares desde la cuenta en dólares
+son **dos débitos reales** y salen como dos filas, una por moneda; pagar todo en pesos un resumen
+mixto es **un débito** y sale como una fila, con sus dos imputaciones en el detalle. La lista refleja
+lo que pasó en las cuentas; el detalle, cómo se imputó. En ninguno de los dos casos hay un número
+que mezcle monedas.
 
 ## D8 — Deshacer opera por grupo de pago, en orden determinístico
 
@@ -246,10 +256,22 @@ sin que nada lo note.
 
 Dos capas, con propósitos distintos:
 
-1. **Un trigger sobre `period_payments`** que toma `FOR UPDATE` sobre su `card_periods`, recalcula la
-   cobertura y rechaza el exceso. Serializa los inserts concurrentes y sostiene el invariante en
-   **todo** camino de escritura, incluido un REST directo que no pase por el RPC. Es el idioma del
-   repo: `trg_fn_credit_transaction_invariants`, `trg_fn_reimbursement_invariants`.
+1. **Dos triggers sobre `period_payments`, con tiempos distintos**, porque no todos los invariantes
+   se pueden verificar en el mismo momento:
+
+   - **`BEFORE INSERT`, por fila** — toma `FOR UPDATE` sobre su `card_periods`, recalcula la
+     cobertura y rechaza el exceso; valida el cruce de monedas contra `transactions.currency_code`
+     (que un CHECK no puede ver, D1); y exige que las patas que **comparten una transacción**
+     compartan también `period_id` y `payment_group_id` — sin eso, un mismo gasto podría quedar
+     imputado a dos resúmenes distintos, que es la contracara fea de haber soltado
+     `UNIQUE(transaction_id)`. Serializa los inserts concurrentes.
+   - **`CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED`** — la identidad
+     `monto = Σ patas` de D1. **No puede vivir en el `BEFORE INSERT`**: cuando se inserta la primera
+     de dos patas de un mismo gasto, la suma todavía no llega al total y el pago legítimo sería
+     rechazado. Diferido al COMMIT, la ve completa.
+
+   Es el idioma del repo: `trg_fn_credit_transaction_invariants`,
+   `trg_fn_reimbursement_invariants`.
 2. **El RPC de D12**, que da atomicidad a la operación completa.
 
 La validación en la action **se conserva**, pero cambia de rol: pasa a ser pre-validación de UX —un
@@ -333,21 +355,54 @@ Los dos "antes" son distintos y no se contradicen: la **base de la alícuota** s
 sello, la **cobertura** se calcula después. Confundirlos da un sello que se cobra a sí mismo, o una
 pata que no puede pagar el resumen completo.
 
-## D17 — La carrera de dos primeros pagos concurrentes: acotada y declarada
+## D17 — El calendario también es SQL, porque un lock no sobrevive a un round-trip
 
-Con el calendario fuera del RPC (D12), dos "primeros pagos" simultáneos podrían confirmar fechas
-distintas para el ciclo en curso, y uno podría fallar en el dinero dejando igual sus fechas
-aplicadas (planteo de la revisión).
+Con el calendario fuera del RPC de dinero (D12), dos "primeros pagos" simultáneos podrían confirmar
+fechas distintas para el ciclo en curso, y uno podría fallar en el dinero dejando igual sus fechas
+aplicadas.
 
-Mitigación, barata: el paso de calendario toma el mismo `FOR UPDATE` sobre el `card_periods` que se
-está pagando, y **se saltea entero cuando `hasAnyPayment` ya es verdadero**. Con eso el segundo
-pedido, si el primero completó, se comporta como lo que es —una pata siguiente— y no toca fechas ni
-sello.
+La mitigación que se había escrito —"el paso de calendario toma `FOR UPDATE`"— **es imposible tal
+como estaba** (hallazgo de la revisión, y es un error de bulto): hoy ese paso es una cadena de
+llamadas Supabase desde TS, y cada llamada de PostgREST es su propia transacción. Un `SELECT ... FOR
+UPDATE` en una de ellas suelta el lock apenas responde. No hay forma de sostener un lock de fila
+entre requests.
 
-**KNOWN GAP declarado:** entre el commit del calendario y el arranque del RPC de dinero queda una
-ventana en la que un segundo pedido todavía ve `hasAnyPayment` falso. No se cierra en esta change.
-El motivo es de proporción: el escenario exige que la misma persona confirme dos primeros pagos del
-mismo resumen desde dos dispositivos dentro de esa ventana; el daño es que quedan aplicadas las
-fechas de la confirmación perdedora, que son datos que el usuario mismo tipeó y que la pantalla de
-editar fechas corrige. El dinero, que es lo que no se puede corregir a mano, queda protegido por el
-trigger de D11 en todos los casos.
+Así que el calendario pasa a ser **su propia función SQL corta** —`confirm_running_cycle(...)`—, que
+en una transacción toma el lock del período que se está pagando, y **no hace nada si ese período ya
+tiene patas**. Sigue siendo un paso separado y previo al RPC de dinero (la asimetría de D12 no
+cambia: las fechas valen aunque el pago falle), pero ahora es atómico e idempotente en vez de una
+secuencia de updates sueltos.
+
+La lógica pura de decisión —`planRunningCycleConfirmation`, que decide confirmar, re-proyectar o
+rechazar— **se queda en TS**, testeada como está hoy. La función SQL ejecuta un plan ya resuelto; no
+lo vuelve a calcular.
+
+**KNOWN GAP declarado:** entre el commit de `confirm_running_cycle` y el arranque del RPC de dinero
+queda una ventana en la que un segundo pedido todavía ve el período sin patas. No se cierra en esta
+change. El motivo es de proporción: exige que la misma persona confirme dos primeros pagos del mismo
+resumen desde dos dispositivos dentro de esa ventana; el daño es que quedan aplicadas las fechas de
+la confirmación perdedora, que son datos que el usuario mismo tipeó y que la pantalla de editar
+fechas corrige. El dinero, que es lo que no se puede corregir a mano, queda protegido por los
+triggers de D11 en todos los casos.
+
+## D18 — El input es "pagos con imputaciones", no una lista plana de patas
+
+Si una transacción puede tener varias patas (D1), una lista plana no dice **cuándo dos patas son un
+mismo débito bancario y cuándo son dos** (hallazgo de la revisión). El input se anida:
+
+```
+payments: [
+  { payment_account_id, payment_date, allocations: [ { settles_currency, settles_amount, fx_rate_to_ars? } ] }
+]
+```
+
+Un pago = una transacción = un débito de una cuenta. Sus `allocations` son sus patas. Con eso:
+
+- *Todo en pesos, resumen mixto* → **un** pago con dos allocations (ARS y USD pesificada).
+- *Pesos con pesos, dólares con dólares* → **dos** pagos, una allocation cada uno.
+- *Pago mínimo* → un pago con una allocation más chica.
+
+La forma del input deja de admitir estados ambiguos: el agrupamiento es un dato que el usuario
+declara al elegir de qué cuenta sale cada cosa, no algo que el backend deduzca comparando montos.
+`payment_group_id` (D8) se asigna a todas las patas de una misma llamada, abarcando los dos pagos
+cuando son dos.

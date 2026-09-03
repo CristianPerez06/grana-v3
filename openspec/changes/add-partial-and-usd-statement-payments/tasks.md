@@ -8,14 +8,16 @@
 - [ ] 1.3b Índice sobre `(period_id, payment_group_id)` y sobre `(period_id, created_at, id)` para el orden determinístico de reversión
 - [ ] 1.4 Backfill único: `settlement_known = false` en todas las filas existentes (sin backfill de montos — D9), y `payment_group_id = id` en cada fila, para poder declararla `NOT NULL`
 - [ ] 1.5 `card_periods.minimum_payment_ars` / `minimum_payment_usd`, nullables, sin default
-- [ ] 1.6 `trg_fn_period_payment_coverage`: trigger `BEFORE INSERT` que toma `FOR UPDATE` sobre el `card_periods`, recalcula la cobertura por moneda y rechaza el exceso; valida además el cruce de monedas contra `transactions.currency_code` y la identidad monto = Σ patas (D1, D11)
+- [ ] 1.6 `trg_fn_period_payment_coverage`: trigger `BEFORE INSERT` por fila — `FOR UPDATE` sobre el `card_periods`, cobertura por moneda, cruce de monedas contra `transactions.currency_code`, y pertenencia (las patas que comparten `transaction_id` comparten `period_id` y `payment_group_id`) — D1, D11
+- [ ] 1.6a `trg_fn_period_payment_amount_matches`: `CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED` con la identidad `transactions.amount = Σ round(settles_amount × fx_rate_to_ars, 2)`. Diferida a propósito: fila por fila, la primera pata de un gasto de dos nunca llega al total (D11)
 - [ ] 1.6b `period_payments` sin policies de escritura: solo `SELECT`. Los dos RPC pasan a `SECURITY DEFINER` con verificación de propiedad adentro, y el self-check de la `0050` que exige INVOKER se actualiza con el motivo escrito (D13)
-- [ ] 1.6c `pay_card_period_legs(...)`, `SECURITY DEFINER`, en este orden exacto (D16): congelar base del sello → insertar sello → recalcular pendiente **con** el sello → validar e insertar transacciones y patas → barrido `pending → paid` solo si queda saldado. Todo en una transacción (D12); el calendario NO entra
+- [ ] 1.6c `pay_card_period_legs(...)`, `SECURITY DEFINER`, recibe pagos anidados (`payments[] → allocations[]`, D18) y corre en este orden exacto (D16): congelar base del sello → insertar sello → recalcular pendiente **con** el sello → validar e insertar transacciones y patas → barrido `pending → paid` solo si queda saldado. Todo en una transacción (D12); el calendario NO entra
+- [ ] 1.6e `confirm_running_cycle(...)`: función SQL corta que toma el lock del período pagado, aplica el plan de fechas ya resuelto en TS y **no hace nada si el período ya tiene patas**. Existe porque un `FOR UPDATE` desde TS no sobrevive al round-trip de PostgREST (D17)
 - [ ] 1.6d `revert_card_period_payment(p_period_id, p_group_id default null)`: reversión de todas las patas o del grupo más reciente completo, con el barrido `paid → pending` condicionado a que el resumen estuviera saldado y el borrado del sello atado al grupo que lo registró
 - [ ] 1.7 Guarda cronológica: bloquea si un resumen posterior tiene **cualquier** pata (antes: "está pagado"); mantiene `GRN02` y el `DETAIL` con la fecha
 - [ ] 1.8 Summary del RPC por moneda (`reverted` como lista de `{ amount, currency, account_name }`) en vez del escalar actual
 - [ ] 1.9 Self-check `do $check$`: falla si vuelve el UNIQUE, si falta el CHECK de coherencia, si falta el trigger de cobertura, si existe **cualquier** policy de escritura sobre `period_payments`, o si alguno de los dos RPC deja de ser SECURITY DEFINER
-- [ ] 1.9b Tests PGlite sobre el SQL real: cobertura excedida, dos inserts concurrentes sobre el mismo pendiente, cruce USD→deuda ARS rechazado, INSERT/UPDATE/DELETE directos rechazados, monto ≠ Σ patas rechazado, pata que paga el total con sello (orden de D16), barrido condicionado, reversión por grupo
+- [ ] 1.9b Tests PGlite sobre el SQL real: cobertura excedida, dos inserts concurrentes sobre el mismo pendiente, cruce USD→deuda ARS rechazado, INSERT/UPDATE/DELETE directos rechazados, monto ≠ Σ patas rechazado **al COMMIT**, gasto con dos patas que sí cierra la identidad, patas del mismo gasto en dos resúmenes rechazadas, redondeo `round(x × fx, 2)` coincidiendo con `Money.multiply`, pata que paga el total con sello (orden de D16), barrido condicionado, reversión por grupo, `confirm_running_cycle` idempotente sobre un período con patas
 - [ ] 1.10 Regenerar `packages/supabase/src/types.ts`
 
 ## 2. La regla de cobertura, en un solo lugar (D1, D2, D4, D11)
@@ -41,17 +43,17 @@
 
 ## 4. Schema y action de pago (D1, D5, D6, D11)
 
-- [ ] 4.1 `payCardPeriodSchema`: `legs` como lista (`settles_currency`, `settles_amount`, `payment_account_id`, `payment_date`, `fx_rate_to_ars?`), con al menos una pata
+- [ ] 4.1 `payCardPeriodSchema`: `payments[]` anidado (`payment_account_id`, `payment_date`, `allocations[]` con `settles_currency`, `settles_amount`, `fx_rate_to_ars?`), con al menos una allocation en total — no una lista plana de patas (D18)
 - [ ] 4.2 `next_end_date` / `next_due_date` y `stamp_tax_amount` requeridos **solo** cuando el período no tiene patas
 - [ ] 4.3 `fx_rate_to_ars` requerida ⟺ la pata cancela USD con una transacción en ARS; rechazada en el resto de los casos
 - [ ] 4.4 `payCardPeriod`: el calendario sigue en TS y corre **antes**; el dinero se delega entero a `pay_card_period_legs` (D12). Se elimina la cadena de rollbacks manuales
 - [ ] 4.5 Pre-validación de cobertura en la action **solo para UX** (`cards.errors.leg_exceeds_pending`, que dice cuánto resta); la garantía es el trigger (D11)
-- [ ] 4.5b El paso de calendario toma `FOR UPDATE` sobre el período pagado y se saltea entero cuando `hasAnyPayment` es verdadero (D17)
+- [ ] 4.5b El paso de calendario se delega a `confirm_running_cycle`; `planRunningCycleConfirmation` sigue en TS y la función SQL solo ejecuta el plan (D17)
 - [ ] 4.6 Mapeo de los errores del RPC a `messageKey`s neutrales, incluida la colisión de cobertura por concurrencia
 - [ ] 4.7 Sello y confirmación de fechas solo cuando `hasAnyPayment` es falso
 - [ ] 4.8 Verificación de que cada cuenta de pago tenga activa la moneda de su transacción, y que no sea de tipo `credit`
 - [ ] 4.9 `revertCardPeriodPayment(periodId, groupId?)` en `@grana/cards`, mapeando los errores del RPC
-- [ ] 4.10 Tests de la action: pata USD con dólares, pata USD pesificada, dos patas en una operación, parcial y luego saldo, exceso rechazado, segunda pata sin fechas ni sello, rollback
+- [ ] 4.10 Tests de la action: un pago con dos allocations (todo en pesos, resumen mixto), dos pagos de una allocation cada uno (pesos con pesos + dólares con dólares), parcial y luego saldo, exceso rechazado, segunda operación sin fechas ni sello, propagación de los errores del RPC
 
 ## 5. Formulario de pago — web (D1, D5, D6, D10)
 

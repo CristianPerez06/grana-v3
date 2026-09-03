@@ -31,8 +31,18 @@ para compensar.
 
 Una transacción de pago SHALL poder tener **más de una pata**: un único débito bancario puede
 cancelar deuda en pesos y deuda en dólares pesificada a la vez, y el sistema NO SHALL partirlo en
-varios gastos para representarlo. El monto de la transacción SHALL ser igual a la suma de sus patas
-expresadas en su moneda, computando una pata pesificada como `settles_amount × fx_rate_to_ars`.
+varios gastos para representarlo. Las patas que comparten una transacción SHALL pertenecer al mismo
+resumen y al mismo grupo de pago: un gasto NO SHALL quedar imputado a dos resúmenes distintos.
+
+El monto de la transacción SHALL ser igual a la suma de sus patas expresadas en su moneda,
+computando una pata pesificada como `settles_amount × fx_rate_to_ars` **redondeado a dos decimales**
+con la misma regla que usa el sistema para multiplicar dinero. Esa identidad SHALL verificarse
+cuando la operación está completa, NO fila por fila: con dos patas sobre un mismo gasto, la primera
+todavía no llega al total y rechazarla ahí bloquearía un pago legítimo.
+
+La operación de pago SHALL recibir las patas **agrupadas por transacción** —cada pago con su cuenta,
+su fecha y sus imputaciones—, y NO SHALL recibir una lista plana de patas: qué patas forman un mismo
+débito bancario es un dato que el usuario declara, no algo que el sistema deduzca.
 
 Toda lectura de las patas de un resumen SHALL contemplar **varias filas**. El sistema NO SHALL leer
 las patas de un período con una lectura de fila única.
@@ -54,6 +64,19 @@ las patas de un período con una lectura de fila única.
 - **WHEN** llega una pata con `settles_currency='ARS'` cuya transacción está en USD
 - **THEN** el sistema la rechaza y no registra nada
 - **AND** el mensaje remite al movimiento de canje de moneda
+
+#### Scenario: Un gasto imputado a dos resúmenes distintos se rechaza
+
+- **WHEN** se intenta registrar una pata sobre una transacción que ya tiene otra pata en un resumen distinto
+- **THEN** el sistema rechaza la operación
+- **AND** la transacción conserva su imputación original
+
+#### Scenario: Un pago en pesos que cancela pesos y dólares es un solo gasto
+
+- **WHEN** el usuario paga en pesos, desde una sola cuenta, un resumen que debe $265.805,42 y US$ 1.932,40 con cotización `1230,50`
+- **THEN** se registra **una** transacción en ARS con dos patas: una `ARS` por $265.805,42 y una `USD` por US$ 1.932,40
+- **AND** el monto de esa transacción es la suma de las dos patas expresadas en pesos
+- **AND** el listado de movimientos muestra una sola fila para ese pago
 
 #### Scenario: Dos pagos concurrentes no pueden sobrepasar el pendiente
 

@@ -41,7 +41,12 @@ declara qué deuda cancela.
 - **Un mismo gasto puede tener varias patas.** Pagar todo en pesos un resumen mixto sigue siendo un
   único débito, ahora con dos imputaciones. De ahí sale una identidad que hoy no existe: el monto de
   la transacción es la suma de sus patas, así que el "monto a pagar" deja de ser un campo libre que
-  puede no corresponder a ninguna deuda.
+  puede no corresponder a ninguna deuda. El input pasa a ser **pagos con imputaciones**, no una
+  lista plana: qué patas forman un mismo débito lo declara el usuario al elegir de qué cuenta sale
+  cada cosa.
+- **El calendario también se muda a SQL**, en su propia función corta y previa al RPC de dinero. No
+  por atomicidad —sigue deliberadamente afuera— sino porque el lock que necesita no sobrevive a un
+  round-trip de PostgREST.
 - **El saldo del resumen se deriva de las patas**, no de su existencia:
   `pendiente = consumos − reintegros − Σ patas`, por moneda. `paid` pasa a significar **saldado**;
   aparece un estado **parcial** que el calendario sigue tratando como impago (un parcial vencido
