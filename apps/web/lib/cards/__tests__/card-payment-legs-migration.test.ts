@@ -404,23 +404,35 @@ describe('pay_card_period_legs — el dinero, en una transacción', () => {
     expect(+tx.fx_rate_to_ars).toBe(1230.5)
   })
 
-  it('un pago parcial NO barre los consumos y deja el resto pendiente', async () => {
+  it('rechaza una operación que NO salda el resumen', async () => {
     await consumo(265_805.42)
-    const r = await pay([payment(BANK, [{ settles: 'ARS', amount: 40_000 }])])
-
-    expect(r.settled).toBe(false)
-    expect(+r.pending_ars).toBe(225_805.42)
+    // Sin esto, quedaría una fila en `period_payments` con deuda viva y `has_payment`
+    // —que todo el módulo lee como "saldado"— pasaría a mentir.
+    await expect(pay([payment(BANK, [{ settles: 'ARS', amount: 40_000 }])])).rejects.toThrow(
+      /statement_not_settled/,
+    )
     expect(await statuses()).toEqual([['pending', 1]])
+    expect((await pending()).ARS.pending).toBe(265_805.42)
   })
 
-  it('el segundo pago salda el resumen y recién ahí barre', async () => {
+  it('rechaza pagar solo los pesos de un resumen mixto', async () => {
     await consumo(265_805.42)
-    await pay([payment(BANK, [{ settles: 'ARS', amount: 40_000 }])])
-    expect(await statuses()).toEqual([['pending', 1]])
+    await consumo(1_932.4, { currency: 'USD' })
+    // Es el caso que hacía falta blindar: media moneda pagada no es un resumen saldado.
+    await expect(
+      pay([payment(BANK, [{ settles: 'ARS', amount: 265_805.42 }])]),
+    ).rejects.toThrow(/statement_not_settled/)
+    const p = await pending()
+    expect(p.ARS.pending).toBe(265_805.42)
+    expect(p.USD.pending).toBe(1_932.4)
+  })
 
-    const r = await pay([payment(BANK, [{ settles: 'ARS', amount: 225_805.42 }])])
-    expect(r.settled).toBe(true)
-    expect(await statuses()).toEqual([['paid', 1]])
+  it('rechaza pagar solo los dólares de un resumen mixto', async () => {
+    await consumo(100_000)
+    await consumo(500, { currency: 'USD' })
+    await expect(pay([payment(BANK, [{ settles: 'USD', amount: 500 }])])).rejects.toThrow(
+      /statement_not_settled/,
+    )
   })
 
   it('todas las patas de una operación comparten grupo', async () => {
@@ -467,19 +479,11 @@ describe('pay_card_period_legs — el impuesto de sellos', () => {
     expect(sello.date).toBe('2026-08-07') // el cierre del resumen
   })
 
-  it('con pago parcial, el sello queda en lo que resta', async () => {
+  it('el sello entra en el total, así que un pago que lo ignora no salda', async () => {
     await consumo(100_000)
-    const r = await pay([payment(BANK, [{ settles: 'ARS', amount: 40_000 }])], { stamp: 1_200 })
-    expect(r.settled).toBe(false)
-    expect(+r.pending_ars).toBe(61_200)
-  })
-
-  it('rechaza cobrar sello en un segundo pago', async () => {
-    await consumo(100_000)
-    await pay([payment(BANK, [{ settles: 'ARS', amount: 40_000 }])])
     await expect(
-      pay([payment(BANK, [{ settles: 'ARS', amount: 60_000 }])], { stamp: 500 }),
-    ).rejects.toThrow(/stamp_tax_only_on_first_payment/)
+      pay([payment(BANK, [{ settles: 'ARS', amount: 100_000 }])], { stamp: 1_200 }),
+    ).rejects.toThrow(/statement_not_settled/)
   })
 })
 
@@ -590,19 +594,6 @@ describe('revert_card_period_payment — deshacer, por grupo', () => {
     expect(await statuses()).toEqual([['pending', 1]])
   })
 
-  it('deshacer el último grupo deja el resumen parcial, y el pago viejo intacto', async () => {
-    await consumo(265_805.42)
-    await pay([payment(BANK, [{ settles: 'ARS', amount: 40_000 }])])
-    const segundo = await pay([payment(BANK, [{ settles: 'ARS', amount: 225_805.42 }])])
-    expect(await statuses()).toEqual([['paid', 1]])
-
-    await revert({ group: segundo.payment_group_id })
-    expect((await pending()).ARS).toEqual({ total: 265_805.42, paid: 40_000, pending: 225_805.42 })
-    expect(await debitCount()).toBe(1)
-    // El barrido se deshace porque el resumen ESTABA saldado.
-    expect(await statuses()).toEqual([['pending', 1]])
-  })
-
   it('deshacer un pago de dos monedas revierte las dos patas y los dos débitos', async () => {
     await consumo(100_000)
     await consumo(500, { currency: 'USD' })
@@ -618,18 +609,6 @@ describe('revert_card_period_payment — deshacer, por grupo', () => {
     const p = await pending()
     expect(p.ARS.pending).toBe(100_000)
     expect(p.USD.pending).toBe(500)
-  })
-
-  it('deshacer un pago PARCIAL no toca el estado de los consumos', async () => {
-    await consumo(265_805.42)
-    const r = await pay([payment(BANK, [{ settles: 'ARS', amount: 40_000 }])])
-    expect(await statuses()).toEqual([['pending', 1]])
-
-    const rev = await revert({ group: r.payment_group_id })
-    // Nunca hubo barrido que deshacer: el resumen no estaba saldado.
-    expect(rev.movements_reverted).toBe(0)
-    expect(await statuses()).toEqual([['pending', 1]])
-    expect((await pending()).ARS.pending).toBe(265_805.42)
   })
 
   it('borra el sello cuando se revierte el grupo que lo trajo', async () => {
@@ -649,22 +628,26 @@ describe('revert_card_period_payment — deshacer, por grupo', () => {
   })
 
   it('rechaza revertir un grupo que no es el más reciente', async () => {
-    await consumo(265_805.42)
-    const primero = await pay([payment(BANK, [{ settles: 'ARS', amount: 40_000 }])])
-    await pay([payment(BANK, [{ settles: 'ARS', amount: 100_000 }])])
-
-    await expect(revert({ group: primero.payment_group_id })).rejects.toThrow(
-      /not_latest_payment_group/,
-    )
+    // Con pago total, un resumen tiene un solo grupo; el caso se arma a nivel de datos,
+    // que es donde el modelo ya admite varios (lo que el RPC todavía no permite).
+    await consumo(100_000)
+    const r = await pay([payment(BANK, [{ settles: 'ARS', amount: 100_000 }])])
+    const viejo = uuid()
+    await db.exec(`
+      update public.period_payments set payment_group_id = '${viejo}', created_at = now() - interval '1 day'
+       where period_id = '${PERIOD}';
+      insert into public.period_payments (id, period_id, transaction_id, payment_group_id, settlement_known)
+      select '${uuid()}', '${PERIOD}', transaction_id, '${r.payment_group_id}', false
+        from public.period_payments where period_id = '${PERIOD}' limit 1;
+    `)
+    await expect(revert({ group: viejo })).rejects.toThrow(/not_latest_payment_group/)
   })
 
   it('bloquea si un resumen POSTERIOR tiene patas, aunque sea un parcial', async () => {
     await consumo(100_000)
     await pay([payment(BANK, [{ settles: 'ARS', amount: 100_000 }])])
     await consumo(50_000, { period: PERIOD2 })
-    // Un pago PARCIAL del resumen siguiente alcanza para bloquear: también es un pasado
-    // sobre el que algo se construyó.
-    await pay([payment(BANK, [{ settles: 'ARS', amount: 10_000 }])], {
+    await pay([payment(BANK, [{ settles: 'ARS', amount: 50_000 }])], {
       period: PERIOD2,
       today: '2026-09-20',
     })

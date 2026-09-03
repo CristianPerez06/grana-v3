@@ -1,11 +1,18 @@
--- Cards — patas de pago: pagar la deuda en dólares EN dólares, y pagar de a partes.
+-- Cards — patas de pago: pagar un resumen con deuda en ARS y en USD, en las dos monedas.
 --
 -- Run AFTER 0060_available_sums_initial_balance.sql.
 --
 -- Hasta acá, pagar un resumen era UN evento: una fila en `period_payments` con
 -- `period_id UNIQUE`, un gasto en ARS, y el barrido de todos los consumos a 'paid'.
--- Ese atajo hacía imposibles dos cosas que el banco sí permite: cancelar los consumos
--- en dólares CON dólares, y pagar menos que el total (el pago mínimo).
+-- Ese atajo hacía imposible lo que el banco sí permite y lo que rompió en producción:
+-- cancelar los consumos en dólares CON dólares, en vez de pesificarlos a la fuerza.
+--
+-- ALCANCE: pago TOTAL multimoneda. Una operación puede tener varios débitos reales (uno
+-- por cuenta y moneda), pero SIEMPRE tiene que dejar el resumen en cero en las dos
+-- monedas. No hay pago parcial, ni pago mínimo, ni estado `partial`: `has_payment` sigue
+-- significando "saldado", que es lo que permite no volver partial-aware a todo el módulo
+-- ahora. El modelo de patas admite parciales — el camino de escritura, no — así que
+-- habilitarlos después es relajar una condición, no rehacer esto.
 --
 -- El modelo pasa a separar cuatro cosas que estaban fusionadas:
 --
@@ -113,25 +120,6 @@ create index if not exists idx_period_payments_period_group
 -- comparten `created_at`, así que sin el desempate por `id` el más reciente no existe.
 create index if not exists idx_period_payments_period_created
   on public.period_payments (period_id, created_at, id);
-
--- ═══════════════════════════════════════════════════════════════════════════
--- 2 · El pago mínimo es un dato DEL RESUMEN
--- ═══════════════════════════════════════════════════════════════════════════
-
--- El banco lo imprime en el extracto y sobrevive al pago: alimenta el atajo del
--- formulario y el aviso de "estás pagando menos que el mínimo". Nullable sin default:
--- la mayoría de los resúmenes se paga entero y nunca se carga, y un cero NO es lo mismo
--- que "no lo cargué".
-alter table public.card_periods
-  add column if not exists minimum_payment_ars numeric(18,2),
-  add column if not exists minimum_payment_usd numeric(18,2);
-
-alter table public.card_periods
-  drop constraint if exists chk_card_period_minimums,
-  add constraint chk_card_period_minimums check (
-    (minimum_payment_ars is null or minimum_payment_ars >= 0)
-    and (minimum_payment_usd is null or minimum_payment_usd >= 0)
-  );
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 3 · `card_period_pending` — la única definición del pendiente
@@ -591,6 +579,25 @@ begin
     from public.card_period_pending(p_period_id) p;
 
   v_settled := coalesce(v_pending_ars, 0) = 0 and coalesce(v_pending_usd, 0) = 0;
+
+  -- ── La operación SALDA el resumen, o no ocurre ─────────────────────────────
+  -- El trigger de la sección 4 garantiza que ninguna pata exceda el pendiente; esto
+  -- garantiza lo otro: que entre todas lo cubran. Sin este chequeo, un pago que cancela
+  -- solo los pesos de un resumen mixto dejaría una fila en `period_payments` con deuda
+  -- en dólares viva, y `has_payment` —que todo el módulo lee como "saldado"— pasaría a
+  -- mentir. La alternativa era volver a todo el módulo partial-aware; esta línea es lo
+  -- que permite no hacerlo todavía.
+  --
+  -- El MODELO admite patas parciales (el trigger las acepta): lo que no las admite es
+  -- el camino de escritura. Habilitar pagos parciales más adelante es relajar este
+  -- chequeo e introducir el estado `partial`, no rehacer el modelo.
+  if not v_settled then
+    raise exception
+      'statement_not_settled: the operation leaves % ARS and % USD pending',
+      coalesce(v_pending_ars, 0), coalesce(v_pending_usd, 0)
+      using errcode = 'GRN04',
+            detail = coalesce(v_pending_ars, 0)::text || '|' || coalesce(v_pending_usd, 0)::text;
+  end if;
 
   if v_settled then
     update public.transactions

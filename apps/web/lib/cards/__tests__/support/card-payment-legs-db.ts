@@ -38,8 +38,6 @@ export function legStatements(): string[] {
     at(/alter table public\.period_payments\s+drop constraint if exists chk_period_payment_settlement[\s\S]*?\);\n/i, 'the local CHECKs'),
     at(/create index if not exists idx_period_payments_period_group[\s\S]*?;/i, 'the group index'),
     at(/create index if not exists idx_period_payments_period_created[\s\S]*?;/i, 'the ordering index'),
-    at(/alter table public\.card_periods\s+add column if not exists minimum_payment_ars[\s\S]*?;/i, 'the minimum payment columns'),
-    at(/alter table public\.card_periods\s+drop constraint if exists chk_card_period_minimums[\s\S]*?\);\n/i, 'the minimum payment CHECK'),
     at(/create or replace function public\.card_period_pending[\s\S]*?\$pending\$;/i, 'card_period_pending'),
     at(/create or replace function public\.trg_fn_period_payment_row_invariants[\s\S]*?\$row_inv\$;/i, 'the row invariants function'),
     at(/drop trigger if exists trg_period_payment_row_invariants[\s\S]*?row_invariants\(\);/i, 'the row invariants trigger'),

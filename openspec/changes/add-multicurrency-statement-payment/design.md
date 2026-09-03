@@ -4,6 +4,16 @@ Decisiones cerradas, con su porqué. Lo que ya está decidido sobre el ciclo de 
 (cuatro fechas, período estimado eager, confirmación al pagar) no se revisa acá: vive en
 `openspec/specs/cards/spec.md` y esta change lo respeta.
 
+> **Alcance recortado a pago TOTAL multimoneda.** La versión original de este documento cubría
+> también pagos parciales y pago mínimo. Se separaron: primero se arregla el bug de producción
+> —pagar un resumen mixto en las dos monedas— y los parciales van en una change aparte.
+>
+> El **modelo no cambió**: patas, grupo de pago, identidad de monto y triggers son los mismos, y son
+> los que hacen falta igual para pagar en dos monedas. Lo que cambia es una condición del camino de
+> escritura (D11): la operación tiene que saldar el resumen. Las decisiones que quedaron fuera de
+> alcance siguen acá marcadas como **DIFERIDA**, porque explican por qué el modelo tiene la forma
+> que tiene y son la base de la change que sigue — borrarlas obligaría a redescubrirlas.
+>
 > **Revisión externa aplicada.** D1, D2, D6, D8 y D11 fueron ajustados, y D12–D15 agregados, después
 > de una revisión que encontró tres defectos verificados contra el código: `.maybeSingle()` sobre
 > `period_payments` (rompe con dos patas), el as-of del dashboard (un parcial borraría el remanente)
@@ -91,47 +101,41 @@ Se la preguntamos.
 Ese mismo dato es lo que hace que el pago mixto (parte de los dólares en dólares, el resto en pesos)
 no necesite modelo nuevo: son dos patas con `settles_currency='USD'`, una desde cada cuenta.
 
-## D2 — Tres conceptos distintos, no un booleano nuevo
+## D2 — `has_payment` sigue significando "saldado", y eso es lo que abarata la change
 
-`period_id` deja de ser UNIQUE, y el booleano `has_payment` **no se reemplaza por otro booleano**.
-Se parte en tres cosas que hoy están fusionadas y que gobiernan decisiones diferentes (ajuste de la
-revisión: la versión anterior las metía todas dentro de `settlement`, que es justo cómo se vuelven a
-mezclar las semánticas):
+`period_id` deja de ser UNIQUE para que un resumen pueda tener varias patas — los pesos y los
+dólares del mismo pago. Pero como **toda operación tiene que dejar el resumen en cero** (D11), no
+puede existir una fila de pago sin cobertura total. Entonces:
 
 ```
 pendiente(moneda) = Σ consumos − Σ reintegros recibidos − Σ patas que cancelan esa moneda
 
-settlement    = 'unpaid' | 'partial' | 'settled'     ← deuda, montos y estado
-hasAnyPayment = existe al menos una pata             ← "ya hubo primera pata"
-status        = 'open' | 'closed' | 'overdue' | 'paid'
+has_payment  ⟺  el resumen está saldado        ← sigue siendo cierto
 ```
 
-- **`settlement`** decide los montos y el estado. `settled` ⟺ pendiente ARS = 0 ∧ pendiente USD = 0,
-  con al menos una pata.
-- **`status`** deriva `paid` **solo** con `settlement === 'settled'`. Un resumen parcial deriva por
-  fecha como cualquier impago: si venció está `overdue`, porque efectivamente debés plata y estás en
-  mora por el resto. Lo que cambia es el monto, no el estado.
-- **`hasAnyPayment`** gobierna lo que depende de *que ya haya habido un pago*, no de cuánto se
-  cubrió: no volver a pedir sello ni fechas del ciclo (D5), bloquear consumos nuevos en ese rango
-  (abajo), y la guarda cronológica de la reversión (D8).
+Ese booleano lo leen `derivePeriodStatus`, `computePeriodAmounts`, `classifyPeriodsLifecycle`, el
+hero de `/cards`, `getCardsMonthSummary` y los compromisos del dashboard. Mientras siga siendo
+verdadero, **ninguno de esos call sites se toca** — y ahí está el grueso del riesgo que esta change
+evita.
 
-Confundir los dos últimos es el error fácil: un resumen parcial **no** es `paid`, pero **sí** tiene
-que bloquear consumos y **sí** bloquea la reversión de un resumen anterior.
+Lo que lo protege no es una convención: es el rechazo `GRN04` del RPC. Un pago que cancela solo los
+pesos de un resumen mixto dejaría deuda en dólares viva con `has_payment` en true, y el booleano
+mentiría en todas esas pantallas a la vez. Esa es exactamente la trampa de "permitamos dos pagos
+sueltos y después vemos".
 
-Esta es la parte cara de la change y hay que decirlo: `has_payment` lo leen `derivePeriodVariant`,
-`classifyPeriodsLifecycle`, `computePeriodAmounts`, el hero de `/cards`, el mes de
-`getCardsMonthSummary`, los compromisos del dashboard y la guarda de alta de consumo. Cada call site
-pasa a leer el concepto que le corresponde de los tres. Ninguno recalcula la regla: sigue viviendo
-donde ya vivía, en `computePeriodAmounts`.
+**Con parciales esto deja de valer**, y por eso son otra change: ahí `has_payment` se parte en
+`settlement` (`unpaid | partial | settled`) para deuda y estado, y `hasAnyPayment` para lo que
+depende de que ya haya habido un pago. Los ~9 call sites se migran entonces, no ahora.
 
-**Un consumo backdated en un resumen con patas se RECHAZA.** No se reasigna. `getOrCreatePeriodForDate`
-(`internal/card-periods.ts:123`) hoy tira `CardConsumoInPaidPeriodError` cuando la fecha cae en un
-resumen pagado, y su comentario dice por qué: fabricar un período frontera "was the bug that dumped
-past-dated consumos into far-future statements". Un resumen `partial` se trata igual que uno
-`settled` para esta guarda — el rechazo se extiende, no se reemplaza por una reasignación silenciosa
-a un período cuyo rango no contiene esa fecha.
+**Un consumo backdated en un resumen pagado se RECHAZA**, como hoy. `getOrCreatePeriodForDate`
+(`internal/card-periods.ts:123`) tira `CardConsumoInPaidPeriodError` y su comentario dice por qué:
+fabricar un período frontera "was the bug that dumped past-dated consumos into far-future
+statements". Esto no cambia.
 
-## D3 — El remanente se queda en el resumen que lo generó
+
+## D3 — El remanente se queda en el resumen que lo generó  ·  **DIFERIDA**
+
+> Fuera del alcance de esta change. Sin pagos parciales no hay remanente. La decisión queda registrada porque es la que descarta el cargo sintético de "saldo anterior", y vale igual cuando entren los parciales.
 
 La opción descartada era generar un cargo "Saldo anterior impago" en el resumen siguiente, como lo
 imprime el banco.
@@ -149,7 +153,9 @@ que este rebuild existe para no volver a tener.
 Lo que se pierde es que la pantalla no calca el resumen de papel del mes siguiente. Se compensa con
 copy: el resumen parcial dice cuánto resta y avisa que el banco lo va a financiar.
 
-## D4 — Los consumos pasan a `paid` recién cuando la última pata cubre el resumen
+## D4 — Los consumos pasan a `paid` recién cuando la última pata cubre el resumen  ·  **DIFERIDA**
+
+> Fuera del alcance de esta change. Con pago total, la operación siempre salda, así que el barrido siempre ocurre. La regla —el barrido depende de la cobertura, no de que exista un pago— ya está implementada así en el RPC y es lo que hace que los parciales después no la toquen.
 
 Con cobertura parcial no hay forma honesta de decir **cuáles** consumos se pagaron: el pago es
 contra el total, no contra líneas. Así que el barrido no se parte: mientras el resumen esté
@@ -240,7 +246,9 @@ pesos canceló dólares depende de una cotización que se guardó en la transacc
 precedente es `stamp_tax_link_known` (migración `0050`), por la misma razón y con el mismo resultado:
 marcar lo que no se sabe es barato, adivinarlo es una corrupción silenciosa.
 
-## D10 — El pago mínimo se persiste en el período, no en el pago
+## D10 — El pago mínimo se persiste en el período, no en el pago  ·  **DIFERIDA**
+
+> Fuera del alcance de esta change. El pago mínimo es la feature diferida. Las columnas NO se crean en esta migración.
 
 `card_periods.minimum_payment_ars` / `minimum_payment_usd`, nullables. Es un dato **del resumen**
 —el banco lo imprime en el extracto— y sobrevive al pago: sirve para el chip del formulario, para
@@ -260,6 +268,15 @@ pedidos concurrentes pasan ese chequeo, el índice mata al segundo en el INSERT.
 (D2) esa red desaparece, y `sum(patas) <= pendiente` validado en TS es un TOCTOU clásico: web y
 mobile leen el mismo pendiente, los dos validan, los dos insertan, y el resumen queda pagado de más
 sin que nada lo note.
+
+Y hay una segunda mitad, que es la que sostiene D2: **ninguna operación puede dejar el resumen sin
+saldar**. El trigger garantiza que ninguna pata se pase; el RPC garantiza que entre todas lleguen.
+Sin eso, un pago de media moneda dejaría `has_payment` en true con deuda viva.
+
+Las dos reglas son distintas a propósito: `pata ≤ pendiente` es del **modelo** y vive en el trigger;
+`Σ operación = pendiente` es del **camino de escritura** y vive en el RPC (`GRN04`). Por eso el
+modelo ya admite parciales aunque la app todavía no los ofrezca: habilitarlos es relajar la segunda,
+no tocar la primera.
 
 Dos capas, con propósitos distintos:
 
@@ -326,7 +343,9 @@ actualiza en la misma migración, con el motivo escrito.
 
 El trigger de cobertura de D11 **se conserva igual**, aunque ya no haya escritura directa: protege
 contra un RPC con un bug, que es el escenario que queda. Defensa en profundidad, no redundancia.
-## D14 — El as-of del dashboard se computa por cobertura, no por existencia
+## D14 — El as-of del dashboard se computa por cobertura, no por existencia  ·  **DIFERIDA**
+
+> Fuera del alcance de esta change. Sin parciales, un pago anterior al corte sí significa saldado: la lectura actual del dashboard queda CORRECTA y no se toca. Vuelve a hacer falta cuando entren los parciales.
 
 `getCommittedOutlook` (`dashboard/queries.ts:714`) arma hoy un `Set` de `period_id` "pagados al
 corte" a partir de *cualquier* fila de pago con fecha ≤ snapshot, y saca esos períodos de los
