@@ -174,10 +174,14 @@ as $pending$
            coalesce(sum(
              case when t.type::text <> 'reimbursement' then abs(t.amount) else 0 end
            ), 0)::numeric(18,2) as charged,
-           -- Solo el reintegro RECIBIDO y no cancelado descuenta: uno pendiente es una
-           -- expectativa y vive fuera del resumen.
+           -- Solo el reintegro EN RESUMEN, recibido y no cancelado, descuenta. El
+           -- `reimbursement_target='statement'` va explícito aunque hoy un reintegro
+           -- 'account' no lleve `card_period_id`: esta función es la fuente central de
+           -- la deuda y tiene que codificar la regla de dominio, no descansar en una
+           -- convención de otra capa que nadie garantiza desde acá.
            coalesce(sum(
              case when t.type::text = 'reimbursement'
+                   and t.reimbursement_target = 'statement'
                    and t.received_at is not null
                    and t.cancelled_at is null
                   then abs(t.amount) else 0 end
@@ -440,10 +444,16 @@ begin
     raise exception 'not_authenticated';
   end if;
 
+  -- `FOR UPDATE` acá, al principio, y no solo en el trigger de las patas: el trigger
+  -- llega tarde para los efectos "solo la primera vez". Sin este lock, dos primeros
+  -- pagos concurrentes leen ambos `v_has_legs = false` —todavía no hay ninguna pata— y
+  -- los dos insertan impuesto de sellos. La cobertura quedaría bien y el resumen
+  -- igual terminaría con dos sellos.
   select cp.id, cp.account_id, cp.start_date, cp.end_date, cp.due_date
     into v_period
     from public.card_periods cp
-   where cp.id = p_period_id;
+   where cp.id = p_period_id
+     for update;
   if not found then
     raise exception 'period_not_found';
   end if;
@@ -504,8 +514,10 @@ begin
   -- ── Los pagos: una transacción por débito, sus allocations como patas ──────
   for v_payment in select value from jsonb_array_elements(p_payments)
   loop
-    v_account_id := (v_payment ->> 'account_id')::uuid;
-    v_date       := (v_payment ->> 'date')::date;
+    -- Los nombres son los del schema documentado (`payCardPeriodSchema`): si el RPC y
+    -- el contrato de la app divergen, el error no aparece acá sino recién al conectarlos.
+    v_account_id := (v_payment ->> 'payment_account_id')::uuid;
+    v_date       := (v_payment ->> 'payment_date')::date;
 
     if not exists (
       select 1 from public.accounts a
@@ -694,10 +706,22 @@ begin
   end if;
 
   if (p_expected ->> 'next_next_id') is not null then
+    -- No alcanza con que exista: `planRunningCycleConfirmation` decidió qué hacer con
+    -- P(n+2) mirando sus fechas, si era estimado, si tenía pago y si tenía consumos. Un
+    -- plan de 'reproject' se calculó sobre un "estimado pelado y vacío", y aplicarlo
+    -- sobre un período que mientras tanto recibió consumos o dejó de ser estimado
+    -- pisaría datos reales. Todos esos anclajes se revalidan.
     select cp.id into v_next_next_id
       from public.card_periods cp
      where cp.id = (p_expected ->> 'next_next_id')::uuid
-       and cp.account_id = v_period.account_id;
+       and cp.account_id = v_period.account_id
+       and cp.start_date = (p_expected ->> 'next_next_start_date')::date
+       and cp.end_date   = (p_expected ->> 'next_next_end_date')::date
+       and cp.is_estimated = (p_expected ->> 'next_next_is_estimated')::boolean
+       and exists (select 1 from public.period_payments pp where pp.period_id = cp.id)
+           = (p_expected ->> 'next_next_has_payments')::boolean
+       and exists (select 1 from public.transactions t where t.card_period_id = cp.id)
+           = (p_expected ->> 'next_next_has_transactions')::boolean;
     if v_next_next_id is null then
       raise exception 'running_cycle_state_changed';
     end if;
@@ -834,8 +858,10 @@ begin
     raise exception 'not_authenticated';
   end if;
 
+  -- Mismo lock que el pago: serializa una reversión contra un pago concurrente, y evita
+  -- devolver un "listo" sobre un estado que cambió mientras se leía.
   select cp.account_id, cp.start_date into v_account_id, v_start_date
-    from public.card_periods cp where cp.id = p_period_id;
+    from public.card_periods cp where cp.id = p_period_id for update;
   if not found then
     raise exception 'period_not_found';
   end if;

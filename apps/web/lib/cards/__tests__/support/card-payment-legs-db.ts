@@ -121,6 +121,7 @@ const STUBS = `
     subcategory_id uuid,
     description text,
     fx_rate_to_ars numeric(18,6),
+    reimbursement_target text,
     received_at timestamptz,
     cancelled_at timestamptz,
     is_parent boolean not null default false

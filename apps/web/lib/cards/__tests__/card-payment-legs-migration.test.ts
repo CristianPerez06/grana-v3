@@ -20,6 +20,7 @@ const PERIOD2 = '00000000-0000-0000-0000-0000000d0002'
 const CAT = '00000000-0000-0000-0000-0000000f0001'
 const SUBCAT = '00000000-0000-0000-0000-0000000f0002'
 const OTHER_UID = '00000000-0000-0000-0000-0000000000a2'
+const PERIOD3 = '00000000-0000-0000-0000-0000000d0003'
 
 let db: PGlite
 let seq = 0
@@ -53,9 +54,9 @@ const reintegro = async (
   opts: { currency?: string; received?: boolean; cancelled?: boolean } = {},
 ) =>
   db.exec(`
-    insert into public.transactions (id, user_id, account_id, type, amount, currency_code, status, card_period_id, received_at, cancelled_at)
+    insert into public.transactions (id, user_id, account_id, type, amount, currency_code, status, card_period_id, reimbursement_target, received_at, cancelled_at)
     values ('${uuid()}', '${UID}', '${CARD}', 'reimbursement', ${amount}, '${opts.currency ?? 'ARS'}',
-            null, '${PERIOD}',
+            null, '${PERIOD}', 'statement',
             ${opts.received === false ? 'null' : `'2026-09-01'`},
             ${opts.cancelled ? `'2026-09-02'` : 'null'});
   `)
@@ -309,8 +310,8 @@ const payment = (
   allocations: Array<{ settles: 'ARS' | 'USD'; amount: number; fx?: number }>,
   date = '2026-09-02',
 ) => ({
-  account_id: accountId,
-  date,
+  payment_account_id: accountId,
+  payment_date: date,
   allocations: allocations.map((a) => ({
     settles_currency: a.settles,
     settles_amount: a.amount,
@@ -737,6 +738,17 @@ const EXPECTED = {
   next_next_id: null,
 }
 
+/** Anclajes completos de P(n+2), los que el plan TS mira para decidir qué hacer con él. */
+const EXPECTED_WITH_NEXT_NEXT = {
+  ...EXPECTED,
+  next_next_id: PERIOD3,
+  next_next_start_date: '2026-09-08',
+  next_next_end_date: '2026-10-07',
+  next_next_is_estimated: true,
+  next_next_has_payments: false,
+  next_next_has_transactions: false,
+}
+
 const confirmCycle = async (
   opts: { end?: string; due?: string; plan?: object; expected?: object } = {},
 ) => {
@@ -774,7 +786,7 @@ describe('confirm_running_cycle — el calendario, revalidado', () => {
       start_date: '2026-08-08',
       end_date: '2026-09-10',
       due_date: '2026-09-17',
-      is_estimated: true === false,
+      is_estimated: false,
     })
     // Y siempre queda un estimado por delante, arrancando al día siguiente del cierre.
     expect(rows[2]).toMatchObject({ start_date: '2026-09-11', is_estimated: true })
@@ -818,5 +830,52 @@ describe('confirm_running_cycle — el calendario, revalidado', () => {
     await db.exec(`insert into auth.users (id) values ('${OTHER_UID}');`)
     await db.exec(`select set_config('request.jwt.claim.sub', '${OTHER_UID}', false);`)
     await expect(confirmCycle()).rejects.toThrow(/not_owner/)
+  })
+})
+
+describe('confirm_running_cycle — los anclajes de P(n+2)', () => {
+  const withNextNext = async () =>
+    db.exec(`
+      insert into public.card_periods (id, account_id, start_date, end_date, due_date, is_estimated)
+      values ('${PERIOD3}', '${CARD}', '2026-09-08', '2026-10-07', '2026-10-14', true);
+    `)
+
+  const confirmWithNextNext = (expected?: object) =>
+    db.query(`
+      select public.confirm_running_cycle(
+        '${PERIOD}'::uuid, '2026-09-10'::date, '2026-09-17'::date,
+        '${JSON.stringify({ ...PLAN_CONFIRM, next_next_op: 'reproject', create_eager_estimated: false })}'::jsonb,
+        '2026-10-10'::date, '2026-10-17'::date,
+        '${JSON.stringify(expected ?? EXPECTED_WITH_NEXT_NEXT)}'::jsonb
+      ) as r
+    `)
+
+  it('aplica el plan cuando P(n+2) sigue siendo el que el plan miró', async () => {
+    await withNextNext()
+    await expect(confirmWithNextNext()).resolves.toBeDefined()
+    const rows = await periods()
+    // Re-proyectado detrás del cierre confirmado.
+    expect(rows[2]).toMatchObject({ start_date: '2026-09-11', end_date: '2026-10-10' })
+  })
+
+  it('rechaza si P(n+2) dejó de ser estimado', async () => {
+    await withNextNext()
+    await db.exec(`update public.card_periods set is_estimated = false where id = '${PERIOD3}';`)
+    await expect(confirmWithNextNext()).rejects.toThrow(/running_cycle_state_changed/)
+  })
+
+  it('rechaza si a P(n+2) le entraron consumos entre la lectura y la llamada', async () => {
+    await withNextNext()
+    await consumo(50_000, { period: PERIOD3 })
+    // El plan decía "estimado pelado y vacío": re-proyectarlo ahora movería consumos reales.
+    await expect(confirmWithNextNext()).rejects.toThrow(/running_cycle_state_changed/)
+  })
+
+  it('rechaza si P(n+2) cambió de fechas', async () => {
+    await withNextNext()
+    // Adelantado, no atrasado: el cierre tiene que seguir siendo anterior al vencimiento
+    // (chk_period_dates), así que mover la fecha "hacia adelante" rompe la tabla, no el test.
+    await db.exec(`update public.card_periods set end_date = '2026-10-05' where id = '${PERIOD3}';`)
+    await expect(confirmWithNextNext()).rejects.toThrow(/running_cycle_state_changed/)
   })
 })
