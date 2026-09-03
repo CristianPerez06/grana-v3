@@ -28,9 +28,13 @@ Grana le borra una deuda que sigue viva), o no lo marca (y Grana le miente sobre
 El pago de un resumen deja de ser un evento y pasa a ser **una serie de patas de pago**. Cada pata
 declara qué deuda cancela.
 
-- **`period_payments` pierde `period_id UNIQUE`** y gana `settles_currency`, `settles_amount` y
-  `fx_rate_to_ars`: la moneda de la deuda que la pata cancela, cuánto de esa deuda, y la cotización
-  cuando el dinero sale en una moneda distinta de la que cancela.
+- **`period_payments` pierde `period_id UNIQUE`** y gana `settles_currency`, `settles_amount`,
+  `fx_rate_to_ars` y `payment_group_id`: la moneda de la deuda que la pata cancela, cuánto de esa
+  deuda, la cotización cuando se pesifica, y qué patas nacieron de una misma operación.
+- **El piso de cobertura y la atomicidad se mudan a la base.** Sacar el `UNIQUE` saca la red que hoy
+  mata un doble pago concurrente, así que `Σ patas ≤ pendiente` pasa a un trigger que serializa sobre
+  el período, y la escritura del dinero a un RPC atómico. El calendario queda deliberadamente afuera
+  de esa transacción.
 - **El saldo del resumen se deriva de las patas**, no de su existencia:
   `pendiente = consumos − reintegros − Σ patas`, por moneda. `paid` pasa a significar **saldado**;
   aparece un estado **parcial** que el calendario sigue tratando como impago (un parcial vencido
@@ -43,7 +47,8 @@ declara qué deuda cancela.
   resumen de papel, no de cada pago.
 - **`card_periods` recuerda el pago mínimo** (`minimum_payment_ars` / `minimum_payment_usd`), que el
   formulario ofrece como chip junto al total.
-- **Deshacer** pasa a operar por patas: la última, o todas.
+- **Deshacer** pasa a operar por grupo de pago: el último, o todos. Una pata sola nunca, cuando su
+  operación creó dos.
 
 ## El remanente se queda en el resumen que lo generó
 
@@ -71,15 +76,20 @@ $225.805*.
 
 ## Impact
 
-- **Specs:** `cards` (5 requirements nuevos, 7 modificados).
-- **Migraciones:** `0061_card_payment_legs.sql` (patas + pago mínimo + `revert_card_period_payment`
-  por pata).
+- **Specs:** `cards` (8 requirements nuevos, 7 modificados) y `dashboard` (1 nuevo: la cobertura
+  parcial al corte).
+- **Migraciones:** `0061_card_payment_legs.sql` (patas + pago mínimo + trigger de cobertura +
+  `pay_card_period_legs` + `revert_card_period_payment` por grupo).
 - **Código:** `packages/cards`, `packages/money-logic` (`computePeriodAmounts`, `derivePeriodStatus`),
   `packages/validation`, `packages/dashboard` (call sites), `packages/i18n-messages`, el formulario
   de pago de web y su espejo nativo.
 - **Riesgo: medio-alto.** No es aditivo: `has_payment` es booleano hoy y lo lee todo el módulo. El
   riesgo se concentra en las lecturas de deuda (hero de `/cards`, compromisos del dashboard) y se
   ataca con tests sobre las funciones puras, que ya son el único lugar donde vive la regla.
+- **Dos defectos verificados que la change tiene que barrer**, y que hoy no molestan porque un
+  resumen tiene una sola fila de pago: seis lecturas `.maybeSingle()` sobre `period_payments`
+  —`.maybeSingle()` **falla** con más de una fila, no devuelve la primera—, y el as-of de compromisos,
+  que trata cualquier pago anterior al corte como resumen saldado.
 - **Datos existentes:** los pagos ya registrados se marcan como pagos de saldo total
   (`settlement_known=false`) y siguen leyéndose como resúmenes saldados. Sin backfill de montos:
   reconstruir cuánto canceló cada moneda en un pago viejo es adivinar.

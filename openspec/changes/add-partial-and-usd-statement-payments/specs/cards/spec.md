@@ -9,17 +9,28 @@ El sistema SHALL registrar cada pago de resumen como una **pata de pago**: una f
 Cada pata SHALL persistir:
 
 - `transaction_id` — el gasto real, **en la moneda de la que sale el dinero**;
+- `payment_group_id` — qué patas nacieron de una misma operación del usuario;
 - `settles_currency` — la moneda de la **deuda del resumen** que la pata cancela (`ARS` o `USD`);
 - `settles_amount` — cuánto de esa deuda cancela, expresado en `settles_currency`, mayor a cero;
-- `fx_rate_to_ars` — la cotización usada, obligatoria **solo** cuando el dinero sale en una moneda
-  distinta de la que cancela, y nula en caso contrario.
+- `fx_rate_to_ars` — la cotización usada, en el único cruce de monedas permitido.
 
 El sistema NO SHALL deducir qué deuda cancela una pata a partir del monto de su transacción: la
 imputación SHALL ser un dato declarado, nunca inferido.
 
-Ninguna pata SHALL cancelar más que el saldo pendiente de su moneda en ese resumen. El write path
-SHALL rechazar el exceso con un mensaje que indique cuánto resta, y las lecturas NO SHALL recortar
-(`clamp`) ningún saldo para compensarlo.
+**Los cruces de moneda SHALL ser una lista cerrada**, no una regla general: la transacción en ARS
+cancelando deuda ARS (sin cotización), en USD cancelando deuda USD (sin cotización), y en ARS
+cancelando deuda USD (**con** cotización obligatoria). El sistema NO SHALL aceptar una transacción
+en USD que cancele deuda en ARS: eso es un canje de moneda, para lo que existe el movimiento
+`exchange`, y admitirlo escondería una conversión dentro de un pago de tarjeta.
+
+Ninguna pata SHALL cancelar más que el saldo pendiente de su moneda en ese resumen. Ese piso SHALL
+sostenerse **en la base de datos**, serializando los inserts concurrentes sobre un mismo resumen, y
+NO SHALL depender de una validación previa en la aplicación: la app MAY pre-validar para dar un
+mensaje mejor, pero la garantía es de la base. Las lecturas NO SHALL recortar (`clamp`) ningún saldo
+para compensar.
+
+Toda lectura de las patas de un resumen SHALL contemplar **varias filas**. El sistema NO SHALL leer
+las patas de un período con una lectura de fila única.
 
 #### Scenario: Una pata en pesos que cancela deuda en pesos
 
@@ -32,6 +43,18 @@ SHALL rechazar el exceso con un mensaje que indique cuánto resta, y las lectura
 - **WHEN** el usuario paga los US$ 1.932,40 del resumen desde una cuenta en pesos, con cotización `1230,50`
 - **THEN** se registra una pata con `settles_currency='USD'`, `settles_amount=1932.40` y `fx_rate_to_ars=1230.50`
 - **AND** la transacción vinculada es un gasto en ARS por el producto de ambos
+
+#### Scenario: Pagar deuda en pesos desde una cuenta en dólares se rechaza
+
+- **WHEN** llega una pata con `settles_currency='ARS'` cuya transacción está en USD
+- **THEN** el sistema la rechaza y no registra nada
+- **AND** el mensaje remite al movimiento de canje de moneda
+
+#### Scenario: Dos pagos concurrentes no pueden sobrepasar el pendiente
+
+- **WHEN** dos pedidos simultáneos intentan cancelar $40.000 cada uno sobre un resumen al que le restan $40.000
+- **THEN** exactamente uno se registra y el otro es rechazado por la base
+- **AND** el saldo pendiente del resumen nunca queda negativo
 
 #### Scenario: Una pata que excede el saldo pendiente se rechaza
 
@@ -89,9 +112,13 @@ permanecer en el resumen que lo generó: el sistema NO SHALL crear ninguna trans
 "saldo anterior" ni trasladar deuda al resumen siguiente.
 
 Un resumen parcial SHALL seguir figurando entre lo que hay que pagar, por su remanente, y SHALL
-poder recibir patas adicionales hasta saldarse. Un resumen parcial NO SHALL aceptar consumos nuevos:
-igual que un resumen saldado, ya cerró, y un consumo con fecha de ese rango pertenece al período en
-curso.
+poder recibir patas adicionales hasta saldarse.
+
+Un resumen con patas —parcial o saldado— NO SHALL aceptar consumos nuevos: ya cerró. Un consumo cuya
+fecha caiga dentro de su rango SHALL ser **rechazado** con el error que ya existe para un resumen
+pagado. El sistema NO SHALL reasignarlo a otro período: imputar un consumo a un período cuyo rango
+no contiene su fecha rompe la asignación por rango, y es exactamente el defecto que el rechazo
+actual vino a corregir.
 
 El sistema NO SHALL calcular, sugerir ni registrar automáticamente intereses de financiación, IVA
 sobre intereses ni punitorios. Esos cargos llegan en el resumen siguiente y se registran como
@@ -116,10 +143,11 @@ consumos.
 - **THEN** el resumen se muestra vencido, con la mora que corresponde
 - **AND** el monto en mora es el remanente, no el total original del resumen
 
-#### Scenario: Un resumen parcial no recibe consumos nuevos
+#### Scenario: Un consumo con fecha dentro de un resumen parcial se rechaza
 
-- **WHEN** se registra un consumo con fecha dentro del rango de un resumen parcial
-- **THEN** el consumo se imputa al período en curso, no al resumen parcial
+- **WHEN** se intenta registrar un consumo con fecha dentro del rango de un resumen que tiene patas de pago
+- **THEN** el sistema rechaza el alta con el error de resumen ya pagado, nombrando el rango del resumen
+- **AND** no se crea ni se reasigna ninguna transacción a otro período
 
 ---
 
@@ -194,6 +222,55 @@ fechas del ciclo solo en el primer pago— aunque los componentes visuales sean 
 - **WHEN** el usuario paga desde la app nativa un resumen con deuda en pesos y en dólares, eligiendo dólares para la porción USD
 - **THEN** se registran las dos patas con la misma semántica que en web
 - **AND** ninguna validación de cobertura ni de cotización se resuelve en la shell nativa
+
+---
+
+### Requirement: El registro de un pago de resumen es atómico en la base, y el calendario queda afuera
+
+El sistema SHALL escribir el lado del **dinero** de un pago de resumen en una única operación atómica
+en la base de datos: el cálculo de la deuda por moneda, el descuento de las patas ya existentes, la
+inserción de las transacciones y sus patas, la inserción del impuesto de sellos cuando corresponde, y
+el barrido `pending → paid` cuando el resumen queda saldado. La operación SHALL serializar los pagos
+concurrentes sobre un mismo resumen.
+
+El sistema NO SHALL sostener esa atomicidad con una cadena de rollbacks manuales desde la aplicación:
+con varias patas por operación, cada camino de error tendría que recordar deshacer todo lo insertado
+antes, y un fallo intermedio dejaría un resumen que nadie puede reconstruir.
+
+El lado del **calendario** —la confirmación de las fechas del ciclo en curso, la creación o
+re-proyección del período estimado siguiente y la reasignación de consumos entre períodos— NO SHALL
+formar parte de esa transacción, y SHALL ejecutarse antes. Esas fechas son hechos leídos del resumen
+de papel: valen independientemente de que el pago se registre bien, y revertirlas por un error de
+monto degradaría períodos ya confirmados.
+
+#### Scenario: Un fallo en el registro del dinero no deja nada a medias
+
+- **WHEN** la inserción de la segunda pata de un pago falla
+- **THEN** ninguna de las transacciones ni de las patas de esa operación queda registrada
+- **AND** los consumos del resumen conservan el estado que tenían
+
+#### Scenario: Un fallo en el dinero no revierte las fechas confirmadas
+
+- **WHEN** el usuario confirma las fechas del ciclo en curso en el primer pago y el registro del dinero falla después
+- **THEN** las fechas confirmadas del ciclo en curso se mantienen, con `is_estimated=false`
+- **AND** el sistema informa el error del pago sin dejar patas registradas
+
+---
+
+### Requirement: Una pata de pago es inmutable
+
+El sistema NO SHALL permitir modificar una pata de pago ya registrada. Corregir un pago SHALL
+hacerse deshaciéndolo y volviéndolo a registrar.
+
+La inmutabilidad SHALL sostenerse a nivel de base de datos, no solo en la aplicación: un `UPDATE`
+directo sobre el monto imputado de una pata esquivaría el piso de cobertura con la misma facilidad
+que un alta, y no existe ningún caso de uso que lo requiera.
+
+#### Scenario: Modificar el monto imputado de una pata se rechaza
+
+- **WHEN** se intenta modificar el `settles_amount` de una pata ya registrada
+- **THEN** la base rechaza la operación
+- **AND** el saldo del resumen queda sin cambios
 
 ---
 
@@ -425,14 +502,16 @@ El sello SHALL sumar a la deuda en pesos del resumen, como cualquier otro cargo:
 
 ### Requirement: El usuario puede deshacer el pago de un resumen
 
-El sistema SHALL permitir deshacer los pagos de un resumen, revirtiendo de forma **atómica** todo lo que el pago escribió del lado del dinero. La reversión SHALL poder alcanzar **todas** las patas del resumen o **solo la más reciente**, y en ambos casos SHALL:
+El sistema SHALL permitir deshacer los pagos de un resumen, revirtiendo de forma **atómica** todo lo que el pago escribió del lado del dinero. La reversión SHALL poder alcanzar **todas** las patas del resumen o **solo el grupo de pago más reciente** —todas las patas nacidas de una misma operación del usuario—, y en ambos casos SHALL:
 
 - borrar las filas de `period_payments` alcanzadas;
 - devolver a `pending` los movimientos del período que el barrido hubiera pasado a `paid`, cuando el resumen estaba saldado;
 - borrar el movimiento de impuesto de sellos, únicamente cuando se revierte la pata que lo registró;
 - borrar los gastos registrados en las cuentas de pago de las patas alcanzadas, en la moneda en que se registraron.
 
-El sistema NO SHALL permitir revertir una pata que no sea la más reciente del resumen sin revertir también las posteriores.
+El sistema NO SHALL permitir revertir un grupo de pago que no sea el más reciente del resumen sin revertir también los posteriores, y NO SHALL revertir una pata sola cuando su operación creó varias: deshacer media operación deja un pago que el usuario nunca hizo así.
+
+El orden de las patas SHALL ser determinístico por `(created_at, id)`: dos patas de una misma operación comparten el instante de creación, y sin el desempate "la más reciente" no está definida.
 
 Tras la reversión, el saldo pendiente del resumen SHALL recomponerse desde las patas que queden, su estado SHALL derivarse de nuevo (impago, parcial o saldado), y el saldo de cada cuenta de pago SHALL recuperar el monto de su gasto, **en su moneda**.
 
@@ -451,11 +530,17 @@ Solo el dueño de la tarjeta SHALL poder deshacer un pago.
 - **AND** el gasto-débito de $120.000 desaparece y el saldo de "Banco Galicia" aumenta $120.000
 - **AND** el resumen vuelve a figurar como impago, con su deuda incluida en el pendiente de la tarjeta
 
-#### Scenario: Deshacer solo la última pata deja el resumen parcial
+#### Scenario: Deshacer solo el último pago deja el resumen parcial
 
-- **WHEN** un resumen tiene una pata de $40.000 y otra posterior de $225.805,42 que lo saldó, y el usuario deshace la segunda
+- **WHEN** un resumen tiene una pata de $40.000 y un pago posterior de $225.805,42 que lo saldó, y el usuario deshace el segundo
 - **THEN** los consumos del período vuelven a `pending` y el resumen queda parcial, con $225.805,42 pendientes
 - **AND** la pata de $40.000 y su gasto siguen existiendo
+
+#### Scenario: Deshacer un pago de dos monedas revierte las dos patas
+
+- **WHEN** el usuario deshace un pago que en una sola operación canceló $265.805,42 en pesos y US$ 1.932,40 en dólares
+- **THEN** las dos patas y sus dos gastos se revierten juntos
+- **AND** no queda ninguna pata suelta de esa operación
 
 #### Scenario: Deshacer la pata en dólares devuelve dólares
 
