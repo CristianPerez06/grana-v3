@@ -23,11 +23,11 @@ export const EyeMaskToggle = ({ disabled = false }: Props) => {
       disabled={disabled}
       aria-label={label}
       title={label}
-      // The ghost variant is tuned for light surfaces, and below `md` this
-      // button sits on the navy band of `DashboardHeader`, where `text-text-muted`
-      // all but disappears. Native solves it the same way — a plain white icon
-      // (`apps/mobile/components/dashboard/EyeMaskToggle.tsx`).
-      className="text-white hover:bg-navy-soft md:text-text-muted md:hover:bg-border-soft"
+      // The ghost variant is tuned for light surfaces, and this button now sits
+      // on the balance card's dark zone at EVERY width — not on the navy band
+      // below `md` only — so the white icon is unconditional. Native solves it
+      // the same way (`apps/mobile/components/dashboard/EyeMaskToggle.tsx`).
+      className="text-white/70 hover:bg-navy-soft hover:text-white"
     >
       <Icon size={18} />
     </Button>

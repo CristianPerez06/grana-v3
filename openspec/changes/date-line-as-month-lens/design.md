@@ -54,7 +54,15 @@ Hoy recibe `{ shortMonth }` y devuelve un string. Pasa a resolver los dos estado
 
 El cálculo de qué meses son elegibles es aritmética de calendario pura: entra en `@grana/dashboard` junto a `formatTodayLine`, con tests, y lo consumen las dos hojas. Las props de la hoja (`MonthSheetProps`) van a `ui-contracts` para que una divergencia entre plataformas rompa TypeScript del otro lado.
 
-### 5. El eye toggle se muda sin cambiar
+### 5. El provider gana `goToMonth` y pierde `goPrev`/`goNext`
+
+**Desviación de lo que decía este diseño**, encontrada al implementar. Acá se afirmaba que el contrato del provider quedaba igual. No queda: la hoja salta a un mes arbitrario y `goPrev`/`goNext` no expresan eso. El provider expone ahora `goToMonth(month)`, que **ignora** los meses fuera de rango en lugar de recortarlos — la hoja solo ofrece alcanzables, así que una llamada fuera de rango es un bug y aterrizar en otro mes lo escondería.
+
+`goPrev`/`goNext` se retiran del contexto del dashboard: sus únicos consumidores eran los dos headers. El contexto del módulo Compartido es otro y no se toca.
+
+Lo que sí queda igual es lo que importaba: el rango, la no-persistencia y el no tocar la URL.
+
+### 6. El eye toggle se muda sin cambiar
 
 Cambia dónde se monta, no qué hace: sigue leyendo del mismo `EyeMaskProvider`, que sigue viviendo en el layout. La única consecuencia real es que **deja de depender del estado de carga del nombre del perfil** — dependencia que solo existía por estar en el header.
 

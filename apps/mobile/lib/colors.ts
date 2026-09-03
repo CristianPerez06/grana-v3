@@ -12,6 +12,11 @@ import type { AccountColorKey } from '@grana/ui-contracts'
 
 export const colors = {
   navy: '#0B1A2B',
+  // `--navy-muted`: el texto secundario sobre la banda navy.
+  navyMuted: 'rgba(255, 255, 255, 0.62)',
+  // `--mint`: el emerald afinado para superficies oscuras (el `--emerald` no
+  // llega a AA contra `--navy`).
+  mint: '#4FD6A4',
   positive: '#10B981',
   emeraldDeep: '#059669',
   error: '#C54B3C',

@@ -120,6 +120,12 @@
     "new_movement": "Nuevo movimiento",
     "mask_show": "Mostrar importes",
     "mask_hide": "Ocultar importes",
+    "month_lens": {
+      "open": "Cambiar el mes",
+      "sheet_title": "¿Qué mes querés ver?",
+      "back_to_today": "Volver a hoy",
+      "committed_note": "Comprometido muestra el mes siguiente al elegido."
+    },
     "hero": {
       "total_label": "Saldo disponible total",
       "balance_as_of": "Saldo al cierre de {month}"

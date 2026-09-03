@@ -22,6 +22,7 @@ import {
   PlacementGridSkeleton,
   SummaryAmountSkeleton,
 } from './balance-card-body-skeleton'
+import { EyeMaskToggle } from './eye-mask-toggle'
 import { MaskedAmount } from './masked-amount'
 import { MaskedAmountDisplay } from './masked-amount-display'
 import { useBalanceMonth } from './use-balance-month'
@@ -358,7 +359,16 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
 
   return (
     <Card className="overflow-hidden p-0">
-      <div className="bg-surface-dark px-[22px] pb-5 pt-6 text-center text-white">
+      <div className="relative bg-surface-dark px-[22px] pb-5 pt-6 text-center text-white">
+        {/* The eye toggle lives HERE, not in the header: it masks amounts, so
+            its place is where the amounts begin, and it is a privacy
+            preference rather than a scope control — it shares nothing with the
+            month lens and has no reason to share a row with it. Absolutely
+            positioned so it does not push the centred label off centre. */}
+        <div className="absolute right-2 top-2">
+          <EyeMaskToggle />
+        </div>
+
         <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/50">
           {isCurrent ? t('hero.total_label') : t('hero.balance_as_of', { month: monthLabel })}
         </p>

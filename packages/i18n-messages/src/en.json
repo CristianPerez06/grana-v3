@@ -120,6 +120,12 @@
     "new_movement": "New movement",
     "mask_show": "Show amounts",
     "mask_hide": "Hide amounts",
+    "month_lens": {
+      "open": "Change the month",
+      "sheet_title": "Which month do you want to see?",
+      "back_to_today": "Back to today",
+      "committed_note": "Committed shows the month after the one you pick."
+    },
     "hero": {
       "total_label": "Total available balance",
       "balance_as_of": "Balance at the end of {month}"

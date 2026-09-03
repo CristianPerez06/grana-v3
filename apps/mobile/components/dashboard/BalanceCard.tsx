@@ -21,6 +21,7 @@ import {
   PlacementStackSkeleton,
   SummaryAmountSkeleton,
 } from './BalanceCardSkeleton'
+import { EyeMaskToggle } from './EyeMaskToggle'
 import { MaskedAmount } from './MaskedAmount'
 import { MaskedAmountDisplay } from './MaskedAmountDisplay'
 
@@ -269,6 +270,15 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
     <View className="overflow-hidden rounded-2xl border border-border bg-card">
       {/* Dark zone — today's balance; does NOT follow the month selector. */}
       <View className="bg-navy px-[18px] pb-[17px] pt-5">
+        {/* The eye toggle lives HERE, not in the header: it masks amounts, so
+            its place is where the amounts begin, and it is a privacy
+            preference rather than a scope control — it shares nothing with the
+            month lens. Absolutely positioned so it does not push the centred
+            label off centre. */}
+        <View style={{ position: 'absolute', right: 6, top: 6, zIndex: 1 }}>
+          <EyeMaskToggle />
+        </View>
+
         <Text className="text-center text-[10.5px] font-extrabold uppercase tracking-widest text-white/50">
           {isCurrent
             ? t('dashboard.hero.total_label')
