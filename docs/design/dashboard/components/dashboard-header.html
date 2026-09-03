@@ -13,15 +13,29 @@
         <header class="header">
           <div>
             <h1>Hola, Cristian</h1>
-            <p>Domingo 7 de junio</p>
+            <div class="lens-row">
+              <button class="month-lens" type="button" aria-haspopup="dialog" aria-label="Cambiar el mes">
+                Domingo 7 de junio<span class="caret" aria-hidden="true">▾</span>
+              </button>
+            </div>
           </div>
           <div class="header-actions">
-            <div class="month-nav" aria-label="Selector de mes">
-              <button type="button" aria-label="Mes anterior">‹</button>
-              <span>Junio 2026</span>
-              <button type="button" aria-label="Mes siguiente">›</button>
+            <button class="button desktop-only" type="button">+ Nuevo movimiento</button>
+          </div>
+        </header>
+
+        <p class="workbench-title" style="margin-top: 28px">DashboardHeader · parado en otro mes</p>
+        <header class="header">
+          <div>
+            <h1>Hola, Cristian</h1>
+            <div class="lens-row">
+              <button class="month-lens" type="button" aria-haspopup="dialog" aria-label="Cambiar el mes">
+                Mayo 2026<span class="caret" aria-hidden="true">▾</span>
+              </button>
+              <button class="back-to-today" type="button">Volver a hoy</button>
             </div>
-            <button class="icon-button" type="button" aria-label="Ocultar importes">◐</button>
+          </div>
+          <div class="header-actions">
             <button class="button desktop-only" type="button">+ Nuevo movimiento</button>
           </div>
         </header>

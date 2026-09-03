@@ -54,6 +54,6 @@
 
 ## 9. Cierre
 
-- [ ] 9.1 Actualizar los mocks del handoff en `docs/design/dashboard/` para que reflejen el header sin controles y el eye toggle en la card.
+- [x] 9.1 Actualizar los mocks del handoff en `docs/design/dashboard/` para que reflejen el header sin controles y el eye toggle en la card.
 - [x] 9.2 Correr las cinco validaciones locales que espeja CI: `pnpm lint` + `lint:mobile`, `typecheck` + `typecheck:mobile`, `test`, `build`, `openspec:check`.
 - [ ] 9.3 Archivar el change en la rama antes del merge, con las deltas aplicadas a `openspec/specs/dashboard/spec.md` y sin secciones `## ADDED/MODIFIED` sobrantes en el master spec.
