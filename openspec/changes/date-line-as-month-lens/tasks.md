@@ -55,7 +55,7 @@
 ## 8b. Presentación en desktop — salió de la verificación
 
 - [x] 8b.1 La grilla se presentaba como panel lateral de alto completo en `≥md`, porque `Drawer` se presenta así en ese viewport. Pasa a popover anclado bajo la línea de la fecha (`Popover`, ya existente), conservando el bottom sheet debajo de `md`.
-- [ ] 8b.2 Confirmar en desktop real que el popover ancla, hace flip por colisión cerca del borde inferior y cierra con `Escape` y con click afuera.
+- [x] 8b.2 Confirmar en desktop real que el popover ancla, hace flip por colisión cerca del borde inferior y cierra con `Escape` y con click afuera. *(Verificado por el owner: ancla bajo la línea, cierra con `Escape` y con click afuera, y en ninguno de los dos casos cambia el mes. El flip por colisión no se ejercitó — depende de tener la fecha cerca del borde inferior.)*
 
 ## 9. Cierre
 
