@@ -46,11 +46,16 @@
 
 ## 8. Verificación en dispositivos — NO delegable a CI
 
-- [ ] 8.1 **Mobile-web**: abrir el dashboard a 320, 360, 375, 390 y 430px y confirmar que la línea entra en un renglón en los siete días de la semana, con especial atención a miércoles y domingo.
+- [x] 8.1 **Mobile-web**: abrir el dashboard a 320, 360, 375, 390 y 430px y confirmar que la línea entra en un renglón en los siete días de la semana, con especial atención a miércoles y domingo. *(Verificado por el owner sobre varios modelos de teléfono; falta todavía el barrido de los siete días.)*
 - [ ] 8.2 **App nativa**: lo mismo en un dispositivo o simulador real, recordando que el header nativo tiene 32px menos de ancho útil (`px-6` contra `px-4`).
 - [ ] 8.3 **Fuente del sistema agrandada**: repetir 8.1 y 8.2 con el escalado en "grande" y "más grande", y confirmar que la degradación cae a "30 de septiembre" y después a elipsis, en ese orden, sin envolver nunca.
 - [ ] 8.4 Confirmar que la hoja nativa no tiene el defecto de scroll parcial que el spec `mobile-app-shell` describe: arrastrar empezando sobre un mes de la grilla y verificar que la hoja entera responde igual.
 - [ ] 8.5 Mirar a alguien que no participó del diseño abrir el dashboard y pedirle que cambie de mes, para saber si la línea se lee como un control. Es el riesgo declarado de este change y esta es su única verificación real.
+
+## 8b. Presentación en desktop — salió de la verificación
+
+- [x] 8b.1 La grilla se presentaba como panel lateral de alto completo en `≥md`, porque `Drawer` se presenta así en ese viewport. Pasa a popover anclado bajo la línea de la fecha (`Popover`, ya existente), conservando el bottom sheet debajo de `md`.
+- [ ] 8b.2 Confirmar en desktop real que el popover ancla, hace flip por colisión cerca del borde inferior y cierra con `Escape` y con click afuera.
 
 ## 9. Cierre
 

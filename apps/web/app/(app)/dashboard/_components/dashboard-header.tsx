@@ -89,17 +89,35 @@ export const DashboardHeader = ({ todayISO }: Props) => {
                 distinguishes a date you can tap from a date that is printed.
                 The `after:` pseudo-element is the 44px touch target — native
                 uses `hitSlop` for the same thing. */}
-            <button
-              type="button"
-              onClick={() => setSheetOpen(true)}
-              aria-haspopup="dialog"
-              aria-expanded={sheetOpen}
-              aria-label={tLens('open')}
-              className="group relative flex min-w-0 items-center gap-1.5 text-sm text-navy-muted after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint md:text-text-muted md:focus-visible:ring-ring"
-            >
-              <FittingText variants={dateLineVariants(todayISO, localeCode, selected)} />
-              <ChevronDown size={14} strokeWidth={2.5} className="shrink-0" aria-hidden />
-            </button>
+            <MonthSheet
+              open={sheetOpen}
+              years={reachableMonths(todayISO, localeCode)}
+              selected={selected}
+              onSelect={(month) => {
+                goToMonth(month)
+                setSheetOpen(false)
+              }}
+              onDismiss={() => setSheetOpen(false)}
+              trigger={
+                <button
+                  type="button"
+                  // Opens, never toggles. On desktop Radix clones this button
+                  // and composes its own toggle after this handler: closed →
+                  // both agree on open; open → this one is a no-op and Radix's
+                  // `onOpenChange(false)` closes it. Making this a toggle
+                  // instead would cancel Radix's out and the popover would
+                  // never open.
+                  onClick={() => setSheetOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-expanded={sheetOpen}
+                  aria-label={tLens('open')}
+                  className="group relative flex min-w-0 items-center gap-1.5 text-sm text-navy-muted after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint md:text-text-muted md:focus-visible:ring-ring"
+                >
+                  <FittingText variants={dateLineVariants(todayISO, localeCode, selected)} />
+                  <ChevronDown size={14} strokeWidth={2.5} className="shrink-0" aria-hidden />
+                </button>
+              }
+            />
 
             {/* Only while it means something. */}
             {!isCurrent && (
@@ -128,17 +146,6 @@ export const DashboardHeader = ({ todayISO }: Props) => {
           </div>
         </div>
       </div>
-
-      <MonthSheet
-        open={sheetOpen}
-        years={reachableMonths(todayISO, localeCode)}
-        selected={selected}
-        onSelect={(month) => {
-          goToMonth(month)
-          setSheetOpen(false)
-        }}
-        onDismiss={() => setSheetOpen(false)}
-      />
     </header>
   )
 }

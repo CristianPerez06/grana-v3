@@ -200,7 +200,15 @@ Como el toggle ya no vive en el header, NO SHALL depender del estado de carga de
 
 ### Requirement: La hoja de meses ofrece cada mes alcanzable a un toque
 
-Activar la línea de la fecha SHALL abrir una **hoja de selección de mes**, con una implementación por plataforma y props compartidas en `@grana/ui-contracts`. En web se presenta como bottom sheet debajo de `md`, según el spec `web-app-shell`; en nativo SHALL cumplir las reglas de `mobile-app-shell` para superficies que montan un `Modal`.
+Activar la línea de la fecha SHALL abrir una **superficie de selección de mes**, con una implementación por plataforma y props compartidas en `@grana/ui-contracts`.
+
+Su presentación depende del ancho, porque una grilla de meses es un **picker** y un picker va al lado de lo que cambia:
+
+- **Web desde `md`**: un popover anclado bajo la línea de la fecha. Un panel lateral de alto completo —que es como se presenta el `Drawer` en ese viewport— es el peso de un formulario para el peso de un selector de fecha.
+- **Web debajo de `md`**: bottom sheet, según el spec `web-app-shell`.
+- **Nativo**: overlay que SHALL cumplir las reglas de `mobile-app-shell` para superficies que montan un `Modal`.
+
+En las tres, cerrar sin elegir NO SHALL cambiar la selección.
 
 La hoja SHALL listar los meses del rango alcanzable —el mes corriente y los 12 anteriores— agrupados por año, y elegir cualquiera de ellos SHALL costar **un solo toque**. Reemplaza a las flechas `‹ ›`, con las que llegar al mes más lejano costaba once toques y que no escalan si el rango crece.
 
@@ -222,6 +230,12 @@ Elegir un mes SHALL cerrar la hoja y aplicar la selección al `DashboardMonthPro
 - **THEN** octubre, noviembre y diciembre de 2026 aparecen visibles y deshabilitados
 - **AND** los meses anteriores a septiembre de 2025 también aparecen deshabilitados
 - **AND** septiembre de 2026 aparece marcado como el mes seleccionado
+
+#### Scenario: En desktop se ancla, no ocupa el costado
+
+- **WHEN** el usuario activa la línea de la fecha en web en viewport `≥md`
+- **THEN** la grilla se abre anclada debajo de la línea de la fecha
+- **AND** NO se presenta como panel lateral de alto completo
 
 #### Scenario: Descartar la hoja no cambia nada
 
