@@ -401,19 +401,23 @@ layout y en el feed nativo · `X1` pendiente en el dashboard · `X2` plegado inv
 
 ---
 
-## Dos decisiones que no puedo tomar solo
+## Decisiones tomadas
 
-1. **¿Se relaja el invariante "una sola pendiente por regla"?** Está escrito en el spec de
-   `transactions` (requirement "El sistema genera instancias recurrentes de forma secuencial",
-   escenario "Usuario vuelve después de varios meses"). Mi recomendación es reemplazarlo por "una por
-   (regla, fecha)" con backlog acotado — pero eso **modifica una requirement existente**, no agrega
-   una, y hay que escribirlo como `## MODIFIED Requirements` en el change de OpenSpec.
+Ambas se resolvieron el 3 de septiembre y quedan acá para que el change que las implemente no las
+vuelva a discutir.
 
-2. **¿Se hace backfill de los meses cerrados?** Mi recomendación es **no reconstruir**: re-proyectar
-   con los montos de hoy sería inventar un pasado. En cambio, marcar explícitamente los meses
-   afectados como incompletos ("faltan datos de recurrencias en este período") es honesto y barato.
-   La alternativa —materializar el backlog con fechas viejas y dejar que el usuario confirme— sí
-   repara el pasado, pero mueve saldos históricos y hay que quererlo a propósito.
+**1 · El invariante se relaja: de "una pendiente por regla" a "una por (regla, fecha)".**
+Con backlog acotado a 12 ocurrencias y el excedente colapsado en una fila agrupada. Esto **modifica**
+la requirement "El sistema genera instancias recurrentes de forma secuencial" del spec de
+`transactions` —en particular el escenario "Usuario vuelve después de varios meses"—, así que el
+change tiene que escribirla como `## MODIFIED Requirements`, no agregar una nueva al lado.
+
+**2 · El pasado no se reconstruye: se marca.**
+Los meses cerrados afectados quedan señalados como incompletos ("faltan datos de recurrencias en este
+período") en vez de re-proyectarse. Re-proyectar usaría los montos de hoy, perdería las reglas
+retiradas e inventaría las creadas después: sería fabricar un pasado que no ocurrió. Materializar el
+backlog viejo con fechas reales sí repararía el dato, pero mueve saldos y agregados de meses ya
+cerrados, y eso hay que quererlo a propósito.
 
 ---
 
