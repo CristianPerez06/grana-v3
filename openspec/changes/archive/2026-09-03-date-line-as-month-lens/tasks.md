@@ -60,10 +60,10 @@
 ## 8c. Posición del caret en nativo — salió de la verificación
 
 - [x] 8c.1 El caret quedaba pegado al borde derecho de la pantalla en lugar de al lado de la fecha: el contenedor de medición de `FittingText` era `flex-1` y se estiraba a toda la fila. Pasa a `flexShrink: 1`, que además mantiene honesta la medición (la caja es el contenido cuando entra y el ancho apretado cuando no, igual que el `clientWidth` de web).
-- [ ] 8c.2 Confirmar en el dispositivo que el caret quedó junto a la fecha, en los dos estados de la línea.
+- [x] 8c.2 Confirmar en el dispositivo que el caret quedó junto a la fecha, en los dos estados de la línea. *(Verificado por el owner en el iPhone: el caret quedó pegado a la fecha, como en web.)*
 
 ## 9. Cierre
 
 - [x] 9.1 Actualizar los mocks del handoff en `docs/design/dashboard/` para que reflejen el header sin controles y el eye toggle en la card.
 - [x] 9.2 Correr las cinco validaciones locales que espeja CI: `pnpm lint` + `lint:mobile`, `typecheck` + `typecheck:mobile`, `test`, `build`, `openspec:check`.
-- [ ] 9.3 Archivar el change en la rama antes del merge, con las deltas aplicadas a `openspec/specs/dashboard/spec.md` y sin secciones `## ADDED/MODIFIED` sobrantes en el master spec.
+- [x] 9.3 Archivar el change en la rama antes del merge, con las deltas aplicadas a `openspec/specs/dashboard/spec.md` y sin secciones `## ADDED/MODIFIED` sobrantes en el master spec.
