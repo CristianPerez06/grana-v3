@@ -4,18 +4,18 @@
 
 - [ ] 1.1 `0061_card_payment_legs.sql`: drop del `UNIQUE(period_id)` de `period_payments`, índice común sobre `(period_id, created_at)`
 - [ ] 1.2 Columnas `settles_currency` (`ARS`/`USD`), `settles_amount numeric(18,2) > 0`, `fx_rate_to_ars numeric(18,6) > 0`, `payment_group_id uuid not null`, `settlement_known boolean not null default true`
-- [ ] 1.3 CHECK: `settles_currency`/`settles_amount` presentes ⟺ `settlement_known = true`; cruces de moneda como lista cerrada (ARS→ARS y USD→USD sin cotización, ARS→USD con cotización, USD→ARS rechazado)
+- [ ] 1.3 CHECK local (lo que se ve desde la fila): `settles_currency`/`settles_amount` presentes ⟺ `settlement_known = true`, montos positivos, nullability de `fx_rate_to_ars`. Los cruces de moneda NO van acá: exigen leer `transactions.currency_code` (otra tabla) y viven en el trigger de 1.6
 - [ ] 1.3b Índice sobre `(period_id, payment_group_id)` y sobre `(period_id, created_at, id)` para el orden determinístico de reversión
-- [ ] 1.4 Backfill único: `settlement_known = false` en todas las filas existentes (sin backfill de montos — D9)
+- [ ] 1.4 Backfill único: `settlement_known = false` en todas las filas existentes (sin backfill de montos — D9), y `payment_group_id = id` en cada fila, para poder declararla `NOT NULL`
 - [ ] 1.5 `card_periods.minimum_payment_ars` / `minimum_payment_usd`, nullables, sin default
-- [ ] 1.6 `trg_fn_period_payment_coverage`: trigger `BEFORE INSERT` que toma `FOR UPDATE` sobre el `card_periods`, recalcula la cobertura por moneda y rechaza el exceso — el piso vive acá, no en la action (D11)
-- [ ] 1.6b Sin policy de `UPDATE` sobre `period_payments`: una pata es inmutable (D13). Conservar `INSERT`/`DELETE`, que la reversión INVOKER necesita
-- [ ] 1.6c `pay_card_period_legs(...)`, `SECURITY INVOKER`: deuda por moneda → descuento de patas existentes → inserción de transacciones y patas → sello si corresponde → barrido `pending → paid` solo si queda saldado, todo en una transacción (D12). El calendario NO entra
+- [ ] 1.6 `trg_fn_period_payment_coverage`: trigger `BEFORE INSERT` que toma `FOR UPDATE` sobre el `card_periods`, recalcula la cobertura por moneda y rechaza el exceso; valida además el cruce de monedas contra `transactions.currency_code` y la identidad monto = Σ patas (D1, D11)
+- [ ] 1.6b `period_payments` sin policies de escritura: solo `SELECT`. Los dos RPC pasan a `SECURITY DEFINER` con verificación de propiedad adentro, y el self-check de la `0050` que exige INVOKER se actualiza con el motivo escrito (D13)
+- [ ] 1.6c `pay_card_period_legs(...)`, `SECURITY DEFINER`, en este orden exacto (D16): congelar base del sello → insertar sello → recalcular pendiente **con** el sello → validar e insertar transacciones y patas → barrido `pending → paid` solo si queda saldado. Todo en una transacción (D12); el calendario NO entra
 - [ ] 1.6d `revert_card_period_payment(p_period_id, p_group_id default null)`: reversión de todas las patas o del grupo más reciente completo, con el barrido `paid → pending` condicionado a que el resumen estuviera saldado y el borrado del sello atado al grupo que lo registró
 - [ ] 1.7 Guarda cronológica: bloquea si un resumen posterior tiene **cualquier** pata (antes: "está pagado"); mantiene `GRN02` y el `DETAIL` con la fecha
 - [ ] 1.8 Summary del RPC por moneda (`reverted` como lista de `{ amount, currency, account_name }`) en vez del escalar actual
-- [ ] 1.9 Self-check `do $check$`: falla si vuelve el UNIQUE, si falta el CHECK de coherencia, si falta el trigger de cobertura, si existe una policy de UPDATE sobre `period_payments`, o si alguno de los dos RPC deja de ser SECURITY INVOKER
-- [ ] 1.9b Tests PGlite sobre el SQL real: cobertura excedida, dos inserts concurrentes sobre el mismo pendiente, cruce USD→deuda ARS rechazado, UPDATE de una pata rechazado, barrido condicionado, reversión por grupo
+- [ ] 1.9 Self-check `do $check$`: falla si vuelve el UNIQUE, si falta el CHECK de coherencia, si falta el trigger de cobertura, si existe **cualquier** policy de escritura sobre `period_payments`, o si alguno de los dos RPC deja de ser SECURITY DEFINER
+- [ ] 1.9b Tests PGlite sobre el SQL real: cobertura excedida, dos inserts concurrentes sobre el mismo pendiente, cruce USD→deuda ARS rechazado, INSERT/UPDATE/DELETE directos rechazados, monto ≠ Σ patas rechazado, pata que paga el total con sello (orden de D16), barrido condicionado, reversión por grupo
 - [ ] 1.10 Regenerar `packages/supabase/src/types.ts`
 
 ## 2. La regla de cobertura, en un solo lugar (D1, D2, D4, D11)
@@ -46,6 +46,7 @@
 - [ ] 4.3 `fx_rate_to_ars` requerida ⟺ la pata cancela USD con una transacción en ARS; rechazada en el resto de los casos
 - [ ] 4.4 `payCardPeriod`: el calendario sigue en TS y corre **antes**; el dinero se delega entero a `pay_card_period_legs` (D12). Se elimina la cadena de rollbacks manuales
 - [ ] 4.5 Pre-validación de cobertura en la action **solo para UX** (`cards.errors.leg_exceeds_pending`, que dice cuánto resta); la garantía es el trigger (D11)
+- [ ] 4.5b El paso de calendario toma `FOR UPDATE` sobre el período pagado y se saltea entero cuando `hasAnyPayment` es verdadero (D17)
 - [ ] 4.6 Mapeo de los errores del RPC a `messageKey`s neutrales, incluida la colisión de cobertura por concurrencia
 - [ ] 4.7 Sello y confirmación de fechas solo cuando `hasAnyPayment` es falso
 - [ ] 4.8 Verificación de que cada cuenta de pago tenga activa la moneda de su transacción, y que no sea de tipo `credit`
@@ -76,13 +77,13 @@
 - [ ] 7.1 `apps/mobile/components/cards/PayCardPeriodForm.tsx`: bloques de pesos y dólares, atajos, avisos
 - [ ] 7.2 Pantalla de pago nativa: cuentas elegibles por moneda (ARS y USD), con sus saldos
 - [ ] 7.3 Detalle de período y de movimiento nativos, con remanente y patas
-- [ ] 7.4 Deshacer pago nativo: deshacer todo o solo la última pata
+- [ ] 7.4 Deshacer pago nativo: deshacer todos los pagos o solo el último grupo de pago
 
 ## 8. Cierre
 
 - [ ] 8.1 QA manual del caso que originó la change: resumen vencido con consumos ARS + USD, pagado en dos monedas
 - [ ] 8.2 QA manual del pago mínimo: parcial, remanente visible, mora sobre el remanente, saldo posterior
-- [ ] 8.3 QA manual de reversión: última pata, todas las patas, bloqueo por resumen posterior con pagos
+- [ ] 8.3 QA manual de reversión: último grupo de pago (incluido uno de dos monedas, que revierte sus dos patas), todos los pagos, bloqueo por resumen posterior con pagos
 - [ ] 8.4 Verificar que un pago anterior a esta change se sigue leyendo como resumen saldado
 - [ ] 8.5 QA del as-of: parado en un mes pasado, un resumen con pago mínimo previo al corte cuenta por su remanente
 - [ ] 8.6 Verificar que pagar un resumen mixto no rompe ninguna pantalla que lea patas (detalle de resumen, detalle de movimiento, listado)

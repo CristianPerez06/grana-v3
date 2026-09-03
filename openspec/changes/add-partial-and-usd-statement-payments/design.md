@@ -49,6 +49,26 @@ cruces que no queremos):
 Pagar deuda en pesos con dólares no es un pago: es un canje, y Grana ya tiene el movimiento
 `exchange` para eso. Habilitarlo acá sería esconder una conversión dentro de un pago de tarjeta.
 
+**Esa tabla NO se puede validar con un `CHECK`.** Decidir el cruce exige leer
+`transactions.currency_code`, que vive en otra tabla, y un `CHECK` no cruza tablas. El `CHECK` local
+cubre lo que se ve desde la fila —nullability, `settlement_known`, montos positivos—; el cruce lo
+valida el trigger de D11.
+
+**Una transacción PUEDE tener más de una pata, y `transaction_id` NO es único.** Es deliberado y
+resuelve el caso que ya existe hoy: pagar todo en pesos un resumen mixto es **un solo débito
+bancario**, que cancela deuda en pesos y deuda en dólares pesificada. Con `UNIQUE(transaction_id)`
+ese pago tendría que partirse en dos gastos en ARS y el usuario vería dos filas donde el banco le
+muestra una. Al revés funciona: un gasto, dos patas, y el detalle del movimiento muestra la
+imputación por moneda.
+
+De ahí sale una identidad que hoy no existe: **el monto de la transacción es igual a la suma de sus
+patas, expresadas en su moneda** (una pata que pesifica aporta `settles_amount × fx_rate_to_ars`).
+Hoy el "monto a pagar" es un campo libre que puede no coincidir con nada: se sugiere el total y el
+usuario puede editarlo a un número que no corresponde a ninguna deuda. Con patas, el monto pasa a
+estar **derivado** de lo que se declara cancelar, que es lo que lo vuelve auditable. Pagar de menos
+sigue siendo posible —es una pata más chica—; pagar de más no, porque el piso de D11 rechaza una
+pata mayor que el pendiente.
+
 La alternativa a declarar la imputación era guardar solo el gasto y deducir qué canceló. No se puede
 sin inventar una regla: con un resumen que debe $100.000 y US$ 200, un pago de $150.000 podría estar
 cancelando todos los pesos y parte de los dólares, o pesos de más contra un saldo a favor. Cualquier
@@ -194,6 +214,10 @@ total, que es exactamente lo que era.
 
 Un CHECK exige que `settles_currency` y `settles_amount` estén presentes ⟺ `settlement_known=true`.
 
+`payment_group_id` nace `NOT NULL`, así que las filas viejas necesitan uno: se backfillea
+determinísticamente con `payment_group_id = id`. Cada pago legacy es su propio grupo de una sola
+pata, que es exactamente lo que era.
+
 Backfillear los montos sería adivinar: en un pago viejo de un resumen mixto, cuánto de esa expensa en
 pesos canceló dólares depende de una cotización que se guardó en la transacción solo a veces. El
 precedente es `stamp_tax_link_known` (migración `0050`), por la misma razón y con el mismo resultado:
@@ -236,7 +260,7 @@ path. La lectura sigue mostrando lo que hay.
 
 ## D12 — El dinero se escribe en un RPC atómico; el calendario queda afuera
 
-`pay_card_period_legs(...)`, `SECURITY INVOKER` como la reversión de la `0050`, hace en una sola
+`pay_card_period_legs(...)`, `SECURITY DEFINER` con verificación de propiedad adentro (D13), hace en una sola
 transacción: bloquea el `card_periods`, calcula la deuda por moneda, resta las patas existentes,
 inserta las transacciones y sus patas, inserta el sello si corresponde, y barre `pending → paid`
 **solo** si queda `settled`.
@@ -251,18 +275,28 @@ documentado en el código y en el encabezado de la `0050`, y la reversión respe
 asimetría. Meterlos en la transacción del dinero haría que un error de monto revierta fechas
 confirmadas — perderíamos una decisión ya tomada. El calendario sigue en TS, antes del RPC.
 
-## D13 — Una pata es inmutable
+## D13 — `period_payments` no se escribe directo: ni UPDATE, ni INSERT, ni DELETE
 
-Sin policy de `UPDATE` sobre `period_payments`: una pata se revierte y se vuelve a crear, no se
-edita.
+Una pata no se modifica: corregir un pago es deshacerlo y volver a registrarlo, que es lo que la UI
+ya ofrece. Pero **quitar solo la policy de `UPDATE` deja la puerta de al lado abierta** (ajuste de
+la revisión): con `DELETE` directo, un cliente REST borra la pata sin borrar su transacción, y queda
+un gasto huérfano que deja de figurar como pago de tarjeta — encima liberando el FK `RESTRICT` que
+es justamente lo que hoy impide borrar un pago desde el detalle del movimiento. La deuda del resumen
+reaparece y la plata ya salió.
 
-Es gratis y elimina una clase entera de bypass. Un `UPDATE` directo sobre `settles_amount` esquiva
-el trigger de D11 tan fácil como un INSERT, y no existe ningún caso de uso: corregir un pago es
-deshacerlo y volver a cargarlo, que es lo que la UI ya ofrece.
+Así que `period_payments` queda **sin policies de escritura**: solo `SELECT`. Las dos operaciones
+legítimas —registrar un pago y deshacerlo— pasan por sus RPC, que se vuelven `SECURITY DEFINER` con
+verificación explícita de propiedad adentro.
 
-Las policies de `INSERT` y `DELETE` se conservan (la reversión es INVOKER y necesita borrar), con el
-trigger de D11 sosteniendo el invariante en las dos.
+Es un cambio respecto de la `0050`, que hizo la reversión `SECURITY INVOKER` a propósito y tiene un
+self-check que falla si deja de serlo. El motivo de ese INVOKER era no darle a la función más
+permisos que al usuario; acá el objetivo es el opuesto y deliberado: la función tiene que poder algo
+que el usuario directo **no** debe poder. El precedente está en el repo: `reverse_settlement`
+(`0023:329`) es `SECURITY DEFINER` por exactamente esta razón. El self-check de la `0050` se
+actualiza en la misma migración, con el motivo escrito.
 
+El trigger de cobertura de D11 **se conserva igual**, aunque ya no haya escritura directa: protege
+contra un RPC con un bug, que es el escenario que queda. Defensa en profundidad, no redundancia.
 ## D14 — El as-of del dashboard se computa por cobertura, no por existencia
 
 `getCommittedOutlook` (`dashboard/queries.ts:714`) arma hoy un `Set` de `period_id` "pagados al
@@ -283,3 +317,37 @@ Hay seis `.maybeSingle()` sobre `period_payments` en el código actual (`pay-car
 Con dos patas, la pantalla de detalle del resumen se rompe. No es un detalle de implementación que se
 pueda dejar al que escriba el código: es un cambio de contrato de lectura que hay que barrer
 completo, y por eso queda asentado acá.
+
+## D16 — Dentro del RPC, el sello se inserta ANTES de las patas
+
+El sello es un consumo del resumen y **sube la deuda en pesos** (D5). El trigger de cobertura de D11
+valida cada pata contra el pendiente del momento. Si las patas se insertaran primero, una pata que
+paga el total —sello incluido, que es lo que la UI sugiere— sería rechazada por exceder un pendiente
+calculado sin el sello (ajuste de la revisión).
+
+El orden dentro de `pay_card_period_legs` es, entonces: congelar la base del sello (que sigue siendo
+el total ARS **previo** al sello, para que no se incluya en su propia base) → insertar el sello →
+recalcular el pendiente **con** el sello → validar e insertar las patas → barrer si queda saldado.
+
+Los dos "antes" son distintos y no se contradicen: la **base de la alícuota** se congela antes del
+sello, la **cobertura** se calcula después. Confundirlos da un sello que se cobra a sí mismo, o una
+pata que no puede pagar el resumen completo.
+
+## D17 — La carrera de dos primeros pagos concurrentes: acotada y declarada
+
+Con el calendario fuera del RPC (D12), dos "primeros pagos" simultáneos podrían confirmar fechas
+distintas para el ciclo en curso, y uno podría fallar en el dinero dejando igual sus fechas
+aplicadas (planteo de la revisión).
+
+Mitigación, barata: el paso de calendario toma el mismo `FOR UPDATE` sobre el `card_periods` que se
+está pagando, y **se saltea entero cuando `hasAnyPayment` ya es verdadero**. Con eso el segundo
+pedido, si el primero completó, se comporta como lo que es —una pata siguiente— y no toca fechas ni
+sello.
+
+**KNOWN GAP declarado:** entre el commit del calendario y el arranque del RPC de dinero queda una
+ventana en la que un segundo pedido todavía ve `hasAnyPayment` falso. No se cierra en esta change.
+El motivo es de proporción: el escenario exige que la misma persona confirme dos primeros pagos del
+mismo resumen desde dos dispositivos dentro de esa ventana; el daño es que quedan aplicadas las
+fechas de la confirmación perdedora, que son datos que el usuario mismo tipeó y que la pantalla de
+editar fechas corrige. El dinero, que es lo que no se puede corregir a mano, queda protegido por el
+trigger de D11 en todos los casos.

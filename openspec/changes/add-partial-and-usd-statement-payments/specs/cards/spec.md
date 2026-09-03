@@ -29,6 +29,11 @@ NO SHALL depender de una validación previa en la aplicación: la app MAY pre-va
 mensaje mejor, pero la garantía es de la base. Las lecturas NO SHALL recortar (`clamp`) ningún saldo
 para compensar.
 
+Una transacción de pago SHALL poder tener **más de una pata**: un único débito bancario puede
+cancelar deuda en pesos y deuda en dólares pesificada a la vez, y el sistema NO SHALL partirlo en
+varios gastos para representarlo. El monto de la transacción SHALL ser igual a la suma de sus patas
+expresadas en su moneda, computando una pata pesificada como `settles_amount × fx_rate_to_ars`.
+
 Toda lectura de las patas de un resumen SHALL contemplar **varias filas**. El sistema NO SHALL leer
 las patas de un período con una lectura de fila única.
 
@@ -257,20 +262,30 @@ monto degradaría períodos ya confirmados.
 
 ---
 
-### Requirement: Una pata de pago es inmutable
+### Requirement: Las patas de pago no se escriben directamente
 
-El sistema NO SHALL permitir modificar una pata de pago ya registrada. Corregir un pago SHALL
-hacerse deshaciéndolo y volviéndolo a registrar.
+El sistema NO SHALL permitir crear, modificar ni borrar una pata de pago por fuera de las
+operaciones de registrar un pago y deshacerlo. Corregir un pago SHALL hacerse deshaciéndolo y
+volviéndolo a registrar.
 
-La inmutabilidad SHALL sostenerse a nivel de base de datos, no solo en la aplicación: un `UPDATE`
-directo sobre el monto imputado de una pata esquivaría el piso de cobertura con la misma facilidad
-que un alta, y no existe ningún caso de uso que lo requiera.
+La restricción SHALL sostenerse a nivel de base de datos, no solo en la aplicación. Las tres
+escrituras rompen el modelo de maneras distintas y ninguna tiene caso de uso: un alta directa saltea
+la atomicidad, una modificación del monto imputado esquiva el piso de cobertura, y un borrado
+directo deja la transacción de pago **huérfana** —un gasto que ya no figura como pago de tarjeta,
+que libera la protección contra su propio borrado, y que reabre la deuda del resumen aunque la plata
+ya haya salido.
 
 #### Scenario: Modificar el monto imputado de una pata se rechaza
 
 - **WHEN** se intenta modificar el `settles_amount` de una pata ya registrada
 - **THEN** la base rechaza la operación
 - **AND** el saldo del resumen queda sin cambios
+
+#### Scenario: Borrar una pata sin deshacer el pago se rechaza
+
+- **WHEN** se intenta borrar directamente la fila de una pata de pago
+- **THEN** la base rechaza la operación
+- **AND** la transacción de pago sigue figurando como pago de resumen, protegida contra su borrado
 
 ---
 

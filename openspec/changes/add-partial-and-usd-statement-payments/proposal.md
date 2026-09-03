@@ -35,6 +35,13 @@ declara qué deuda cancela.
   mata un doble pago concurrente, así que `Σ patas ≤ pendiente` pasa a un trigger que serializa sobre
   el período, y la escritura del dinero a un RPC atómico. El calendario queda deliberadamente afuera
   de esa transacción.
+- **`period_payments` deja de escribirse directo**: solo `SELECT`. Registrar un pago y deshacerlo
+  pasan por sus RPC, que se vuelven `SECURITY DEFINER` con verificación de propiedad adentro. Un
+  `DELETE` directo dejaba la transacción de pago huérfana y reabría la deuda con la plata ya afuera.
+- **Un mismo gasto puede tener varias patas.** Pagar todo en pesos un resumen mixto sigue siendo un
+  único débito, ahora con dos imputaciones. De ahí sale una identidad que hoy no existe: el monto de
+  la transacción es la suma de sus patas, así que el "monto a pagar" deja de ser un campo libre que
+  puede no corresponder a ninguna deuda.
 - **El saldo del resumen se deriva de las patas**, no de su existencia:
   `pendiente = consumos − reintegros − Σ patas`, por moneda. `paid` pasa a significar **saldado**;
   aparece un estado **parcial** que el calendario sigue tratando como impago (un parcial vencido
