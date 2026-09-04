@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Undo2 } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
@@ -18,15 +18,15 @@ const formatDate = (iso: string) => {
 
 type Props = {
   params: Promise<{ id: string; periodId: string }>
-  // `?pagado=1` lo pone el formulario de pago al terminar: esta pantalla es el acuse
-  // de la anterior, y tiene que DECIR que el pago se registró, no solo mostrar un
-  // estado consistente.
-  searchParams: Promise<{ pagado?: string }>
+  // `?pagado=1` lo pone el formulario de pago al terminar y `?deshecho=1` la
+  // reversión: esta pantalla es el acuse de la operación anterior, y tiene que DECIR
+  // qué pasó, no solo mostrar un estado consistente.
+  searchParams: Promise<{ pagado?: string; deshecho?: string; sello?: string }>
 }
 
 const PeriodDetailPage = async ({ params, searchParams }: Props) => {
   const { id, periodId } = await params
-  const { pagado } = await searchParams
+  const { pagado, deshecho, sello } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -83,6 +83,9 @@ const PeriodDetailPage = async ({ params, searchParams }: Props) => {
   })()
 
   const justPaid = pagado === '1' && period.has_payment
+  // El resumen ya no tiene pago: la reversión terminó. La condición es la inversa de
+  // la del acuse de pago, así que los dos avisos nunca pueden convivir.
+  const justReverted = deshecho === '1' && !period.has_payment
 
   return (
     <>
@@ -90,6 +93,20 @@ const PeriodDetailPage = async ({ params, searchParams }: Props) => {
         <div className="flex items-start gap-2.5 rounded-[13px] border border-emerald/30 bg-emerald-soft px-4 py-3 text-sm text-emerald-deep">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
           <span>{t('period.just_paid')}</span>
+        </div>
+      )}
+
+      {justReverted && (
+        <div className="flex flex-col gap-1.5 rounded-[13px] border border-border bg-card px-4 py-3 text-sm text-text-muted">
+          <div className="flex items-start gap-2.5">
+            <Undo2 className="mt-0.5 size-4 shrink-0 text-slate" aria-hidden />
+            <span>{t('period.just_reverted')}</span>
+          </div>
+          {/* El sello ambiguo es lo único que la reversión NO pudo terminar: quedó un
+              movimiento en pie y hay que decirlo acá, que es donde se lo ve. */}
+          {sello === 'ambiguo' && (
+            <p className="pl-[26px] text-[13px]">{t('revert.stamp_tax_ambiguous')}</p>
+          )}
         </div>
       )}
 

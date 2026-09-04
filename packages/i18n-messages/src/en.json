@@ -716,6 +716,7 @@
       "of_connector": "of"
     },
     "period": {
+      "just_reverted": "Done — the payment is undone and the statement is unpaid again.",
       "just_paid": "Done — this statement's payment is recorded.",
       "detail_title": "Statement",
       "future": "Future",

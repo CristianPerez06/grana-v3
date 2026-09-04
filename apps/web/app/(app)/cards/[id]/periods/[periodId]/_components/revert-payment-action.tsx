@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { Undo2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
@@ -46,9 +46,9 @@ export const RevertPaymentAction = ({
   const t = useTranslations('cards')
   const tCommon = useTranslations('common')
   const router = useRouter()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const handleRevert = () => {
@@ -60,11 +60,15 @@ export const RevertPaymentAction = ({
         return
       }
       setOpen(false)
-      // Legacy payment whose sello could not be told apart from a hand-entered one:
-      // the reversal completed, but a movement stayed behind and the user must know.
-      if (result.summary?.stampTax === 'ambiguous') {
-        setNotice(t('revert.stamp_tax_ambiguous'))
-      }
+      // El acuse va en la URL y NO en un estado de este componente: al refrescar, el
+      // resumen deja de tener pago y este botón —con todo lo que colgara de él— se
+      // desmonta. Un aviso guardado acá desaparecía junto con el botón, incluido el
+      // del sello ambiguo, que es justo el que hay que leer sí o sí.
+      const params = new URLSearchParams({ deshecho: '1' })
+      // Pago viejo cuyo sello no se puede distinguir de uno cargado a mano: la
+      // reversión terminó, pero quedó un movimiento y el usuario tiene que saberlo.
+      if (result.summary?.stampTax === 'ambiguous') params.set('sello', 'ambiguo')
+      router.replace(`${pathname}?${params.toString()}`)
       router.refresh()
     })
   }
@@ -79,12 +83,6 @@ export const RevertPaymentAction = ({
         <Undo2 size={15} strokeWidth={2} aria-hidden />
         {t('actions.revert_payment')}
       </button>
-
-      {notice && (
-        <p className="rounded-[12px] border border-border bg-card px-3 py-2 text-[13px] text-text-muted">
-          {notice}
-        </p>
-      )}
 
       <AlertDialog.Root open={open} onOpenChange={setOpen}>
         <AlertDialog.Portal>

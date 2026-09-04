@@ -716,6 +716,7 @@
       "of_connector": "de"
     },
     "period": {
+      "just_reverted": "Listo, deshicimos el pago. El resumen volvió a quedar impago.",
       "just_paid": "Listo, registramos el pago de este resumen.",
       "detail_title": "Resumen",
       "future": "Futuro",
