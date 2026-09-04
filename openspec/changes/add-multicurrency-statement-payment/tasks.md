@@ -84,6 +84,12 @@
 > orden que evite una ventana con el pago de resumen caído: solo se puede hacerla corta y
 > elegida. El resto de la app no se ve afectado.
 
+> **El PR no se mergea hasta que este bloque esté cerrado, incluido el archive.**
+> `AGENTS.md` § "OpenSpec — workflow obligatorio" es explícito: el archive va **en la
+> rama, antes del merge a `main`**, y *"Do not defer the archive to a follow-up PR"*.
+> Como el QA depende de la migración aplicada, el orden es: validar → QA → archivar →
+> mergear. No al revés.
+
 **Validación (sin apuro):**
 
 - [ ] 9.1 Aplicar `0061` en un proyecto que NO sea producción. El repo **no documenta
@@ -94,6 +100,13 @@
       si aparece, se arregla con calma
 - [ ] 9.3 QA de los cuatro recorridos + reversión de los dos pagos mixtos (web; mobile no
       tiene ese flujo)
+
+**Cierre del change (en esta misma rama, antes del merge):**
+
+- [ ] 9.3b Archivar el change: mover a `openspec/changes/archive/YYYY-MM-DD-add-multicurrency-statement-payment/`
+- [ ] 9.3c Aplicar los deltas a `openspec/specs/cards/spec.md` — no pueden quedar
+      secciones `## ADDED/MODIFIED Requirements` en el master spec
+- [ ] 9.3d `pnpm openspec:check` final en verde, y las casillas de OpenSpec del PR tildadas
 
 **Ventana de producción (corta y coordinada):**
 
