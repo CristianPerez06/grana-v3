@@ -470,6 +470,39 @@ export function aggregateCardDebtAsOf(rows: CardDebtRow[]): Record<OutlookCurren
   }
 }
 
+/** Un débito del pago de un resumen, con la fecha en que la plata salió. */
+export type StatementDebitAtSnapshot = {
+  period_id: string
+  /** Fecha financiera del débito. `null` = ilegible; se lee como pagado (conservador). */
+  date: string | null
+}
+
+/**
+ * Qué resúmenes estaban SALDADOS a la fecha del corte.
+ *
+ * Un resumen se paga con un débito por moneda, y esos débitos pueden llevar fechas
+ * distintas: si los pesos salieron el 5 y los dólares el 20, a un corte del 10 ese
+ * resumen **todavía se debía**. Por eso la condición es sobre TODOS sus débitos, no
+ * sobre alguno — preguntarlo fila por fila lo sacaba de los compromisos por el primero.
+ *
+ * Bajo pago total hay un solo grupo de pago por resumen, así que "todos los débitos del
+ * resumen" y "todos los del grupo" son el mismo conjunto. Con pagos parciales esto deja
+ * de alcanzar: ahí la pregunta pasa a ser de cobertura, no de fechas.
+ *
+ * Pura: mismo input, mismo output.
+ */
+export function derivePaidAtSnapshot(
+  debits: StatementDebitAtSnapshot[],
+  snapshotDate: string,
+): Set<string> {
+  const byPeriod = new Map<string, boolean>()
+  for (const d of debits) {
+    const settledAtCut = d.date == null || d.date <= snapshotDate
+    byPeriod.set(d.period_id, (byPeriod.get(d.period_id) ?? true) && settledAtCut)
+  }
+  return new Set([...byPeriod.entries()].filter(([, all]) => all).map(([id]) => id))
+}
+
 /** Minimal card identity the by-card aggregation needs to label its rows. */
 export type CommittedCardMeta = {
   id: string

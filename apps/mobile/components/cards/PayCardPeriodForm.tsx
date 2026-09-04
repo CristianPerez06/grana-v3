@@ -9,7 +9,7 @@ import {
   checkNegativeBalance,
 } from '@grana/money-logic'
 import { Money, parseMoneyInput } from '@grana/validation'
-import { formatARS } from '@grana/i18n-messages'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { getTodayAR, formatDateISO } from '../../lib/date'
 import { payCardPeriod } from '../../lib/cards/mutations'
 import { useShowCents } from '../../lib/preferences-context'
@@ -25,7 +25,8 @@ export type PaymentAccount = {
   id: string
   name: string
   subtitle: string | null
-  balanceARS: number
+  /** Saldo disponible en la moneda del débito. */
+  balance: number
 }
 
 type Props = {
@@ -43,6 +44,9 @@ type Props = {
   /** Alícuota de sellos recordada; null = primera vez (se pregunta). */
   stampTaxRate: number | null
   paymentAccounts: PaymentAccount[]
+  /** Cuentas con USD activo: la deuda en dólares se puede cancelar CON dólares. */
+  usdAccounts: PaymentAccount[]
+  defaultUsdAccountId: string
   /** Preselected debit account — the card's own bank when available. */
   defaultPaymentAccountId: string
 }
@@ -67,6 +71,8 @@ export function PayCardPeriodForm({
   stampTaxRate,
   paymentAccounts,
   defaultPaymentAccountId,
+  usdAccounts,
+  defaultUsdAccountId,
 }: Props) {
   const t = useT()
   const router = useRouter()
@@ -90,44 +96,39 @@ export function PayCardPeriodForm({
 
   const sumARS = (a: number, b: number) => Money.toNumber(Money.add(Money.from(a), Money.from(b)))
 
-  const consumosBase = (fx: number | null): number | null =>
-    hasUsdDebt ? computeStatementPaymentTotal(pendingAmountARS, pendingAmountUSD, fx) : pendingAmountARS
-
   const [stampTax, setStampTax] = useState(initialStamp > 0 ? String(initialStamp) : '')
-  const [amount, setAmount] = useState(String(sumARS(pendingAmountARS, initialStamp)))
   const [fxRate, setFxRate] = useState('')
   const [paymentAccountId, setPaymentAccountId] = useState(
     defaultPaymentAccountId || paymentAccounts[0]?.id || '',
   )
+  // Espejo del web: los dólares se cancelan CON dólares por defecto cuando hay cuenta.
+  const [payUsdInUsd, setPayUsdInUsd] = useState(hasUsdDebt && usdAccounts.length > 0)
+  const [usdAccountId, setUsdAccountId] = useState(defaultUsdAccountId)
+  const [usdAccountSheet, setUsdAccountSheet] = useState(false)
   const [paymentDate, setPaymentDate] = useState(formatDateISO(getTodayAR()))
   const [nextEndDate, setNextEndDate] = useState(runningEndDate)
   const [nextDueDate, setNextDueDate] = useState(runningDueDate)
 
   const parsedFx = fxRate ? parseMoneyInput(fxRate, { decimalPlaces: 6 }) : null
   const parsedStamp = parseMoneyInput(stampTax) ?? 0
-  const computedTotal = hasUsdDebt
+  /** ¿La porción en dólares se pesifica? Solo entonces hace falta la cotización. */
+  const pesifyUsd = hasUsdDebt && !payUsdInUsd
+  const computedTotal = pesifyUsd
     ? computeStatementPaymentTotal(pendingAmountARS, pendingAmountUSD, parsedFx)
     : null
   const usdConvertedARS =
-    computedTotal !== null && hasUsdDebt
-      ? Math.round((computedTotal - pendingAmountARS) * 100) / 100
+    computedTotal !== null ? Math.round((computedTotal - pendingAmountARS) * 100) / 100 : null
+
+  // Los montos de los débitos son DERIVADOS de lo que se cancela, no estado editable.
+  const arsToSettle = sumARS(pendingAmountARS, parsedStamp)
+  const arsDebit = pesifyUsd
+    ? usdConvertedARS !== null
+      ? sumARS(arsToSettle, usdConvertedARS)
       : null
-  const suggestedConsumos = consumosBase(parsedFx)
-  const suggestedTotal = suggestedConsumos !== null ? sumARS(suggestedConsumos, parsedStamp) : null
+    : arsToSettle
+  const suggestedTotal = arsDebit
 
-  const recomputeAmount = (fx: number | null, stamp: number) => {
-    const base = consumosBase(fx)
-    if (base !== null) setAmount(String(sumARS(base, stamp)))
-  }
-
-  const handleFxChange = (value: string) => {
-    setFxRate(value)
-    recomputeAmount(value ? parseMoneyInput(value, { decimalPlaces: 6 }) : null, parsedStamp)
-  }
-  const handleStampChange = (value: string) => {
-    setStampTax(value)
-    recomputeAmount(parsedFx, parseMoneyInput(value) ?? 0)
-  }
+  const handleStampChange = (value: string) => setStampTax(value)
 
   // Chips de monto (sin mostrar el %): cada alícuota común aplicada a la base + el
   // monto aprendido/sugerido, deduplicados.
@@ -141,18 +142,51 @@ export function PayCardPeriodForm({
   ).sort((a, b) => b - a)
 
   const selectedAccount = paymentAccounts.find((a) => a.id === paymentAccountId)
-  const parsedPaymentAmount = parseMoneyInput(amount)
+  const selectedUsdAccount = usdAccounts.find((a) => a.id === usdAccountId)
+  // El aviso corre por moneda, contra la cuenta de cada débito: los saldos nunca se
+  // comparan entre monedas.
+  const usdNegativeWarning =
+    payUsdInUsd && selectedUsdAccount && pendingAmountUSD > 0
+      ? checkNegativeBalance(selectedUsdAccount.balance, pendingAmountUSD)
+      : null
+  /**
+   * Los débitos reales de la operación, uno por moneda y sin sumarse nunca. Pagando los
+   * dólares con dólares son dos —o uno solo en dólares, si el resumen no debe pesos ni
+   * hubo sello—. Pesificando hay un único débito en pesos.
+   */
+  const debitRows =
+    payUsdInUsd && pendingAmountUSD > 0
+      ? [
+          ...(arsToSettle > 0
+            ? [
+                {
+                  key: 'ars',
+                  account: selectedAccount?.name ?? null,
+                  value: arsDebit !== null ? fmtARS(arsDebit) : '—',
+                },
+              ]
+            : []),
+          {
+            key: 'usd',
+            account: selectedUsdAccount?.name ?? null,
+            value: formatUSD(pendingAmountUSD, showCents),
+          },
+        ]
+      : null
+  const parsedPaymentAmount = arsDebit
   const negativeWarning =
     selectedAccount && parsedPaymentAmount !== null && parsedPaymentAmount > 0
-      ? checkNegativeBalance(selectedAccount.balanceARS, parsedPaymentAmount)
+      ? checkNegativeBalance(selectedAccount.balance, parsedPaymentAmount)
       : null
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    const parsedAmount = parseMoneyInput(amount)
-    if (parsedAmount === null || parsedAmount <= 0) errs.amount = t('cards.errors.limit_invalid')
-    if (hasUsdDebt && (parsedFx === null || parsedFx <= 0)) errs.fxRate = t('cards.errors.fx_required')
-    if (!paymentAccountId) errs.paymentAccountId = t('cards.errors.account_required')
+    // La cotización se exige SOLO al pesificar: pagar dólares con dólares no convierte.
+    if (pesifyUsd && (parsedFx === null || parsedFx <= 0)) errs.fxRate = t('cards.errors.fx_required')
+    if (payUsdInUsd && !usdAccountId) errs.usdAccountId = t('cards.errors.account_required')
+    if (arsToSettle > 0 && !paymentAccountId) {
+      errs.paymentAccountId = t('cards.errors.account_required')
+    }
     if (!paymentDate) errs.paymentDate = t('common.required_short')
     if (!nextEndDate) errs.nextEndDate = t('common.required_short')
     if (!nextDueDate) errs.nextDueDate = t('common.required_short')
@@ -172,40 +206,119 @@ export function PayCardPeriodForm({
     setFormError(null)
     if (!validate()) return
     setSubmitting(true)
+    // Espejo exacto del web: un pago = UN débito real, con lo que ese débito cancela.
+    // Dólares con dólares → dos débitos. Dólares pesificados → uno, con dos imputaciones.
+    const payments = [
+      ...(arsToSettle > 0
+        ? [
+            {
+              payment_account_id: paymentAccountId,
+              payment_date: paymentDate,
+              allocations: [
+                { settles_currency: 'ARS' as const, settles_amount: arsToSettle },
+                ...(pesifyUsd && parsedFx !== null && parsedFx > 0
+                  ? [
+                      {
+                        settles_currency: 'USD' as const,
+                        settles_amount: pendingAmountUSD,
+                        fx_rate_to_ars: parsedFx,
+                      },
+                    ]
+                  : []),
+              ],
+            },
+          ]
+        : []),
+      ...(payUsdInUsd && pendingAmountUSD > 0
+        ? [
+            {
+              payment_account_id: usdAccountId,
+              payment_date: paymentDate,
+              allocations: [
+                { settles_currency: 'USD' as const, settles_amount: pendingAmountUSD },
+              ],
+            },
+          ]
+        : []),
+    ]
+
     const result = await payCardPeriod(queryClient, {
       period_id: periodId,
-      amount: parseMoneyInput(amount) ?? 0,
-      payment_account_id: paymentAccountId,
-      payment_date: paymentDate,
+      payments,
       next_end_date: nextEndDate,
       next_due_date: nextDueDate,
-      stamp_tax_amount: parseMoneyInput(stampTax) ?? 0,
-      ...(hasUsdDebt && parsedFx !== null && parsedFx > 0 ? { fx_rate_to_ars: parsedFx } : {}),
+      stamp_tax_amount: parsedStamp,
     })
     setSubmitting(false)
     if (!result.ok) {
       setFormError(t(result.errorKey))
       return
     }
-    router.replace({ pathname: '/(app)/cards/[id]', params: { id: cardId } })
+    // El acuse ES la pantalla siguiente: la del resumen recién pagado, que dice qué se
+    // debitó de cada cuenta. Aterrizar en la tarjeta mostraba el ciclo EN CURSO, vacío
+    // y en cero, sin decir qué pasó.
+    router.replace({
+      pathname: '/(app)/cards/[id]/periods/[periodId]',
+      params: { id: cardId, periodId, pagado: '1' },
+    })
   }
 
   return (
-    <View className="flex-col gap-5">
+    <View className="flex-col gap-4">
       {/* Section 1: Payment data */}
-      <View className="flex-col gap-5 rounded-2xl border border-border bg-card p-5">
+      <View className="flex-col gap-4 rounded-2xl border border-border bg-card p-5">
         <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
           {t('cards.payment.section_payment_data')}
         </Text>
 
-        {/* FX (solo USD) */}
+        {/* Porción en dólares: primero CÓMO se paga. La cotización aparece solo si se
+            pesifica — pagar dólares con dólares no convierte nada. */}
         {hasUsdDebt && (
+          <View className="flex-col gap-2.5">
+            <Label>{t('cards.payment.usd_mode_label')}</Label>
+            <View className="flex-row flex-wrap gap-2">
+              <Pressable
+                onPress={() => usdAccounts.length > 0 && setPayUsdInUsd(true)}
+                className={`rounded-full border px-3 py-1.5 ${
+                  payUsdInUsd ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
+                } ${usdAccounts.length === 0 ? 'opacity-40' : ''}`}
+              >
+                <Text
+                  className={`text-sm font-semibold ${
+                    payUsdInUsd ? 'text-emerald-deep' : 'text-text-muted'
+                  }`}
+                >
+                  {t('cards.payment.usd_mode_in_usd')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setPayUsdInUsd(false)}
+                className={`rounded-full border px-3 py-1.5 ${
+                  !payUsdInUsd ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
+                }`}
+              >
+                <Text
+                  className={`text-sm font-semibold ${
+                    !payUsdInUsd ? 'text-emerald-deep' : 'text-text-muted'
+                  }`}
+                >
+                  {t('cards.payment.usd_mode_in_ars')}
+                </Text>
+              </Pressable>
+            </View>
+            {usdAccounts.length === 0 && (
+              <Text className="text-xs text-text-muted">{t('cards.payment.usd_no_account')}</Text>
+            )}
+          </View>
+        )}
+
+        {pesifyUsd && (
           <View className="flex-col gap-1.5">
             <Label>{t('cards.payment.fx_label')}</Label>
             <Text className="text-xs text-text-muted">{t('cards.payment.fx_helper')}</Text>
             <MoneyAmountInput
               value={fxRate}
-              onChangeText={handleFxChange}
+              onChangeText={setFxRate}
               placeholder={t('cards.payment.fx_placeholder')}
               invalid={Boolean(errors.fxRate)}
             />
@@ -279,14 +392,121 @@ export function PayCardPeriodForm({
           />
         </View>
 
+        <View className="h-px bg-border" />
+
+        {/* Cuenta de débito */}
+        {arsToSettle > 0 && (
+          <View className="flex-col gap-1.5">
+            <Label>{t('cards.labels.debit_account')}</Label>
+            <Pressable
+              onPress={() => setAccountSheet(true)}
+              className={`h-11 flex-row items-center justify-between rounded-lg border bg-card px-3 ${
+                errors.paymentAccountId ? 'border-error' : 'border-border'
+              }`}
+            >
+              <Text className={`text-sm ${selectedAccount ? 'text-text' : 'text-text-soft'}`}>
+                {selectedAccount ? selectedAccount.name : t('cards.errors.account_required')}
+              </Text>
+              {selectedAccount && (
+                <Text className="text-xs tabular-nums text-text-muted">
+                  {fmtARS(selectedAccount.balance)}
+                </Text>
+              )}
+            </Pressable>
+            {errors.paymentAccountId && (
+              <Text className="text-xs text-error">{errors.paymentAccountId}</Text>
+            )}
+            {negativeWarning?.negative && (
+              <Text className="text-xs text-warning-deep">
+                {t('transactions.form.negative_warning', {
+                  amount: `ARS ${negativeWarning.projected.toLocaleString('es-AR')}`,
+                })}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Cuenta en dólares: al lado de la de pesos, porque son las dos patas de
+            la misma decisión. Separadas, la pantalla pedía cuentas en dos momentos
+            distintos. */}
+        {payUsdInUsd && (
+          <View className="flex-col gap-1.5">
+            <Label>{t('cards.payment.usd_account_label')}</Label>
+            <Pressable
+              onPress={() => setUsdAccountSheet(true)}
+              className={`h-11 flex-row items-center justify-between rounded-lg border bg-card px-3 ${
+                errors.usdAccountId ? 'border-error' : 'border-border'
+              }`}
+            >
+              <Text
+                className={`text-sm ${selectedUsdAccount ? 'text-text' : 'text-text-soft'}`}
+              >
+                {selectedUsdAccount
+                  ? selectedUsdAccount.name
+                  : t('cards.errors.account_required')}
+              </Text>
+              {selectedUsdAccount && (
+                <Text className="text-xs tabular-nums text-text-muted">
+                  {formatUSD(selectedUsdAccount.balance, showCents)}
+                </Text>
+              )}
+            </Pressable>
+            {errors.usdAccountId && (
+              <Text className="text-xs text-error">{errors.usdAccountId}</Text>
+            )}
+            {usdNegativeWarning?.negative && (
+              <Text className="text-xs text-warning-deep">
+                {t('transactions.form.negative_warning', {
+                  amount: formatUSD(usdNegativeWarning.projected, showCents),
+                })}
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* Monto a pagar */}
         <View className="flex-col gap-1.5">
           <Label>{t('cards.labels.amount_to_pay')}</Label>
-          <Text className="text-xs text-text-muted">{t('cards.labels.amount_to_pay_helper')}</Text>
-          <MoneyAmountInput value={amount} onChangeText={setAmount} invalid={Boolean(errors.amount)} />
-          {errors.amount && <Text className="text-xs text-error">{errors.amount}</Text>}
+          <Text className="text-xs text-text-muted">
+            {debitRows === null
+              ? t('cards.labels.amount_to_pay_helper')
+              : debitRows.length > 1
+                ? t('cards.payment.debits_helper')
+                : t('cards.labels.amount_to_pay_helper_usd')}
+          </Text>
+          {/* Derivado de lo que se cancela, no un campo libre: un importe editable podía
+              no corresponder a ninguna deuda y el resumen quedaba marcado como pagado
+              igual. Pagar de menos es un pago parcial, que hoy no está soportado. */}
+          {/* Pagando los dólares con dólares NO hay un "monto a pagar": hay un monto por
+              moneda, y no se suman. Van los dos, cada uno con su cuenta. */}
+          {debitRows !== null ? (
+            <View className="flex-col gap-2">
+              {debitRows.map((d) => (
+                <View
+                  key={d.key}
+                  className="flex-row items-baseline justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3"
+                >
+                  <Text className="text-[13px] text-text-muted">
+                    {/* Sin cuenta elegida, el placeholder del selector se leía como si
+                        FUERA el nombre de la cuenta. */}
+                    {d.account
+                      ? t('cards.payment.debit_from', { account: d.account })
+                      : t('cards.payment.debit_account_pending')}
+                  </Text>
+                  <Text className="text-xl font-extrabold tabular-nums text-text">{d.value}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <MoneyAmountInput
+              value={arsDebit !== null ? fmtARS(arsDebit).replace(/^\$\s?/, '') : ''}
+              onChangeText={() => {}}
+              editable={false}
+            />
+          )}
 
-          {hasUsdDebt && (
+          {/* Al pesificar: desglose de cómo se arma el total en ARS. */}
+          {pesifyUsd && (
             <View className="mt-2 rounded-xl border border-border bg-page px-4">
               <BreakdownRow
                 label={t('cards.payment.breakdown_ars')}
@@ -308,38 +528,6 @@ export function PayCardPeriodForm({
                 bold
               />
             </View>
-          )}
-        </View>
-
-        <View className="h-px bg-border" />
-
-        {/* Cuenta de débito */}
-        <View className="flex-col gap-1.5">
-          <Label>{t('cards.labels.debit_account')}</Label>
-          <Pressable
-            onPress={() => setAccountSheet(true)}
-            className={`h-11 flex-row items-center justify-between rounded-lg border bg-card px-3 ${
-              errors.paymentAccountId ? 'border-error' : 'border-border'
-            }`}
-          >
-            <Text className={`text-sm ${selectedAccount ? 'text-text' : 'text-text-soft'}`}>
-              {selectedAccount ? selectedAccount.name : t('cards.errors.account_required')}
-            </Text>
-            {selectedAccount && (
-              <Text className="text-xs tabular-nums text-text-muted">
-                {fmtARS(selectedAccount.balanceARS)}
-              </Text>
-            )}
-          </Pressable>
-          {errors.paymentAccountId && (
-            <Text className="text-xs text-error">{errors.paymentAccountId}</Text>
-          )}
-          {negativeWarning?.negative && (
-            <Text className="text-xs text-warning-deep">
-              {t('transactions.form.negative_warning', {
-                amount: `ARS ${negativeWarning.projected.toLocaleString('es-AR')}`,
-              })}
-            </Text>
           )}
         </View>
 
@@ -403,7 +591,8 @@ export function PayCardPeriodForm({
         </View>
       </View>
 
-      {/* Irreversibility warning + CTA */}
+      {/* Hasta cuándo se puede deshacer + CTA. Decía que el pago era irreversible;
+          se puede deshacer desde el resumen. */}
       <Text className="rounded-xl bg-page px-4 py-3.5 text-xs leading-relaxed text-text-muted">
         {t('cards.payment.warning')}
       </Text>
@@ -413,6 +602,31 @@ export function PayCardPeriodForm({
       <Button onPress={handleSubmit} loading={submitting} size="lg">
         {t('cards.actions.confirm_payment')}
       </Button>
+
+      <SelectSheet
+        visible={usdAccountSheet}
+        onClose={() => setUsdAccountSheet(false)}
+        title={t('cards.payment.usd_account_label')}
+        items={usdAccounts}
+        keyExtractor={(a) => a.id}
+        renderRow={(a) => (
+          <Pressable
+            onPress={() => {
+              setUsdAccountId(a.id)
+              setUsdAccountSheet(false)
+            }}
+            className="flex-row items-center justify-between gap-3 rounded-xl px-3 py-3 active:bg-border-soft"
+          >
+            <View className="flex-1">
+              <Text className="text-sm font-medium text-text">{a.name}</Text>
+              {a.subtitle && <Text className="text-xs text-text-muted">{a.subtitle}</Text>}
+            </View>
+            <Text className="text-xs tabular-nums text-text-muted">
+              {formatUSD(a.balance, showCents)}
+            </Text>
+          </Pressable>
+        )}
+      />
 
       <SelectSheet
         visible={accountSheet}
@@ -432,7 +646,7 @@ export function PayCardPeriodForm({
               <Text className="text-sm font-medium text-text">{a.name}</Text>
               {a.subtitle && <Text className="text-xs text-text-muted">{a.subtitle}</Text>}
             </View>
-            <Text className="text-xs tabular-nums text-text-muted">{fmtARS(a.balanceARS)}</Text>
+            <Text className="text-xs tabular-nums text-text-muted">{fmtARS(a.balance)}</Text>
           </Pressable>
         )}
       />

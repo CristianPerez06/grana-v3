@@ -481,24 +481,39 @@ export type Database = {
       period_payments: {
         Row: {
           created_at: string
+          fx_rate_to_ars: number | null
           id: string
+          payment_group_id: string
           period_id: string
+          settlement_known: boolean
+          settles_amount: number | null
+          settles_currency: string | null
           stamp_tax_link_known: boolean
           stamp_tax_transaction_id: string | null
           transaction_id: string
         }
         Insert: {
           created_at?: string
+          fx_rate_to_ars?: number | null
           id?: string
+          payment_group_id?: string
           period_id: string
+          settlement_known?: boolean
+          settles_amount?: number | null
+          settles_currency?: string | null
           stamp_tax_link_known?: boolean
           stamp_tax_transaction_id?: string | null
           transaction_id: string
         }
         Update: {
           created_at?: string
+          fx_rate_to_ars?: number | null
           id?: string
+          payment_group_id?: string
           period_id?: string
+          settlement_known?: boolean
+          settles_amount?: number | null
+          settles_currency?: string | null
           stamp_tax_link_known?: boolean
           stamp_tax_transaction_id?: string | null
           transaction_id?: string
@@ -507,9 +522,16 @@ export type Database = {
           {
             foreignKeyName: "period_payments_period_id_fkey"
             columns: ["period_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "card_periods"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_payments_settles_currency_fkey"
+            columns: ["settles_currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
           },
           {
             foreignKeyName: "period_payments_stamp_tax_transaction_id_fkey"
@@ -1283,8 +1305,38 @@ export type Database = {
         Args: { p_settlement_id: string }
         Returns: undefined
       }
-      revert_card_period_payment: {
+      card_period_pending: {
         Args: { p_period_id: string }
+        Returns: {
+          currency_code: string
+          total: number
+          paid: number
+          pending: number
+        }[]
+      }
+      confirm_running_cycle: {
+        Args: {
+          p_period_id: string
+          p_next_end_date: string
+          p_next_due_date: string
+          p_plan: Json
+          p_projected_end: string
+          p_projected_due: string
+          p_expected: Json
+        }
+        Returns: Json
+      }
+      pay_card_period_legs: {
+        Args: {
+          p_period_id: string
+          p_payments: Json
+          p_today: string
+          p_stamp_tax_amount?: number
+        }
+        Returns: Json
+      }
+      revert_card_period_payment: {
+        Args: { p_period_id: string; p_group_id?: string }
         Returns: Json
       }
       unshare_movement: { Args: { p_root_id: string }; Returns: undefined }

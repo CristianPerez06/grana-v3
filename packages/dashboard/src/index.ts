@@ -21,6 +21,8 @@ export {
   aggregateHero,
   buildMonthBalanceSeries,
   calculateTransactionSums,
+  derivePaidAtSnapshot,
+  type StatementDebitAtSnapshot,
   type CommittedCardMeta,
   type HeroAccountRow,
   type MonthBalanceTxInput,

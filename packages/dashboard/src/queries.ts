@@ -22,6 +22,7 @@ import {
   aggregateCardDebtByCard,
   aggregateHero,
   buildMonthBalanceSeries,
+  derivePaidAtSnapshot,
   projectRecurrenceItems,
   sumByCurrency,
   topCommittedItems,
@@ -722,15 +723,14 @@ export async function getCommittedOutlookForMonth(
       }
       const paymentDateOf = (t: PaymentRow['transaction']): string | null =>
         Array.isArray(t) ? (t[0]?.date ?? null) : (t?.date ?? null)
-      // Paid as of the snapshot. A payment with no readable date is treated as
-      // paid — the conservative reading, and the shape today's behaviour has.
-      const paidAtSnapshot = new Set(
-        ((payments ?? []) as unknown as PaymentRow[])
-          .filter((row) => {
-            const date = paymentDateOf(row.transaction)
-            return date == null || date <= snapshotDate
-          })
-          .map((row) => row.period_id),
+      // La regla vive en `derivePaidAtSnapshot` (pura, testeada): un resumen está
+      // saldado al corte solo si TODOS sus débitos salieron en o antes de esa fecha.
+      const paidAtSnapshot = derivePaidAtSnapshot(
+        ((payments ?? []) as unknown as PaymentRow[]).map((row) => ({
+          period_id: row.period_id,
+          date: paymentDateOf(row.transaction),
+        })),
+        snapshotDate,
       )
       const unpaid = candidates.filter((p) => !paidAtSnapshot.has(p.id))
 

@@ -104,17 +104,20 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
       )
     : null
 
-  // Card payments show the statement composition (ARS + USD portions) instead
-  // of repeating the period info the context note already carries.
-  let paymentComposition: { paidARS: number; paidUSD: number } | null = null
+  // Qué deuda del resumen canceló ESTE débito, no la composición del resumen entero.
+  // La diferencia importa desde que un pago puede tener dos débitos: mostrar el total
+  // del resumen repetiría la misma cifra en los dos movimientos, y ninguno diría la
+  // verdad sobre sí mismo. La lista de movimientos muestra la plata que salió; el
+  // detalle, cómo se imputó.
+  let paymentAllocations: Array<{
+    settlesCurrency: string
+    settlesAmount: number
+    fxRateToArs: number | null
+  }> = []
   if (movement.kind === 'card_payment') {
     const periodDetail = await getCardPeriodDetail(supabase, movement.period_id)
-    if (periodDetail) {
-      paymentComposition = {
-        paidARS: periodDetail.paidAmountARS,
-        paidUSD: periodDetail.paidAmountUSD,
-      }
-    }
+    paymentAllocations =
+      periodDetail?.paymentDebits.find((d) => d.transactionId === transaction.id)?.allocations ?? []
   }
 
   return (
@@ -145,7 +148,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         editHousehold={editData?.household ?? null}
         editAccounts={editData?.accounts ?? null}
         sharedInfo={sharedInfo}
-        paymentComposition={paymentComposition}
+        paymentAllocations={paymentAllocations}
         monthWeightSlices={monthWeightSlices}
         recurrence={recurrenceSummary}
         contextPeriodLabel={contextPeriodLabel}

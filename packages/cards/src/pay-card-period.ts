@@ -4,48 +4,120 @@ import {
   deriveStampTaxRate,
   planRunningCycleConfirmation,
   suggestNextPeriodDates,
-  addDaysToISO,
 } from '@grana/money-logic'
 import {
   payCardPeriodSchema,
   validateActionInput,
-  Money,
-  normalizeMoneyAmount,
   type PayCardPeriodInput,
 } from '@grana/validation'
 import type { CardMutationResult } from './mutations'
 
-function normalizeActionMoney(value: number): number {
-  return normalizeMoneyAmount(value) ?? value
-}
-
-function normalizeActionFxRate(value: number): number {
-  return normalizeMoneyAmount(value, { decimalPlaces: 6 }) ?? value
+/** Lo que devuelve `pay_card_period_legs`. */
+type PayLegsResult = {
+  payment_group_id: string
+  transaction_ids: string[]
+  settled: boolean
+  pending_ars: number | string
+  pending_usd: number | string
+  /** Base ARS del resumen ANTES del sello; la alícuota se deriva acá afuera. */
+  stamp_tax_base_ars: number | string | null
 }
 
 /**
- * Pay a card statement. Single source of truth shared by web and mobile: verifies
- * ownership/closed-state, confirms the running cycle's dates (via the pure
- * `planRunningCycleConfirmation`), inserts the payment expense, the optional
- * impuesto de sellos (freezing the ARS base before the insert and remembering the
- * derived rate), sweeps the period's charges to `paid`, and records the
- * `period_payment` — rolling back partial writes on any failure. `supabase`,
- * `userId` and `today` are injected so the package stays platform-agnostic; error
- * text is neutral (`messageKey`/`errorCode`), never translated here.
+ * Traduce los errores de los RPC a `messageKey`s neutrales.
+ *
+ * Los RPC levantan excepciones con texto estable (nunca traducido) y, en los casos que
+ * la app necesita nombrar un número, con `errcode` + `detail`. Acá NO se re-valida nada:
+ * la garantía es de la base, esto solo le pone palabras.
+ */
+function mapPaymentError(error: { message?: string; code?: string; details?: string }): CardMutationResult {
+  const message = error.message ?? ''
+  const has = (needle: string) => message.includes(needle)
+
+  if (has('not_authenticated') || has('not_owner')) {
+    return { ok: false, messageKey: 'cards.errors.period_no_access' }
+  }
+  if (has('period_not_found')) return { ok: false, messageKey: 'cards.errors.period_not_found' }
+  if (has('period_not_closed')) return { ok: false, messageKey: 'cards.errors.period_not_closed' }
+  if (has('payment_account_invalid')) {
+    return { ok: false, messageKey: 'cards.errors.payment_account_not_found' }
+  }
+  if (has('payment_account_currency_inactive')) {
+    return { ok: false, messageKey: 'cards.errors.payment_currency_inactive' }
+  }
+  if (has('stamp_tax_only_on_first_payment')) {
+    return { ok: false, messageKey: 'cards.errors.period_already_paid' }
+  }
+  // GRN04: la operación no salda el resumen. `detail` trae "<ars>|<usd>".
+  if (error.code === 'GRN04' || has('statement_not_settled')) {
+    const [ars, usd] = (error.details ?? '').split('|')
+    return {
+      ok: false,
+      messageKey: 'cards.errors.statement_not_settled',
+      messageParams: { ars: ars ?? '', usd: usd ?? '' },
+    }
+  }
+  // GRN03 / I-PAY-5: una imputación excede el pendiente de su moneda.
+  if (error.code === 'GRN03' || has('I-PAY-5')) {
+    return {
+      ok: false,
+      messageKey: 'cards.errors.leg_exceeds_pending',
+      messageParams: { pending: (error.details ?? '').trim() },
+    }
+  }
+  // I-PAY-2 / I-PAY-3: cruce de monedas o cotización incoherente.
+  if (has('I-PAY-2') || has('I-PAY-3')) {
+    return { ok: false, messageKey: 'cards.errors.usd_fx_required' }
+  }
+  if (has('running_cycle_state_changed')) {
+    return { ok: false, messageKey: 'cards.errors.running_cycle_undetermined' }
+  }
+  return { ok: false, errorCode: error.code, messageKey: 'cards.errors.payment_failed' }
+}
+
+/**
+ * Pagar un resumen de tarjeta. Fuente única compartida por web y mobile.
+ *
+ * La escritura vive en la base, en DOS operaciones deliberadamente separadas:
+ *
+ *   1. `confirm_running_cycle` — el CALENDARIO. Las fechas del ciclo en curso son
+ *      hechos leídos del resumen de papel: valen aunque el pago falle. Por eso van
+ *      antes y en su propia transacción. La DECISIÓN (confirmar, re-proyectar o
+ *      rechazar) se toma acá con `planRunningCycleConfirmation`, que es pura y está
+ *      testeada; la función SQL revalida los anclajes y ejecuta.
+ *   2. `pay_card_period_legs` — el DINERO. Atómico: transacciones, imputaciones, sello,
+ *      la verificación de que la operación salda el resumen y el barrido a `paid`, todo
+ *      o nada. Reemplaza la cadena de rollbacks manuales que esto tenía.
+ *
+ * Lo único que queda acá del lado de la escritura es la alícuota de sellos: es un
+ * APRENDIZAJE, no un hecho contable, y se deriva de la base que devuelve el RPC.
+ *
+ * `supabase`, `userId` y `today` se inyectan para que el package no dependa de la
+ * plataforma; el texto de error es neutral (`messageKey`), nunca traducido acá.
  */
 export async function payCardPeriod(args: {
   supabase: GranaSupabaseClient
   userId: string
   input: unknown
   today: Date
-}): Promise<CardMutationResult<PayCardPeriodInput> & { expenseId?: string }> {
+}): Promise<
+  CardMutationResult<PayCardPeriodInput> & {
+    /** Primer débito de la operación. Se conserva para las shells que esperan uno. */
+    expenseId?: string
+    /** TODOS los débitos, uno por cuenta. */
+    expenseIds?: string[]
+    paymentGroupId?: string
+  }
+> {
   const { supabase, userId, today } = args
   const validation = await validateActionInput(payCardPeriodSchema, args.input)
   if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
 
   const data = validation.data
 
-  // Verify period ownership
+  // ── Verificaciones de lectura, para dar buenos mensajes ────────────────────
+  // Los RPC vuelven a chequear todo esto: acá se hace para que el usuario reciba el
+  // mensaje correcto sin depender de parsear una excepción.
   const { data: period, error: periodError } = await supabase
     .from('card_periods')
     .select('id, account_id, start_date, end_date, due_date')
@@ -67,93 +139,22 @@ export async function payCardPeriod(args: {
     return { ok: false, messageKey: 'cards.errors.period_no_access' }
   }
 
-  // Verify period is not already paid
   const { data: existingPayment } = await supabase
     .from('period_payments')
     .select('id')
     .eq('period_id', data.period_id)
+    .limit(1)
     .maybeSingle()
 
   if (existingPayment) {
     return { ok: false, messageKey: 'cards.errors.period_already_paid' }
   }
 
-  // Verify period is closed or overdue (not open)
-  const status = derivePeriodStatus(period, today, false)
-  if (status === 'open') {
+  if (derivePeriodStatus(period, today, false) === 'open') {
     return { ok: false, messageKey: 'cards.errors.period_not_closed' }
   }
 
-  // Verify payment account belongs to user
-  const { data: paymentAccount, error: paymentAccountError } = await supabase
-    .from('accounts')
-    .select('type, is_active')
-    .eq('id', data.payment_account_id)
-    .eq('user_id', userId)
-    .single()
-
-  if (paymentAccountError || !paymentAccount) {
-    return { ok: false, messageKey: 'cards.errors.payment_account_not_found' }
-  }
-  if (paymentAccount.type === 'credit') {
-    return { ok: false, messageKey: 'cards.errors.payment_from_card' }
-  }
-
-  // USD debt requires the payment-day cotización (the only point where the
-  // conversion is real). Mirrors the pendingAmountUSD math of getCardPeriods:
-  // pending USD consumos minus received USD statement reimbursements.
-  const { data: periodTxRows, error: periodTxError } = await supabase
-    .from('transactions')
-    .select('type, amount, currency_code, status, received_at, cancelled_at')
-    .eq('card_period_id', data.period_id)
-
-  if (periodTxError) {
-    return { ok: false, messageKey: 'cards.errors.debt_check_failed' }
-  }
-
-  const usdPending = (periodTxRows ?? [])
-    .filter((r) => r.type !== 'reimbursement' && r.status === 'pending' && r.currency_code === 'USD')
-    .reduce((sum, r) => Money.toNumber(Money.add(Money.from(sum), Money.from(Math.abs(Number(r.amount))))), 0)
-  const usdReimbursed = (periodTxRows ?? [])
-    .filter(
-      (r) =>
-        r.type === 'reimbursement' &&
-        r.currency_code === 'USD' &&
-        r.received_at != null &&
-        r.cancelled_at == null,
-    )
-    .reduce((sum, r) => Money.toNumber(Money.add(Money.from(sum), Money.from(Math.abs(Number(r.amount))))), 0)
-  const pendingUSD = Money.toNumber(Money.subtract(Money.from(usdPending), Money.from(usdReimbursed)))
-
-  // Base ARS del resumen (consumos pending ARS menos reintegros ARS recibidos),
-  // computada ANTES de insertar el sello para que no se incluya en su propia
-  // base. Mirrors the pendingAmountARS math of getCardPeriodDetail.
-  const arsPending = (periodTxRows ?? [])
-    .filter((r) => r.type !== 'reimbursement' && r.status === 'pending' && r.currency_code === 'ARS')
-    .reduce((sum, r) => Money.toNumber(Money.add(Money.from(sum), Money.from(Math.abs(Number(r.amount))))), 0)
-  const arsReimbursed = (periodTxRows ?? [])
-    .filter(
-      (r) =>
-        r.type === 'reimbursement' &&
-        r.currency_code === 'ARS' &&
-        r.received_at != null &&
-        r.cancelled_at == null,
-    )
-    .reduce((sum, r) => Money.toNumber(Money.add(Money.from(sum), Money.from(Math.abs(Number(r.amount))))), 0)
-  const stampTaxBaseARS = Money.toNumber(Money.subtract(Money.from(arsPending), Money.from(arsReimbursed)))
-
-  if (pendingUSD > 0 && (data.fx_rate_to_ars == null || data.fx_rate_to_ars <= 0)) {
-    return { ok: false, messageKey: 'cards.errors.usd_fx_required' }
-  }
-
-  // ── Confirmación del ciclo en curso (P(n+1)) ────────────────────────────────
-  // The statement being paid announces the dates of the cycle now running: the
-  // user has them in hand at this exact moment. next_end_date/next_due_date
-  // confirm the period that follows the one being paid (usually estimated).
-  // The branching lives in planRunningCycleConfirmation (pure, tested); this
-  // block fetches its inputs and executes the plan. It runs BEFORE the payment
-  // inserts: confirmed dates are real-world facts, so if the payment fails
-  // afterwards they harmlessly stay confirmed.
+  // ── 1 · El calendario ──────────────────────────────────────────────────────
   const { data: laterPeriods, error: laterPeriodsError } = await supabase
     .from('card_periods')
     .select('id, start_date, end_date, due_date, is_estimated')
@@ -231,253 +232,92 @@ export async function payCardPeriod(args: {
     }
   }
 
-  const newNextStart = addDaysToISO(data.next_end_date, 1)
-  // Suggestion history for projections: the paid cycle + the just-confirmed one.
-  const confirmedHistory = [
-    { end_date: period.end_date, due_date: period.due_date },
-    { end_date: data.next_end_date, due_date: data.next_due_date },
-  ]
+  // Proyección para el estimado siguiente: el ciclo pagado + el recién confirmado.
+  const projected = suggestNextPeriodDates(
+    [
+      { end_date: period.end_date, due_date: period.due_date },
+      { end_date: data.next_end_date, due_date: data.next_due_date },
+    ],
+    today,
+  )
 
-  if (plan.createConfirmedNext) {
-    // Legacy edge (no running period row yet): create it directly confirmed.
-    const { error: createNextError } = await supabase.from('card_periods').upsert(
-      {
-        account_id: period.account_id,
-        start_date: addDaysToISO(period.end_date, 1),
-        end_date: data.next_end_date,
-        due_date: data.next_due_date,
-        is_estimated: false,
-      },
-      { onConflict: 'account_id,start_date' },
-    )
-    if (createNextError) {
-      return {
-        ok: false,
-        messageKey: 'cards.errors.running_cycle_invalid_dates',
-        messageParams: { date: periodEndDisplay },
-      }
-    }
-  }
-
-  if (nextNextRow && plan.nextNextOp !== 'none') {
-    if (plan.nextNextOp === 'reproject') {
-      // The confirmed close swallows a bare estimated P(n+2): re-project it
-      // past the new close instead of rejecting.
-      const reprojected = suggestNextPeriodDates(confirmedHistory, today)
-      const { error: reprojectError } = await supabase
-        .from('card_periods')
-        .update({
-          start_date: newNextStart,
-          end_date: reprojected.suggestedEndDate,
-          due_date: reprojected.suggestedDueDate,
-        })
-        .eq('id', nextNextRow.id)
-      if (reprojectError) return { ok: false, errorCode: reprojectError.code }
-    } else {
-      // Boundary cascade with P(n+2) — same semantics as updatePeriodDates.
-      if (plan.nextNextOp === 'shift_extend') {
-        // Days now covered by the running cycle: move consumos from P(n+2).
-        const { error: reassignError } = await supabase
-          .from('transactions')
-          .update({ card_period_id: nextPeriodRow!.id })
-          .eq('card_period_id', nextNextRow.id)
-          .lte('date', data.next_end_date)
-        if (reassignError) return { ok: false, errorCode: reassignError.code }
-      } else {
-        // Shrinking: consumos past the real close belong to P(n+2).
-        const { error: reassignError } = await supabase
-          .from('transactions')
-          .update({ card_period_id: nextNextRow.id })
-          .eq('card_period_id', nextPeriodRow!.id)
-          .gt('date', data.next_end_date)
-        if (reassignError) return { ok: false, errorCode: reassignError.code }
-      }
-
-      const { error: shiftError } = await supabase
-        .from('card_periods')
-        .update({ start_date: newNextStart })
-        .eq('id', nextNextRow.id)
-      if (shiftError) return { ok: false, errorCode: shiftError.code }
-    }
-  }
-
-  if (!plan.createConfirmedNext && nextPeriodRow) {
-    // Confirm the running cycle with the statement's dates.
-    const { error: confirmError } = await supabase
-      .from('card_periods')
-      .update({
-        end_date: data.next_end_date,
-        due_date: data.next_due_date,
-        is_estimated: false,
-      })
-      .eq('id', nextPeriodRow.id)
-    if (confirmError) {
-      return {
-        ok: false,
-        messageKey: 'cards.errors.running_cycle_invalid_dates',
-        messageParams: { date: periodEndDisplay },
-      }
-    }
-  }
-
-  if (plan.createEagerEstimated) {
-    // Eager invariant: there is always an estimated period after the running
-    // one, so the timeline's "Próximo" never disappears and consumos beyond
-    // the confirmed close have a home.
-    const projected = suggestNextPeriodDates(confirmedHistory, today)
-    const { data: eagerPeriod, error: eagerError } = await supabase
-      .from('card_periods')
-      .upsert(
-        {
-          account_id: period.account_id,
-          start_date: newNextStart,
-          end_date: projected.suggestedEndDate,
-          due_date: projected.suggestedDueDate,
-          is_estimated: true,
-        },
-        { onConflict: 'account_id,start_date' },
-      )
-      .select('id')
-      .single()
-
-    if (eagerError || !eagerPeriod) {
-      return { ok: false, messageKey: 'cards.errors.eager_estimated_failed' }
-    }
-
-    if (plan.reassignShrunkTailToEager && nextPeriodRow) {
-      // Shrunk running cycle with no P(n+2) row before this call: consumos that
-      // fell out of the confirmed range move to the fresh estimated period.
-      const { error: reassignError } = await supabase
-        .from('transactions')
-        .update({ card_period_id: eagerPeriod.id })
-        .eq('card_period_id', nextPeriodRow.id)
-        .gt('date', data.next_end_date)
-      if (reassignError) return { ok: false, errorCode: reassignError.code }
-    }
-  }
-
-  // 1. INSERT expense on payment account. The payment-day fx (when the period
-  // had USD debt) is persisted on the expense for traceability.
-  const { data: expense, error: expenseError } = await supabase
-    .from('transactions')
-    .insert({
-      user_id: userId,
-      account_id: data.payment_account_id,
-      type: 'expense',
-      amount: normalizeActionMoney(data.amount),
-      currency_code: 'ARS',
-      date: data.payment_date,
-      category_id: null,
-      description: `Pago de tarjeta ${account.name}`,
-      is_parent: false,
-      status: null,
-      card_period_id: null,
-      fx_rate_to_ars: data.fx_rate_to_ars != null ? normalizeActionFxRate(data.fx_rate_to_ars) : null,
-    })
-    .select('id')
-    .single()
-
-  if (expenseError || !expense) {
-    return { ok: false, errorCode: expenseError?.code, messageKey: 'cards.errors.payment_failed' }
-  }
-
-  // 1.5 INSERT impuesto de sellos del resumen (si el usuario confirmó monto > 0).
-  // Movimiento de la tarjeta asignado al período, con fecha = cierre del resumen;
-  // queda 'pending' y se barre a 'paid' en el paso 2 junto con el resto. La base
-  // (stampTaxBaseARS) se congeló antes de este insert para no auto-incluirse.
-  const stampTaxAmount = data.stamp_tax_amount ?? 0
-  let stampTaxId: string | null = null
-  if (stampTaxAmount > 0) {
-    const [{ data: impuestosCat }, { data: selloSub }] = await Promise.all([
-      supabase
-        .from('categories')
-        .select('id')
-        .eq('canonical_name', 'impuestos')
-        .is('user_id', null)
-        .maybeSingle(),
-      supabase
-        .from('subcategories')
-        .select('id')
-        .eq('canonical_name', 'impuesto-de-sellos')
-        .is('user_id', null)
-        .maybeSingle(),
-    ])
-
-    const { data: stampTx, error: stampError } = await supabase
-      .from('transactions')
-      .insert({
-        user_id: userId,
-        account_id: period.account_id,
-        type: 'expense',
-        amount: normalizeActionMoney(stampTaxAmount),
-        currency_code: 'ARS',
-        date: period.end_date,
-        category_id: impuestosCat?.id ?? null,
-        subcategory_id: selloSub?.id ?? null,
-        description: 'Impuesto de sellos',
-        is_parent: false,
-        status: 'pending',
-        card_period_id: data.period_id,
-        due_date: period.due_date,
-        fx_rate_to_ars: null,
-      })
-      .select('id')
-      .single()
-
-    if (stampError || !stampTx) {
-      await supabase.from('transactions').delete().eq('id', expense.id)
-      return { ok: false, errorCode: stampError?.code, messageKey: 'cards.errors.stamp_tax_failed' }
-    }
-    stampTaxId = stampTx.id
-
-    // Primera vez para esta tarjeta: derivar y recordar la alícuota para que en
-    // los próximos resúmenes Grana la sugiera sola. Una corrección puntual del
-    // monto en pagos posteriores NO reescribe la tasa (solo se setea si era null).
-    if (account.stamp_tax_rate == null) {
-      const derived = deriveStampTaxRate(stampTaxBaseARS, stampTaxAmount)
-      if (derived != null) {
-        await supabase
-          .from('accounts')
-          .update({ stamp_tax_rate: derived })
-          .eq('id', period.account_id)
-      }
-    }
-  }
-
-  // 2. UPDATE child transactions to 'paid' (incluye el sello recién insertado)
-  const { error: updateError } = await supabase
-    .from('transactions')
-    .update({ status: 'paid' })
-    .eq('card_period_id', data.period_id)
-    .eq('status', 'pending')
-
-  if (updateError) {
-    if (stampTaxId) await supabase.from('transactions').delete().eq('id', stampTaxId)
-    await supabase.from('transactions').delete().eq('id', expense.id)
-    return { ok: false, errorCode: updateError.code }
-  }
-
-  // 3. INSERT period_payment. `stamp_tax_transaction_id` links the sello explicitly so
-  // reverting this payment identifies it without guessing by category+period (which
-  // would delete a hand-entered sello). `stamp_tax_link_known` defaults to true in the
-  // schema: for payments written from here on, a null link means "there was no sello".
-  const { error: paymentError } = await supabase.from('period_payments').insert({
-    period_id: data.period_id,
-    transaction_id: expense.id,
-    stamp_tax_transaction_id: stampTaxId,
+  const { error: calendarError } = await supabase.rpc('confirm_running_cycle', {
+    p_period_id: data.period_id,
+    p_next_end_date: data.next_end_date,
+    p_next_due_date: data.next_due_date,
+    p_plan: {
+      create_confirmed_next: plan.createConfirmedNext,
+      next_next_op: plan.nextNextOp,
+      create_eager_estimated: plan.createEagerEstimated,
+      reassign_shrunk_tail_to_eager: plan.reassignShrunkTailToEager,
+    },
+    p_projected_end: projected.suggestedEndDate,
+    p_projected_due: projected.suggestedDueDate,
+    // Los anclajes que el plan da por ciertos. Si algo cambió entre la lectura de
+    // arriba y esta llamada, la función NO aplica el plan.
+    p_expected: {
+      paid_end_date: period.end_date,
+      next_period_id: nextPeriodRow?.id ?? null,
+      next_end_date: nextPeriodRow?.end_date ?? null,
+      next_due_date: nextPeriodRow?.due_date ?? null,
+      next_next_id: nextNextRow?.id ?? null,
+      next_next_start_date: nextNextRow?.start_date ?? null,
+      next_next_end_date: nextNextRow?.end_date ?? null,
+      next_next_is_estimated: nextNextRow?.is_estimated ?? null,
+      next_next_has_payments: nextNextRow ? laterPaidIds.has(nextNextRow.id) : null,
+      next_next_has_transactions: nextNextRow ? nextNextHasTx : null,
+    },
   })
 
-  if (paymentError) {
-    // Rollback: revert transactions to pending, delete the sello, delete expense
-    await supabase
-      .from('transactions')
-      .update({ status: 'pending' })
-      .eq('card_period_id', data.period_id)
-      .eq('status', 'paid')
-    if (stampTaxId) await supabase.from('transactions').delete().eq('id', stampTaxId)
-    await supabase.from('transactions').delete().eq('id', expense.id)
-    return { ok: false, errorCode: paymentError.code }
+  if (calendarError) {
+    if ((calendarError.message ?? '').includes('running_cycle_state_changed')) {
+      return { ok: false, messageKey: 'cards.errors.running_cycle_undetermined' }
+    }
+    return {
+      ok: false,
+      messageKey: 'cards.errors.running_cycle_invalid_dates',
+      messageParams: { date: periodEndDisplay },
+    }
   }
 
-  return { ok: true, expenseId: expense.id }
+  // ── 2 · El dinero ──────────────────────────────────────────────────────────
+  const { data: payResult, error: payError } = await supabase.rpc('pay_card_period_legs', {
+    p_period_id: data.period_id,
+    p_payments: data.payments,
+    p_today: formatDateISO(today),
+    p_stamp_tax_amount: data.stamp_tax_amount ?? 0,
+  })
+
+  if (payError) return mapPaymentError(payError)
+
+  const result = payResult as unknown as PayLegsResult | null
+  if (!result) return { ok: false, messageKey: 'cards.errors.payment_failed' }
+
+  // ── 3 · La alícuota aprendida ──────────────────────────────────────────────
+  // Primera vez para esta tarjeta: derivar y recordar la tasa para sugerirla sola en
+  // los próximos resúmenes. Una corrección puntual del monto NO la reescribe (solo se
+  // setea si era null). Es un aprendizaje, no un hecho contable: vive fuera de la
+  // transacción del dinero a propósito.
+  const stampTaxAmount = data.stamp_tax_amount ?? 0
+  if (stampTaxAmount > 0 && account.stamp_tax_rate == null && result.stamp_tax_base_ars != null) {
+    const derived = deriveStampTaxRate(Number(result.stamp_tax_base_ars), stampTaxAmount)
+    if (derived != null) {
+      await supabase
+        .from('accounts')
+        .update({ stamp_tax_rate: derived })
+        .eq('id', period.account_id)
+    }
+  }
+
+  return {
+    ok: true,
+    expenseId: result.transaction_ids[0],
+    expenseIds: result.transaction_ids,
+    paymentGroupId: result.payment_group_id,
+  }
+}
+
+/** `today` como ISO local, que es lo que el RPC compara contra el cierre del resumen. */
+function formatDateISO(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
