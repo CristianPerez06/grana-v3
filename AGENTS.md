@@ -2,6 +2,16 @@
 
 pnpm workspaces monorepo with two apps: `apps/web` (Next.js App Router) and `apps/mobile` (Expo). Mobile mirrors web feature-by-feature with parallel native implementations sharing typed prop contracts via `@grana/ui-contracts` and pure business logic via `@grana/money-logic` (see "Web ↔ Mobile policy" below).
 
+## Pre-flight — MANDATORY
+
+Antes de la primera acción de git de cualquier unidad de trabajo, en este orden. Cada punto apunta a su sección canónica: la regla vive ahí, este bloque solo garantiza que se lea a tiempo.
+
+1. **Validá el nombre de la branch** — `git branch --show-current`, y comparalo contra el formato de [§ Branching](#branching). Si no valida, renombrala **antes del primer commit**: después ya hay commits y pushes sobre un nombre que hay que corregir igual.
+   - Esto aplica también cuando **la branch no la elegiste vos**. Claude Code on the web provisiona la branch de la sesión derivándola del primer prompt: `claude/iol-financial-entities-table-q2wflp`. Prefijo fuera de la lista y sufijo random — viola la convención igual que si la hubieras tipeado. Venir dada no la hace válida.
+   - Si tenés instrucciones de sesión que te fijan a una branch asignada y no podés renombrarla por tu cuenta, **decíselo al usuario antes del primer commit**. Commitear en silencio sobre un nombre inválido no es una opción.
+2. **Si el output dice `main`, no commitees** — [§ Pre-commit check](#pre-commit-check--mandatory). Es el mismo comando: un solo `git branch --show-current` responde las dos preguntas.
+3. **Si vas a agregar una migración, elegí el número contra `main`**, no contra tu working tree — ver la fila "Migration numbers are picked against `main`" en la tabla de [§ Cross-cutting principles](#cross-cutting-principles). Ya hubo una colisión de `0057` por saltear esto.
+
 ## V3 Rebuild Standard
 
 Grana V3 is not a rewrite for its own sake. It is a rebuild whose goal is to make the product functionally explicit, technically reliable, and documented enough that a fresh LLM session can continue the app without relying on hidden chat context.
