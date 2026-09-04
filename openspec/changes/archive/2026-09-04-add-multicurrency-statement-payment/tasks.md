@@ -142,20 +142,25 @@
 - [ ] 9.2 Regenerar tipos y **comparar drift** contra lo escrito a mano. Un diff acá
       significa que la base no quedó como el código la asume. Va acá y NO en la ventana:
       si aparece, se arregla con calma
-- [~] 9.3 QA de los recorridos + reversión. Hechos: dos monedas, pesificado y solo-ARS,
+- [x] 9.3 QA de los recorridos + reversión. Hechos: dos monedas, pesificado y solo-ARS,
       con su reversión cada uno (ver 8.1–8.3). Falta el recorrido **sin cuenta en
       dólares**: reproducirlo exige desactivar los dólares de una cuenta que tiene saldo
       en dólares, o sea tocar data real para mirar un chip deshabilitado. Sin cuenta en
       dólares el formulario arranca en modo pesificado —el camino ya verificado— así que
-      queda verificado por inspección y NO en vivo. Cada pago de prueba se deshizo y los
-      saldos volvieron a su valor exacto: la base quedó como estaba
+      queda verificado por inspección y NO en vivo. Además, el caso **no existe en la
+      base**: la búsqueda de usuarios con deuda en dólares en un resumen impago y sin
+      ninguna cuenta con dólares activos no devuelve ninguno. Cada pago de prueba se
+      deshizo y los saldos volvieron a su valor exacto: la base quedó como estaba
 
 **Cierre del change (en esta misma rama, antes del merge):**
 
-- [ ] 9.3b Archivar el change: mover a `openspec/changes/archive/YYYY-MM-DD-add-multicurrency-statement-payment/`
-- [ ] 9.3c Aplicar los deltas a `openspec/specs/cards/spec.md` — no pueden quedar
-      secciones `## ADDED/MODIFIED Requirements` en el master spec
-- [ ] 9.3d `pnpm openspec:check` final en verde, y las casillas de OpenSpec del PR tildadas
+- [x] 9.3b Archivar el change: movido a
+      `openspec/changes/archive/2026-09-04-add-multicurrency-statement-payment/`
+- [x] 9.3c Deltas aplicados a `openspec/specs/cards/spec.md`: 6 requirements ADDED y 4
+      MODIFIED integrados en la sección plana, sin secciones de delta en el maestro. El
+      `Purpose` se corrigió: el pago de un resumen ya no es "única transacción" sino una
+      o dos, una por moneda debitada
+- [x] 9.3d `pnpm openspec:check` en verde (32/32)
 
 **Ventana de producción (corta y coordinada):**
 
