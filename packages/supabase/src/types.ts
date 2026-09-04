@@ -527,6 +527,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "period_payments_settles_currency_fkey"
+            columns: ["settles_currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
             foreignKeyName: "period_payments_stamp_tax_transaction_id_fkey"
             columns: ["stamp_tax_transaction_id"]
             isOneToOne: false
