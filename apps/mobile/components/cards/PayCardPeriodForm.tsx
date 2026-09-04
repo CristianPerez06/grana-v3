@@ -126,7 +126,6 @@ export function PayCardPeriodForm({
       ? sumARS(arsToSettle, usdConvertedARS)
       : null
     : arsToSettle
-  const amount = arsDebit !== null ? String(arsDebit) : ''
   const suggestedTotal = arsDebit
 
   const handleStampChange = (value: string) => setStampTax(value)
@@ -149,6 +148,30 @@ export function PayCardPeriodForm({
   const usdNegativeWarning =
     payUsdInUsd && selectedUsdAccount && pendingAmountUSD > 0
       ? checkNegativeBalance(selectedUsdAccount.balance, pendingAmountUSD)
+      : null
+  /**
+   * Los débitos reales de la operación, uno por moneda y sin sumarse nunca. Pagando los
+   * dólares con dólares son dos —o uno solo en dólares, si el resumen no debe pesos ni
+   * hubo sello—. Pesificando hay un único débito en pesos.
+   */
+  const debitRows =
+    payUsdInUsd && pendingAmountUSD > 0
+      ? [
+          ...(arsToSettle > 0
+            ? [
+                {
+                  key: 'ars',
+                  account: selectedAccount?.name ?? null,
+                  value: arsDebit !== null ? fmtARS(arsDebit) : '—',
+                },
+              ]
+            : []),
+          {
+            key: 'usd',
+            account: selectedUsdAccount?.name ?? null,
+            value: formatUSD(pendingAmountUSD, showCents),
+          },
+        ]
       : null
   const parsedPaymentAmount = arsDebit
   const negativeWarning =
@@ -401,11 +424,41 @@ export function PayCardPeriodForm({
         {/* Monto a pagar */}
         <View className="flex-col gap-1.5">
           <Label>{t('cards.labels.amount_to_pay')}</Label>
-          <Text className="text-xs text-text-muted">{t('cards.labels.amount_to_pay_helper')}</Text>
+          <Text className="text-xs text-text-muted">
+            {debitRows === null
+              ? t('cards.labels.amount_to_pay_helper')
+              : debitRows.length > 1
+                ? t('cards.payment.debits_helper')
+                : t('cards.labels.amount_to_pay_helper_usd')}
+          </Text>
           {/* Derivado de lo que se cancela, no un campo libre: un importe editable podía
               no corresponder a ninguna deuda y el resumen quedaba marcado como pagado
               igual. Pagar de menos es un pago parcial, que hoy no está soportado. */}
-          <MoneyAmountInput value={amount} onChangeText={() => {}} editable={false} />
+          {/* Pagando los dólares con dólares NO hay un "monto a pagar": hay un monto por
+              moneda, y no se suman. Van los dos, cada uno con su cuenta. */}
+          {debitRows !== null ? (
+            <View className="flex-col gap-2">
+              {debitRows.map((d) => (
+                <View
+                  key={d.key}
+                  className="flex-row items-baseline justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3"
+                >
+                  <Text className="text-[13px] text-text-muted">
+                    {d.account
+                      ? t('cards.payment.debit_from', { account: d.account })
+                      : t('cards.errors.account_required')}
+                  </Text>
+                  <Text className="text-xl font-extrabold tabular-nums text-text">{d.value}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <MoneyAmountInput
+              value={arsDebit !== null ? fmtARS(arsDebit).replace(/^\$\s?/, '') : ''}
+              onChangeText={() => {}}
+              editable={false}
+            />
+          )}
 
           {/* Al pesificar: desglose de cómo se arma el total en ARS. */}
           {pesifyUsd && (

@@ -663,7 +663,8 @@
       "movements_with_count": "Transactions ({count})",
       "current_movements": "Transactions in the current statement",
       "amount_to_pay": "Amount to pay",
-      "amount_to_pay_helper": "Pre-filled with the total outstanding. You can edit it.",
+      "amount_to_pay_helper": "Leaves your peso account. Computed from what you are settling of the statement.",
+      "amount_to_pay_helper_usd": "Leaves your dollar account. Computed from what you are settling of the statement.",
       "debit_account": "Debit account",
       "payment_date": "Payment date",
       "next_period_helper": "Your statement announces the running cycle's close and due dates. Confirm them here.",
@@ -934,7 +935,8 @@
       "usd_mode_in_ars": "In pesos",
       "usd_no_account": "You have no account with dollars enabled, so this part is paid in pesos.",
       "usd_account_label": "Dollar account",
-      "usd_debit_note": "{usd} leaves your dollar account."
+      "debits_helper": "Two debits, one per currency. Computed from what you are settling of the statement.",
+      "debit_from": "From {account}"
     },
     "edit_dates": {
       "dialog_title": "Edit statement dates",

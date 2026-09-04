@@ -176,7 +176,6 @@ export const PayCardPeriodForm = ({
       ? sumARS(arsToSettle, usdConvertedARS)
       : null
     : arsToSettle
-  const amount = arsDebit !== null ? String(arsDebit) : ''
   const suggestedTotal = arsDebit
 
   const handleStampChange = (value: string) => setStampTax(value)
@@ -203,6 +202,30 @@ export const PayCardPeriodForm = ({
   // El mismo aviso, para la cuenta en dólares. Los saldos NUNCA se comparan entre
   // monedas: cada débito se chequea contra el suyo.
   const selectedUsdAccount = usdAccounts.find((a) => a.id === usdAccountId)
+  /**
+   * Los débitos reales de la operación, uno por moneda y sin sumarse nunca. Pagando los
+   * dólares con dólares son dos —o uno solo en dólares, si el resumen no debe pesos ni
+   * hubo sello—. Pesificando hay un único débito en pesos, que muestra el campo de abajo.
+   */
+  const debitRows =
+    payUsdInUsd && pendingAmountUSD > 0
+      ? [
+          ...(arsToSettle > 0
+            ? [
+                {
+                  key: 'ars',
+                  account: selectedAccount?.name ?? null,
+                  value: arsDebit !== null ? fmtARS(arsDebit) : '—',
+                },
+              ]
+            : []),
+          {
+            key: 'usd',
+            account: selectedUsdAccount?.name ?? null,
+            value: formatUSD(pendingAmountUSD, showCents),
+          },
+        ]
+      : null
   const usdNegativeWarning =
     payUsdInUsd && selectedUsdAccount && pendingAmountUSD > 0
       ? checkNegativeBalance(selectedUsdAccount.balance, pendingAmountUSD)
@@ -451,17 +474,50 @@ export const PayCardPeriodForm = ({
             </MoneyField>
           </div>
 
-          {/* Monto a pagar (incluye consumos + sello). Editable para pago parcial. */}
+          {/* Monto a pagar: consumos + sello. Con dos débitos, uno por moneda. */}
           <div className="flex flex-col gap-1.5">
             <FieldLabel>{t('labels.amount_to_pay')}</FieldLabel>
-            <Hint>{t('labels.amount_to_pay_helper')}</Hint>
+            <Hint>
+              {debitRows === null
+                ? t('labels.amount_to_pay_helper')
+                : debitRows.length > 1
+                  ? t('payment.debits_helper')
+                  : t('labels.amount_to_pay_helper_usd')}
+            </Hint>
             {/* El monto es DERIVADO de lo que se cancela, no un campo libre: un importe
                 editable podía no corresponder a ninguna deuda y el resumen quedaba
                 marcado como pagado igual. Pagar de menos es un pago parcial, que hoy
                 no está soportado. */}
-            <MoneyField size="lg">
-              <output className={`${moneyInputCls('lg')} block`}>{amount}</output>
-            </MoneyField>
+            {/* Pagando los dólares con dólares NO hay un "monto a pagar": hay un monto
+                por moneda, y no se suman. Mostrar uno grande y el otro como nota al pie
+                hace leer el primero como el total. Van los dos, cada uno con su cuenta. */}
+            {debitRows !== null ? (
+              <div className="flex flex-col gap-2">
+                {debitRows.map((d) => (
+                  <div
+                    key={d.key}
+                    className="flex items-baseline justify-between gap-3 rounded-[13px] border-[1.5px] border-border bg-card px-4 py-3"
+                  >
+                    <span className="text-[13px] text-text-muted">
+                      {d.account
+                        ? t('payment.debit_from', { account: d.account })
+                        : t('errors.account_required')}
+                    </span>
+                    <span className="text-xl font-extrabold tracking-tight tabular-nums text-text">
+                      {d.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <MoneyField size="lg">
+                {/* Formateado: al pasar a solo-lectura se perdía el formateo que hacía el
+                    input mientras se tipeaba, y el monto salía crudo ("52000"). */}
+                <output className={`${moneyInputCls('lg')} block`}>
+                  {arsDebit !== null ? fmtARS(arsDebit).replace(/^\$\s?/, '') : '—'}
+                </output>
+              </MoneyField>
+            )}
 
             {/* Al pesificar: desglose línea a línea de cómo se arma el total en ARS. */}
             {pesifyUsd && (
@@ -492,15 +548,6 @@ export const PayCardPeriodForm = ({
               </div>
             )}
           </div>
-
-          {/* Pagando los dólares con dólares hay DOS débitos reales: se nombran por
-              separado, en su moneda, sin sumarlos nunca. */}
-          {payUsdInUsd && pendingAmountUSD > 0 && (
-            <div className="flex items-start gap-2.5 px-0.5 text-xs leading-relaxed text-text-muted">
-              <Info className="mt-0.5 size-4 shrink-0 text-slate" aria-hidden />
-              <span>{t('payment.usd_debit_note', { usd: formatUSD(pendingAmountUSD, showCents) })}</span>
-            </div>
-          )}
 
           {/* Relación sello ↔ débito (note-rel): explica por qué del débito sale
               consumos + sello. Al pesificar, el desglose de arriba ya lo muestra. */}

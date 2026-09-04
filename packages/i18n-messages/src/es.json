@@ -663,7 +663,8 @@
       "movements_with_count": "Movimientos ({count})",
       "current_movements": "Movimientos del resumen actual",
       "amount_to_pay": "Monto a pagar",
-      "amount_to_pay_helper": "Pre-llenado con el total pendiente. Podés editarlo.",
+      "amount_to_pay_helper": "Sale de tu cuenta en pesos. Se calcula con lo que estás cancelando del resumen.",
+      "amount_to_pay_helper_usd": "Sale de tu cuenta en dólares. Se calcula con lo que estás cancelando del resumen.",
       "debit_account": "Cuenta de débito",
       "payment_date": "Fecha del pago",
       "next_period_helper": "Tu resumen anuncia el cierre y vencimiento del ciclo en curso. Confirmalos acá.",
@@ -934,7 +935,8 @@
       "usd_mode_in_ars": "En pesos",
       "usd_no_account": "No tenés ninguna cuenta con dólares habilitados, así que esta parte se paga en pesos.",
       "usd_account_label": "Cuenta en dólares",
-      "usd_debit_note": "De tu cuenta en dólares sale {usd}."
+      "debits_helper": "Dos débitos: uno por moneda. Se calculan con lo que estás cancelando del resumen.",
+      "debit_from": "De {account}"
     },
     "edit_dates": {
       "dialog_title": "Editar fechas del resumen",
