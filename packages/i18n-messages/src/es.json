@@ -989,7 +989,11 @@
       "installment_no_cuotas": "La compra no tiene cuotas para recalcular.",
       "shared_update_failed": "No se pudo actualizar el compartido: {error}",
       "shared_unshare_settlement": "No se puede descompartir: hay una liquidación registrada después de esta compra. Revertí esa liquidación primero.",
-      "installment_delete_paid": "No podés eliminar una compra con cuotas ya pagadas."
+      "installment_delete_paid": "No podés eliminar una compra con cuotas ya pagadas.",
+      "statement_not_settled": "El pago tiene que cancelar el resumen completo. Quedarían {ars} en pesos y {usd} en dólares sin pagar.",
+      "leg_exceeds_pending": "Estás pagando más de lo que debe el resumen. Restan {pending}.",
+      "payment_currency_inactive": "Esa cuenta no tiene habilitada la moneda del pago.",
+      "revert_not_latest_group": "Primero deshacé el pago más reciente de este resumen."
     }
   },
   "transactions": {

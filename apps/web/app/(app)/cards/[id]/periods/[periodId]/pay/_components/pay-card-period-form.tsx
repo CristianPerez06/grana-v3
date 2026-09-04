@@ -15,7 +15,6 @@ import { Money, parseMoneyInput } from '@grana/validation'
 import { formatARS } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
-import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Card } from '@/components/ui/card'
 import { Alert } from '@/components/ui/alert'
@@ -207,8 +206,6 @@ export const PayCardPeriodForm = ({
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    const parsedAmount = parseMoneyInput(amount)
-    if (parsedAmount === null || parsedAmount <= 0) errs.amount = t('errors.limit_invalid')
     if (hasUsdDebt && (parsedFx === null || parsedFx <= 0)) {
       errs.fxRate = t('errors.fx_required')
     }
@@ -236,17 +233,35 @@ export const PayCardPeriodForm = ({
 
     setFormError(null)
     startTransition(async () => {
+      // El pago viaja como UN débito con sus imputaciones. El monto NO se manda: lo
+      // deriva la base de lo que se declara cancelar. La porción ARS incluye el sello,
+      // que es un cargo del resumen y sube su deuda en pesos.
+      const arsToSettle = sumARS(pendingAmountARS, parsedStamp)
       const result = await payCardPeriod({
         period_id: periodId,
-        amount: parseMoneyInput(amount) ?? 0,
-        payment_account_id: paymentAccountId,
-        payment_date: paymentDate,
+        payments: [
+          {
+            payment_account_id: paymentAccountId,
+            payment_date: paymentDate,
+            allocations: [
+              ...(arsToSettle > 0
+                ? [{ settles_currency: 'ARS' as const, settles_amount: arsToSettle }]
+                : []),
+              ...(hasUsdDebt && parsedFx !== null && parsedFx > 0
+                ? [
+                    {
+                      settles_currency: 'USD' as const,
+                      settles_amount: pendingAmountUSD,
+                      fx_rate_to_ars: parsedFx,
+                    },
+                  ]
+                : []),
+            ],
+          },
+        ],
         next_end_date: nextEndDate,
         next_due_date: nextDueDate,
-        stamp_tax_amount: parseMoneyInput(stampTax) ?? 0,
-        ...(hasUsdDebt && parsedFx !== null && parsedFx > 0
-          ? { fx_rate_to_ars: parsedFx }
-          : {}),
+        stamp_tax_amount: parsedStamp,
       })
 
       if (!result.ok) {
@@ -356,16 +371,13 @@ export const PayCardPeriodForm = ({
           <div className="flex flex-col gap-1.5">
             <FieldLabel>{t('labels.amount_to_pay')}</FieldLabel>
             <Hint>{t('labels.amount_to_pay_helper')}</Hint>
-            <MoneyField size="lg" invalid={Boolean(errors.amount)}>
-              <MoneyAmountInput
-                required
-                value={amount}
-                onChange={setAmount}
-                className={moneyInputCls('lg')}
-              />
-              <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0" />
+            {/* El monto es DERIVADO de lo que se cancela, no un campo libre: un importe
+                editable podía no corresponder a ninguna deuda y el resumen quedaba
+                marcado como pagado igual. Pagar de menos es un pago parcial, que hoy
+                no está soportado. */}
+            <MoneyField size="lg">
+              <output className={`${moneyInputCls('lg')} block`}>{amount}</output>
             </MoneyField>
-            {errors.amount && <FieldError>{errors.amount}</FieldError>}
 
             {/* Caso USD: desglose línea a línea de cómo se arma el total en ARS. */}
             {hasUsdDebt && (

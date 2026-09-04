@@ -14,22 +14,36 @@ export type RevertedStampTax =
    */
   | 'ambiguous'
 
+/** Un débito que volvió a su cuenta, en SU moneda. */
+export type RevertedDebit = {
+  amount: number
+  currencyCode: string
+  accountName: string
+}
+
 /** Summary returned by the RPC, used to give the user concrete feedback. */
 export type RevertPaymentSummary = {
-  /** Amount of the debit expense that went back to the payment account. */
-  revertedAmount: number
-  /** Name of the account the money returned to. */
-  paymentAccountName: string
+  /**
+   * Los débitos que se revirtieron, uno por cuenta y moneda. Un resumen mixto pagado en
+   * dos monedas devuelve dos: NUNCA se suman ni se convierten entre sí.
+   */
+  reverted: RevertedDebit[]
   /** Charges that went back to `pending`, excluding the sello when it was deleted. */
   movementsReverted: number
   stampTax: RevertedStampTax
+  /** `false` cuando solo se revirtió un grupo de pago y el resumen conserva otros. */
+  fullyReverted: boolean
 }
 
 type RpcSummary = {
-  reverted_amount: number | string | null
-  payment_account_name: string | null
+  reverted: Array<{
+    amount: number | string | null
+    currency_code: string | null
+    account_name: string | null
+  }> | null
   movements_reverted: number | null
   stamp_tax: string | null
+  fully_reverted: boolean | null
 }
 
 /**
@@ -52,11 +66,18 @@ type RpcSummary = {
 export async function revertCardPeriodPayment(args: {
   supabase: GranaSupabaseClient
   periodId: string
+  /**
+   * Grupo de pago a revertir. Omitirlo revierte TODO el resumen, que es lo que ofrece
+   * la UI. Un grupo son todas las patas nacidas de una misma operación: revertir una
+   * sola dejaría medio pago que el usuario nunca hizo así.
+   */
+  groupId?: string
 }): Promise<CardMutationResult & { summary?: RevertPaymentSummary }> {
-  const { supabase, periodId } = args
+  const { supabase, periodId, groupId } = args
 
   const { data, error } = await supabase.rpc('revert_card_period_payment', {
     p_period_id: periodId,
+    ...(groupId ? { p_group_id: groupId } : {}),
   })
 
   if (error) {
@@ -85,6 +106,9 @@ export async function revertCardPeriodPayment(args: {
     if (message.includes('period_not_paid')) {
       return { ok: false, messageKey: 'cards.errors.period_not_paid' }
     }
+    if (message.includes('not_latest_payment_group')) {
+      return { ok: false, messageKey: 'cards.errors.revert_not_latest_group' }
+    }
 
     return { ok: false, errorCode: error.code, messageKey: 'cards.errors.revert_failed' }
   }
@@ -97,10 +121,14 @@ export async function revertCardPeriodPayment(args: {
   return {
     ok: true,
     summary: {
-      revertedAmount: Number(summary.reverted_amount ?? 0),
-      paymentAccountName: summary.payment_account_name ?? '',
+      reverted: (summary.reverted ?? []).map((d) => ({
+        amount: Number(d.amount ?? 0),
+        currencyCode: d.currency_code ?? 'ARS',
+        accountName: d.account_name ?? '',
+      })),
       movementsReverted: Number(summary.movements_reverted ?? 0),
       stampTax: isRevertedStampTax(summary.stamp_tax) ? summary.stamp_tax : 'none',
+      fullyReverted: summary.fully_reverted ?? true,
     },
   }
 }

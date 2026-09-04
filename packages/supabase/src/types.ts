@@ -1298,8 +1298,38 @@ export type Database = {
         Args: { p_settlement_id: string }
         Returns: undefined
       }
-      revert_card_period_payment: {
+      card_period_pending: {
         Args: { p_period_id: string }
+        Returns: {
+          currency_code: string
+          total: number
+          paid: number
+          pending: number
+        }[]
+      }
+      confirm_running_cycle: {
+        Args: {
+          p_period_id: string
+          p_next_end_date: string
+          p_next_due_date: string
+          p_plan: Json
+          p_projected_end: string
+          p_projected_due: string
+          p_expected: Json
+        }
+        Returns: Json
+      }
+      pay_card_period_legs: {
+        Args: {
+          p_period_id: string
+          p_payments: Json
+          p_today: string
+          p_stamp_tax_amount?: number
+        }
+        Returns: Json
+      }
+      revert_card_period_payment: {
+        Args: { p_period_id: string; p_group_id?: string }
         Returns: Json
       }
       unshare_movement: { Args: { p_root_id: string }; Returns: undefined }

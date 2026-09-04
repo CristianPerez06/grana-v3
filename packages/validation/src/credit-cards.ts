@@ -145,35 +145,90 @@ export const registerInstallmentsSchema = yup
 
 // ─── Task 2.5: Pagar resumen ─────────────────────────────────────────────────
 
+// ─── Pago de resumen: pagos con imputaciones ─────────────────────────────────
+
+/**
+ * Una **imputación**: qué deuda del resumen cancela una parte de un débito.
+ *
+ * `settles_currency` es la moneda de la DEUDA, no la del dinero que sale: pagar
+ * US$ 500 desde una cuenta en pesos es una allocation `USD` con cotización.
+ */
+export const paymentAllocationSchema = yup
+  .object({
+    settles_currency: yup
+      .string()
+      .label('settles_currency')
+      .required()
+      .oneOf(SUPPORTED_CURRENCIES),
+    settles_amount: yup.number().label('settles_amount').required().positive(),
+    /** Solo en el cruce permitido: débito en ARS que cancela deuda en USD. */
+    fx_rate_to_ars: yup.number().label('fx_rate_to_ars').positive().nullable().optional(),
+  })
+  .strict()
+
+/**
+ * Un **pago**: un débito real de una cuenta, con lo que ese débito cancela.
+ *
+ * El input va ANIDADO y no como lista plana de imputaciones, porque una lista plana no
+ * puede decir cuándo dos imputaciones son un mismo débito bancario y cuándo son dos —
+ * y eso lo declara el usuario al elegir de qué cuenta sale cada cosa.
+ *
+ * El monto NO viaja: se DERIVA de las imputaciones. Un importe libre puede no
+ * corresponder a ninguna deuda, que es exactamente lo que hacía que un resumen quedara
+ * marcado como pagado con cualquier número.
+ */
+export const statementPaymentSchema = yup
+  .object({
+    payment_account_id: yup.string().label('payment_account_id').uuid().required(),
+    payment_date: yup.string().label('payment_date').required(),
+    allocations: yup
+      .array()
+      .label('allocations')
+      .of(paymentAllocationSchema)
+      .min(1)
+      .required(),
+  })
+  .strict()
+  // Un débito tiene UNA moneda. Si alguna imputación pesifica, el débito es en pesos y
+  // el resto tiene que cancelar pesos; si ninguna pesifica, todas cancelan la misma
+  // moneda — la de la cuenta. Y un débito ocurre un día, a un solo tipo de cambio.
+  .test('coherent-debit-currency', 'debit_currency_incoherent', function (value) {
+    const allocations = value?.allocations ?? []
+    if (allocations.length === 0) return true
+    const pesified = allocations.filter((a) => a?.fx_rate_to_ars != null)
+
+    if (pesified.length === 0) {
+      const currencies = new Set(allocations.map((a) => a?.settles_currency))
+      return currencies.size === 1
+    }
+    if (pesified.some((a) => a?.settles_currency !== 'USD')) return false
+    if (new Set(pesified.map((a) => a?.fx_rate_to_ars)).size > 1) return false
+    return allocations
+      .filter((a) => a?.fx_rate_to_ars == null)
+      .every((a) => a?.settles_currency === 'ARS')
+  })
+
 export const payCardPeriodSchema = yup
   .object({
     period_id: yup.string().label('period_id').uuid().required(),
-    amount: yup.number().label('amount').required().positive(),
-    payment_account_id: yup.string().label('payment_account_id').uuid().required(),
-    payment_date: yup.string().label('payment_date').required(),
-    // Cotización del día de pago. Optional at the schema level; the action
-    // requires it (> 0) when the period has pending USD debt and persists it
-    // on the payment expense for traceability.
-    fx_rate_to_ars: yup
-      .number()
-      .label('fx_rate_to_ars')
-      .positive()
-      .nullable()
-      .optional(),
+    /** Un pago por débito real. Dos monedas pagadas por separado = dos pagos. */
+    payments: yup
+      .array()
+      .label('payments')
+      .of(statementPaymentSchema)
+      .min(1)
+      .required(),
     // Impuesto de sellos confirmado por el usuario para este resumen (ARS).
-    // 0 / ausente = sin sello (no se inserta movimiento ni se toca la alícuota).
-    // > 0 = se registra como movimiento del período y, si la tarjeta no tenía
-    // alícuota, se deriva y persiste (monto ÷ base).
+    // 0 / ausente = sin sello. > 0 = se registra como movimiento del período y, si la
+    // tarjeta no tenía alícuota, se deriva y persiste (monto ÷ base).
     stamp_tax_amount: yup
       .number()
       .label('stamp_tax_amount')
       .min(0)
       .nullable()
       .optional(),
-    // Confirmation of the in-course period P(n+1): the statement being paid
-    // announces these dates, so the user has them in hand. The action updates
-    // the (usually estimated) next period instead of creating P(n+2), and
-    // validates next_end_date > paid period's end_date (its anchor).
+    // Confirmación del ciclo en curso P(n+1): el resumen que se paga las anuncia, así
+    // que el usuario las tiene en la mano en este momento.
     next_end_date: yup.string().label('next_end_date').required(),
     next_due_date: yup
       .string()
@@ -222,4 +277,6 @@ export type RegisterInstallmentsInput = yup.InferType<
   typeof registerInstallmentsSchema
 >
 export type PayCardPeriodInput = yup.InferType<typeof payCardPeriodSchema>
+export type StatementPaymentInput = yup.InferType<typeof statementPaymentSchema>
+export type PaymentAllocationInput = yup.InferType<typeof paymentAllocationSchema>
 export type UpdatePeriodDatesInput = yup.InferType<typeof updatePeriodDatesSchema>

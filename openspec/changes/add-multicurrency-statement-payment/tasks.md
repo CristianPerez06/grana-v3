@@ -35,13 +35,15 @@
 
 ## 4. Schema y action de pago (D1, D6, D11, D12, D18)
 
-- [ ] 4.1 `payCardPeriodSchema`: `payments[]` anidado (`payment_account_id`, `payment_date`, `allocations[]`), con al menos una allocation
-- [ ] 4.2 `fx_rate_to_ars` requerida ⟺ la pata cancela USD con una transacción en ARS; rechazada en el resto
-- [ ] 4.3 `payCardPeriod`: el calendario se delega a `confirm_running_cycle` y corre antes; el dinero, entero a `pay_card_period_legs`. Se elimina la cadena de rollbacks manuales
-- [ ] 4.4 Mapeo de los errores del RPC a `messageKey`s neutrales, incluidos `GRN04` (no salda) y la colisión de cobertura
-- [ ] 4.5 La alícuota de sellos se deriva y persiste en TS desde `stamp_tax_base_ars`, que devuelve el RPC
-- [ ] 4.6 `revertCardPeriodPayment(periodId, groupId?)`, mapeando los errores del RPC
-- [ ] 4.7 Tests de la action: un pago con dos allocations, dos pagos de una allocation cada uno, operación que no salda, propagación de errores del RPC
+- [x] 4.1 `payCardPeriodSchema`: `payments[]` anidado (`payment_account_id`, `payment_date`, `allocations[]`), con al menos una allocation
+- [x] 4.2 `fx_rate_to_ars` requerida ⟺ la pata cancela USD con una transacción en ARS; rechazada en el resto
+- [x] 4.3 `payCardPeriod`: el calendario se delega a `confirm_running_cycle` y corre antes; el dinero, entero a `pay_card_period_legs`. Se elimina la cadena de rollbacks manuales
+- [x] 4.4 Mapeo de los errores del RPC a `messageKey`s neutrales, incluidos `GRN04` (no salda) y la colisión de cobertura
+- [x] 4.5 La alícuota de sellos se deriva y persiste en TS desde `stamp_tax_base_ars`, que devuelve el RPC
+- [x] 4.6 `revertCardPeriodPayment(periodId, groupId?)`, mapeando los errores del RPC
+- [x] 4.7a Las shells web y nativa construyen el payload anidado con **un** débito en pesos: la app queda funcionando igual que hoy sobre el modelo nuevo, y el selector de cuenta en dólares entra en el bloque 5
+- [x] 4.7b El monto a pagar deja de ser editable en las dos shells: es una consecuencia de lo que se cancela, no una entrada
+- [ ] 4.8 Tests de la action: un pago con dos allocations, dos pagos de una allocation cada uno, operación que no salda, propagación de errores del RPC
 
 ## 5. Formulario de pago — web (D1, D6, D18)
 

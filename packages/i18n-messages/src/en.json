@@ -989,7 +989,11 @@
       "installment_no_cuotas": "The purchase has no installments to recalculate.",
       "shared_update_failed": "Couldn’t update the shared split: {error}",
       "shared_unshare_settlement": "Can’t un-share: a settlement is dated after this purchase. Reverse that settlement first.",
-      "installment_delete_paid": "You can’t delete a purchase with already-paid installments."
+      "installment_delete_paid": "You can’t delete a purchase with already-paid installments.",
+      "statement_not_settled": "The payment must settle the whole statement. It would leave {ars} in pesos and {usd} in dollars unpaid.",
+      "leg_exceeds_pending": "You are paying more than the statement owes. {pending} remains.",
+      "payment_currency_inactive": "That account does not have the payment currency enabled.",
+      "revert_not_latest_group": "Undo the most recent payment of this statement first."
     }
   },
   "transactions": {

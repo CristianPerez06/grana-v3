@@ -149,8 +149,6 @@ export function PayCardPeriodForm({
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    const parsedAmount = parseMoneyInput(amount)
-    if (parsedAmount === null || parsedAmount <= 0) errs.amount = t('cards.errors.limit_invalid')
     if (hasUsdDebt && (parsedFx === null || parsedFx <= 0)) errs.fxRate = t('cards.errors.fx_required')
     if (!paymentAccountId) errs.paymentAccountId = t('cards.errors.account_required')
     if (!paymentDate) errs.paymentDate = t('common.required_short')
@@ -172,15 +170,34 @@ export function PayCardPeriodForm({
     setFormError(null)
     if (!validate()) return
     setSubmitting(true)
+    // Espejo exacto del web: UN débito con sus imputaciones, y el monto DERIVADO de lo
+    // que se declara cancelar. La porción ARS incluye el sello, que sube la deuda.
+    const arsToSettle = sumARS(pendingAmountARS, parsedStamp)
     const result = await payCardPeriod(queryClient, {
       period_id: periodId,
-      amount: parseMoneyInput(amount) ?? 0,
-      payment_account_id: paymentAccountId,
-      payment_date: paymentDate,
+      payments: [
+        {
+          payment_account_id: paymentAccountId,
+          payment_date: paymentDate,
+          allocations: [
+            ...(arsToSettle > 0
+              ? [{ settles_currency: 'ARS' as const, settles_amount: arsToSettle }]
+              : []),
+            ...(hasUsdDebt && parsedFx !== null && parsedFx > 0
+              ? [
+                  {
+                    settles_currency: 'USD' as const,
+                    settles_amount: pendingAmountUSD,
+                    fx_rate_to_ars: parsedFx,
+                  },
+                ]
+              : []),
+          ],
+        },
+      ],
       next_end_date: nextEndDate,
       next_due_date: nextDueDate,
-      stamp_tax_amount: parseMoneyInput(stampTax) ?? 0,
-      ...(hasUsdDebt && parsedFx !== null && parsedFx > 0 ? { fx_rate_to_ars: parsedFx } : {}),
+      stamp_tax_amount: parsedStamp,
     })
     setSubmitting(false)
     if (!result.ok) {
@@ -283,8 +300,10 @@ export function PayCardPeriodForm({
         <View className="flex-col gap-1.5">
           <Label>{t('cards.labels.amount_to_pay')}</Label>
           <Text className="text-xs text-text-muted">{t('cards.labels.amount_to_pay_helper')}</Text>
-          <MoneyAmountInput value={amount} onChangeText={setAmount} invalid={Boolean(errors.amount)} />
-          {errors.amount && <Text className="text-xs text-error">{errors.amount}</Text>}
+          {/* Derivado de lo que se cancela, no un campo libre: un importe editable podía
+              no corresponder a ninguna deuda y el resumen quedaba marcado como pagado
+              igual. Pagar de menos es un pago parcial, que hoy no está soportado. */}
+          <MoneyAmountInput value={amount} onChangeText={() => {}} editable={false} />
 
           {hasUsdDebt && (
             <View className="mt-2 rounded-xl border border-border bg-page px-4">

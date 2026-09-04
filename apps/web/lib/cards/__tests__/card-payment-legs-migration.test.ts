@@ -880,6 +880,12 @@ describe('confirm_running_cycle — los anclajes de P(n+2)', () => {
  *
  * Estos tests son la alarma: atan la propiedad, no la implementación. Deben ponerse en
  * rojo ANTES de que una pantalla muestre un resumen mixto como pagado debiendo dólares.
+ *
+ * OJO con qué es lo que atan: el invariante del **camino de escritura actual**, no una
+ * verdad eterna del modelo. Hoy vale porque el RPC exige settlement total. Cuando entren
+ * los pagos parciales, estos tests cambian A PROPÓSITO — ahí `has_payment` deja de ser
+ * equivalente a "saldado" y se parte en `settlement` + `hasAnyPayment`. Verlos en rojo
+ * en ese momento es la señal correcta; verlos en rojo antes, un bug.
  */
 describe('INVARIANTE: existe un pago ⟺ el resumen está saldado', () => {
   /** La propiedad, verificada sobre el estado real de la base. */
