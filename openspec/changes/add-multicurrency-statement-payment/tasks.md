@@ -57,7 +57,7 @@
 ## 6. Detalle de resumen y de movimiento (D7)
 
 - [x] 6.1 Detalle de período: un renglón por DÉBITO real (fecha, cuenta, monto en su moneda), en web y en nativo
-- [ ] 6.2 Detalle de movimiento de pago: qué deuda del resumen canceló ese débito
+- [x] 6.2 Detalle de movimiento de pago: una fila por imputación de ESE débito, en la moneda de la deuda que canceló. Antes salía de la composición del RESUMEN, que con dos débitos habría repetido la misma cifra en los dos movimientos
 - [x] 6.3 El diálogo de deshacer pago lista TODOS los débitos que vuelven, cada uno en su moneda: con dos, mostrar solo el primero subestimaba lo que la reversión hace
 
 ## 7. Paridad nativa
@@ -65,7 +65,7 @@
 - [x] 7.1 `apps/mobile/components/cards/PayCardPeriodForm.tsx`: bloques de pesos y dólares, avisos
 - [x] 7.2 Pantalla de pago nativa: cuentas elegibles por moneda, con sus saldos
 - [x] 7.3 Detalle de período nativo con los débitos del pago
-- [ ] 7.4 Deshacer pago nativo
+- [x] 7.4 **Verificado: mobile no tiene flujo de deshacer pago de resumen**, así que no hay copy ni shape viejo que pueda quedar desalineado — el único `revert` nativo es el de settlements de cuenta corriente. Es una brecha de paridad PREEXISTENTE (web sí puede deshacer), ajena a esta change: queda anotada abajo, no resuelta acá
 
 ## 8. Cierre
 
@@ -75,3 +75,14 @@
 - [ ] 8.4 Verificar que un pago anterior a esta change se sigue leyendo como resumen saldado
 - [ ] 8.5 Verificar que el dashboard, el hero de `/cards` y el resumen del mes dan lo mismo que antes
 - [ ] 8.6 `pnpm openspec:check`, lint, typecheck y tests en verde
+
+## Fuera de alcance, detectado en el camino
+
+- **Deshacer el pago de un resumen no existe en la app nativa.** Web lo tiene desde la
+  migración `0050`; mobile nunca lo expuso. No lo agrega esta change —sería superficie
+  nueva, no el arreglo del bug— pero conviene un ticket: hoy un usuario que pagó mal
+  desde el teléfono tiene que abrir la web para corregirlo.
+- **CI corre solo `pnpm --filter web test`.** Ningún archivo de `packages/*` entra en esa
+  suite, aunque varios paquetes tengan script de `test`. Por eso los tests de esta change
+  viven en `apps/web/lib/**`. Cambiarlo puede poner en rojo tests viejos: es su propia
+  conversación.
