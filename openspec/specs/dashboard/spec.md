@@ -1205,13 +1205,17 @@ La card "Cuánto gastaste" SHALL cerrar con una tira de ritmo que muestre un ani
 
 El ritmo SHALL calcularse como `Gastaste / ingresos acreditados` **dentro de la misma moneda y el mismo mes**. El ritmo evalúa **el mes**: el saldo arrastrado de meses anteriores ("Tenías") NO SHALL participar de ninguno de los dos términos. La pregunta es cómo fue este mes, no cómo viene el usuario en general. El denominador SHALL ser el ingreso del mes (`totalIncome`), NO el "Entró" de "Resumen del mes": ese último es una lectura de liquidez que incluye reintegros, liquidaciones y patas de cambio de moneda, y meterlas en el denominador infla el ritmo con plata que no es ingreso. El sistema NO SHALL requerir un ingreso mensual esperado configurado por el usuario.
 
+**El copy de la tira SHALL nombrar `ingresos`, y NO SHALL usar "entró" ni "entró plata" para referirse a su denominador.** Las dos lecturas conviven en la misma pantalla y "Entró" ya tiene dueño: es la palabra de la zona clara de la card de saldo, donde significa *todo lo que subió el saldo* (ingresos, reintegros, liquidaciones, ajustes, patas de cambio). Que la tira use esa misma palabra para un subconjunto —solo `totalIncome`— produce una contradicción literal que el usuario lee de un vistazo: la card de arriba dice "Entró $ 2.000" y la de abajo, en el mismo viewport, "Todavía no entró plata este mes". Las dos son ciertas bajo su propia definición y ninguna de las dos lo dice. La divergencia de denominador es deliberada (ver el párrafo anterior); lo que NO es aceptable es no nombrarla.
+
+Por lo tanto, el estado indeterminado SHALL decir que **no hubo ingresos** —no que no entró plata— y SHALL aclarar, en su bajada, que reintegros y ajustes no cuentan como ingreso. Esa aclaración es lo que cierra la incongruencia: sin ella, un mes cuyo único movimiento a favor fue un reintegro deja al usuario con dos afirmaciones que se contradicen y ninguna pista de por qué.
+
 Se SHALL renderizar **un solo anillo, el de ARS**. El ritmo en USD NO SHALL renderizarse como segundo anillo.
 
 Dos estados SHALL tratarse como estados de primera clase, no como bordes excepcionales, porque con este denominador son habituales:
 
 - **Ritmo indeterminado** (ingresos del mes en cero, típico a comienzo de mes): el sistema SHALL mostrar un mensaje explicativo **en lugar del anillo**, y NO SHALL mostrar 0% ni dividir por cero.
 - **Ritmo mayor a 100%**: el anillo y la barra SHALL pasar al color de alerta (terracota), y tanto el anillo como el copy SHALL expresar la relación como **múltiplo**, no como porcentaje. Pasado el 100% el porcentaje deja de ser la unidad adecuada: "el 1020%" hay que decodificarlo, "10 veces" no. Además un porcentaje de cuatro cifras no entra en el agujero del anillo y se recorta, que en un número de dinero es la peor falla posible.
-- **Ritmo desbordado**: cuando el cociente supera un umbral de escala, el sistema NO SHALL mostrar el anillo ni el porcentaje, y SHALL mostrar en su lugar un mensaje con un ícono, en el tono de la app, acompañado de **los dos montos que lo produjeron**. Con un denominador cercano a cero —un mes cuyo único ingreso fueron centavos— el cociente se va a los millones: es aritméticamente correcto y no es una lectura, y un número capeado tampoco lo sería. Este estado NO SHALL confundirse con el indeterminado: acá **sí entró plata**, solo que poca, y decir "todavía no entró plata este mes" sería falso. El umbral SHALL ubicarse donde el número deja de informar, no donde se pone grande: un mes en que se gastó diez veces el ingreso es extraordinario pero perfectamente legible y SHALL conservar su porcentaje.
+- **Ritmo desbordado**: cuando el cociente supera un umbral de escala, el sistema NO SHALL mostrar el anillo ni el porcentaje, y SHALL mostrar en su lugar un mensaje con un ícono, en el tono de la app, acompañado de **los dos montos que lo produjeron**. Con un denominador cercano a cero —un mes cuyo único ingreso fueron centavos— el cociente se va a los millones: es aritméticamente correcto y no es una lectura, y un número capeado tampoco lo sería. Este estado NO SHALL confundirse con el indeterminado: acá **sí hubo ingresos**, solo que ínfimos, y decir que no se registró ninguno sería falso. El umbral SHALL ubicarse donde el número deja de informar, no donde se pone grande: un mes en que se gastó diez veces el ingreso es extraordinario pero perfectamente legible y SHALL conservar su porcentaje.
 
 #### Scenario: Mes con ingresos y gasto por debajo
 
@@ -1224,6 +1228,13 @@ Dos estados SHALL tratarse como estados de primera clase, no como bordes excepci
 - **WHEN** el usuario abre el dashboard antes de que se acredite ningún ingreso del mes
 - **THEN** la tira muestra un mensaje explicativo en lugar del anillo
 - **AND** no se renderiza ningún porcentaje
+
+#### Scenario: El mes recibió un reintegro pero ningún ingreso
+
+- **WHEN** lo único que subió el saldo del mes fue un reintegro recibido, así que "Resumen del mes" muestra "Entró $ 2.000" y los ingresos del mes son cero
+- **THEN** la tira muestra su estado indeterminado
+- **AND** el mensaje habla de **ingresos**, no de que "no entró plata", que contradiría a la card de saldo de la misma pantalla
+- **AND** la bajada aclara que reintegros y ajustes no cuentan como ingreso
 
 #### Scenario: El gasto supera los ingresos del mes
 
@@ -1242,7 +1253,7 @@ Dos estados SHALL tratarse como estados de primera clase, no como bordes excepci
 - **WHEN** el usuario gastó cientos de miles en un mes cuyo único ingreso fueron unos centavos
 - **THEN** la tira muestra un mensaje con ícono en lugar del anillo y del porcentaje
 - **AND** acompaña los dos montos que lo produjeron
-- **AND** NO dice que todavía no entró plata, porque sí entró
+- **AND** NO dice que no hubo ingresos, porque sí los hubo
 
 
 ---
