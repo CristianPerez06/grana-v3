@@ -72,6 +72,7 @@ export async function payCardPeriod(args: {
     .from('period_payments')
     .select('id')
     .eq('period_id', data.period_id)
+    .limit(1)
     .maybeSingle()
 
   if (existingPayment) {

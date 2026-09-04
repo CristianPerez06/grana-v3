@@ -722,15 +722,26 @@ export async function getCommittedOutlookForMonth(
       }
       const paymentDateOf = (t: PaymentRow['transaction']): string | null =>
         Array.isArray(t) ? (t[0]?.date ?? null) : (t?.date ?? null)
-      // Paid as of the snapshot. A payment with no readable date is treated as
-      // paid — the conservative reading, and the shape today's behaviour has.
+      // Paid as of the snapshot — and a statement is settled only when EVERY debit of
+      // its payment has left. A mixed statement is paid with one debit per currency,
+      // and those can carry different dates: if the pesos left on the 5th and the
+      // dollars on the 20th, at a cut on the 10th that statement was still owed. Asking
+      // it row by row would have dropped it from the commitments on the strength of the
+      // first debit alone. A payment with no readable date is treated as paid — the
+      // conservative reading, and the shape today's behaviour has.
+      const debitsByPeriod = new Map<string, boolean[]>()
+      for (const row of (payments ?? []) as unknown as PaymentRow[]) {
+        const date = paymentDateOf(row.transaction)
+        const settledAtCut = date == null || date <= snapshotDate
+        debitsByPeriod.set(row.period_id, [
+          ...(debitsByPeriod.get(row.period_id) ?? []),
+          settledAtCut,
+        ])
+      }
       const paidAtSnapshot = new Set(
-        ((payments ?? []) as unknown as PaymentRow[])
-          .filter((row) => {
-            const date = paymentDateOf(row.transaction)
-            return date == null || date <= snapshotDate
-          })
-          .map((row) => row.period_id),
+        [...debitsByPeriod.entries()]
+          .filter(([, debits]) => debits.every(Boolean))
+          .map(([periodId]) => periodId),
       )
       const unpaid = candidates.filter((p) => !paidAtSnapshot.has(p.id))
 

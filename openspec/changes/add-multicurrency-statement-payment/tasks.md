@@ -21,16 +21,16 @@
 
 ## 2. La regla de cobertura en TS (D2)
 
-- [ ] 2.1 `computePeriodAmounts`: exponer `paidAmount*` desde las patas cuando existan, sin cambiar su contrato actual — un resumen con pago sigue siendo un resumen saldado
-- [ ] 2.2 Una pata `settlement_known = false` (pago legacy) satura el resumen
-- [ ] 2.3 Verificar que `derivePeriodStatus`, `derivePeriodVariant` y `classifyPeriodsLifecycle` NO necesitan cambios: `has_payment` sigue significando saldado
-- [ ] 2.4 Tests: resumen mixto saldado con dos patas, pago legacy, reintegro recibido
+- [x] 2.1 **Verificado: `computePeriodAmounts` no necesita cambios.** Con settlement total, un resumen con pago tiene todos sus consumos en `paid`, así que `paidAmount*` sale de los consumos como hoy. Las patas no participan de la lectura en este alcance — participan del *write path*, donde las valida el trigger
+- [x] 2.2 **Verificado: `derivePeriodStatus`, `derivePeriodVariant` y `classifyPeriodsLifecycle` no necesitan cambios.** `has_payment` sigue significando saldado mientras el RPC rechace toda operación que no deje el resumen en cero (`GRN04`)
+- [ ] 2.3 Test de regresión que ATA esa equivalencia: si alguien relaja el rechazo del RPC, algo tiene que ponerse rojo antes que una pantalla mienta
 
 ## 3. Lecturas de patas (D15)
 
-- [ ] 3.1 Barrer las seis lecturas `.maybeSingle()` sobre `period_payments` (`pay-card-period.ts:72`, `cards/mutations.ts:262` y `:292`, `detail-queries.ts:291`, `thin-mutations.ts:751` y `:903`) a lecturas de varias filas — con dos patas `.maybeSingle()` **falla**
-- [ ] 3.2 `detail-queries.ts`: exponer las patas del período para el detalle del resumen
-- [ ] 3.3 Verificar que el dashboard NO necesita cambios (sin parciales, un pago anterior al corte sí significa saldado)
+- [x] 3.1 Auditoría completa de lecturas que asumían UNA fila de pago: 6 `.maybeSingle()` y 0 `.single()`. Los cuatro booleanos ("¿este resumen tiene pago?") pasan a `.limit(1).maybeSingle()`; los dos de `detail-queries` cambian de forma
+- [x] 3.2 `detail-queries.ts`: `paymentDebits` — TODOS los débitos del pago, deduplicados por transacción (un débito puede llevar varias patas). Los escalares `payment*` se conservan derivados del primero, para las lecturas que todavía asumen uno
+- [x] 3.3 **Dos asunciones de fila única que NO eran `.maybeSingle()`**: el `Map.set` por fila de `detail-queries.ts:201`, que se quedaba con la última pata en silencio; y el as-of de `dashboard/queries.ts:714`, que marcaba el resumen como saldado al corte si **alguno** de sus débitos era anterior — ahora exige que lo sean todos
+- [ ] 3.4 Tests del as-of con dos débitos de fechas distintas alrededor del corte
 
 ## 4. Schema y action de pago (D1, D6, D11, D12, D18)
 

@@ -19,6 +19,25 @@ type Tables<T extends keyof Database['public']['Tables']> = Database['public']['
 
 // ─── Detail return types ───────────────────────────────────────────────────────
 
+/**
+ * Un débito REAL del pago de un resumen: la plata que salió de una cuenta, en su
+ * moneda. Un resumen mixto pagado en dos monedas tiene dos; uno pagado todo en pesos
+ * tiene uno, aunque cancele deuda en las dos (un débito puede llevar varias patas).
+ *
+ * Los campos escalares `payment*` de abajo describen el PRIMER débito y se conservan
+ * para las lecturas que todavía asumen uno solo. Nada que muestre plata debe sumarlos:
+ * son de monedas distintas.
+ */
+export type CardPeriodPaymentDebit = {
+  transactionId: string
+  date: string | null
+  amount: number
+  currencyCode: string
+  accountName: string | null
+  /** La cotización usada, cuando ese débito pesificó deuda en dólares. */
+  fxRateToArs: number | null
+}
+
 export type CardPeriodDetail = CardPeriodWithPayment & {
   variant: PeriodVariant
   alert: CardPeriodAlert
@@ -41,6 +60,8 @@ export type CardPeriodDetail = CardPeriodWithPayment & {
   paymentHasStampTax: boolean
   paymentRecordId: string | null
   paymentExpenseId: string | null
+  /** TODOS los débitos del pago, uno por transacción real. Vacío si está impago. */
+  paymentDebits: CardPeriodPaymentDebit[]
   nextPeriodStart: string | null
   nextPeriodIsPaid: boolean
   transactions: Array<{
@@ -182,7 +203,7 @@ export async function getCardPeriods(
     ? await supabase
         .from('period_payments')
         .select(
-          'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, account:accounts!transactions_account_id_fkey(name))',
+          'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, currency_code, fx_rate_to_ars, account:accounts!transactions_account_id_fkey(name))',
         )
         .in('period_id', paidPeriodIds)
     : { data: [], error: null }
@@ -190,26 +211,50 @@ export async function getCardPeriods(
   if (paymentError) throw paymentError
 
   type PaymentInfo = {
-    date: string | null
-    amount: number | null
-    accountName: string | null
+    debits: CardPeriodPaymentDebit[]
     hasStampTax: boolean
     recordId: string
     expenseId: string
   }
+  type PaymentTxRow = {
+    date: string
+    amount: number | string
+    currency_code: string
+    fx_rate_to_ars: number | string | null
+    account: { name: string } | null
+  }
+  // Un período tiene VARIAS patas, y varias patas pueden compartir un débito (un pago
+  // en pesos que cancela pesos y dólares pesificados). Así que se acumula por período y
+  // se deduplica por transacción: un `Map.set` por fila se quedaba con la última en
+  // silencio, que es peor que fallar — perdía el segundo débito sin avisar.
   const paymentByPeriod = new Map<string, PaymentInfo>()
+  const seenDebits = new Map<string, Set<string>>()
   for (const p of paymentRows ?? []) {
-    const tx = p.transactions as unknown as
-      | { date: string; amount: number | string; account: { name: string } | null }
-      | null
-    paymentByPeriod.set(p.period_id, {
-      date: tx?.date ?? null,
-      amount: tx ? Number(tx.amount) : null,
-      accountName: tx?.account?.name ?? null,
-      hasStampTax: p.stamp_tax_transaction_id != null,
+    const tx = p.transactions as unknown as PaymentTxRow | null
+    const existing = paymentByPeriod.get(p.period_id)
+    const seen = seenDebits.get(p.period_id) ?? new Set<string>()
+    seenDebits.set(p.period_id, seen)
+
+    const info: PaymentInfo = existing ?? {
+      debits: [],
+      hasStampTax: false,
       recordId: p.id,
       expenseId: p.transaction_id,
-    })
+    }
+    if (tx && !seen.has(p.transaction_id)) {
+      seen.add(p.transaction_id)
+      info.debits.push({
+        transactionId: p.transaction_id,
+        date: tx.date ?? null,
+        amount: Number(tx.amount),
+        currencyCode: tx.currency_code,
+        accountName: tx.account?.name ?? null,
+        fxRateToArs: tx.fx_rate_to_ars != null ? Number(tx.fx_rate_to_ars) : null,
+      })
+    }
+    // El sello lo trae UNA sola pata de la operación: basta con que alguna lo tenga.
+    info.hasStampTax = info.hasStampTax || p.stamp_tax_transaction_id != null
+    paymentByPeriod.set(p.period_id, info)
   }
 
   // Index next period (by chronological asc) before reversing for display order.
@@ -246,9 +291,10 @@ export async function getCardPeriods(
       paidAmountARS: amounts.paidAmountARS,
       paidAmountUSD: amounts.paidAmountUSD,
       stampTaxRate,
-      paymentDate: paymentInfo?.date ?? null,
-      paymentAmount: paymentInfo?.amount ?? null,
-      paymentAccountName: paymentInfo?.accountName ?? null,
+      paymentDate: paymentInfo?.debits[0]?.date ?? null,
+      paymentAmount: paymentInfo?.debits[0]?.amount ?? null,
+      paymentAccountName: paymentInfo?.debits[0]?.accountName ?? null,
+      paymentDebits: paymentInfo?.debits ?? [],
       paymentHasStampTax: paymentInfo?.hasStampTax ?? false,
       paymentRecordId: paymentInfo?.recordId ?? null,
       paymentExpenseId: paymentInfo?.expenseId ?? null,
@@ -287,13 +333,16 @@ export async function getCardPeriodDetail(
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })
       .order('id', { ascending: false }),
+    // Sin `.maybeSingle()`: un resumen pagado en dos monedas tiene dos patas, y esa
+    // lectura FALLA con más de una fila en vez de devolver la primera.
     supabase
       .from('period_payments')
       .select(
-        'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, account:accounts!transactions_account_id_fkey(name))',
+        'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, currency_code, fx_rate_to_ars, account:accounts!transactions_account_id_fkey(name))',
       )
       .eq('period_id', periodId)
-      .maybeSingle(),
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true }),
     supabase
       .from('accounts')
       .select('stamp_tax_rate')
@@ -319,11 +368,34 @@ export async function getCardPeriodDetail(
   // whichever total the statement shows (paid when paid, else pending).
   const amounts = computePeriodAmounts(txRows, periodWithPayment.has_payment)
 
-  const payment = paymentResult.data
-  const paymentTx = payment?.transactions as unknown as
-    | { date: string; amount: number | string; account: { name: string } | null }
-    | null
-  const paymentTxDate = paymentTx?.date ?? null
+  type PaymentTxRow = {
+    date: string
+    amount: number | string
+    currency_code: string
+    fx_rate_to_ars: number | string | null
+    account: { name: string } | null
+  }
+  const paymentLegs = paymentResult.data ?? []
+  // Un débito puede llevar varias patas (pesos que cancelan pesos y dólares
+  // pesificados), así que se deduplica por transacción: los débitos son la plata que
+  // salió, las patas son cómo se imputó.
+  const seenDebits = new Set<string>()
+  const paymentDebits: CardPeriodPaymentDebit[] = []
+  for (const leg of paymentLegs) {
+    const tx = leg.transactions as unknown as PaymentTxRow | null
+    if (!tx || seenDebits.has(leg.transaction_id)) continue
+    seenDebits.add(leg.transaction_id)
+    paymentDebits.push({
+      transactionId: leg.transaction_id,
+      date: tx.date ?? null,
+      amount: Number(tx.amount),
+      currencyCode: tx.currency_code,
+      accountName: tx.account?.name ?? null,
+      fxRateToArs: tx.fx_rate_to_ars != null ? Number(tx.fx_rate_to_ars) : null,
+    })
+  }
+  const payment = paymentLegs[0] ?? null
+  const firstDebit = paymentDebits[0] ?? null
 
   return {
     ...periodWithPayment,
@@ -334,10 +406,12 @@ export async function getCardPeriodDetail(
     paidAmountARS: amounts.paidAmountARS,
     paidAmountUSD: amounts.paidAmountUSD,
     stampTaxRate: accountResult.data?.stamp_tax_rate ?? null,
-    paymentDate: paymentTxDate,
-    paymentAmount: paymentTx ? Number(paymentTx.amount) : null,
-    paymentAccountName: paymentTx?.account?.name ?? null,
-    paymentHasStampTax: payment?.stamp_tax_transaction_id != null,
+    paymentDate: firstDebit?.date ?? null,
+    paymentAmount: firstDebit?.amount ?? null,
+    paymentAccountName: firstDebit?.accountName ?? null,
+    paymentDebits,
+    // El sello lo trae UNA pata de la operación: alcanza con que alguna lo tenga.
+    paymentHasStampTax: paymentLegs.some((l) => l.stamp_tax_transaction_id != null),
     paymentRecordId: payment?.id ?? null,
     paymentExpenseId: payment?.transaction_id ?? null,
     nextPeriodStart: nextPeriod?.start_date ?? null,
