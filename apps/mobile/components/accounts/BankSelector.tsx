@@ -15,7 +15,7 @@ import {
   ACCOUNT_COLOR_HEX,
   type AccountColorKey,
 } from '@grana/ui-contracts'
-import type { Institution } from '@grana/accounts'
+import { filterInstitutions, type Institution } from '@grana/accounts'
 import { createCustomInstitution } from '../../lib/accounts/mutations'
 import { useT } from '../../lib/locale-context'
 import { accountColors, colors } from '../../lib/colors'
@@ -116,11 +116,7 @@ function BankSelectorModal({
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState(false)
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    if (!normalized) return institutions
-    return institutions.filter((i) => i.name.toLowerCase().includes(normalized))
-  }, [institutions, query])
+  const filtered = useMemo(() => filterInstitutions(institutions, query), [institutions, query])
 
   const handleClose = () => {
     setQuery('')

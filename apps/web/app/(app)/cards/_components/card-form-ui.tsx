@@ -6,6 +6,7 @@ import { Building2 } from 'lucide-react'
 import { FieldIcon, FieldLabel } from '@/components/ui/form-primitives'
 import { DatePicker } from '@/components/ui/date-picker'
 import { useDrawerContainer } from '@/components/ui/drawer'
+import { filterInstitutions } from '@grana/accounts'
 import type { Institution } from '@/lib/accounts/types'
 
 /**
@@ -86,9 +87,7 @@ export const BankSelectorField = ({
   // Inside the card drawer, portal the list into the drawer panel (not body) so
   // the Dialog's scroll-lock lets the wheel scroll it — see `useDrawerContainer`.
   const drawerContainer = useDrawerContainer()
-  const filtered = institutions.filter((i) =>
-    i.name.toLowerCase().includes(search.toLowerCase()),
-  )
+  const filtered = filterInstitutions(institutions, search)
   const showDropdown = focused && !institutionId
 
   return (
