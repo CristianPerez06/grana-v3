@@ -97,8 +97,25 @@
 - [ ] 8.3b El **bloqueo** de la reversión por un resumen posterior con patas no se probó
       en vivo (haría falta pagar dos resúmenes seguidos de la misma tarjeta). Cubierto por
       test PGlite
-- [ ] 8.4 Verificar que un pago anterior a esta change se sigue leyendo como resumen saldado
-- [ ] 8.5 Verificar que el dashboard, el hero de `/cards` y el resumen del mes dan lo mismo que antes
+- [x] 8.4 Verificar que un pago anterior a esta change se sigue leyendo como resumen
+      saldado. El backfill dejó las patas viejas con `settlement_known = false` y
+      `settles_currency`/`settles_amount` en NULL, como corresponde: no inventó
+      imputaciones que nadie puede reconstruir. Sobre un pago real de julio
+      (`12129086`), `card_period_pending` devuelve **`pending = 0` y `paid = total`**
+      —la pata legacy satura el resumen, que es la única lectura correcta cuando no se
+      sabe qué imputó— y la lectura de débitos devuelve **una** fila con **una**
+      transacción, así que el renglón "Pagado el…" no se duplica. Era la regresión más
+      cara posible: si esta lectura fallara, TODOS los resúmenes ya pagados de todos los
+      usuarios aparecerían impagos
+- [x] 8.5 Verificar que el dashboard, el hero de `/cards` y el resumen del mes dan lo
+      mismo que antes. Medido con snapshot antes → pago en dos monedas → después →
+      reversión → snapshot final, sobre datos reales. Los saldos vuelven **exactos** y
+      los seis renglones de deuda pendiente también. Con el pago vigente: el hero pasa a
+      96.712,67 (la suma de los DOS resúmenes que siguen impagos, sin el pagado), el
+      Disponible baja 52.520 en pesos y 1.900 en dólares **cada uno en su moneda**, y el
+      "Se fue" del resumen del mes muestra `−$84.675,00` y `−US$1.900,00` en renglones
+      separados. Ninguna cifra en pesos absorbió los dólares: era exactamente el riesgo
+      de esta change
 - [ ] 8.6 `pnpm openspec:check`, lint, typecheck y tests en verde
 
 ## 9. Puesta en producción (ver `SUPABASE_SETUP.md` § 12.9)
@@ -130,7 +147,8 @@
       dólares**: reproducirlo exige desactivar los dólares de una cuenta que tiene saldo
       en dólares, o sea tocar data real para mirar un chip deshabilitado. Sin cuenta en
       dólares el formulario arranca en modo pesificado —el camino ya verificado— así que
-      queda verificado por inspección y NO en vivo
+      queda verificado por inspección y NO en vivo. Cada pago de prueba se deshizo y los
+      saldos volvieron a su valor exacto: la base quedó como estaba
 
 **Cierre del change (en esta misma rama, antes del merge):**
 
