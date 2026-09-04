@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { CheckCircle2 } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
@@ -17,10 +18,15 @@ const formatDate = (iso: string) => {
 
 type Props = {
   params: Promise<{ id: string; periodId: string }>
+  // `?pagado=1` lo pone el formulario de pago al terminar: esta pantalla es el acuse
+  // de la anterior, y tiene que DECIR que el pago se registró, no solo mostrar un
+  // estado consistente.
+  searchParams: Promise<{ pagado?: string }>
 }
 
-const PeriodDetailPage = async ({ params }: Props) => {
+const PeriodDetailPage = async ({ params, searchParams }: Props) => {
   const { id, periodId } = await params
+  const { pagado } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -76,8 +82,17 @@ const PeriodDetailPage = async ({ params }: Props) => {
     return Array.from(groups.entries())
   })()
 
+  const justPaid = pagado === '1' && period.has_payment
+
   return (
     <>
+      {justPaid && (
+        <div className="flex items-start gap-2.5 rounded-[13px] border border-emerald/30 bg-emerald-soft px-4 py-3 text-sm text-emerald-deep">
+          <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>{t('period.just_paid')}</span>
+        </div>
+      )}
+
       {/* Date range + edit-dates action — dynamic chrome sub-header. The
           layout chrome is sync (back-link + generic title); this is the
           per-period detail that depends on data. */}

@@ -716,6 +716,7 @@
       "of_connector": "de"
     },
     "period": {
+      "just_paid": "Listo, registramos el pago de este resumen.",
       "detail_title": "Resumen",
       "future": "Futuro",
       "current": "En curso",

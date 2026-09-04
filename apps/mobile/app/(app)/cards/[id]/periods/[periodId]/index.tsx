@@ -30,7 +30,13 @@ export default function StatementDetailScreen() {
   const t = useT()
   const router = useRouter()
   const showCents = useShowCents()
-  const { id, periodId } = useLocalSearchParams<{ id: string; periodId: string }>()
+  // `pagado=1` lo pone el formulario de pago al terminar: esta pantalla es el acuse
+  // de la anterior, y tiene que DECIR que el pago se registró.
+  const { id, periodId, pagado } = useLocalSearchParams<{
+    id: string
+    periodId: string
+    pagado?: string
+  }>()
   const [editOpen, setEditOpen] = useState(false)
 
   const query = useQuery({
@@ -97,6 +103,12 @@ export default function StatementDetailScreen() {
         ) : (
           <>
             {/* Header: range + status + due */}
+            {pagado === '1' && period.has_payment && (
+              <View className="rounded-2xl border border-emerald/30 bg-emerald-soft px-4 py-3">
+                <Text className="text-sm text-emerald-deep">{t('cards.period.just_paid')}</Text>
+              </View>
+            )}
+
             <View className="flex-col gap-1">
               <View className="flex-row flex-wrap items-center gap-2">
                 <Text className="text-base font-semibold text-text">

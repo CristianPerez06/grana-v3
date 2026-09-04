@@ -254,7 +254,13 @@ export function PayCardPeriodForm({
       setFormError(t(result.errorKey))
       return
     }
-    router.replace({ pathname: '/(app)/cards/[id]', params: { id: cardId } })
+    // El acuse ES la pantalla siguiente: la del resumen recién pagado, que dice qué se
+    // debitó de cada cuenta. Aterrizar en la tarjeta mostraba el ciclo EN CURSO, vacío
+    // y en cero, sin decir qué pasó.
+    router.replace({
+      pathname: '/(app)/cards/[id]/periods/[periodId]',
+      params: { id: cardId, periodId, pagado: '1' },
+    })
   }
 
   return (

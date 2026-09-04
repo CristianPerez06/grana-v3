@@ -316,7 +316,10 @@ export const PayCardPeriodForm = ({
         return
       }
 
-      router.push(`/cards/${cardId}`)
+      // El acuse ES la pantalla siguiente (regla del repo): la del resumen recién
+      // pagado, que dice qué se debitó de cada cuenta y ofrece deshacerlo. Aterrizar en
+      // la tarjeta mostraba el ciclo EN CURSO, vacío y en cero, sin decir qué pasó.
+      router.push(`/cards/${cardId}/periods/${periodId}?pagado=1`)
     })
   }
 
