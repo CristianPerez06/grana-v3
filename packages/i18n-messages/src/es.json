@@ -936,7 +936,8 @@
       "usd_no_account": "No tenés ninguna cuenta con dólares habilitados, así que esta parte se paga en pesos.",
       "usd_account_label": "Cuenta en dólares",
       "debits_helper": "Dos débitos: uno por moneda. Se calculan con lo que estás cancelando del resumen.",
-      "debit_from": "De {account}"
+      "debit_from": "De {account}",
+      "debit_account_pending": "Falta elegir la cuenta"
     },
     "edit_dates": {
       "dialog_title": "Editar fechas del resumen",

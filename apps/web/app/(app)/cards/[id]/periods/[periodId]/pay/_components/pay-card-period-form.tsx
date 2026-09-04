@@ -521,9 +521,12 @@ export const PayCardPeriodForm = ({
                     className="flex items-baseline justify-between gap-3 rounded-[13px] border-[1.5px] border-border bg-card px-4 py-3"
                   >
                     <span className="text-[13px] text-text-muted">
+                      {/* Sin cuenta elegida, el placeholder del selector ("Seleccioná una
+                          cuenta.") se leía como si FUERA el nombre de la cuenta. Acá el
+                          renglón dice qué falta. */}
                       {d.account
                         ? t('payment.debit_from', { account: d.account })
-                        : t('errors.account_required')}
+                        : t('payment.debit_account_pending')}
                     </span>
                     <span className="text-xl font-extrabold tracking-tight tabular-nums text-text">
                       {d.value}

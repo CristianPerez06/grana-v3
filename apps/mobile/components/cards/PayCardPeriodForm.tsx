@@ -481,9 +481,11 @@ export function PayCardPeriodForm({
                   className="flex-row items-baseline justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3"
                 >
                   <Text className="text-[13px] text-text-muted">
+                    {/* Sin cuenta elegida, el placeholder del selector se leía como si
+                        FUERA el nombre de la cuenta. */}
                     {d.account
                       ? t('cards.payment.debit_from', { account: d.account })
-                      : t('cards.errors.account_required')}
+                      : t('cards.payment.debit_account_pending')}
                   </Text>
                   <Text className="text-xl font-extrabold tabular-nums text-text">{d.value}</Text>
                 </View>
