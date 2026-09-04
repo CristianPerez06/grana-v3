@@ -113,17 +113,28 @@ const PeriodDetailPage = async ({ params }: Props) => {
             USD
           </p>
         )}
-        {period.has_payment && period.paymentDate && (
-          <p className="text-xs text-green-700 mt-1">
-            {t('period.paid_on_prefix')} {formatDate(period.paymentDate)}
-          </p>
-        )}
+        {/* Un renglón por DÉBITO real: la lista se parece a lo que muestra el banco.
+            Un pago en pesos que cancela pesos y dólares pesificados es un solo débito;
+            pagar cada moneda por su cuenta son dos. */}
+        {period.has_payment &&
+          period.paymentDebits.map((d) => (
+            <p key={d.transactionId} className="text-xs text-green-700 mt-1">
+              {t('period.paid_on_prefix')} {d.date ? formatDate(d.date) : '—'}
+              {d.accountName ? ` · ${d.accountName}` : ''} ·{' '}
+              {d.currencyCode === 'USD'
+                ? formatUSD(d.amount, showCents)
+                : formatARS(d.amount, showCents)}
+            </p>
+          ))}
         {period.has_payment && (
           <div className="mt-3 flex flex-col gap-2">
             <RevertPaymentAction
               periodId={period.id}
-              paymentAmount={period.paymentAmount ?? 0}
-              paymentAccountName={period.paymentAccountName}
+              debits={period.paymentDebits.map((d) => ({
+                amount: d.amount,
+                currencyCode: d.currencyCode,
+                accountName: d.accountName,
+              }))}
               // Los movimientos que vuelven a pendiente son los `paid` del resumen; si
               // el pago registró un sello, ese se elimina y se enuncia aparte.
               movementCount={

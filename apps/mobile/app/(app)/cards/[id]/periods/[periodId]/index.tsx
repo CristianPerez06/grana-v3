@@ -122,11 +122,18 @@ export default function StatementDetailScreen() {
               {totalUSD > 0 && (
                 <Text className="text-sm text-text-muted">{formatUSD(totalUSD, showCents)} USD</Text>
               )}
-              {period.has_payment && period.paymentDate && (
-                <Text className="mt-1 text-xs text-emerald-deep">
-                  {t('cards.period.paid_on_prefix')} {fmt(period.paymentDate)}
-                </Text>
-              )}
+              {/* Un renglón por DÉBITO real, como en web: la lista se parece a lo que
+                  muestra el banco, y cada monto va en su moneda. */}
+              {period.has_payment &&
+                period.paymentDebits.map((d) => (
+                  <Text key={d.transactionId} className="mt-1 text-xs text-emerald-deep">
+                    {t('cards.period.paid_on_prefix')} {d.date ? fmt(d.date) : '—'}
+                    {d.accountName ? ` · ${d.accountName}` : ''} ·{' '}
+                    {d.currencyCode === 'USD'
+                      ? formatUSD(d.amount, showCents)
+                      : formatARS(d.amount, showCents)}
+                  </Text>
+                ))}
             </View>
 
             {canPay && (

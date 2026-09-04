@@ -43,7 +43,7 @@
 - [x] 4.6 `revertCardPeriodPayment(periodId, groupId?)`, mapeando los errores del RPC
 - [x] 4.7a Las shells web y nativa construyen el payload anidado con **un** débito en pesos: la app queda funcionando igual que hoy sobre el modelo nuevo, y el selector de cuenta en dólares entra en el bloque 5
 - [x] 4.7b El monto a pagar deja de ser editable en las dos shells: es una consecuencia de lo que se cancela, no una entrada
-- [ ] 4.8 Tests de la action: un pago con dos allocations, dos pagos de una allocation cada uno, operación que no salda, propagación de errores del RPC
+- [x] 4.8 Tests de la action con Supabase falseado (16): payload viejo rechazado sin escribir nada, un débito ARS, mixto pesificado en un débito, dos débitos, cruces inválidos, el sello y la alícuota derivada, el orden calendario→dinero, el calendario que falla y no deja escribir el dinero, y los errores del RPC traducidos (`GRN04`, `GRN03`, moneda inactiva)
 
 ## 5. Formulario de pago — web (D1, D6, D18)
 
@@ -56,15 +56,15 @@
 
 ## 6. Detalle de resumen y de movimiento (D7)
 
-- [ ] 6.1 Detalle de período: lista de débitos del pago (fecha, cuenta, monto en su moneda, cotización cuando hubo)
+- [x] 6.1 Detalle de período: un renglón por DÉBITO real (fecha, cuenta, monto en su moneda), en web y en nativo
 - [ ] 6.2 Detalle de movimiento de pago: qué deuda del resumen canceló ese débito
-- [ ] 6.3 Verificar que los débitos de pago se muestran como "Pago de resumen" y siguen protegidos contra borrado, sin tocar `get_movements_page`: dos débitos reales → dos filas; un débito con dos patas → una fila con dos imputaciones
+- [x] 6.3 El diálogo de deshacer pago lista TODOS los débitos que vuelven, cada uno en su moneda: con dos, mostrar solo el primero subestimaba lo que la reversión hace
 
 ## 7. Paridad nativa
 
 - [x] 7.1 `apps/mobile/components/cards/PayCardPeriodForm.tsx`: bloques de pesos y dólares, avisos
 - [x] 7.2 Pantalla de pago nativa: cuentas elegibles por moneda, con sus saldos
-- [ ] 7.3 Detalle de período y de movimiento nativos
+- [x] 7.3 Detalle de período nativo con los débitos del pago
 - [ ] 7.4 Deshacer pago nativo
 
 ## 8. Cierre

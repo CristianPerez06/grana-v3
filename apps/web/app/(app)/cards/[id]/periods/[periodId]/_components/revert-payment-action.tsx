@@ -5,15 +5,20 @@ import { useRouter } from 'next/navigation'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { Undo2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { formatARS } from '@grana/i18n-messages'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { revertCardPeriodPayment } from '@/app/_actions/credit-cards'
 
 type Props = {
   periodId: string
   /** Monto del gasto-débito: lo que vuelve a la cuenta. */
-  paymentAmount: number
+  /**
+   * Los débitos reales del pago, uno por cuenta y moneda. Un resumen mixto pagado en
+   * dos monedas tiene dos, y la reversión devuelve las dos: mostrar solo la primera
+   * subestimaría lo que la operación hace, que es justo lo que este diálogo existe
+   * para evitar.
+   */
+  debits: Array<{ amount: number; currencyCode: string; accountName: string | null }>
   /** Cuenta a la que vuelve la plata. */
-  paymentAccountName: string | null
   /** Movimientos del resumen que vuelven a pendiente (sin contar el sello). */
   movementCount: number
   /** El pago registró un sello vinculado — se elimina con la reversión. */
@@ -33,8 +38,7 @@ type Props = {
  */
 export const RevertPaymentAction = ({
   periodId,
-  paymentAmount,
-  paymentAccountName,
+  debits,
   movementCount,
   hasStampTax,
   showCents,
@@ -94,14 +98,20 @@ export const RevertPaymentAction = ({
             </AlertDialog.Description>
 
             <ul className="mt-3 flex list-disc flex-col gap-1 pl-5 text-[13.5px] leading-relaxed text-text-muted">
-              <li>
-                {paymentAccountName
-                  ? t('revert.effect_amount_to_account', {
-                      amount: formatARS(paymentAmount, showCents),
-                      account: paymentAccountName,
-                    })
-                  : t('revert.effect_amount', { amount: formatARS(paymentAmount, showCents) })}
-              </li>
+              {/* Una línea por débito, cada una en SU moneda: nunca se suman. */}
+              {debits.map((d) => {
+                const amount =
+                  d.currencyCode === 'USD'
+                    ? formatUSD(d.amount, showCents)
+                    : formatARS(d.amount, showCents)
+                return (
+                  <li key={`${d.currencyCode}-${d.accountName ?? ''}-${d.amount}`}>
+                    {d.accountName
+                      ? t('revert.effect_amount_to_account', { amount, account: d.accountName })
+                      : t('revert.effect_amount', { amount })}
+                  </li>
+                )
+              })}
               <li>{t('revert.effect_movements', { count: movementCount })}</li>
               {hasStampTax && <li>{t('revert.effect_stamp_tax')}</li>}
             </ul>
