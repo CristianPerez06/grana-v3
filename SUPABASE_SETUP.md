@@ -475,6 +475,59 @@ Si el self-check falla con `% account(s) named Efectivo still exist`, alguien cr
 
 ---
 
+## 12.9 Migración 0061 — patas de pago multimoneda (add-multicurrency-statement-payment)
+
+### 12.9.1 Por qué esta migración necesita coordinación
+
+A diferencia de las anteriores, **`0061` no es compatible hacia atrás con el código
+desplegado**, y en las dos direcciones:
+
+| Estado | Qué pasa con "pagar un resumen" |
+|---|---|
+| Código VIEJO + esquema nuevo | **Roto.** `period_payments` pierde sus policies de escritura, y el `payCardPeriod` viejo inserta directo |
+| Código NUEVO + esquema viejo | **Roto.** Los RPC `pay_card_period_legs` y `confirm_running_cycle` todavía no existen |
+
+No hay orden que evite una ventana: **cualquier secuencia deja el pago de resumen caído
+entre la migración y el deploy**. Lo que sí se puede es hacerla corta y elegida. El resto
+de la app no se ve afectado — solo el flujo de pago de resumen.
+
+Esto NO es un defecto de la migración: es la consecuencia de mover la garantía contable a
+la base, que es exactamente lo que la change buscaba. Pero hay que ejecutarlo sabiéndolo.
+
+### 12.9.2 Orden recomendado
+
+1. **Validar en un proyecto que no sea producción.** El repo no documenta un entorno de
+   staging; si no existe, alcanza con un proyecto Supabase vacío al que se le apliquen
+   las migraciones en orden. Es donde conviene descubrir un error, no en producción.
+2. **Aplicar `0061`** pegando el archivo completo en el **SQL Editor**. Corre entera en
+   una transacción: si el `do $check$` final falla, **no queda nada aplicado**. Al final
+   se ve `✓ 0061 card payment legs applied`.
+3. **Regenerar los tipos y comparar drift.** Las columnas de pata, `isOneToOne: false` en
+   `period_payments.period_id` y las cuatro funciones se escribieron **a mano** mientras
+   la migración no estaba aplicada:
+
+   ```bash
+   pnpm --filter @grana/supabase types:gen
+   git diff packages/supabase/src/types.ts
+   ```
+
+   Un diff acá **no es cosmético**: significa que la base no quedó como el código la
+   asume. Revisarlo antes de seguir.
+4. **QA de los cuatro recorridos** (ver `tasks.md` de la change): resumen solo ARS, mixto
+   pagando USD en USD, mixto pesificado, y sin cuenta USD activa. Más la reversión de los
+   dos mixtos.
+5. **Producción: migración y deploy coordinados**, en una ventana de bajo tráfico, en ese
+   orden y lo más juntos posible.
+
+### 12.9.3 Qué NO revierte esta migración
+
+La reversión del pago devuelve el dinero, pero **nunca el calendario**: las fechas
+confirmadas del ciclo en curso, el período estimado creado y las reasignaciones de
+consumos quedan. Son hechos leídos del resumen de papel y valen aunque el pago se haya
+cargado mal.
+
+---
+
 ## 13. Checklist de producción
 
 - [ ] Agregar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` al host (Vercel u otro).

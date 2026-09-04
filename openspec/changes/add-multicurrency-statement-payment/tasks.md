@@ -76,6 +76,21 @@
 - [ ] 8.5 Verificar que el dashboard, el hero de `/cards` y el resumen del mes dan lo mismo que antes
 - [ ] 8.6 `pnpm openspec:check`, lint, typecheck y tests en verde
 
+## 9. Puesta en producción (ver `SUPABASE_SETUP.md` § 12.9)
+
+> **`0061` no es compatible hacia atrás con el código desplegado, en las dos direcciones.**
+> Código viejo + esquema nuevo rompe (se van las policies de escritura de
+> `period_payments`); código nuevo + esquema viejo también (no existen los RPC). No hay
+> orden que evite una ventana con el pago de resumen caído: solo se puede hacerla corta y
+> elegida. El resto de la app no se ve afectado.
+
+- [ ] 9.1 Aplicar `0061` en un proyecto que NO sea producción (el repo no documenta
+      staging; sirve un proyecto vacío con las migraciones en orden)
+- [ ] 9.2 Regenerar tipos y **comparar drift** contra lo escrito a mano. Un diff acá
+      significa que la base no quedó como el código la asume
+- [ ] 9.3 QA de los cuatro recorridos + reversión de los dos pagos mixtos
+- [ ] 9.4 Producción: migración y deploy coordinados, en ventana de bajo tráfico
+
 ## Fuera de alcance, detectado en el camino
 
 - **Deshacer el pago de un resumen no existe en la app nativa.** Web lo tiene desde la
