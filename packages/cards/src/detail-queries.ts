@@ -36,6 +36,16 @@ export type CardPeriodPaymentDebit = {
   accountName: string | null
   /** La cotización usada, cuando ese débito pesificó deuda en dólares. */
   fxRateToArs: number | null
+  /**
+   * Qué deuda del resumen canceló ESTE débito. Un pago en pesos de un resumen mixto
+   * tiene dos: los pesos y los dólares pesificados. La UI muestra un débito —la plata
+   * que salió— con sus imputaciones adentro, nunca el mismo gasto repetido.
+   */
+  allocations: Array<{
+    settlesCurrency: string
+    settlesAmount: number
+    fxRateToArs: number | null
+  }>
 }
 
 export type CardPeriodDetail = CardPeriodWithPayment & {
@@ -203,7 +213,7 @@ export async function getCardPeriods(
     ? await supabase
         .from('period_payments')
         .select(
-          'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, currency_code, fx_rate_to_ars, account:accounts!transactions_account_id_fkey(name))',
+          'id, period_id, transaction_id, stamp_tax_transaction_id, settles_currency, settles_amount, fx_rate_to_ars, transactions!transaction_id(date, amount, currency_code, fx_rate_to_ars, account:accounts!transactions_account_id_fkey(name))',
         )
         .in('period_id', paidPeriodIds)
     : { data: [], error: null }
@@ -250,6 +260,16 @@ export async function getCardPeriods(
         currencyCode: tx.currency_code,
         accountName: tx.account?.name ?? null,
         fxRateToArs: tx.fx_rate_to_ars != null ? Number(tx.fx_rate_to_ars) : null,
+        allocations: [],
+      })
+    }
+    // La imputación de ESTA pata va dentro de su débito: un gasto, varias imputaciones.
+    const debit = info.debits.find((d) => d.transactionId === p.transaction_id)
+    if (debit && p.settles_currency != null && p.settles_amount != null) {
+      debit.allocations.push({
+        settlesCurrency: p.settles_currency,
+        settlesAmount: Number(p.settles_amount),
+        fxRateToArs: p.fx_rate_to_ars != null ? Number(p.fx_rate_to_ars) : null,
       })
     }
     // El sello lo trae UNA sola pata de la operación: basta con que alguna lo tenga.
@@ -338,7 +358,7 @@ export async function getCardPeriodDetail(
     supabase
       .from('period_payments')
       .select(
-        'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, currency_code, fx_rate_to_ars, account:accounts!transactions_account_id_fkey(name))',
+        'id, period_id, transaction_id, stamp_tax_transaction_id, settles_currency, settles_amount, fx_rate_to_ars, transactions!transaction_id(date, amount, currency_code, fx_rate_to_ars, account:accounts!transactions_account_id_fkey(name))',
       )
       .eq('period_id', periodId)
       .order('created_at', { ascending: true })
@@ -383,16 +403,27 @@ export async function getCardPeriodDetail(
   const paymentDebits: CardPeriodPaymentDebit[] = []
   for (const leg of paymentLegs) {
     const tx = leg.transactions as unknown as PaymentTxRow | null
-    if (!tx || seenDebits.has(leg.transaction_id)) continue
-    seenDebits.add(leg.transaction_id)
-    paymentDebits.push({
-      transactionId: leg.transaction_id,
-      date: tx.date ?? null,
-      amount: Number(tx.amount),
-      currencyCode: tx.currency_code,
-      accountName: tx.account?.name ?? null,
-      fxRateToArs: tx.fx_rate_to_ars != null ? Number(tx.fx_rate_to_ars) : null,
-    })
+    if (!tx) continue
+    if (!seenDebits.has(leg.transaction_id)) {
+      seenDebits.add(leg.transaction_id)
+      paymentDebits.push({
+        transactionId: leg.transaction_id,
+        date: tx.date ?? null,
+        amount: Number(tx.amount),
+        currencyCode: tx.currency_code,
+        accountName: tx.account?.name ?? null,
+        fxRateToArs: tx.fx_rate_to_ars != null ? Number(tx.fx_rate_to_ars) : null,
+        allocations: [],
+      })
+    }
+    const debit = paymentDebits.find((d) => d.transactionId === leg.transaction_id)
+    if (debit && leg.settles_currency != null && leg.settles_amount != null) {
+      debit.allocations.push({
+        settlesCurrency: leg.settles_currency,
+        settlesAmount: Number(leg.settles_amount),
+        fxRateToArs: leg.fx_rate_to_ars != null ? Number(leg.fx_rate_to_ars) : null,
+      })
+    }
   }
   const payment = paymentLegs[0] ?? null
   const firstDebit = paymentDebits[0] ?? null

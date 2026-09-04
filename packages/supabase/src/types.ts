@@ -481,24 +481,39 @@ export type Database = {
       period_payments: {
         Row: {
           created_at: string
+          fx_rate_to_ars: number | null
           id: string
+          payment_group_id: string
           period_id: string
+          settlement_known: boolean
+          settles_amount: number | null
+          settles_currency: string | null
           stamp_tax_link_known: boolean
           stamp_tax_transaction_id: string | null
           transaction_id: string
         }
         Insert: {
           created_at?: string
+          fx_rate_to_ars?: number | null
           id?: string
+          payment_group_id?: string
           period_id: string
+          settlement_known?: boolean
+          settles_amount?: number | null
+          settles_currency?: string | null
           stamp_tax_link_known?: boolean
           stamp_tax_transaction_id?: string | null
           transaction_id: string
         }
         Update: {
           created_at?: string
+          fx_rate_to_ars?: number | null
           id?: string
+          payment_group_id?: string
           period_id?: string
+          settlement_known?: boolean
+          settles_amount?: number | null
+          settles_currency?: string | null
           stamp_tax_link_known?: boolean
           stamp_tax_transaction_id?: string | null
           transaction_id?: string
@@ -507,7 +522,7 @@ export type Database = {
           {
             foreignKeyName: "period_payments_period_id_fkey"
             columns: ["period_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "card_periods"
             referencedColumns: ["id"]
           },

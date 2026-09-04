@@ -862,3 +862,105 @@ describe('confirm_running_cycle — los anclajes de P(n+2)', () => {
     await expect(confirmWithNextNext()).rejects.toThrow(/running_cycle_state_changed/)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * La equivalencia que sostiene TODO el recorte de alcance.
+ *
+ * Este alcance no introduce el estado `partial` ni vuelve partial-aware a
+ * `derivePeriodStatus`, `computePeriodAmounts`, `classifyPeriodsLifecycle`, el hero de
+ * `/cards`, el resumen del mes ni los compromisos del dashboard. Todos ellos leen
+ * `has_payment` —"existe una fila de pago"— como **"el resumen está saldado"**.
+ *
+ * Eso es cierto por una sola razón: `pay_card_period_legs` rechaza (`GRN04`) cualquier
+ * operación que no deje el pendiente en cero en las dos monedas. Si alguien relaja ese
+ * rechazo —por ejemplo, al empezar a implementar pagos parciales— la equivalencia se
+ * rompe en silencio y esas seis superficies pasan a mentir a la vez.
+ *
+ * Estos tests son la alarma: atan la propiedad, no la implementación. Deben ponerse en
+ * rojo ANTES de que una pantalla muestre un resumen mixto como pagado debiendo dólares.
+ */
+describe('INVARIANTE: existe un pago ⟺ el resumen está saldado', () => {
+  /** La propiedad, verificada sobre el estado real de la base. */
+  const expectInvariant = async () => {
+    const legs = +(
+      await db.query<{ n: string }>(
+        `select count(*)::text as n from public.period_payments where period_id = '${PERIOD}'`,
+      )
+    ).rows[0].n
+    const p = await pending()
+    const settled = p.ARS.pending === 0 && p.USD.pending === 0
+    // has_payment ⟺ saldado. Las dos direcciones.
+    expect(legs > 0).toBe(settled)
+    return { legs, settled }
+  }
+
+  it('se mantiene tras un pago total en una moneda', async () => {
+    await consumo(265_805.42)
+    await pay([payment(BANK, [{ settles: 'ARS', amount: 265_805.42 }])])
+    const r = await expectInvariant()
+    expect(r.legs).toBeGreaterThan(0)
+  })
+
+  it('se mantiene tras un pago total en dos monedas, con dos débitos', async () => {
+    await consumo(265_805.42)
+    await consumo(1_932.4, { currency: 'USD' })
+    await pay([
+      payment(BANK, [{ settles: 'ARS', amount: 265_805.42 }]),
+      payment(BANK, [{ settles: 'USD', amount: 1_932.4 }]),
+    ])
+    const r = await expectInvariant()
+    expect(r.settled).toBe(true)
+  })
+
+  it('se mantiene tras un pago total en dos monedas con UN solo débito', async () => {
+    await consumo(265_805.42)
+    await consumo(1_932.4, { currency: 'USD' })
+    await pay([
+      payment(BANK, [
+        { settles: 'ARS', amount: 265_805.42 },
+        { settles: 'USD', amount: 1_932.4, fx: 1230.5 },
+      ]),
+    ])
+    await expectInvariant()
+  })
+
+  it('se mantiene cuando el pago se RECHAZA: no queda fila ni deuda saldada', async () => {
+    await consumo(265_805.42)
+    await consumo(1_932.4, { currency: 'USD' })
+    await expect(
+      pay([payment(BANK, [{ settles: 'ARS', amount: 265_805.42 }])]),
+    ).rejects.toThrow(/statement_not_settled/)
+    const r = await expectInvariant()
+    // Ni una fila: si esto pasara a > 0, la equivalencia estaría rota.
+    expect(r.legs).toBe(0)
+  })
+
+  it('se mantiene tras deshacer el pago', async () => {
+    await consumo(100_000)
+    await pay([payment(BANK, [{ settles: 'ARS', amount: 100_000 }])])
+    await revert()
+    const r = await expectInvariant()
+    expect(r.legs).toBe(0)
+  })
+
+  it('se mantiene con un pago legacy, que satura el resumen', async () => {
+    await consumo(120_000)
+    const tx = await debit(120_000)
+    await db.exec(`
+      insert into public.period_payments (id, period_id, transaction_id, payment_group_id, settlement_known)
+      values ('${uuid()}', '${PERIOD}', '${tx}', '${uuid()}', false);
+    `)
+    await expectInvariant()
+  })
+
+  it('el sello no puede romperla: entra en el total exigido', async () => {
+    await consumo(100_000)
+    await expect(
+      pay([payment(BANK, [{ settles: 'ARS', amount: 100_000 }])], { stamp: 1_200 }),
+    ).rejects.toThrow(/statement_not_settled/)
+    const r = await expectInvariant()
+    expect(r.legs).toBe(0)
+  })
+})

@@ -17,20 +17,21 @@
 - [x] 1.8 `revert_card_period_payment(period_id, group_id)`: por grupo, con lock y resumen por moneda
 - [x] 1.9 Self-check: falla si vuelve el UNIQUE, si faltan los triggers, si el de identidad deja de ser diferido, si aparece una policy de escritura o si un RPC deja de ser DEFINER
 - [x] 1.9b Tests PGlite sobre el SQL real (59): cobertura, concurrencia, cruces, escrituras directas, identidad diferida, orden del sello, operación que no salda, reversión por grupo, anclajes del calendario
-- [ ] 1.10 Regenerar `packages/supabase/src/types.ts` (requiere la migración aplicada)
+- [x] 1.10 `packages/supabase/src/types.ts`: columnas de pata a mano y `period_id` deja de ser `isOneToOne` — los tipos afirmaban que un resumen tiene UNA fila de pago. Regenerar contra la base cuando la migración se aplique
 
 ## 2. La regla de cobertura en TS (D2)
 
 - [x] 2.1 **Verificado: `computePeriodAmounts` no necesita cambios.** Con settlement total, un resumen con pago tiene todos sus consumos en `paid`, así que `paidAmount*` sale de los consumos como hoy. Las patas no participan de la lectura en este alcance — participan del *write path*, donde las valida el trigger
 - [x] 2.2 **Verificado: `derivePeriodStatus`, `derivePeriodVariant` y `classifyPeriodsLifecycle` no necesitan cambios.** `has_payment` sigue significando saldado mientras el RPC rechace toda operación que no deje el resumen en cero (`GRN04`)
-- [ ] 2.3 Test de regresión que ATA esa equivalencia: si alguien relaja el rechazo del RPC, algo tiene que ponerse rojo antes que una pantalla mienta
+- [x] 2.3 Test de regresión que ATA la equivalencia `existe pago ⟺ saldado`, en las dos direcciones y sobre el estado real de la base: pago total en una moneda, en dos con dos débitos, en dos con un débito, pago rechazado, reversión, pago legacy y el caso del sello. Si alguien relaja `GRN04`, se pone rojo antes de que una pantalla mienta
 
 ## 3. Lecturas de patas (D15)
 
 - [x] 3.1 Auditoría completa de lecturas que asumían UNA fila de pago: 6 `.maybeSingle()` y 0 `.single()`. Los cuatro booleanos ("¿este resumen tiene pago?") pasan a `.limit(1).maybeSingle()`; los dos de `detail-queries` cambian de forma
 - [x] 3.2 `detail-queries.ts`: `paymentDebits` — TODOS los débitos del pago, deduplicados por transacción (un débito puede llevar varias patas). Los escalares `payment*` se conservan derivados del primero, para las lecturas que todavía asumen uno
 - [x] 3.3 **Dos asunciones de fila única que NO eran `.maybeSingle()`**: el `Map.set` por fila de `detail-queries.ts:201`, que se quedaba con la última pata en silencio; y el as-of de `dashboard/queries.ts:714`, que marcaba el resumen como saldado al corte si **alguno** de sus débitos era anterior — ahora exige que lo sean todos
-- [ ] 3.4 Tests del as-of con dos débitos de fechas distintas alrededor del corte
+- [x] 3.4 La regla del as-of se extrae a `derivePaidAtSnapshot` (pura) y se testea: dos débitos alrededor del corte, el día del corte, fecha ilegible, y que una ilegible NO salve a un resumen cuyo otro débito es posterior
+- [x] 3.5 Un débito con varias imputaciones expone sus `allocations`, para que el detalle muestre **un** débito con sus dos imputaciones adentro y no el mismo gasto repetido
 
 ## 4. Schema y action de pago (D1, D6, D11, D12, D18)
 
