@@ -4,14 +4,15 @@ import { useState } from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
 import { Check, ChevronDown, Wallet } from 'lucide-react'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
-import { formatARS } from '@grana/i18n-messages'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { AccountAvatar } from '@/components/ui/account-avatar'
 
 export type DebitAccount = {
   id: string
   name: string
-  balanceARS: number
+  /** Saldo disponible en la moneda del débito que se está por hacer. */
+  balance: number
   /** Secondary line under the name (account type / institution), like the mockup. */
   subtitle: string | null
   /** Visual identity (color + icon/monogram), same as the accounts listing. */
@@ -28,6 +29,7 @@ export type DebitAccount = {
  */
 export const DebitAccountSelect = ({
   accounts,
+  currency = 'ARS',
   value,
   onChange,
   label,
@@ -36,6 +38,8 @@ export const DebitAccountSelect = ({
   invalid = false,
 }: {
   accounts: DebitAccount[]
+  /** Moneda del débito: decide cómo se formatea el saldo, nunca lo convierte. */
+  currency?: 'ARS' | 'USD'
   value: string
   onChange: (id: string) => void
   label: string
@@ -44,6 +48,8 @@ export const DebitAccountSelect = ({
   invalid?: boolean
 }) => {
   const showCents = useShowCents()
+  // Bimoneda: el saldo se muestra en SU moneda. Nunca se convierte para compararlo.
+  const fmt = (n: number) => (currency === 'USD' ? formatUSD(n, showCents) : formatARS(n, showCents))
   const [open, setOpen] = useState(false)
   const selected = accounts.find((a) => a.id === value) ?? null
 
@@ -77,7 +83,7 @@ export const DebitAccountSelect = ({
               </span>
               <span className="shrink-0 text-right">
                 <span className="block font-semibold tabular-nums text-text">
-                  {formatARS(selected.balanceARS, showCents)}
+                  {fmt(selected.balance)}
                 </span>
                 <span className="block text-[11px] text-text-soft">{availableLabel}</span>
               </span>
@@ -118,7 +124,7 @@ export const DebitAccountSelect = ({
                   )}
                 </span>
                 <span className="shrink-0 font-semibold tabular-nums text-text-muted">
-                  {formatARS(account.balanceARS, showCents)}
+                  {fmt(account.balance)}
                 </span>
                 {isSelected && <Check className="size-4 shrink-0 text-emerald" aria-hidden />}
               </button>

@@ -904,7 +904,7 @@
       "header_context": "{card} · cerró el {close} · vence el {due}",
       "available_label": "disponible",
       "usd_note_prefix": "Consumos en dólares:",
-      "usd_note_description": "Este resumen tiene deuda en USD. Cargá la cotización del día de pago abajo: el total a pagar en ARS se calcula con ella.",
+      "usd_note_description": "Este resumen tiene deuda en dólares. Podés cancelarla con dólares, desde una cuenta en dólares, o pesificarla con la cotización del día de pago.",
       "fx_label": "Cotización del día (ARS por 1 USD)",
       "fx_helper": "La deuda en dólares se convierte con la cotización del día en que pagás el resumen.",
       "fx_placeholder": "Ej: 1230,50",
@@ -922,7 +922,13 @@
       "stamp_tax_relation_note": "El sello es un cargo aparte: se debita de la misma cuenta junto al pago. Se debita {total} = {consumos} (resumen) + {stamp} (sellos).",
       "stamp_tax_other_placeholder": "Otro monto",
       "stamp_tax_none": "No me cobraron sellos",
-      "warning": "Una vez confirmado, el pago no se puede revertir. Si registraste un monto o cuenta incorrectos, podés corregirlo con un ajuste de saldo."
+      "warning": "Una vez confirmado, el pago no se puede revertir. Si registraste un monto o cuenta incorrectos, podés corregirlo con un ajuste de saldo.",
+      "usd_mode_label": "¿Cómo pagás los dólares del resumen?",
+      "usd_mode_in_usd": "En dólares",
+      "usd_mode_in_ars": "En pesos",
+      "usd_no_account": "No tenés ninguna cuenta con dólares habilitados, así que esta parte se paga en pesos.",
+      "usd_account_label": "Cuenta en dólares",
+      "usd_debit_note": "De tu cuenta en dólares sale {usd}."
     },
     "edit_dates": {
       "dialog_title": "Editar fechas del resumen",

@@ -12,7 +12,7 @@ import {
   COMMON_STAMP_TAX_RATES,
 } from '@/lib/cards/utils'
 import { Money, parseMoneyInput } from '@grana/validation'
-import { formatARS } from '@grana/i18n-messages'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -84,6 +84,9 @@ type Props = {
   paymentAccounts: PaymentAccount[]
   /** Preselected debit account — the card's own bank when available. */
   defaultPaymentAccountId: string
+  /** Cuentas con USD activo: la deuda en dólares se puede cancelar CON dólares. */
+  usdAccounts: PaymentAccount[]
+  defaultUsdAccountId: string
 }
 
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
@@ -110,6 +113,8 @@ export const PayCardPeriodForm = ({
   stampTaxRate,
   paymentAccounts,
   defaultPaymentAccountId,
+  usdAccounts,
+  defaultUsdAccountId,
 }: Props) => {
   const router = useRouter()
   const t = useTranslations('cards')
@@ -132,16 +137,13 @@ export const PayCardPeriodForm = ({
   const sumARS = (a: number, b: number) =>
     Money.toNumber(Money.add(Money.from(a), Money.from(b)))
 
-  // Total a pagar = consumos (ARS + USD×fx) + sello. El consumo USD requiere la
-  // cotización; hasta tenerla se usa la base ARS y el sello se suma igual.
-  const consumosBase = (fx: number | null): number | null =>
-    hasUsdDebt
-      ? computeStatementPaymentTotal(pendingAmountARS, pendingAmountUSD, fx)
-      : pendingAmountARS
-
   const [stampTax, setStampTax] = useState(initialStamp > 0 ? String(initialStamp) : '')
-  const [amount, setAmount] = useState(String(sumARS(pendingAmountARS, initialStamp)))
   const [fxRate, setFxRate] = useState('')
+  // La deuda en dólares se cancela CON dólares por defecto cuando hay una cuenta en
+  // dólares: es lo que hace el banco y lo que el usuario pidió. Pesificarla sigue
+  // disponible, pero deja de ser la única opción.
+  const [payUsdInUsd, setPayUsdInUsd] = useState(hasUsdDebt && usdAccounts.length > 0)
+  const [usdAccountId, setUsdAccountId] = useState(defaultUsdAccountId || usdAccounts[0]?.id || '')
   const [paymentAccountId, setPaymentAccountId] = useState(
     defaultPaymentAccountId || paymentAccounts[0]?.id || '',
   )
@@ -154,34 +156,27 @@ export const PayCardPeriodForm = ({
   // the sello auto-fills the amount with the computed total (still editable).
   const parsedFx = fxRate ? parseMoneyInput(fxRate, { decimalPlaces: 6 }) : null
   const parsedStamp = parseMoneyInput(stampTax) ?? 0
-  const computedTotal = hasUsdDebt
+  /** ¿La porción en dólares se pesifica? Solo entonces hace falta la cotización. */
+  const pesifyUsd = hasUsdDebt && !payUsdInUsd
+  const computedTotal = pesifyUsd
     ? computeStatementPaymentTotal(pendingAmountARS, pendingAmountUSD, parsedFx)
     : null
   const usdConvertedARS =
-    computedTotal !== null && hasUsdDebt
-      ? Math.round((computedTotal - pendingAmountARS) * 100) / 100
+    computedTotal !== null ? Math.round((computedTotal - pendingAmountARS) * 100) / 100 : null
+
+  // La deuda en pesos del resumen INCLUYE el sello: es un cargo del resumen y sube lo
+  // que hay que cancelar.
+  const arsToSettle = sumARS(pendingAmountARS, parsedStamp)
+  // Los montos de los débitos son DERIVADOS de lo que se cancela, no estado editable.
+  const arsDebit = pesifyUsd
+    ? usdConvertedARS !== null
+      ? sumARS(arsToSettle, usdConvertedARS)
       : null
+    : arsToSettle
+  const amount = arsDebit !== null ? String(arsDebit) : ''
+  const suggestedTotal = arsDebit
 
-  // Sugerencia de total (consumos + sello) que se muestra como ayuda.
-  const suggestedConsumos = consumosBase(parsedFx)
-  const suggestedTotal =
-    suggestedConsumos !== null ? sumARS(suggestedConsumos, parsedStamp) : null
-
-  const recomputeAmount = (fx: number | null, stamp: number) => {
-    const base = consumosBase(fx)
-    if (base !== null) setAmount(String(sumARS(base, stamp)))
-  }
-
-  const handleFxChange = (value: string) => {
-    setFxRate(value)
-    const fx = value ? parseMoneyInput(value, { decimalPlaces: 6 }) : null
-    recomputeAmount(fx, parsedStamp)
-  }
-
-  const handleStampChange = (value: string) => {
-    setStampTax(value)
-    recomputeAmount(parsedFx, parseMoneyInput(value) ?? 0)
-  }
+  const handleStampChange = (value: string) => setStampTax(value)
 
   // Chips de monto (sin mostrar el %): cada alícuota común aplicada a la base +
   // el monto aprendido/sugerido, deduplicados. Se muestran también en modo
@@ -198,18 +193,27 @@ export const PayCardPeriodForm = ({
   // Soft, non-blocking warning: paying from this account would leave its ARS
   // available balance negative. Statement payments are always in ARS.
   const selectedAccount = paymentAccounts.find((a) => a.id === paymentAccountId)
-  const parsedPaymentAmount = parseMoneyInput(amount)
   const negativeWarning =
-    selectedAccount && parsedPaymentAmount !== null && parsedPaymentAmount > 0
-      ? checkNegativeBalance(selectedAccount.balanceARS, parsedPaymentAmount)
+    selectedAccount && arsDebit !== null && arsDebit > 0
+      ? checkNegativeBalance(selectedAccount.balance, arsDebit)
+      : null
+  // El mismo aviso, para la cuenta en dólares. Los saldos NUNCA se comparan entre
+  // monedas: cada débito se chequea contra el suyo.
+  const selectedUsdAccount = usdAccounts.find((a) => a.id === usdAccountId)
+  const usdNegativeWarning =
+    payUsdInUsd && selectedUsdAccount && pendingAmountUSD > 0
+      ? checkNegativeBalance(selectedUsdAccount.balance, pendingAmountUSD)
       : null
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (hasUsdDebt && (parsedFx === null || parsedFx <= 0)) {
+    // La cotización se exige SOLO al pesificar: pagar dólares con dólares no convierte
+    // nada, y pedirla sería inventar un dato.
+    if (pesifyUsd && (parsedFx === null || parsedFx <= 0)) {
       errs.fxRate = t('errors.fx_required')
     }
-    if (!paymentAccountId) errs.paymentAccountId = t('errors.account_required')
+    if (payUsdInUsd && !usdAccountId) errs.usdAccountId = t('errors.account_required')
+    if (arsToSettle > 0 && !paymentAccountId) errs.paymentAccountId = t('errors.account_required')
     if (!paymentDate) errs.paymentDate = tCommon('required_short')
     if (!nextEndDate) errs.nextEndDate = tCommon('required_short')
     if (!nextDueDate) errs.nextDueDate = tCommon('required_short')
@@ -233,32 +237,49 @@ export const PayCardPeriodForm = ({
 
     setFormError(null)
     startTransition(async () => {
-      // El pago viaja como UN débito con sus imputaciones. El monto NO se manda: lo
-      // deriva la base de lo que se declara cancelar. La porción ARS incluye el sello,
-      // que es un cargo del resumen y sube su deuda en pesos.
-      const arsToSettle = sumARS(pendingAmountARS, parsedStamp)
+      // Un pago = UN débito real de una cuenta, con lo que ese débito cancela. Los
+      // montos NO viajan: los deriva la base de las imputaciones declaradas.
+      //
+      //   · dólares con dólares  → DOS débitos: uno en pesos y uno en dólares.
+      //   · dólares pesificados  → UN débito en pesos con dos imputaciones, que es
+      //                            exactamente lo que hace la app hoy.
+      const payments = [
+        ...(arsToSettle > 0
+          ? [
+              {
+                payment_account_id: paymentAccountId,
+                payment_date: paymentDate,
+                allocations: [
+                  { settles_currency: 'ARS' as const, settles_amount: arsToSettle },
+                  ...(pesifyUsd && parsedFx !== null && parsedFx > 0
+                    ? [
+                        {
+                          settles_currency: 'USD' as const,
+                          settles_amount: pendingAmountUSD,
+                          fx_rate_to_ars: parsedFx,
+                        },
+                      ]
+                    : []),
+                ],
+              },
+            ]
+          : []),
+        ...(payUsdInUsd && pendingAmountUSD > 0
+          ? [
+              {
+                payment_account_id: usdAccountId,
+                payment_date: paymentDate,
+                allocations: [
+                  { settles_currency: 'USD' as const, settles_amount: pendingAmountUSD },
+                ],
+              },
+            ]
+          : []),
+      ]
+
       const result = await payCardPeriod({
         period_id: periodId,
-        payments: [
-          {
-            payment_account_id: paymentAccountId,
-            payment_date: paymentDate,
-            allocations: [
-              ...(arsToSettle > 0
-                ? [{ settles_currency: 'ARS' as const, settles_amount: arsToSettle }]
-                : []),
-              ...(hasUsdDebt && parsedFx !== null && parsedFx > 0
-                ? [
-                    {
-                      settles_currency: 'USD' as const,
-                      settles_amount: pendingAmountUSD,
-                      fx_rate_to_ars: parsedFx,
-                    },
-                  ]
-                : []),
-            ],
-          },
-        ],
+        payments,
         next_end_date: nextEndDate,
         next_due_date: nextDueDate,
         stamp_tax_amount: parsedStamp,
@@ -280,9 +301,69 @@ export const PayCardPeriodForm = ({
         <div className="flex flex-col gap-5 p-5">
           <SectionLabel className="mb-0">{t('payment.section_payment_data')}</SectionLabel>
 
-          {/* Caso USD: cotización primero, luego la conversión visible, para que
-              el monto a pagar se entienda antes de fijarlo. */}
+          {/* Porción en dólares del resumen: primero CÓMO se paga, y solo si se
+              pesifica aparece la cotización. Pagar dólares con dólares no convierte
+              nada. */}
           {hasUsdDebt && (
+            <div className="flex flex-col gap-3">
+              <FieldLabel>{t('payment.usd_mode_label')}</FieldLabel>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPayUsdInUsd(true)}
+                  disabled={usdAccounts.length === 0}
+                  aria-pressed={payUsdInUsd}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors disabled:opacity-40 ${
+                    payUsdInUsd
+                      ? 'border-emerald bg-emerald-soft text-emerald-deep'
+                      : 'border-border bg-card text-text-muted hover:bg-page'
+                  }`}
+                >
+                  {t('payment.usd_mode_in_usd')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayUsdInUsd(false)}
+                  aria-pressed={!payUsdInUsd}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
+                    !payUsdInUsd
+                      ? 'border-emerald bg-emerald-soft text-emerald-deep'
+                      : 'border-border bg-card text-text-muted hover:bg-page'
+                  }`}
+                >
+                  {t('payment.usd_mode_in_ars')}
+                </button>
+              </div>
+              {usdAccounts.length === 0 && (
+                <Hint>{t('payment.usd_no_account')}</Hint>
+              )}
+
+              {payUsdInUsd && (
+                <div className="flex flex-col gap-1.5">
+                  <FieldLabel>{t('payment.usd_account_label')}</FieldLabel>
+                  <DebitAccountSelect
+                    accounts={usdAccounts}
+                    currency="USD"
+                    value={usdAccountId}
+                    onChange={setUsdAccountId}
+                    label={t('payment.usd_account_label')}
+                    placeholder={t('errors.account_required')}
+                    availableLabel={t('payment.available_label')}
+                    invalid={Boolean(errors.usdAccountId)}
+                  />
+                  {errors.usdAccountId && <FieldError>{errors.usdAccountId}</FieldError>}
+                  {usdNegativeWarning?.negative && (
+                    <NegativeBalanceNotice
+                      projected={usdNegativeWarning.projected}
+                      currency="USD"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {pesifyUsd && (
             <div className="flex flex-col gap-1.5">
               <FieldLabel>{t('payment.fx_label')}</FieldLabel>
               <Hint>{t('payment.fx_helper')}</Hint>
@@ -292,7 +373,7 @@ export const PayCardPeriodForm = ({
                   required
                   groupThousands={false}
                   value={fxRate}
-                  onChange={handleFxChange}
+                  onChange={setFxRate}
                   placeholder={t('payment.fx_placeholder')}
                   className={moneyInputCls('sm')}
                 />
@@ -379,8 +460,8 @@ export const PayCardPeriodForm = ({
               <output className={`${moneyInputCls('lg')} block`}>{amount}</output>
             </MoneyField>
 
-            {/* Caso USD: desglose línea a línea de cómo se arma el total en ARS. */}
-            {hasUsdDebt && (
+            {/* Al pesificar: desglose línea a línea de cómo se arma el total en ARS. */}
+            {pesifyUsd && (
               <div className="mt-2 rounded-[12px] border border-border bg-page px-4 text-xs tabular-nums">
                 <div className="flex items-center justify-between py-2.5 text-text-muted">
                   <span>{t('payment.breakdown_ars')}</span>
@@ -409,9 +490,18 @@ export const PayCardPeriodForm = ({
             )}
           </div>
 
+          {/* Pagando los dólares con dólares hay DOS débitos reales: se nombran por
+              separado, en su moneda, sin sumarlos nunca. */}
+          {payUsdInUsd && pendingAmountUSD > 0 && (
+            <div className="flex items-start gap-2.5 px-0.5 text-xs leading-relaxed text-text-muted">
+              <Info className="mt-0.5 size-4 shrink-0 text-slate" aria-hidden />
+              <span>{t('payment.usd_debit_note', { usd: formatUSD(pendingAmountUSD, showCents) })}</span>
+            </div>
+          )}
+
           {/* Relación sello ↔ débito (note-rel): explica por qué del débito sale
-              consumos + sello. En USD el desglose de arriba ya lo muestra. */}
-          {parsedStamp > 0 && !hasUsdDebt && (
+              consumos + sello. Al pesificar, el desglose de arriba ya lo muestra. */}
+          {parsedStamp > 0 && !pesifyUsd && (
             <div className="flex items-start gap-2.5 px-0.5 text-xs leading-relaxed text-text-muted">
               <Info className="mt-0.5 size-4 shrink-0 text-slate" aria-hidden />
               <span>

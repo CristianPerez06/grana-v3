@@ -904,7 +904,7 @@
       "header_context": "{card} · closed on {close} · due {due}",
       "available_label": "available",
       "usd_note_prefix": "Dollar purchases:",
-      "usd_note_description": "This statement has USD debt. Enter the payment-day rate below: the ARS total to pay is computed with it.",
+      "usd_note_description": "This statement has USD debt. You can settle it with dollars, from a dollar account, or convert it at the payment-day rate.",
       "fx_label": "Payment-day rate (ARS per 1 USD)",
       "fx_helper": "USD debt converts at the rate of the day you pay the statement.",
       "fx_placeholder": "E.g. 1230.50",
@@ -922,7 +922,13 @@
       "stamp_tax_relation_note": "The stamp tax is a separate charge: it's debited from the same account along with the payment. {total} is debited = {consumos} (statement) + {stamp} (stamp tax).",
       "stamp_tax_other_placeholder": "Other amount",
       "stamp_tax_none": "No stamp tax charged",
-      "warning": "Once confirmed, the payment cannot be reverted. If you recorded a wrong amount or account, fix it with a balance adjustment."
+      "warning": "Once confirmed, the payment cannot be reverted. If you recorded a wrong amount or account, fix it with a balance adjustment.",
+      "usd_mode_label": "How are you paying the statement's dollars?",
+      "usd_mode_in_usd": "In dollars",
+      "usd_mode_in_ars": "In pesos",
+      "usd_no_account": "You have no account with dollars enabled, so this part is paid in pesos.",
+      "usd_account_label": "Dollar account",
+      "usd_debit_note": "{usd} leaves your dollar account."
     },
     "edit_dates": {
       "dialog_title": "Edit statement dates",

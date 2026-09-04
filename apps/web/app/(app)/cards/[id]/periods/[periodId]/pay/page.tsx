@@ -49,19 +49,27 @@ const PayPeriodPage = async ({ params }: Props) => {
   const runningDueDate = runningPeriod?.due_date ?? projection.suggestedDueDate
   const runningIsEstimated = runningPeriod?.is_estimated ?? true
 
-  // Payment accounts: cash + bank with ARS active
-  const debitEligible = [...accountGroups.cash, ...accountGroups.bank].filter(
-    (a) => a.is_active && a.currencies.some((c) => c.currency_code === 'ARS' && c.is_active),
-  )
-  const paymentAccounts = debitEligible.map((a) => ({
+  // Cuentas de débito, por moneda. La deuda en dólares se puede cancelar CON dólares,
+  // así que las dos listas se arman por separado: una cuenta puede estar en una y no en
+  // la otra, y sus saldos nunca se comparan entre monedas.
+  const eligible = [...accountGroups.cash, ...accountGroups.bank].filter((a) => a.is_active)
+  const withCurrency = (code: 'ARS' | 'USD') =>
+    eligible.filter((a) => a.currencies.some((c) => c.currency_code === code && c.is_active))
+
+  const toOption = (code: 'ARS' | 'USD') => (a: (typeof eligible)[number]) => ({
     id: a.id,
     name: a.name,
     // Secondary line: the issuing institution when it differs from the name
     // (matches the accounts listing's name / institution split).
     subtitle: a.institution && a.institution.name !== a.name ? a.institution.name : null,
-    balanceARS: a.balances.ARS,
+    balance: a.balances[code],
     avatar: a.avatar,
-  }))
+  })
+
+  const debitEligible = withCurrency('ARS')
+  const paymentAccounts = debitEligible.map(toOption('ARS'))
+  const usdEligible = withCurrency('USD')
+  const usdAccounts = usdEligible.map(toOption('USD'))
 
   // Default the debit account to one of the CARD's own bank (same institution),
   // so paying a Galicia card defaults to the Galicia account instead of the
@@ -72,6 +80,12 @@ const PayPeriodPage = async ({ params }: Props) => {
       ? debitEligible.find((a) => a.institution?.id === cardInstitutionId)?.id
       : undefined) ??
     paymentAccounts[0]?.id ??
+    ''
+  const defaultUsdAccountId =
+    (cardInstitutionId
+      ? usdEligible.find((a) => a.institution?.id === cardInstitutionId)?.id
+      : undefined) ??
+    usdAccounts[0]?.id ??
     ''
 
   const t = await getTranslations('cards')
@@ -124,6 +138,8 @@ const PayPeriodPage = async ({ params }: Props) => {
         stampTaxRate={period.stampTaxRate}
         paymentAccounts={paymentAccounts}
         defaultPaymentAccountId={defaultPaymentAccountId}
+        usdAccounts={usdAccounts}
+        defaultUsdAccountId={defaultUsdAccountId}
       />
     </>
   )
