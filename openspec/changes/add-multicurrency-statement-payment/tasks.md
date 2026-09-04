@@ -84,12 +84,30 @@
 > orden que evite una ventana con el pago de resumen caído: solo se puede hacerla corta y
 > elegida. El resto de la app no se ve afectado.
 
-- [ ] 9.1 Aplicar `0061` en un proyecto que NO sea producción (el repo no documenta
-      staging; sirve un proyecto vacío con las migraciones en orden)
+**Validación (sin apuro):**
+
+- [ ] 9.1 Aplicar `0061` en un proyecto que NO sea producción. El repo **no documenta
+      staging**: o se crea un proyecto vacío con las migraciones en orden, o se acepta
+      explícitamente que no hay validación previa real
 - [ ] 9.2 Regenerar tipos y **comparar drift** contra lo escrito a mano. Un diff acá
-      significa que la base no quedó como el código la asume
-- [ ] 9.3 QA de los cuatro recorridos + reversión de los dos pagos mixtos
-- [ ] 9.4 Producción: migración y deploy coordinados, en ventana de bajo tráfico
+      significa que la base no quedó como el código la asume. Va acá y NO en la ventana:
+      si aparece, se arregla con calma
+- [ ] 9.3 QA de los cuatro recorridos + reversión de los dos pagos mixtos (web; mobile no
+      tiene ese flujo)
+
+**Ventana de producción (corta y coordinada):**
+
+- [ ] 9.4 Avisar que el pago de resúmenes puede estar indisponible unos minutos
+- [ ] 9.5 Aplicar `0061` en el SQL Editor de producción
+- [ ] 9.6 Deployar el código nuevo **inmediatamente**: no es un paso independiente, es la
+      otra mitad de la misma operación
+- [ ] 9.7 Smoke test de un pago real
+
+**No hay rollback funcional.** Que la migración sea transaccional protege de que falle su
+aplicación, NO de volver al modelo viejo después: una vez que hay pagos con patas, esas
+filas no se representan en el esquema anterior. Si algo sale mal, se arregla hacia
+adelante. Y **la reversión de pago no es un rollback**: devuelve el dinero, nunca el
+calendario.
 
 ## Fuera de alcance, detectado en el camino
 

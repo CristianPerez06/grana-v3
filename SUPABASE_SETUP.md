@@ -494,15 +494,16 @@ de la app no se ve afectado — solo el flujo de pago de resumen.
 Esto NO es un defecto de la migración: es la consecuencia de mover la garantía contable a
 la base, que es exactamente lo que la change buscaba. Pero hay que ejecutarlo sabiéndolo.
 
-### 12.9.2 Orden recomendado
+### 12.9.2 Antes de producción (validación, sin apuro)
 
-1. **Validar en un proyecto que no sea producción.** El repo no documenta un entorno de
-   staging; si no existe, alcanza con un proyecto Supabase vacío al que se le apliquen
-   las migraciones en orden. Es donde conviene descubrir un error, no en producción.
-2. **Aplicar `0061`** pegando el archivo completo en el **SQL Editor**. Corre entera en
-   una transacción: si el `do $check$` final falla, **no queda nada aplicado**. Al final
-   se ve `✓ 0061 card payment legs applied`.
-3. **Regenerar los tipos y comparar drift.** Las columnas de pata, `isOneToOne: false` en
+El repo **no documenta un entorno de staging**, así que no lo demos por disponible: o se
+crea un proyecto Supabase vacío y se le aplican las migraciones en orden, o se acepta
+explícitamente que no hay validación previa real. Las dos son decisiones válidas; lo que
+no vale es suponer que existe algo que no está.
+
+1. **Aplicar `0061`** en ese proyecto, pegando el archivo completo en el **SQL Editor**.
+   Al final se ve `✓ 0061 card payment legs applied`.
+2. **Regenerar los tipos y comparar drift.** Las columnas de pata, `isOneToOne: false` en
    `period_payments.period_id` y las cuatro funciones se escribieron **a mano** mientras
    la migración no estaba aplicada:
 
@@ -512,19 +513,39 @@ la base, que es exactamente lo que la change buscaba. Pero hay que ejecutarlo sa
    ```
 
    Un diff acá **no es cosmético**: significa que la base no quedó como el código la
-   asume. Revisarlo antes de seguir.
-4. **QA de los cuatro recorridos** (ver `tasks.md` de la change): resumen solo ARS, mixto
-   pagando USD en USD, mixto pesificado, y sin cuenta USD activa. Más la reversión de los
-   dos mixtos.
-5. **Producción: migración y deploy coordinados**, en una ventana de bajo tráfico, en ese
-   orden y lo más juntos posible.
+   asume. Este paso va ACÁ y no en la ventana de producción: si aparece drift, se
+   arregla con calma, no con el pago de resúmenes caído.
+3. **QA de los cuatro recorridos**: resumen solo ARS, mixto pagando USD en USD, mixto
+   pesificado en ARS, y sin cuenta USD activa. Más la **reversión** de los dos mixtos, en
+   web (mobile no tiene ese flujo — ver la brecha anotada en la change).
 
-### 12.9.3 Qué NO revierte esta migración
+### 12.9.3 La ventana de producción, en orden
 
-La reversión del pago devuelve el dinero, pero **nunca el calendario**: las fechas
-confirmadas del ciclo en curso, el período estimado creado y las reasignaciones de
-consumos quedan. Son hechos leídos del resumen de papel y valen aunque el pago se haya
-cargado mal.
+Cuanto más corta, mejor: entre el paso 2 y el 3 **el pago de resúmenes no funciona**.
+
+1. **Avisar** que el pago de resúmenes puede estar indisponible unos minutos.
+2. **Aplicar `0061`** en el SQL Editor de producción. Corre entera en una transacción: si
+   el `do $check$` falla, no queda nada aplicado y la ventana se cierra sin cambios.
+3. **Deployar el código nuevo inmediatamente.** No es un paso independiente: es la otra
+   mitad de la misma operación.
+4. **Smoke test** de un pago real, y de los cuatro recorridos si el tiempo lo permite.
+
+### 12.9.4 No hay rollback funcional
+
+La migración es transaccional: **si falla, no deja nada**. Eso es rollback de la
+*aplicación de la migración*, y no hay que confundirlo con poder volver al modelo viejo
+después.
+
+Una vez que un usuario registró un pago con patas, **volver atrás no es trivial**: esas
+filas tienen imputaciones que el esquema viejo no sabe representar, y el código viejo
+insertaba directo en una tabla que ya no acepta escrituras. Si algo sale mal después del
+release, el camino es arreglar hacia adelante, no revertir.
+
+**La reversión de pago NO es un rollback.** Devuelve el dinero —los débitos, las patas,
+el barrido de consumos— pero **nunca el calendario**: las fechas confirmadas del ciclo en
+curso, el período estimado creado y las reasignaciones de consumos quedan como están. Son
+hechos leídos del resumen de papel y valen aunque el pago se haya cargado mal. Usarla
+esperando que "deshaga el release" deja el calendario adelantado y el dinero atrás.
 
 ---
 
