@@ -931,7 +931,7 @@
       "stamp_tax_relation_note": "The stamp tax is a separate charge: it's debited from the same account along with the payment. {total} is debited = {consumos} (statement) + {stamp} (stamp tax).",
       "stamp_tax_other_placeholder": "Other amount",
       "stamp_tax_none": "No stamp tax charged",
-      "warning": "Once confirmed, the payment cannot be reverted. If you recorded a wrong amount or account, fix it with a balance adjustment.",
+      "warning": "If you get it wrong, you can undo this payment from the statement: the money returns to your accounts and the charges go back to pending. It stops being undoable once you pay a later statement of this card.",
       "usd_mode_label": "How are you paying the statement's dollars?",
       "usd_mode_in_usd": "In dollars",
       "usd_mode_in_ars": "In pesos",

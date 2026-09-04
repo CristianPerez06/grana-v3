@@ -931,7 +931,7 @@
       "stamp_tax_relation_note": "El sello es un cargo aparte: se debita de la misma cuenta junto al pago. Se debita {total} = {consumos} (resumen) + {stamp} (sellos).",
       "stamp_tax_other_placeholder": "Otro monto",
       "stamp_tax_none": "No me cobraron sellos",
-      "warning": "Una vez confirmado, el pago no se puede revertir. Si registraste un monto o cuenta incorrectos, podés corregirlo con un ajuste de saldo.",
+      "warning": "Si te equivocaste, vas a poder deshacer este pago desde el resumen: vuelve la plata a tus cuentas y los consumos a pendientes. Deja de poder deshacerse cuando pagás un resumen posterior de esta tarjeta.",
       "usd_mode_label": "¿Cómo pagás los dólares del resumen?",
       "usd_mode_in_usd": "En dólares",
       "usd_mode_in_ars": "En pesos",

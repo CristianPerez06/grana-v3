@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Check, Info, Lock, Sparkles } from 'lucide-react'
+import { Check, Info, Sparkles, Undo2 } from 'lucide-react'
 import { getTodayAR } from '@/lib/date'
 import { payCardPeriod } from '@/app/_actions/credit-cards'
 import {
@@ -643,9 +643,11 @@ export const PayCardPeriodForm = ({
         </div>
       </Card>
 
-      {/* Cierre: irreversibilidad (neutral, informativo) + CTA */}
+      {/* Cierre: hasta cuándo se puede deshacer (neutral, informativo) + CTA.
+          El candado decía que el pago era irreversible; se puede deshacer desde el
+          resumen, así que el ícono también dejó de corresponder. */}
       <div className="flex gap-3 rounded-[14px] bg-page px-4 py-3.5">
-        <Lock className="mt-0.5 size-4 shrink-0 text-text-soft" aria-hidden />
+        <Undo2 className="mt-0.5 size-4 shrink-0 text-text-soft" aria-hidden />
         <p className="text-xs leading-relaxed text-text-muted">{t('payment.warning')}</p>
       </div>
 

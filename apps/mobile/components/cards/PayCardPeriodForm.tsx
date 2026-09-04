@@ -591,7 +591,8 @@ export function PayCardPeriodForm({
         </View>
       </View>
 
-      {/* Irreversibility warning + CTA */}
+      {/* Hasta cuándo se puede deshacer + CTA. Decía que el pago era irreversible;
+          se puede deshacer desde el resumen. */}
       <Text className="rounded-xl bg-page px-4 py-3.5 text-xs leading-relaxed text-text-muted">
         {t('cards.payment.warning')}
       </Text>
