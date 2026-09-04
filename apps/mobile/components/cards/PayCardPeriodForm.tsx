@@ -258,9 +258,9 @@ export function PayCardPeriodForm({
   }
 
   return (
-    <View className="flex-col gap-5">
+    <View className="flex-col gap-4">
       {/* Section 1: Payment data */}
-      <View className="flex-col gap-5 rounded-2xl border border-border bg-card p-5">
+      <View className="flex-col gap-4 rounded-2xl border border-border bg-card p-5">
         <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
           {t('cards.payment.section_payment_data')}
         </Text>
@@ -268,7 +268,7 @@ export function PayCardPeriodForm({
         {/* Porción en dólares: primero CÓMO se paga. La cotización aparece solo si se
             pesifica — pagar dólares con dólares no convierte nada. */}
         {hasUsdDebt && (
-          <View className="flex-col gap-3">
+          <View className="flex-col gap-2.5">
             <Label>{t('cards.payment.usd_mode_label')}</Label>
             <View className="flex-row flex-wrap gap-2">
               <Pressable
@@ -302,41 +302,6 @@ export function PayCardPeriodForm({
             </View>
             {usdAccounts.length === 0 && (
               <Text className="text-xs text-text-muted">{t('cards.payment.usd_no_account')}</Text>
-            )}
-
-            {payUsdInUsd && (
-              <View className="flex-col gap-1.5">
-                <Label>{t('cards.payment.usd_account_label')}</Label>
-                <Pressable
-                  onPress={() => setUsdAccountSheet(true)}
-                  className={`h-11 flex-row items-center justify-between rounded-lg border bg-card px-3 ${
-                    errors.usdAccountId ? 'border-error' : 'border-border'
-                  }`}
-                >
-                  <Text
-                    className={`text-sm ${selectedUsdAccount ? 'text-text' : 'text-text-soft'}`}
-                  >
-                    {selectedUsdAccount
-                      ? selectedUsdAccount.name
-                      : t('cards.errors.account_required')}
-                  </Text>
-                  {selectedUsdAccount && (
-                    <Text className="text-xs tabular-nums text-text-muted">
-                      {formatUSD(selectedUsdAccount.balance, showCents)}
-                    </Text>
-                  )}
-                </Pressable>
-                {errors.usdAccountId && (
-                  <Text className="text-xs text-error">{errors.usdAccountId}</Text>
-                )}
-                {usdNegativeWarning?.negative && (
-                  <Text className="text-xs text-warning-deep">
-                    {t('transactions.form.negative_warning', {
-                      amount: formatUSD(usdNegativeWarning.projected, showCents),
-                    })}
-                  </Text>
-                )}
-              </View>
             )}
           </View>
         )}
@@ -421,6 +386,78 @@ export function PayCardPeriodForm({
           />
         </View>
 
+        <View className="h-px bg-border" />
+
+        {/* Cuenta de débito */}
+        {arsToSettle > 0 && (
+          <View className="flex-col gap-1.5">
+            <Label>{t('cards.labels.debit_account')}</Label>
+            <Pressable
+              onPress={() => setAccountSheet(true)}
+              className={`h-11 flex-row items-center justify-between rounded-lg border bg-card px-3 ${
+                errors.paymentAccountId ? 'border-error' : 'border-border'
+              }`}
+            >
+              <Text className={`text-sm ${selectedAccount ? 'text-text' : 'text-text-soft'}`}>
+                {selectedAccount ? selectedAccount.name : t('cards.errors.account_required')}
+              </Text>
+              {selectedAccount && (
+                <Text className="text-xs tabular-nums text-text-muted">
+                  {fmtARS(selectedAccount.balance)}
+                </Text>
+              )}
+            </Pressable>
+            {errors.paymentAccountId && (
+              <Text className="text-xs text-error">{errors.paymentAccountId}</Text>
+            )}
+            {negativeWarning?.negative && (
+              <Text className="text-xs text-warning-deep">
+                {t('transactions.form.negative_warning', {
+                  amount: `ARS ${negativeWarning.projected.toLocaleString('es-AR')}`,
+                })}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Cuenta en dólares: al lado de la de pesos, porque son las dos patas de
+            la misma decisión. Separadas, la pantalla pedía cuentas en dos momentos
+            distintos. */}
+        {payUsdInUsd && (
+          <View className="flex-col gap-1.5">
+            <Label>{t('cards.payment.usd_account_label')}</Label>
+            <Pressable
+              onPress={() => setUsdAccountSheet(true)}
+              className={`h-11 flex-row items-center justify-between rounded-lg border bg-card px-3 ${
+                errors.usdAccountId ? 'border-error' : 'border-border'
+              }`}
+            >
+              <Text
+                className={`text-sm ${selectedUsdAccount ? 'text-text' : 'text-text-soft'}`}
+              >
+                {selectedUsdAccount
+                  ? selectedUsdAccount.name
+                  : t('cards.errors.account_required')}
+              </Text>
+              {selectedUsdAccount && (
+                <Text className="text-xs tabular-nums text-text-muted">
+                  {formatUSD(selectedUsdAccount.balance, showCents)}
+                </Text>
+              )}
+            </Pressable>
+            {errors.usdAccountId && (
+              <Text className="text-xs text-error">{errors.usdAccountId}</Text>
+            )}
+            {usdNegativeWarning?.negative && (
+              <Text className="text-xs text-warning-deep">
+                {t('transactions.form.negative_warning', {
+                  amount: formatUSD(usdNegativeWarning.projected, showCents),
+                })}
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* Monto a pagar */}
         <View className="flex-col gap-1.5">
           <Label>{t('cards.labels.amount_to_pay')}</Label>
@@ -483,38 +520,6 @@ export function PayCardPeriodForm({
                 bold
               />
             </View>
-          )}
-        </View>
-
-        <View className="h-px bg-border" />
-
-        {/* Cuenta de débito */}
-        <View className="flex-col gap-1.5">
-          <Label>{t('cards.labels.debit_account')}</Label>
-          <Pressable
-            onPress={() => setAccountSheet(true)}
-            className={`h-11 flex-row items-center justify-between rounded-lg border bg-card px-3 ${
-              errors.paymentAccountId ? 'border-error' : 'border-border'
-            }`}
-          >
-            <Text className={`text-sm ${selectedAccount ? 'text-text' : 'text-text-soft'}`}>
-              {selectedAccount ? selectedAccount.name : t('cards.errors.account_required')}
-            </Text>
-            {selectedAccount && (
-              <Text className="text-xs tabular-nums text-text-muted">
-                {fmtARS(selectedAccount.balance)}
-              </Text>
-            )}
-          </Pressable>
-          {errors.paymentAccountId && (
-            <Text className="text-xs text-error">{errors.paymentAccountId}</Text>
-          )}
-          {negativeWarning?.negative && (
-            <Text className="text-xs text-warning-deep">
-              {t('transactions.form.negative_warning', {
-                amount: `ARS ${negativeWarning.projected.toLocaleString('es-AR')}`,
-              })}
-            </Text>
           )}
         </View>
 

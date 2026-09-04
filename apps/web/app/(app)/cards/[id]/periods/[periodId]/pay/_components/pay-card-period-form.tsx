@@ -321,17 +321,17 @@ export const PayCardPeriodForm = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       {/* Section 1: Payment data */}
       <Card>
-        <div className="flex flex-col gap-5 p-5">
+        <div className="flex flex-col gap-4 p-5">
           <SectionLabel className="mb-0">{t('payment.section_payment_data')}</SectionLabel>
 
           {/* Porción en dólares del resumen: primero CÓMO se paga, y solo si se
               pesifica aparece la cotización. Pagar dólares con dólares no convierte
               nada. */}
           {hasUsdDebt && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               <FieldLabel>{t('payment.usd_mode_label')}</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -362,29 +362,6 @@ export const PayCardPeriodForm = ({
               </div>
               {usdAccounts.length === 0 && (
                 <Hint>{t('payment.usd_no_account')}</Hint>
-              )}
-
-              {payUsdInUsd && (
-                <div className="flex flex-col gap-1.5">
-                  <FieldLabel>{t('payment.usd_account_label')}</FieldLabel>
-                  <DebitAccountSelect
-                    accounts={usdAccounts}
-                    currency="USD"
-                    value={usdAccountId}
-                    onChange={setUsdAccountId}
-                    label={t('payment.usd_account_label')}
-                    placeholder={t('errors.account_required')}
-                    availableLabel={t('payment.available_label')}
-                    invalid={Boolean(errors.usdAccountId)}
-                  />
-                  {errors.usdAccountId && <FieldError>{errors.usdAccountId}</FieldError>}
-                  {usdNegativeWarning?.negative && (
-                    <NegativeBalanceNotice
-                      projected={usdNegativeWarning.projected}
-                      currency="USD"
-                    />
-                  )}
-                </div>
               )}
             </div>
           )}
@@ -473,6 +450,51 @@ export const PayCardPeriodForm = ({
               />
             </MoneyField>
           </div>
+
+          <div className="h-px bg-border" />
+
+          {/* Cuenta de débito */}
+          {arsToSettle > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>{t('labels.debit_account')}</FieldLabel>
+              <DebitAccountSelect
+                accounts={paymentAccounts}
+                value={paymentAccountId}
+                onChange={setPaymentAccountId}
+                label={t('labels.debit_account')}
+                placeholder={t('errors.account_required')}
+                availableLabel={t('payment.available_label')}
+                invalid={Boolean(errors.paymentAccountId)}
+              />
+              {errors.paymentAccountId && <FieldError>{errors.paymentAccountId}</FieldError>}
+              {negativeWarning?.negative && (
+                <NegativeBalanceNotice projected={negativeWarning.projected} currency="ARS" />
+              )}
+            </div>
+          )}
+
+          {/* Cuenta en dólares: al lado de la de pesos, porque son las dos patas de la
+              misma decisión. Separadas —una arriba con los chips, otra acá abajo— la
+              pantalla pedía cuentas en dos momentos distintos. */}
+          {payUsdInUsd && (
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>{t('payment.usd_account_label')}</FieldLabel>
+              <DebitAccountSelect
+                accounts={usdAccounts}
+                currency="USD"
+                value={usdAccountId}
+                onChange={setUsdAccountId}
+                label={t('payment.usd_account_label')}
+                placeholder={t('errors.account_required')}
+                availableLabel={t('payment.available_label')}
+                invalid={Boolean(errors.usdAccountId)}
+              />
+              {errors.usdAccountId && <FieldError>{errors.usdAccountId}</FieldError>}
+              {usdNegativeWarning?.negative && (
+                <NegativeBalanceNotice projected={usdNegativeWarning.projected} currency="USD" />
+              )}
+            </div>
+          )}
 
           {/* Monto a pagar: consumos + sello. Con dos débitos, uno por moneda. */}
           <div className="flex flex-col gap-1.5">
@@ -563,26 +585,6 @@ export const PayCardPeriodForm = ({
               </span>
             </div>
           )}
-
-          <div className="h-px bg-border" />
-
-          {/* Cuenta de débito */}
-          <div className="flex flex-col gap-1.5">
-            <FieldLabel>{t('labels.debit_account')}</FieldLabel>
-            <DebitAccountSelect
-              accounts={paymentAccounts}
-              value={paymentAccountId}
-              onChange={setPaymentAccountId}
-              label={t('labels.debit_account')}
-              placeholder={t('errors.account_required')}
-              availableLabel={t('payment.available_label')}
-              invalid={Boolean(errors.paymentAccountId)}
-            />
-            {errors.paymentAccountId && <FieldError>{errors.paymentAccountId}</FieldError>}
-            {negativeWarning?.negative && (
-              <NegativeBalanceNotice projected={negativeWarning.projected} currency="ARS" />
-            )}
-          </div>
 
           {/* Fecha del pago */}
           <div className="flex flex-col gap-1.5">
