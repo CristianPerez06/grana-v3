@@ -69,9 +69,34 @@
 
 ## 8. Cierre
 
-- [ ] 8.1 QA manual del caso que originó la change: resumen vencido con consumos ARS + USD, pagado en dos monedas
-- [ ] 8.2 QA manual del rechazo: intentar pagar solo una de las dos monedas
-- [ ] 8.3 QA manual de reversión: pago de dos monedas, bloqueo por resumen posterior con pagos
+- [x] 8.1 QA manual del caso que originó la change: resumen vencido con consumos ARS + USD,
+      pagado en dos monedas. Verificado sobre datos reales (Visa Brubank,
+      `d6f6e97c`, ARS 52.000 + USD 1.900 + 520 de sello): **un** `payment_group_id` con
+      **dos** patas, `fx_rate_to_ars` NULL en las dos, dos débitos —uno por moneda, de la
+      misma cuenta— pendiente 0,00 en ARS y USD, consumos barridos a `paid`, calendario
+      confirmado y estimado eager creado, y los saldos movidos solo en su propia moneda
+- [x] 8.1b QA manual del camino que YA existía (pesificación), sobre el mismo resumen:
+      **un** débito de 2.940.520,00 con **dos** imputaciones (ARS con `fx` NULL, USD con
+      1520), la identidad `Σ round(settles_amount × fx, 2) = amount` cerrando al centavo,
+      y la cuenta en dólares sin tocar
+- [x] 8.1c QA manual del caso más común, un resumen **solo en ARS** (Visa BBVA,
+      `086076f6`): ni nota, ni chips, ni cotización, ni cuenta en dólares; un solo monto;
+      una sola pata. De yapa cubrió un **reintegro en resumen** (−3.000) restándose bien
+      del pendiente, y dejó ver que un reintegro conserva `status = NULL` —no es un
+      consumo a pagar— sin quedar fuera de la cuenta, porque `card_period_pending` no
+      filtra por status
+- [ ] 8.2 QA manual del rechazo: intentar pagar solo una de las dos monedas.
+      **No es alcanzable desde la UI**: el formulario siempre arma un payload que salda
+      las dos monedas, así que no hay forma de provocar `GRN04` a mano sin llamar al RPC
+      directo. Cubierto por los tests PGlite (`rechaza una operación que no salda`, y los
+      7 del invariante `existe pago ⟺ saldado`). Queda sin verificación manual, dicho
+- [x] 8.3 QA manual de reversión: verificada en los **tres** pagos (dos monedas,
+      pesificado y solo-ARS). Devuelve la plata a cada cuenta en su moneda, los consumos
+      a `pending`, **elimina** el movimiento del sello y no deja filas en
+      `period_payments`. Los saldos vuelven al valor exacto previo
+- [ ] 8.3b El **bloqueo** de la reversión por un resumen posterior con patas no se probó
+      en vivo (haría falta pagar dos resúmenes seguidos de la misma tarjeta). Cubierto por
+      test PGlite
 - [ ] 8.4 Verificar que un pago anterior a esta change se sigue leyendo como resumen saldado
 - [ ] 8.5 Verificar que el dashboard, el hero de `/cards` y el resumen del mes dan lo mismo que antes
 - [ ] 8.6 `pnpm openspec:check`, lint, typecheck y tests en verde
@@ -92,14 +117,20 @@
 
 **Validación (sin apuro):**
 
-- [ ] 9.1 Aplicar `0061` en un proyecto que NO sea producción. El repo **no documenta
-      staging**: o se crea un proyecto vacío con las migraciones en orden, o se acepta
-      explícitamente que no hay validación previa real
+- [~] 9.1 Aplicar `0061` en un proyecto que NO sea producción. **No se hizo así**: la
+      migración se aplicó directamente sobre la base con datos reales, y el QA corrió
+      contra cuentas de usuarios reales. El riesgo se acotó de otra forma —cada pago de
+      prueba se deshizo y los saldos volvieron a su valor exacto— pero la validación
+      previa en un proyecto aparte NO existió. Queda dicho, no tapado
 - [ ] 9.2 Regenerar tipos y **comparar drift** contra lo escrito a mano. Un diff acá
       significa que la base no quedó como el código la asume. Va acá y NO en la ventana:
       si aparece, se arregla con calma
-- [ ] 9.3 QA de los cuatro recorridos + reversión de los dos pagos mixtos (web; mobile no
-      tiene ese flujo)
+- [~] 9.3 QA de los recorridos + reversión. Hechos: dos monedas, pesificado y solo-ARS,
+      con su reversión cada uno (ver 8.1–8.3). Falta el recorrido **sin cuenta en
+      dólares**: reproducirlo exige desactivar los dólares de una cuenta que tiene saldo
+      en dólares, o sea tocar data real para mirar un chip deshabilitado. Sin cuenta en
+      dólares el formulario arranca en modo pesificado —el camino ya verificado— así que
+      queda verificado por inspección y NO en vivo
 
 **Cierre del change (en esta misma rama, antes del merge):**
 
