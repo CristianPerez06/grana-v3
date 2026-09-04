@@ -50,7 +50,19 @@ export {
 
 export { deriveMonthOpening } from './month-opening'
 
-export { formatTodayLine } from './today-line'
+export {
+  dateLineVariants,
+  isCurrentMonth,
+  monthAndYear,
+  type MonthSelection,
+} from './date-line'
+
+export {
+  reachableMonths,
+  MONTHS_BACK,
+  type MonthYear,
+  type ReachableMonth,
+} from './month-range'
 
 export { deriveBalanceCardView, type BalanceCardView } from './balance-card-view'
 

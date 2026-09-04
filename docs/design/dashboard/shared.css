@@ -88,6 +88,71 @@ button {
   gap: 10px;
 }
 
+/* La lente: la línea de la fecha ES el selector de mes, no un rótulo al lado
+   de uno. El caret no es adorno — sin él nada distingue una fecha que se toca
+   de una fecha impresa. El `month-nav` salió del header del dashboard: le
+   comía ~190px de una fila de ~330px y la fecha truncaba. Sigue vivo en los
+   handoffs de Movimientos y Cuentas, que no cambian. */
+.month-lens {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.month-lens .caret {
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* Solo cuando estás parado fuera del mes corriente. */
+.back-to-today {
+  border: 0;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 4px 11px;
+  color: var(--positive, #059669);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.lens-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* El ojito vive en la card de saldo, donde empiezan los montos que enmascara.
+   Es preferencia de privacidad, no control de alcance: no comparte naturaleza
+   con la lente ni tiene por qué compartir fila con ella. */
+.card-eye {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+}
+
+.card.hero {
+  position: relative;
+}
+
 .month-nav {
   display: inline-flex;
   min-height: 42px;
