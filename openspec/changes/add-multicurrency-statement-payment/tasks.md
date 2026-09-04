@@ -47,12 +47,12 @@
 
 ## 5. Formulario de pago — web (D1, D6, D18)
 
-- [ ] 5.1 Bloque "Pesos del resumen": deuda ARS, cuenta ARS
-- [ ] 5.2 Bloque "Dólares del resumen" (solo con `pendingAmountUSD > 0`): elección **En dólares** (cuenta USD) / **En pesos** (cotización + cuenta ARS)
-- [ ] 5.3 El monto de cada débito se DERIVA de las imputaciones y deja de ser un campo libre; la UI explica qué sale de cada cuenta
-- [ ] 5.4 Aviso de saldo negativo por cuenta y por moneda, reusando `checkNegativeBalance` y `NegativeBalanceNotice`
-- [ ] 5.5 Cierre del formulario: "Sale de tus cuentas" por moneda, sin ningún total combinado
-- [ ] 5.6 Copy nuevo en `packages/i18n-messages` (es/en), incluida la reescritura de `payment.usd_note_description`
+- [x] 5.1 Bloque "Pesos del resumen": deuda ARS, cuenta ARS
+- [x] 5.2 Bloque "Dólares del resumen": elección **En dólares** (cuenta USD, sin cotización) / **En pesos** (cotización). Por defecto **En dólares** cuando hay cuenta con USD activo; si hay varias candidatas y ninguna es del banco de la tarjeta, NO se elige una por el usuario: se le pide
+- [x] 5.3 El monto de cada débito se DERIVA de las imputaciones y deja de ser un campo libre; la UI explica qué sale de cada cuenta
+- [x] 5.4 Aviso de saldo negativo por cuenta y por moneda, reusando `checkNegativeBalance` y `NegativeBalanceNotice`
+- [x] 5.5 Cierre del formulario: "Sale de tus cuentas" por moneda, sin ningún total combinado
+- [x] 5.6 Copy nuevo en `packages/i18n-messages` (es/en), incluida la reescritura de `payment.usd_note_description`
 
 ## 6. Detalle de resumen y de movimiento (D7)
 
@@ -62,8 +62,8 @@
 
 ## 7. Paridad nativa
 
-- [ ] 7.1 `apps/mobile/components/cards/PayCardPeriodForm.tsx`: bloques de pesos y dólares, avisos
-- [ ] 7.2 Pantalla de pago nativa: cuentas elegibles por moneda, con sus saldos
+- [x] 7.1 `apps/mobile/components/cards/PayCardPeriodForm.tsx`: bloques de pesos y dólares, avisos
+- [x] 7.2 Pantalla de pago nativa: cuentas elegibles por moneda, con sus saldos
 - [ ] 7.3 Detalle de período y de movimiento nativos
 - [ ] 7.4 Deshacer pago nativo
 

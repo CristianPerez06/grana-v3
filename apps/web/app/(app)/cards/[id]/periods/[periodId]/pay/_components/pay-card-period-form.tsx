@@ -143,7 +143,10 @@ export const PayCardPeriodForm = ({
   // dólares: es lo que hace el banco y lo que el usuario pidió. Pesificarla sigue
   // disponible, pero deja de ser la única opción.
   const [payUsdInUsd, setPayUsdInUsd] = useState(hasUsdDebt && usdAccounts.length > 0)
-  const [usdAccountId, setUsdAccountId] = useState(defaultUsdAccountId || usdAccounts[0]?.id || '')
+  // Vacío a propósito cuando hay varias candidatas y ninguna es del banco de la
+  // tarjeta: la validación lo pide, en vez de mover dólares desde una cuenta que el
+  // usuario no eligió.
+  const [usdAccountId, setUsdAccountId] = useState(defaultUsdAccountId)
   const [paymentAccountId, setPaymentAccountId] = useState(
     defaultPaymentAccountId || paymentAccounts[0]?.id || '',
   )

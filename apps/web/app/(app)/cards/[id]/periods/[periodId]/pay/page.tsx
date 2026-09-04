@@ -81,12 +81,18 @@ const PayPeriodPage = async ({ params }: Props) => {
       : undefined) ??
     paymentAccounts[0]?.id ??
     ''
+  // Default de la cuenta en dólares, con una regla distinta a la de pesos a propósito.
+  //
+  // En pesos, "pagá la Galicia desde tu cuenta Galicia" es una señal fuerte y por eso
+  // se cae a la primera de la lista cuando no hay match. En dólares esa caída sería
+  // ARBITRARIA: elegir por el usuario entre varias cuentas equivalentes, para una
+  // operación que le va a mover dólares. Así que cuando hay más de una candidata y
+  // ninguna es del banco de la tarjeta, NO se elige: se le pide que elija.
+  const usdSameInstitution = cardInstitutionId
+    ? usdEligible.find((a) => a.institution?.id === cardInstitutionId)?.id
+    : undefined
   const defaultUsdAccountId =
-    (cardInstitutionId
-      ? usdEligible.find((a) => a.institution?.id === cardInstitutionId)?.id
-      : undefined) ??
-    usdAccounts[0]?.id ??
-    ''
+    usdSameInstitution ?? (usdAccounts.length === 1 ? usdAccounts[0].id : '')
 
   const t = await getTranslations('cards')
   const accent = cardAccent(cardDetail, cardDetail.institution)
