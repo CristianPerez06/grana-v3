@@ -1051,7 +1051,7 @@
         "cancel": "Cancelar",
         "delete_warning_default": "Esta acción no se puede deshacer.",
         "delete_warning_parent": "Se van a eliminar la compra y todas sus cuotas. Esta acción no se puede deshacer.",
-        "delete_warning_card_payment": "Al eliminar este pago, las cuotas del período volverán a pendientes. ¿Continuar?",
+        "delete_warning_card_payment": "Al eliminar este pago, los consumos del período volverán a pendientes. ¿Continuar?",
         "delete_blocked_card_payment": "Este movimiento es el pago de un resumen de tarjeta. Para deshacerlo —y que los movimientos del resumen vuelvan a pendientes— andá al detalle del período, en Tarjetas.",
         "got_it": "Entendido"
       },
@@ -1088,7 +1088,7 @@
       "context": {
         "card_pending": "Este consumo no afecta tu disponible hasta que pagues el resumen del {periodo}.",
         "card_paid_installment": "Esta cuota ya está incluida en el resumen del {periodo} que pagaste.",
-        "card_payment": "Con este pago, las cuotas del período {periodo} quedaron en estado pagado.",
+        "card_payment": "Con este pago, los consumos del período {periodo} quedaron en estado pagado.",
         "reimbursement_pending": "Esperás que te lo devuelvan. Cuando llegue, marcalo como recibido y se va a sumar a tu disponible.",
         "reimbursement_cancelled": "Marcaste este reintegro como cancelado. Si finalmente lo recibís, podés reabrirlo."
       },

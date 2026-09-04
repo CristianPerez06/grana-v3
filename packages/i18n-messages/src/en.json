@@ -1051,7 +1051,7 @@
         "cancel": "Cancel",
         "delete_warning_default": "This action can't be undone.",
         "delete_warning_parent": "This will delete the purchase and all its installments. This action can't be undone.",
-        "delete_warning_card_payment": "If you delete this payment, the installments for the period will go back to pending. Continue?",
+        "delete_warning_card_payment": "If you delete this payment, the period's charges will go back to pending. Continue?",
         "delete_blocked_card_payment": "This movement is the payment of a card statement. To undo it — and send the statement's charges back to pending — go to the period detail, under Cards.",
         "got_it": "Got it"
       },
@@ -1088,7 +1088,7 @@
       "context": {
         "card_pending": "This card spending won't reduce your available balance until you pay the {periodo} statement.",
         "card_paid_installment": "This installment is already included in the {periodo} statement you paid.",
-        "card_payment": "With this payment, the installments for the {periodo} period moved to paid.",
+        "card_payment": "With this payment, the {periodo} period's charges moved to paid.",
         "reimbursement_pending": "You're expecting this refund. When it lands, mark it as received and it'll add to your available balance.",
         "reimbursement_cancelled": "You marked this reimbursement as cancelled. If it does come in, you can reopen it."
       },
