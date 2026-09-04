@@ -139,9 +139,18 @@
       contra cuentas de usuarios reales. El riesgo se acotó de otra forma —cada pago de
       prueba se deshizo y los saldos volvieron a su valor exacto— pero la validación
       previa en un proyecto aparte NO existió. Queda dicho, no tapado
-- [ ] 9.2 Regenerar tipos y **comparar drift** contra lo escrito a mano. Un diff acá
-      significa que la base no quedó como el código la asume. Va acá y NO en la ventana:
-      si aparece, se arregla con calma
+- [x] 9.2 Comparar drift contra lo escrito a mano. Hecho contra la base real leyendo
+      `information_schema` y `pg_proc` en vez del CLI (que este entorno no tiene).
+      **Apareció un drift y se corrigió**: faltaba la relación
+      `period_payments_settles_currency_fkey → currencies(code)` en el bloque
+      `Relationships`. Sin síntoma hoy —ninguna lectura hace ese join embebido— pero es
+      justo lo que el chequeo busca: los tipos se validan contra sí mismos, nunca contra
+      la base. Coinciden: las 11 columnas (tipo, nullability y la correspondencia entre
+      `column_default` y qué campos son opcionales en `Insert`), las 4 firmas de RPC con
+      sus nombres de parámetro en orden y cuáles llevan `DEFAULT`, y el modelo de
+      seguridad (las 3 que escriben son `DEFINER`; `card_period_pending`, que solo lee,
+      es `INVOKER`). Lo único no cubierto por esta vía es lo que el CLI genera y estas
+      consultas no ven; conviene regenerar con el CLI cuando esté disponible
 - [x] 9.3 QA de los recorridos + reversión. Hechos: dos monedas, pesificado y solo-ARS,
       con su reversión cada uno (ver 8.1–8.3). Falta el recorrido **sin cuenta en
       dólares**: reproducirlo exige desactivar los dólares de una cuenta que tiene saldo
