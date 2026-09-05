@@ -25,6 +25,10 @@
 -- Si los dos coinciden entre sí pero no con lo que esperás, el dato cargado es
 -- distinto de lo que creés — §10 (detectores) suele decir por qué.
 --
+-- Cada bloque arranca con `reset role;`: en Supabase local el SQL Editor reusa la
+-- conexión, así que el `set role authenticated` de §6/§11 quedaba pegado para el
+-- bloque siguiente y `auth.users` fallaba con "permission denied for table users".
+--
 -- Solo lectura: ningún bloque escribe.
 -- ═══════════════════════════════════════════════════════════════════════════
 
@@ -35,6 +39,7 @@
 -- Devuelve una fila por concepto con ARS y USD. Las reglas son las de
 -- `packages/dashboard/src/{queries,aggregations,month-summary,month-opening,
 -- month-spending,committed-window}.ts`. Leé la columna `nota`.
+reset role;
 with p as (
   select u.id as user_id, '2026-08'::text as month
   from auth.users u
@@ -397,6 +402,7 @@ order by ord;
 -- ───────────────────────────────────────────────────────────────────────────
 -- Incluye también las archivadas y las tarjetas (marcadas) para que veas plata
 -- que EXISTE pero no entra al Disponible.
+reset role;
 with p as (
   select u.id as user_id, '2026-08'::text as month
   from auth.users u
@@ -454,6 +460,7 @@ order by cuenta_propia desc, a.type, a.name, ac.currency_code;
 -- ───────────────────────────────────────────────────────────────────────────
 -- Una fila por PATA (una transferencia entre dos cuentas propias son dos filas
 -- que se cancelan). `lado` dice a qué columna de la card va.
+reset role;
 with p as (
   select u.id as user_id, '2026-08'::text as month
   from auth.users u
@@ -518,11 +525,84 @@ order by l.date, l.id, l.leg;
 
 
 -- ───────────────────────────────────────────────────────────────────────────
+-- §3b INICIO — "Entró" y "Se fue" desglosados por origen
+-- ───────────────────────────────────────────────────────────────────────────
+-- "Entró" NO es "ingresos". Es todo lo que subió el saldo de las cuentas propias:
+-- ingresos + reintegros recibidos a cuenta + saldadas cobradas + la pata que
+-- llega de un cambio de moneda + ajustes positivos + transferencias con una sola
+-- pata propia. La dona "De dónde vino" y la tira de ritmo usan SOLO `income`.
+reset role;
+with p as (
+  select u.id as user_id, '2026-08'::text as month
+  from auth.users u
+  where u.email = 'julieta.malacalza@gmail.com'
+),
+x as (
+  select p.user_id, p.month,
+         (p.month || '-01')::date as month_from,
+         least(((p.month || '-01')::date + interval '1 month' - interval '1 day')::date,
+               (now() at time zone 'America/Argentina/Buenos_Aires')::date) as cut
+  from p
+),
+owned as (
+  select a.id from public.accounts a, x
+  where a.user_id = x.user_id and a.type::text in ('cash', 'bank') and a.is_active
+),
+legs as (
+  select t.id, t.date, l.account_id, l.currency_code, l.net, l.bucket
+  from public.transactions t
+  cross join lateral (
+    values
+      (t.account_id, t.currency_code,
+       case t.type::text
+         when 'income' then t.amount when 'expense' then -t.amount
+         when 'transfer' then -t.amount when 'exchange' then -t.amount
+         when 'adjustment' then t.amount
+         when 'reimbursement' then case when t.reimbursement_target = 'account' and t.received_at is not null and t.cancelled_at is null then t.amount else null end
+         when 'settlement' then case t.settlement_direction when 'out' then -t.amount when 'in' then t.amount else null end
+         else null end,
+       case when t.type::text = 'expense' and exists (select 1 from public.period_payments pp where pp.transaction_id = t.id)
+            then 'cardPayment' else t.type::text end),
+      (case when t.type::text = 'transfer' then t.transfer_destination_account_id end, t.currency_code, t.amount, 'transfer'),
+      (case when t.type::text = 'exchange' then t.transfer_destination_account_id end, t.destination_currency, t.destination_amount, 'exchange')
+  ) as l(account_id, currency_code, net, bucket)
+  where t.status is null
+    and l.account_id in (select id from owned)
+    and l.currency_code in ('ARS', 'USD')
+    and l.net is not null
+),
+agg as (
+  select l.currency_code, l.bucket, sum(l.net) as signed, sum(abs(l.net)) as magnitude, count(*) as patas
+  from legs l, x
+  where l.date >= x.month_from and l.date <= x.cut
+  group by 1, 2
+)
+select currency_code as moneda,
+       case bucket
+         when 'income' then 'ingresos (lo que muestra "De dónde vino" y el ritmo)'
+         when 'reimbursement' then 'reintegros recibidos a cuenta'
+         when 'expense' then 'gastos pagados desde una cuenta'
+         when 'cardPayment' then 'pagos de resumen de tarjeta'
+         when 'adjustment' then 'ajustes (con signo)'
+         when 'settlement' then 'saldadas del hogar (con signo)'
+         when 'exchange' then 'cambio de moneda, pata en esta moneda (con signo)'
+         when 'transfer' then 'transferencias con una sola pata propia (con signo)'
+         else bucket end as origen,
+       case when bucket in ('income', 'reimbursement') then 'Entró'
+            when bucket in ('expense', 'cardPayment') then 'Se fue'
+            when signed >= 0 then 'Entró' else 'Se fue' end as lado,
+       case when bucket in ('income', 'reimbursement', 'expense', 'cardPayment') then magnitude else abs(signed) end as monto,
+       patas
+from agg
+order by moneda, lado, monto desc;
+
+-- ───────────────────────────────────────────────────────────────────────────
 -- §4  INICIO — "Cuánto gastaste": cada gasto/reintegro del mes con su bucket
 -- ───────────────────────────────────────────────────────────────────────────
 -- Devengado. `porcion_propia` NULL = compartido sin split para vos (la card lo
 -- saltea). `bucket` NULL = sin cuenta (la card lo saltea). `motivo_exclusion`
 -- explica las filas que la card no cuenta.
+reset role;
 with p as (
   select u.id as user_id, '2026-08'::text as month
   from auth.users u
@@ -586,6 +666,7 @@ order by motivo_exclusion, t.date, t.created_at;
 -- ───────────────────────────────────────────────────────────────────────────
 -- §5a INICIO — "Compromisos": resúmenes de tarjeta candidatos y su estado al corte
 -- ───────────────────────────────────────────────────────────────────────────
+reset role;
 with p as (
   select u.id as user_id, '2026-08'::text as month
   from auth.users u
@@ -642,6 +723,7 @@ order by estado, cp.due_date desc, tarjeta;
 -- ───────────────────────────────────────────────────────────────────────────
 -- §5b INICIO — "Compromisos": gastos fijos en la ventana (instancias + proyección)
 -- ───────────────────────────────────────────────────────────────────────────
+reset role;
 with p as (
   select u.id as user_id, '2026-08'::text as month
   from auth.users u
@@ -718,6 +800,7 @@ order by 1, 2;
 -- pagina de a 50 (hasta 500); acá pedimos 500. `excludeShared` = true es el
 -- default de la UI (toggle "mostrar compartidos" apagado): cambialo si lo tenés
 -- prendido.
+reset role;
 select set_config('request.jwt.claims',
   (select json_build_object('sub', u.id, 'role', 'authenticated')::text
      from auth.users u where u.email = 'julieta.malacalza@gmail.com'), false);
@@ -751,6 +834,7 @@ from public.get_movements_page(
 -- §6b MOVIMIENTOS — lo que existe en el mes pero la lista NO muestra, y por qué
 -- ───────────────────────────────────────────────────────────────────────────
 -- RECOMPUTADO. Si "no ves" un movimiento, casi seguro está acá.
+reset role;
 with p as (
   select u.id as user_id, '2026-08'::text as month
   from auth.users u
@@ -795,6 +879,7 @@ order by t.date, t.created_at;
 -- ───────────────────────────────────────────────────────────────────────────
 -- getMonthCategoryBreakdown. Neto > 0 = porción de la dona; neto < 0 = crédito
 -- ("te devolvieron"). El reintegro toma la categoría del gasto vinculado.
+reset role;
 with p as (
   select u.id as user_id, '2026-08'::text as month
   from auth.users u
@@ -836,7 +921,12 @@ rows_in as (
     and t.date between x.month_from and x.month_to
     and (t.status is not null or t.date <= x.today)
 )
-select coalesce(c.name, '(sin categoría)') as categoria,
+select case when r.category_id is null then '(sin categoría → la UI dice "Sin categoría")'
+            when c.name is null or btrim(c.name) = '' then '⚠ NOMBRE VACÍO'
+            else c.name end as categoria,
+       c.canonical_name as canonical,
+       case when c.id is null then null when c.user_id is null then 'sistema (la UI traduce por canonical)' else 'propia' end as origen,
+       r.category_id,
        r.currency_code as moneda,
        sum(case when r.kind = 'expense' then r.own else 0 end) as gastos,
        sum(case when r.kind = 'reimbursement' then r.own else 0 end) as reintegros,
@@ -848,14 +938,64 @@ select coalesce(c.name, '(sin categoría)') as categoria,
 from rows_in r
 left join public.categories c on c.id = r.category_id
 where r.own is not null
-group by 1, 2
+group by 1, 2, 3, 4, 5
 order by r.currency_code, neto desc;
 
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §7b MOVIMIENTOS — cada reintegro RECIBIDO en el mes y el gasto que devuelve
+-- ───────────────────────────────────────────────────────────────────────────
+-- El reintegro toma la categoría del gasto vinculado, aunque ese gasto sea de
+-- OTRO mes. Si en el mes no hubo gasto en esa categoría (o hubo menos), el neto
+-- queda negativo y la dona lo muestra abajo como "Te devolvieron".
+reset role;
+with p as (
+  select u.id as user_id, '2026-08'::text as month
+  from auth.users u
+  where u.email = 'julieta.malacalza@gmail.com'
+),
+x as (
+  select p.user_id,
+         (p.month || '-01')::date as month_from,
+         ((p.month || '-01')::date + interval '1 month' - interval '1 day')::date as month_to
+  from p
+),
+visible_tx as (
+  select t.* from public.transactions t, x
+  where t.user_id = x.user_id
+     or (t.is_shared and t.household_id is not null
+         and t.household_id in (select hm.household_id from public.household_member hm where hm.user_id = x.user_id))
+)
+select r.date as fecha_reintegro,
+       r.amount as monto,
+       (select s.amount_assigned from public.shared_expense_split s, x where s.transaction_id = r.id and s.user_id = x.user_id) as porcion_propia_si_compartido,
+       r.currency_code as moneda,
+       r.reimbursement_target as destino,
+       case r.reimbursement_target
+         when 'account' then 'sube el saldo de ' || coalesce(a.name, '?') || ' → cuenta en "Entró" y resta en "Ya se pagó"'
+         when 'statement' then 'baja la deuda del resumen → resta en "Por pagar" y en Compromisos'
+         else '?' end as efecto,
+       le.date as fecha_gasto,
+       le.description as gasto,
+       le.amount as monto_gasto,
+       coalesce(c.name, '(sin categoría)') as categoria_del_gasto,
+       case when le.date < x.month_from or le.date > x.month_to then 'el gasto es de OTRO mes' else '' end as nota,
+       r.id as reintegro_id, le.id as gasto_id
+from visible_tx r
+cross join x
+left join public.transactions le on le.id = r.linked_transaction_id
+left join public.categories c on c.id = le.category_id
+left join public.accounts a on a.id = r.account_id
+where r.type::text = 'reimbursement'
+  and r.received_at is not null and r.cancelled_at is null
+  and r.date between x.month_from and x.month_to
+order by r.date;
 
 -- ───────────────────────────────────────────────────────────────────────────
 -- §8  MOVIMIENTOS — "De dónde vino": ingresos por categoría
 -- ───────────────────────────────────────────────────────────────────────────
 -- getMonthIncomeBreakdown. Solo type='income' (los reintegros NO son ingreso).
+reset role;
 with p as (
   select u.id as user_id, '2026-08'::text as month
   from auth.users u
@@ -887,6 +1027,7 @@ order by t.currency_code, total desc;
 -- ───────────────────────────────────────────────────────────────────────────
 -- §9  MOVIMIENTOS — bloques "Por confirmar" (no dependen del mes)
 -- ───────────────────────────────────────────────────────────────────────────
+reset role;
 with p as (
   select u.id as user_id from auth.users u where u.email = 'julieta.malacalza@gmail.com'
 )
@@ -919,6 +1060,7 @@ order by 1, 2;
 -- ───────────────────────────────────────────────────────────────────────────
 -- Cada fila es un dato que, por cómo está cargado, NO se va a ver donde
 -- esperás. No es un error de la app necesariamente: es dónde mirar primero.
+reset role;
 with p as (
   select u.id as user_id,
          (now() at time zone 'America/Argentina/Buenos_Aires')::date as today
@@ -1057,6 +1199,11 @@ other as (
   where a.user_id = p.user_id and ac.initial_balance <> 0
     and ac.initial_balance_date > (select min(t.date) from public.transactions t where t.account_id = a.id and t.currency_code = ac.currency_code and t.status is null)
   union all
+  select 'categoría con nombre vacío (la dona la muestra sin etiqueta)', c.id, null, 'category', 0, '',
+         'canonical = ' || coalesce(c.canonical_name, 'null') || ' · sistema = ' || (c.user_id is null)::text
+  from public.categories c, p
+  where (c.user_id = p.user_id or c.user_id is null) and (c.name is null or btrim(c.name) = '')
+  union all
   select 'regla activa con más de una instancia pendiente', r.id, null, 'recurrence', r.amount, r.currency_code,
          coalesce(r.description, '') || ' · pendientes = ' || (select count(*) from public.recurrence_instances ri where ri.recurrence_id = r.id and ri.status = 'pending')
   from public.recurrences r, p
@@ -1112,6 +1259,7 @@ order by detector, date nulls last;
 -- ───────────────────────────────────────────────────────────────────────────
 -- accounts_net tiene que ser igual a "Cuentas propias" de §1; available igual
 -- a DISPONIBLE (en el mes corriente).
+reset role;
 select set_config('request.jwt.claims',
   (select json_build_object('sub', u.id, 'role', 'authenticated')::text
      from auth.users u where u.email = 'julieta.malacalza@gmail.com'), false);
@@ -1128,6 +1276,7 @@ from public.get_available_sums(
 -- ───────────────────────────────────────────────────────────────────────────
 -- Es el "neto_movimientos" de §2 para las cuentas propias, calculado por la
 -- función de la base. Si un renglón difiere de §2, hay bug.
+reset role;
 select set_config('request.jwt.claims',
   (select json_build_object('sub', u.id, 'role', 'authenticated')::text
      from auth.users u where u.email = 'julieta.malacalza@gmail.com'), false);
@@ -1145,6 +1294,7 @@ order by a.name, b.currency_code;
 -- ───────────────────────────────────────────────────────────────────────────
 -- §12 Meses con actividad — para saber qué meses vale la pena auditar
 -- ───────────────────────────────────────────────────────────────────────────
+reset role;
 with p as (
   select u.id as user_id from auth.users u where u.email = 'julieta.malacalza@gmail.com'
 )
