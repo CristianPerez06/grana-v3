@@ -1081,6 +1081,7 @@ found as (
   select 'gasto en tarjeta sin status (queda on-ledger y descuenta el saldo)', t.id, t.date, t.type::text, t.amount, t.currency_code,
          'account.type = credit pero status es null'
   from tx t where t.account_type = 'credit' and t.status is null and not t.is_parent
+    and t.type::text = 'expense'   -- un reintegro "en resumen" vive en la tarjeta sin status y no toca saldo: es normal
   union all
   select 'fila con status de tarjeta en cuenta que no es tarjeta (no cuenta en el saldo)', t.id, t.date, t.type::text, t.amount, t.currency_code,
          'status = ' || t.status || ' en cuenta ' || t.account_type
@@ -1193,8 +1194,18 @@ other as (
   from public.accounts a join public.account_currencies ac on ac.account_id = a.id, p
   where a.user_id = p.user_id and ac.initial_balance_date > p.today
   union all
-  select 'saldo inicial fechado después de movimientos de esa cuenta (los anteriores no lo ven)', null, ac.initial_balance_date, 'account_currency', ac.initial_balance, ac.currency_code,
+  select 'saldo inicial fechado después de movimientos de esa cuenta (si el inicial salió del resumen del banco, esos movimientos se cuentan DOS veces)', null, ac.initial_balance_date, 'account_currency', ac.initial_balance, ac.currency_code,
          a.name || ' · primer movimiento ' || (select min(t.date) from public.transactions t where t.account_id = a.id and t.currency_code = ac.currency_code and t.status is null)
+           || ' · neto de los movimientos anteriores al inicial = '
+           || coalesce((select sum(case when t.account_id = a.id then
+                          case t.type::text when 'income' then t.amount when 'expense' then -t.amount when 'transfer' then -t.amount
+                            when 'exchange' then -t.amount when 'adjustment' then t.amount
+                            when 'reimbursement' then case when t.reimbursement_target = 'account' and t.received_at is not null and t.cancelled_at is null then t.amount else 0 end
+                            when 'settlement' then case t.settlement_direction when 'out' then -t.amount when 'in' then t.amount else 0 end else 0 end
+                        else t.amount end)
+                  from public.transactions t
+                 where t.status is null and t.currency_code = ac.currency_code and t.date < ac.initial_balance_date
+                   and (t.account_id = a.id or (t.type::text = 'transfer' and t.transfer_destination_account_id = a.id)))::text, '0')
   from public.accounts a join public.account_currencies ac on ac.account_id = a.id, p
   where a.user_id = p.user_id and ac.initial_balance <> 0
     and ac.initial_balance_date > (select min(t.date) from public.transactions t where t.account_id = a.id and t.currency_code = ac.currency_code and t.status is null)
@@ -1216,6 +1227,22 @@ other as (
   from public.recurrence_instances ri join public.recurrences r on r.id = ri.recurrence_id, p
   where ri.user_id = p.user_id and ri.status = 'pending' and r.status = 'active'
     and (r.last_generated_date is null or ri.scheduled_date > r.last_generated_date)
+  union all
+  select 'reglas activas que se parecen (mismo tipo y cuenta, monto a menos de 1%): ¿la misma recurrencia cargada dos veces?', r.id, r.start_date, 'recurrence', r.amount, r.currency_code,
+         coalesce(r.description, '') || ' · se parece a: ' ||
+         (select string_agg(coalesce(o.description, '?') || ' ' || o.amount || ' (' || o.id || ')', ' | ')
+            from public.recurrences o
+           where o.id <> r.id and o.user_id = r.user_id and o.status = 'active'
+             and o.movement_type = r.movement_type and o.account_id is not distinct from r.account_id
+             and o.currency_code = r.currency_code
+             and abs(o.amount - r.amount) <= greatest(r.amount, o.amount) * 0.01)
+  from public.recurrences r, p
+  where r.user_id = p.user_id and r.status = 'active'
+    and exists (select 1 from public.recurrences o
+                 where o.id <> r.id and o.user_id = r.user_id and o.status = 'active'
+                   and o.movement_type = r.movement_type and o.account_id is not distinct from r.account_id
+                   and o.currency_code = r.currency_code
+                   and abs(o.amount - r.amount) <= greatest(r.amount, o.amount) * 0.01)
   union all
   select 'regla activa con cursor en el futuro', r.id, r.last_generated_date, 'recurrence', r.amount, r.currency_code, coalesce(r.description, '')
   from public.recurrences r, p
