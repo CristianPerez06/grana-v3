@@ -15,9 +15,29 @@ import {
   type CreateSubcategoryInput,
   type UpdateSubcategoryInput,
 } from '@grana/validation'
+import { getHousehold } from '@grana/shared'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
+
+// ── Household scope ─────────────────────────────────────────────────────────────
+//
+// `scope: 'household'` resolves to the caller's active household id. There is
+// no client-supplied household id on purpose: the only household a user can put
+// a category into is their own, and RLS (0063) rejects anything else anyway.
+
+async function resolveHouseholdScope(
+  supabase: ServerClient,
+  scope: 'own' | 'household' | undefined,
+): Promise<{ ok: true; householdId: string | null } | { ok: false; formError: string }> {
+  if (scope !== 'household') return { ok: true, householdId: null }
+  const household = await getHousehold(supabase)
+  if (!household) {
+    const t = await getTranslations('settings.categories.errors')
+    return { ok: false, formError: t('household_required') }
+  }
+  return { ok: true, householdId: household.id }
+}
 
 // ── Usage guard ─────────────────────────────────────────────────────────────────
 
@@ -30,18 +50,20 @@ type ServerClient = Awaited<ReturnType<typeof createClient>>
 // raw FK error.
 const CATEGORY_REF_TABLES = ['transactions', 'recurrences', 'recurrence_instances'] as const
 
+//
+// No `user_id` filter: RLS already scopes each table to the rows the caller can
+// see (own + shared), and a household category referenced by the other member's
+// shared movement is in use just the same. The DB's RESTRICT FK is the last word.
 async function isCategoryColumnInUse(
   supabase: ServerClient,
   column: 'category_id' | 'subcategory_id',
   id: string,
-  userId: string,
 ): Promise<{ inUse: boolean; errorCode?: string }> {
   for (const table of CATEGORY_REF_TABLES) {
     const { count, error } = await supabase
       .from(table)
       .select('id', { count: 'exact', head: true })
       .eq(column, id)
-      .eq('user_id', userId)
     if (error) return { inUse: false, errorCode: error.code }
     if ((count ?? 0) > 0) return { inUse: true }
   }
@@ -56,9 +78,8 @@ async function isCategoryColumnInUse(
 async function isCategoryInUse(
   supabase: ServerClient,
   categoryId: string,
-  userId: string,
 ): Promise<{ inUse: boolean; errorCode?: string }> {
-  const direct = await isCategoryColumnInUse(supabase, 'category_id', categoryId, userId)
+  const direct = await isCategoryColumnInUse(supabase, 'category_id', categoryId)
   if (direct.errorCode || direct.inUse) return direct
 
   const { data: subs, error: subsError } = await supabase
@@ -75,7 +96,6 @@ async function isCategoryInUse(
       .from(table)
       .select('id', { count: 'exact', head: true })
       .in('subcategory_id', subIds)
-      .eq('user_id', userId)
     if (error) return { inUse: false, errorCode: error.code }
     if ((count ?? 0) > 0) return { inUse: true }
   }
@@ -93,8 +113,12 @@ export async function createCategory(
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
+  const scope = await resolveHouseholdScope(supabase, validation.data.scope)
+  if (!scope.ok) return { ok: false, formError: scope.formError, errorCode: 'household_required' }
+
   const { error } = await supabase.from('categories').insert({
     user_id: userId,
+    household_id: scope.householdId,
     name: validation.data.name,
     canonical_name: slugify(validation.data.name),
     type: validation.data.type,
@@ -117,19 +141,30 @@ export async function updateCategory(
   const validation = await validateActionInput(updateCategorySchema, input)
   if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
 
-  const userId = await getAuthenticatedUserId()
+  await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  const updates: { name?: string; icon?: string | null; color?: string | null } = {}
+  const updates: {
+    name?: string
+    icon?: string | null
+    color?: string | null
+    household_id?: string
+  } = {}
   if (validation.data.name !== undefined) updates.name = validation.data.name
   if (validation.data.icon !== undefined) updates.icon = validation.data.icon
   if (validation.data.color !== undefined) updates.color = validation.data.color
+  // Own → household is the only direction offered. `scope: 'own'` on a
+  // household category is a no-op: other members may already point at it.
+  const scope = await resolveHouseholdScope(supabase, validation.data.scope)
+  if (!scope.ok) return { ok: false, formError: scope.formError, errorCode: 'household_required' }
+  if (scope.householdId) updates.household_id = scope.householdId
 
+  // No `user_id` filter: a household category is editable by every member, and
+  // RLS (0063) is what decides which rows the caller may touch.
   const { error } = await supabase
     .from('categories')
     .update(updates)
     .eq('id', id)
-    .eq('user_id', userId)
 
   if (error) {
     return { ok: false, formError: await translatePostgresError(error.code, 'category'), errorCode: error.code }
@@ -140,14 +175,13 @@ export async function updateCategory(
 }
 
 export async function archiveCategory(id: string): Promise<ActionResult<never>> {
-  const userId = await getAuthenticatedUserId()
+  await getAuthenticatedUserId()
   const supabase = await createClient()
 
   const { error } = await supabase
     .from('categories')
     .update({ is_active: false })
     .eq('id', id)
-    .eq('user_id', userId)
 
   if (error) {
     const t = await getTranslations('settings.categories.errors')
@@ -159,7 +193,7 @@ export async function archiveCategory(id: string): Promise<ActionResult<never>> 
 }
 
 export async function deleteCategory(id: string): Promise<ActionResult<never>> {
-  const userId = await getAuthenticatedUserId()
+  await getAuthenticatedUserId()
   const supabase = await createClient()
 
   // Hard delete only when the category is unused — directly (category_id) or via
@@ -167,7 +201,7 @@ export async function deleteCategory(id: string): Promise<ActionResult<never>> {
   // recurrences and recurrence instances. Deleting a used category would destroy
   // historical classification; the user should archive (is_active=false) instead
   // — see archiveCategory. The DB also enforces this via ON DELETE RESTRICT (0026).
-  const usage = await isCategoryInUse(supabase, id, userId)
+  const usage = await isCategoryInUse(supabase, id)
   if (usage.errorCode) {
     const t = await getTranslations('settings.categories.errors')
     return { ok: false, formError: t('delete_failed'), errorCode: usage.errorCode }
@@ -181,7 +215,6 @@ export async function deleteCategory(id: string): Promise<ActionResult<never>> {
     .from('categories')
     .delete()
     .eq('id', id)
-    .eq('user_id', userId)
 
   if (error) {
     const t = await getTranslations('settings.categories.errors')
@@ -225,7 +258,7 @@ export async function updateSubcategory(
   const validation = await validateActionInput(updateSubcategorySchema, input)
   if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
 
-  const userId = await getAuthenticatedUserId()
+  await getAuthenticatedUserId()
   const supabase = await createClient()
 
   const updates: { name?: string } = {}
@@ -235,7 +268,6 @@ export async function updateSubcategory(
     .from('subcategories')
     .update(updates)
     .eq('id', id)
-    .eq('user_id', userId)
 
   if (error) {
     return { ok: false, formError: await translatePostgresError(error.code, 'subcategory'), errorCode: error.code }
@@ -246,14 +278,13 @@ export async function updateSubcategory(
 }
 
 export async function archiveSubcategory(id: string): Promise<ActionResult<never>> {
-  const userId = await getAuthenticatedUserId()
+  await getAuthenticatedUserId()
   const supabase = await createClient()
 
   const { error } = await supabase
     .from('subcategories')
     .update({ is_active: false })
     .eq('id', id)
-    .eq('user_id', userId)
 
   if (error) {
     const t = await getTranslations('settings.categories.errors')
@@ -265,7 +296,7 @@ export async function archiveSubcategory(id: string): Promise<ActionResult<never
 }
 
 export async function deleteSubcategory(id: string): Promise<ActionResult<never>> {
-  const userId = await getAuthenticatedUserId()
+  await getAuthenticatedUserId()
   const supabase = await createClient()
 
   // Hard delete only when the subcategory is unused (transactions, recurrences or
@@ -273,7 +304,7 @@ export async function deleteSubcategory(id: string): Promise<ActionResult<never>
   // classification off historical rows; the user should archive (is_active=false)
   // instead — see archiveSubcategory. The DB also enforces this via ON DELETE
   // RESTRICT (0026).
-  const usage = await isCategoryColumnInUse(supabase, 'subcategory_id', id, userId)
+  const usage = await isCategoryColumnInUse(supabase, 'subcategory_id', id)
   if (usage.errorCode) {
     const t = await getTranslations('settings.categories.errors')
     return { ok: false, formError: t('delete_failed'), errorCode: usage.errorCode }
@@ -287,7 +318,6 @@ export async function deleteSubcategory(id: string): Promise<ActionResult<never>
     .from('subcategories')
     .delete()
     .eq('id', id)
-    .eq('user_id', userId)
 
   if (error) {
     const t = await getTranslations('settings.categories.errors')

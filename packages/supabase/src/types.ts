@@ -296,6 +296,7 @@ export type Database = {
           canonical_name: string
           color: string | null
           created_at: string
+          household_id: string | null
           icon: string | null
           id: string
           is_active: boolean
@@ -307,6 +308,7 @@ export type Database = {
           canonical_name: string
           color?: string | null
           created_at?: string
+          household_id?: string | null
           icon?: string | null
           id?: string
           is_active?: boolean
@@ -318,6 +320,7 @@ export type Database = {
           canonical_name?: string
           color?: string | null
           created_at?: string
+          household_id?: string | null
           icon?: string | null
           id?: string
           is_active?: boolean
@@ -325,7 +328,15 @@ export type Database = {
           type?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "household"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       currencies: {
         Row: {
@@ -976,6 +987,7 @@ export type Database = {
           canonical_name: string
           category_id: string
           created_at: string
+          household_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -985,6 +997,7 @@ export type Database = {
           canonical_name: string
           category_id: string
           created_at?: string
+          household_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -994,6 +1007,7 @@ export type Database = {
           canonical_name?: string
           category_id?: string
           created_at?: string
+          household_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -1005,6 +1019,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subcategories_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "household"
             referencedColumns: ["id"]
           },
         ]
@@ -1339,6 +1360,7 @@ export type Database = {
         Args: { p_period_id: string; p_group_id?: string }
         Returns: Json
       }
+      detach_household_classifications: { Args: { p_household_id: string }; Returns: number }
       unshare_movement: { Args: { p_root_id: string }; Returns: undefined }
     }
     Enums: {

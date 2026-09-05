@@ -3,7 +3,12 @@ import { Alert, Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { MoreHorizontal } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
-import { archiveCategory, deleteCategory, type CategoryWithSubcategories } from '../../lib/categories'
+import {
+  archiveCategory,
+  deleteCategory,
+  type CategoryScope,
+  type CategoryWithSubcategories,
+} from '../../lib/categories'
 import { invalidateAfterCategoryMutation } from '../../lib/categories-invalidate'
 import { useT } from '../../lib/locale-context'
 import { colors } from '../../lib/colors'
@@ -13,7 +18,7 @@ type Props = {
   category: CategoryWithSubcategories
   displayName: string
   subcategoryCount: number
-  isSystem: boolean
+  scope: CategoryScope
   onChanged?: () => void
 }
 
@@ -33,10 +38,13 @@ export function CategoryRow({
   category,
   displayName,
   subcategoryCount,
-  isSystem,
+  scope,
   onChanged,
 }: Props) {
   const t = useT()
+  // System rows are read-only; own and household rows carry the same actions —
+  // a household category is every member's to edit (RLS 0063 decides who).
+  const isSystem = scope === 'system'
   const router = useRouter()
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
@@ -120,6 +128,13 @@ export function CategoryRow({
               {typeLabel}
             </Text>
           </View>
+          {scope === 'household' && (
+            <View className="rounded-full bg-emerald-soft px-2 py-0.5">
+              <Text className="text-[11px] font-extrabold text-emerald-deep">
+                {t('settings.categories.household_badge')}
+              </Text>
+            </View>
+          )}
         </View>
         {subcategoryCount > 0 && (
           <Text className="mt-1 text-[13px] text-text-muted">

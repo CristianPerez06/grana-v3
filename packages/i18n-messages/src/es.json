@@ -249,7 +249,8 @@
         "system_heading": "Del sistema",
         "user_heading": "Propias",
         "empty": "No hay categorías todavía.",
-        "subcategory_count": "{count} subcategorías"
+        "subcategory_count": "{count} subcategorías",
+        "household_heading": "Del hogar"
       },
       "types": {
         "income": "Ingreso",
@@ -278,7 +279,8 @@
         "delete_in_use_subcategory": "Esta subcategoría tiene movimientos o recurrencias asociadas. Archivala en lugar de eliminarla.",
         "system_readonly": "Las categorías del sistema no se pueden editar.",
         "not_found": "Categoría no encontrada.",
-        "generic": "Algo salió mal. Intentá de nuevo."
+        "generic": "Algo salió mal. Intentá de nuevo.",
+        "household_required": "Necesitás un hogar activo para crear una categoría del hogar."
       },
       "form": {
         "name_label": "Nombre",
@@ -293,7 +295,10 @@
         "color_none": "Sin color",
         "color_custom": "Color personalizado",
         "submit_create": "Guardar categoría",
-        "submit_update": "Guardar cambios"
+        "submit_update": "Guardar cambios",
+        "household_label": "Es del hogar",
+        "household_help": "La ven y la usan los dos miembros, en gastos compartidos y propios.",
+        "household_locked": "Ya es del hogar. Una categoría del hogar no vuelve a ser propia."
       },
       "new": {
         "title": "Nueva categoría"
@@ -314,7 +319,8 @@
         "list_loading": "Cargando las categorías…",
         "subcategories_loading": "Cargando las subcategorías…",
         "form_loading": "Cargando la categoría…"
-      }
+      },
+      "household_badge": "Hogar"
     },
     "security": {
       "label": "Seguridad",

@@ -16,10 +16,13 @@ import { createCategory } from '@/app/_actions/categories'
 import { createCategorySchema } from '@grana/validation'
 import { IconPicker } from '../../_components/icon-picker'
 import { ColorPicker } from '../../_components/color-picker'
+import { HouseholdScopeField } from '../../_components/household-scope-field'
 
 const TYPE_VALUES = ['expense', 'income', 'both'] as const
 
 type Props = {
+  /** Whether the user belongs to an active household. Shows the "Es del hogar" control. */
+  hasHousehold?: boolean
   /** `'drawer'` renders the hi-fi shell; `'page'` renders the body inline (fallback route). */
   variant?: 'drawer' | 'page'
   /** Drawer chrome: close handler for the header ✕ / footer cancel. */
@@ -28,7 +31,12 @@ type Props = {
   onSuccess?: () => void
 }
 
-export const CreateCategoryForm = ({ variant = 'page', onClose, onSuccess }: Props) => {
+export const CreateCategoryForm = ({
+  hasHousehold = false,
+  variant = 'page',
+  onClose,
+  onSuccess,
+}: Props) => {
   const t = useTranslations('settings.categories')
   const tCommon = useTranslations('common')
   const router = useRouter()
@@ -44,7 +52,7 @@ export const CreateCategoryForm = ({ variant = 'page', onClose, onSuccess }: Pro
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: yupResolver(createCategorySchema),
-    defaultValues: { name: '', type: 'expense' as const, icon: '', color: '' },
+    defaultValues: { name: '', type: 'expense' as const, icon: '', color: '', scope: 'own' as const },
   })
 
   const onSubmit = handleSubmit(async (values) => {
@@ -68,7 +76,7 @@ export const CreateCategoryForm = ({ variant = 'page', onClose, onSuccess }: Pro
     }
     if (result.fieldErrors) {
       for (const [field, message] of Object.entries(result.fieldErrors)) {
-        if (message) setError(field as 'name' | 'type' | 'icon' | 'color', { message })
+        if (message) setError(field as 'name' | 'type' | 'icon' | 'color' | 'scope', { message })
       }
     }
     if (result.formError) setFormError(result.formError)
@@ -116,6 +124,18 @@ export const CreateCategoryForm = ({ variant = 'page', onClose, onSuccess }: Pro
       />
       {errors.color?.message && (
         <p className="text-xs text-destructive">{errors.color.message}</p>
+      )}
+      {hasHousehold && (
+        <Controller
+          control={control}
+          name="scope"
+          render={({ field }) => (
+            <HouseholdScopeField
+              checked={field.value === 'household'}
+              onChange={(checked) => field.onChange(checked ? 'household' : 'own')}
+            />
+          )}
+        />
       )}
     </>
   )

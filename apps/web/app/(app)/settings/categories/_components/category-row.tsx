@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQueryClient } from '@tanstack/react-query'
-import type { CategoryWithSubcategories, CategoryType } from '@/lib/categories/types'
+import type { CategoryScope, CategoryWithSubcategories, CategoryType } from '@/lib/categories/types'
 import { archiveCategory, deleteCategory } from '@/app/_actions/categories'
 import { invalidateAfterCategoryMutation } from '@/lib/transactions/invalidation'
 import { Button } from '@/components/ui/button'
@@ -26,7 +26,9 @@ type Props = {
   category: CategoryWithSubcategories
   displayName: string
   subcategoryCount: number
-  isSystem: boolean
+  scope: CategoryScope
+  /** Whether the user belongs to an active household (gates the form's "Es del hogar" control). */
+  hasHousehold: boolean
 }
 
 const pillClassByType: Record<CategoryType, string> = {
@@ -38,8 +40,11 @@ const pillClassByType: Record<CategoryType, string> = {
 const textActionClass =
   'text-xs font-bold text-text-muted transition-colors hover:text-text disabled:opacity-50'
 
-export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem }: Props) => {
+export const CategoryRow = ({ category, displayName, subcategoryCount, scope, hasHousehold }: Props) => {
   const t = useTranslations('settings.categories')
+  // System rows are read-only; own and household rows carry the same actions —
+  // a household category is every member's to edit (RLS 0063 decides who).
+  const isSystem = scope === 'system'
   const router = useRouter()
   const qc = useQueryClient()
   const [error, setError] = useState<string | null>(null)
@@ -107,6 +112,11 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
             >
               {t(`types.${category.type}`)}
             </span>
+            {scope === 'household' && (
+              <span className="inline-flex min-h-[22px] items-center rounded-full bg-emerald-soft px-2 text-[11px] font-extrabold text-emerald-deep">
+                {t('household_badge')}
+              </span>
+            )}
           </div>
           {subcategoryCount > 0 && (
             <span className="mt-1 block text-[13px] font-medium text-text-muted">
@@ -190,6 +200,7 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
           <EditCategoryForm
             key={editInstance}
             category={category}
+            hasHousehold={hasHousehold}
             variant="drawer"
             onClose={() => setEditOpen(false)}
             onSuccess={() => setEditOpen(false)}

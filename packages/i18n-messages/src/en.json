@@ -249,7 +249,8 @@
         "system_heading": "System",
         "user_heading": "Custom",
         "empty": "No categories yet.",
-        "subcategory_count": "{count} subcategories"
+        "subcategory_count": "{count} subcategories",
+        "household_heading": "Household"
       },
       "types": {
         "income": "Income",
@@ -278,7 +279,8 @@
         "delete_in_use_subcategory": "This subcategory has linked movements or recurrences. Archive it instead of deleting it.",
         "system_readonly": "System categories cannot be edited.",
         "not_found": "Category not found.",
-        "generic": "Something went wrong. Please try again."
+        "generic": "Something went wrong. Please try again.",
+        "household_required": "You need an active household to create a household category."
       },
       "form": {
         "name_label": "Name",
@@ -293,7 +295,10 @@
         "color_none": "No color",
         "color_custom": "Custom color",
         "submit_create": "Save category",
-        "submit_update": "Save changes"
+        "submit_update": "Save changes",
+        "household_label": "Household category",
+        "household_help": "Both members see and use it, in shared and personal expenses.",
+        "household_locked": "Already a household category. It cannot go back to personal."
       },
       "new": {
         "title": "New category"
@@ -314,7 +319,8 @@
         "list_loading": "Loading the categories…",
         "subcategories_loading": "Loading the subcategories…",
         "form_loading": "Loading the category…"
-      }
+      },
+      "household_badge": "Household"
     },
     "security": {
       "label": "Security",

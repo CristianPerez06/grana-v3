@@ -392,7 +392,15 @@ export function CategorySelectField({
               <SheetRow
                 primary={item.name}
                 secondary={
-                  item.is_active === false ? t('transactions.drawer.archived') : undefined
+                  // "Hogar" tells a household category apart from an own one with
+                  // the same name (unique per scope, spec `categories`); mirror of
+                  // the web picker's badge.
+                  [
+                    item.household_id != null ? t('settings.categories.household_badge') : null,
+                    item.is_active === false ? t('transactions.drawer.archived') : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ') || undefined
                 }
                 selected={categoryId === item.id && !subcategoryId}
                 trailing={

@@ -118,6 +118,8 @@ export type CategorySubcategory = {
   name: string
   canonical_name: string
   user_id: string | null
+  /** Household that owns it, when it is the household's rather than the user's. */
+  household_id?: string | null
   /**
    * Only ever `false` on a node grafted from `MovementEditContext.archivedTaxonomy`
    * — the catalog itself serves active rows only. Renderers use it to badge the
@@ -138,6 +140,8 @@ export type CategoryWithSubcategories = {
   // node can carry them through without claiming every consumer supplies them.
   canonical_name?: string
   user_id?: string | null
+  /** Household that owns it: renderers badge it "Hogar" so both members read it as shared vocabulary. */
+  household_id?: string | null
   icon?: string | null
   color?: string | null
 }
