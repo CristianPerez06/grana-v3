@@ -1784,10 +1784,10 @@
     "created_on": "Creada el {date}",
     "edit_title": "Editar regla recurrente",
     "duplicate_badge": "Duplicada",
-    "duplicate_hint": "Ya tenés otra regla activa con la misma cuenta, moneda, tipo y monto. Si son gastos distintos, ignorá el aviso.",
+    "duplicate_hint": "Ya tenés otra regla activa con la misma cuenta, moneda y tipo, y un monto igual o casi igual (hasta 1 % de diferencia). Si son gastos distintos, ignorá el aviso.",
     "duplicate_warning_title": "Ya tenés una regla así",
-    "duplicate_warning_body": "«{rule}» tiene la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos.",
-    "duplicate_warning_body_untitled": "Ya tenés una regla activa con la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos.",
+    "duplicate_warning_body": "«{rule}» tiene la misma cuenta, moneda y tipo, y un monto igual o casi igual. Podés crearla igual si son gastos distintos.",
+    "duplicate_warning_body_untitled": "Ya tenés una regla activa con la misma cuenta, moneda y tipo, y un monto igual o casi igual. Podés crearla igual si son gastos distintos.",
     "route": {
       "form_loading": "Cargando el formulario…"
     }

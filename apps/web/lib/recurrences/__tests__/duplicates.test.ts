@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  closeAmounts,
   duplicateRuleIds,
   findDuplicateRules,
   groupDuplicateRules,
@@ -7,12 +8,13 @@ import {
 } from '@grana/recurrences'
 
 /**
- * Duplicate detection keys on (account, currency, movement_type, amount) and
- * deliberately ignores category and description: in the real duplicates found in
- * production those fields DIFFERED (one rule filed under `impuestos`, its twin
- * under `impuestos / IIBB`), so requiring them to match would miss the cases
- * that matter. The cost is legitimate false positives, which is exactly why the
- * warning never blocks.
+ * Duplicate detection keys on (account, currency, movement_type) plus an amount
+ * that is equal or within 1 %, and deliberately ignores category and
+ * description: in the real duplicates found in production those fields DIFFERED
+ * (one rule filed under `impuestos`, its twin under `impuestos / IIBB`; a loan
+ * loaded twice as 48.733,92 and 48.723,04), so requiring them to match would
+ * miss the cases that matter. The cost is legitimate false positives, which is
+ * exactly why the warning never blocks.
  */
 
 const MP = 'account-mp'
@@ -71,6 +73,15 @@ describe('findDuplicateRules', () => {
     expect(matches[0].description).toBe('chat gpt')
   })
 
+  it('flags an amount within 1 % — the loan loaded twice with a recalculated cuota', () => {
+    // The audit pair: same loan, 10,88 pesos apart, one titled and one not.
+    const matches = findDuplicateRules(
+      { account_id: MP, currency_code: 'ARS', movement_type: 'expense', amount: 48723.04 },
+      [rule({ id: 'named', amount: '48733.92', description: 'Prestamo Anses' })],
+    )
+    expect(matches.map((m) => m.id)).toEqual(['named'])
+  })
+
   it('does not flag a different amount, account, currency or type', () => {
     const candidate = {
       account_id: MP,
@@ -78,8 +89,9 @@ describe('findDuplicateRules', () => {
       movement_type: 'expense',
       amount: 450000,
     }
+    // 2,2 % apart: outside the tolerance.
     expect(
-      findDuplicateRules(candidate, [rule({ id: 'a', amount: 450001 })]),
+      findDuplicateRules(candidate, [rule({ id: 'a', amount: 460000 })]),
     ).toEqual([])
     expect(
       findDuplicateRules(candidate, [rule({ id: 'b', account_id: VISA })]),
@@ -107,7 +119,48 @@ describe('findDuplicateRules', () => {
   })
 })
 
+describe('closeAmounts', () => {
+  it('is inclusive at exactly 1 % of the larger amount', () => {
+    expect(closeAmounts(100000, 99000)).toBe(true)
+    expect(closeAmounts(100000, 98999.99)).toBe(false)
+  })
+
+  it('treats cents-equal values as close regardless of representation', () => {
+    expect(closeAmounts('450000.00', 450000)).toBe(true)
+  })
+
+  it('rejects non-numeric input instead of throwing', () => {
+    expect(closeAmounts('abc', 1)).toBe(false)
+  })
+})
+
 describe('groupDuplicateRules / duplicateRuleIds', () => {
+  it('groups near amounts inside the same account/currency/type', () => {
+    const groups = groupDuplicateRules([
+      rule({ id: 'anses-named', amount: '48733.92', description: 'Prestamo Anses' }),
+      rule({ id: 'anses-untitled', amount: '48723.04' }),
+      rule({ id: 'far', amount: 60000 }),
+    ])
+    expect(groups).toHaveLength(1)
+    expect(groups[0].map((r) => r.id).sort()).toEqual(['anses-named', 'anses-untitled'])
+  })
+
+  it('does not chain two rules that are each 1 % apart into a third beyond the tolerance', () => {
+    // 100.000 ↔ 99.100 ↔ 98.200: the outer pair is 1,8 % apart, but the chain
+    // links consecutive neighbours, so all three land in one group. That is the
+    // documented behaviour (a ladder of near amounts is still worth a look), and
+    // a fourth rule clearly apart stays out.
+    const groups = groupDuplicateRules([
+      rule({ id: 'a', amount: 100000 }),
+      rule({ id: 'b', amount: 99100 }),
+      rule({ id: 'c', amount: 98200 }),
+      rule({ id: 'd', amount: 90000 }),
+    ])
+    expect(groups).toHaveLength(1)
+    expect(groups[0].map((r) => r.id).sort()).toEqual(['a', 'b', 'c'])
+  })
+
+
   it('groups only collisions of two or more', () => {
     const groups = groupDuplicateRules([
       rule({ id: 'alq-1', description: 'ALQUILER' }),

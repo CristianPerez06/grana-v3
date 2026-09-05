@@ -36,6 +36,8 @@ export {
   type SeededRecurrenceResolution,
 } from './mutations'
 export {
+  closeAmounts,
+  DUPLICATE_AMOUNT_TOLERANCE,
   findDuplicateRules,
   groupDuplicateRules,
   duplicateRuleIds,

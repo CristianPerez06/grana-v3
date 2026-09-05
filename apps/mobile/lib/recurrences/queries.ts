@@ -6,10 +6,13 @@
 
 import { supabase } from '../supabase'
 import {
+  getDuplicateRulesFor,
   getRecurrences as getRecurrencesImpl,
   getRecurrenceDetail as getRecurrenceDetailImpl,
   getPendingRecurrenceInstances as getPendingRecurrenceInstancesImpl,
   getTopRecurrenceSuggestion as getTopRecurrenceSuggestionImpl,
+  type DuplicateCandidate,
+  type DuplicateMatch,
   type PendingRecurrenceInstance,
   type RecurrenceDetail,
   type RecurrenceStatus,
@@ -17,6 +20,8 @@ import {
 } from '@grana/recurrences'
 
 export type {
+  DuplicateCandidate,
+  DuplicateMatch,
   PendingRecurrenceInstance,
   RecurrenceDetail,
   RecurrenceStatus,
@@ -48,4 +53,11 @@ export async function getTopRecurrenceSuggestion() {
   } = await supabase.auth.getUser()
   if (!user) return null
   return getTopRecurrenceSuggestionImpl(supabase, user.id)
+}
+
+// Active rules that collide with a candidate (same account, currency and type,
+// equal or nearly equal amount). Read BEFORE creating, to warn: it never blocks.
+// Mirror of web's `checkDuplicateRecurrences` action.
+export async function getDuplicateRules(candidate: DuplicateCandidate): Promise<DuplicateMatch[]> {
+  return getDuplicateRulesFor(supabase, candidate)
 }
