@@ -7,6 +7,7 @@ import {
   DONUT_FALLBACK,
   generateSubTints,
   INCOME_PALETTE,
+  netAfterCredits,
   RANKING_VISIBLE,
   type CategoryBreakdown,
   type CategorySlice,
@@ -353,6 +354,16 @@ export const CategorySpendingOverview = ({
               </Text>
             </View>
           ))}
+          {/* Closing line: the centre sums the DRAWN slices, so with a category
+              in credit it is neither gross nor net. Mirror of web. */}
+          <View className="mt-0.5 flex-row items-center gap-2 border-t border-border-soft pt-2">
+            <Text numberOfLines={1} className="min-w-0 flex-1 text-[12px] font-bold text-text">
+              {t('transactions.spending.net_total_label')}
+            </Text>
+            <Text className="text-[12px] font-extrabold text-text">
+              {fmt(netAfterCredits(breakdown.total, credits))}
+            </Text>
+          </View>
         </View>
       ) : null}
 

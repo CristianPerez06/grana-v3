@@ -60,7 +60,23 @@ El **pago del resumen de tarjeta NO es gasto** (cancela deuda) y NO cuenta en "E
 
 Los reintegros **recibidos** (no cancelados) de esa categoría restan, por su **fecha**, sin importar su destino (`reimbursement_target`: "a cuenta" o "en resumen") — para la categorización solo importa que volvió plata a esa categoría. Les aplica el mismo corte de caja: un reintegro fechado adelante todavía no volvió.
 
+Cuando hay al menos un crédito, el total del centro deja de ser el gasto del mes: es la suma de lo dibujado, ni bruto ni neto. Por eso la card SHALL cerrar, sólo en ese caso, con una línea que muestre **el neto del mes** = total del centro − suma de los créditos. Sin créditos esa línea NO SHALL mostrarse: el centro ya es el neto y repetirlo sería ruido. La línea SHALL existir en **ambas plataformas** y SHALL calcularse con aritmética de dinero, no con resta de floats.
+
+Esa línea es el puente con la card "Cuánto gastaste" del Inicio, que muestra el mismo neto en el caso corriente. Las dos pantallas PUEDEN seguir difiriendo por dos causas que esta línea no explica y que NO SHALL ocultarse detrás de ella: un balde de "Cuánto gastaste" pisado en cero (reintegro mayor que el gasto de ese medio de pago) y las filas sin cuenta asignada, que el Inicio saltea.
+
 El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando los reintegros recibidos de la categoría en el mes superan su gasto del mes (p. ej. un reintegro cuyo gasto original fue de un mes anterior, o un consumo de tarjeta aún no devengado). El sistema NO SHALL descartar ni capear a cero esos netos negativos: SHALL mostrarlos como **créditos** ("te devolvieron"), separados del peso de gasto y **fuera de la dona** (una dona no puede representar una porción negativa). El total/peso de la dona SHALL derivarse solo de los netos positivos. Los créditos SHALL mostrarse en **ambas plataformas**.
+
+#### Scenario: Con una categoría en crédito, la card cierra con el neto
+
+- **WHEN** el mes cierra con la dona en $2.211.312,91 y una categoría en crédito por $146.985,07
+- **THEN** debajo del bloque "te devolvieron" la card muestra una línea con $2.064.327,84
+- **AND** ese es el mismo número que la card "Cuánto gastaste" del Inicio muestra para ese mes
+
+#### Scenario: Sin créditos no aparece la línea de cierre
+
+- **WHEN** ninguna categoría del mes quedó en crédito
+- **THEN** la card no muestra la línea de cierre
+- **AND** el total del centro ya es el neto del mes
 
 #### Scenario: El neto descuenta los reintegros recibidos
 
@@ -118,8 +134,6 @@ El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando lo
 
 - **WHEN** hoy es el 1 de agosto y la categoría Hogar tiene una cuota de tarjeta de $50.000 fechada el 20 de agosto
 - **THEN** esa cuota SÍ cuenta en el desglose de agosto desde hoy (ya está incurrida: la compra ocurrió antes)
-
----
 
 ### Requirement: El desglose se presenta como donut más ranking
 

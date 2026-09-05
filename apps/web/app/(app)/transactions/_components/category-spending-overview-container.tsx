@@ -281,6 +281,7 @@ export function CategorySpendingOverviewContainer() {
           ? t('spending.income_subtitle')
           : t('spending.subtitle_egresos'),
       creditsLabel: t('spending.credits_label'),
+      netTotalLabel: t('spending.net_total_label'),
     }),
     [overviewMode, activeCategory, t, tRoot],
   )

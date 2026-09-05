@@ -9,6 +9,7 @@ import {
   generateSubTints,
   INCOME_PALETTE,
   MODE_ACCENT,
+  netAfterCredits,
   RANKING_VISIBLE,
   type CategoryBreakdown,
   type CategorySlice,
@@ -113,6 +114,8 @@ type Props = {
     subtitle: string
     /** Label for the credits ("te devolvieron") group. */
     creditsLabel: string
+    /** Closing line under the credits: what the month cost once they are subtracted. */
+    netTotalLabel: string
   }
   detailHref?: string
   /**
@@ -782,6 +785,18 @@ export const CategorySpendingOverview = ({
               </li>
             ))}
           </ul>
+          {/* Closing line: the centre is the sum of the DRAWN slices, so with a
+              category in credit it is neither gross nor net. This states what the
+              month cost once the credits come off — the figure the dashboard's
+              "Gastaste" tile shows. */}
+          <div className="mt-2.5 flex items-center gap-3 border-t border-border-soft pt-2.5">
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
+              {labels.netTotalLabel}
+            </span>
+            <span className="shrink-0 text-sm font-extrabold tabular-nums text-text">
+              {fmt(netAfterCredits(breakdown.total, credits))}
+            </span>
+          </div>
         </div>
       )}
 

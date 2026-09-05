@@ -1182,6 +1182,7 @@
       "no_subcategory": "No subcategory",
       "center_label": "Spent",
       "credits_label": "Refunded to you",
+      "net_total_label": "Actually spent",
       "mode_egresos": "Expenses",
       "mode_ingresos": "Income",
       "subtitle_egresos": "This month's spending",
