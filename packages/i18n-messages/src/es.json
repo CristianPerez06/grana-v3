@@ -1182,6 +1182,7 @@
       "no_subcategory": "Sin subcategoría",
       "center_label": "Gastado",
       "credits_label": "Te devolvieron",
+      "net_total_label": "Te costó",
       "mode_egresos": "Egresos",
       "mode_ingresos": "Ingresos",
       "subtitle_egresos": "Gastos del mes",
