@@ -146,6 +146,8 @@ Esta regla SHALL regir en **ambas plataformas**: web y nativo comparten la lente
 
 La lista drilleada aplica cuando el **único** filtro de contenido activo es la categoría (opcionalmente acotada por subcategoría y por la moneda visualizada). Si el usuario superpone **otro** filtro (cuenta, tipo, rango de monto o búsqueda de texto), ya no está en el drill puro: el listado SHALL volver a la lente CAJA del listado general (`get_movements_page`), que respeta TODOS los filtros combinados. La reconciliación con el donut solo se promete en el estado de drill puro.
 
+Los filtros que pone el drill pertenecen al modo que los puso: una fila de ingresos fija el tipo `income` y su categoría; una fila de egresos fija una categoría (y opcionalmente una subcategoría). Al cambiar de modo (Egresos ↔ Ingresos) el sistema SHALL descartar esos filtros de drill (tipo, categoría y subcategoría) en ambas direcciones, y SHALL conservar los filtros propios del usuario: mes, moneda, búsqueda, cuenta y rango de montos. Dejar el tipo o la categoría del modo anterior hace que la lista muestre filas que la card de arriba ya no explica (el chip "Ingresos" pegado bajo un donut de egresos). Cambiar al modo ya activo no altera nada. La regla rige en web y en nativo.
+
 Reglas de composición de la lista drilleada (espejo del desglose):
 
 - **Cuotas**: en un mes en que devenga una cuota, la lista SHALL mostrar la **cuota de ese mes** (la transacción hija, con su fecha de vencimiento, su monto de cuota y un indicador `n/total`), NO la compra "madre". La compra madre (`is_parent`, off-ledger) NUNCA SHALL aparecer.
@@ -215,6 +217,18 @@ Cuando el desglose está en modo subcategoría (una categoría activa con sus su
 - **WHEN** el usuario toca una categoría del desglose de egresos y luego vuelve a todas las categorías
 - **THEN** no queda ningún filtro de contenido activo por haber entrado al drill (ni categoría, ni subcategoría, ni un filtro de moneda "pegado" por la visualización)
 - **AND** el drill de egresos NO SHALL fijar un filtro de moneda: el gráfico y la lista derivan la moneda de la misma fuente, así que volver atrás deja el estado limpio
+
+#### Scenario: Cambiar de modo no deja filtros del modo anterior
+
+- **WHEN** el usuario toca "Sueldo" en el desglose de ingresos (la lista queda filtrada por tipo ingreso y esa categoría) y luego vuelve a "Egresos"
+- **THEN** la lista deja de filtrar por tipo ingreso y por categoría, y muestra el listado general del mes
+- **AND** no queda ningún chip de filtro de tipo ni de categoría activo
+- **AND** el mes, la moneda visualizada, la búsqueda, la cuenta y el rango de montos que el usuario hubiera fijado se conservan
+
+#### Scenario: Cambiar de modo en la app nativa limpia los mismos filtros (mobile)
+
+- **WHEN** el usuario hace lo mismo en la app nativa
+- **THEN** la hoja de filtros y los chips muestran el mismo estado que en web: sin tipo ni categoría, con los filtros propios intactos
 
 #### Scenario: Seleccionar una subcategoría no revierte el donut a todas las categorías
 
