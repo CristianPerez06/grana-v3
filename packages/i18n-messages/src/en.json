@@ -1784,10 +1784,10 @@
     "created_on": "Created on {date}",
     "edit_title": "Edit recurring rule",
     "duplicate_badge": "Duplicate",
-    "duplicate_hint": "You already have another active rule with the same account, currency, type and amount. If they are different expenses, ignore this.",
+    "duplicate_hint": "You already have another active rule with the same account, currency and type, and an equal or nearly equal amount (within 1%). If they are different expenses, ignore this.",
     "duplicate_warning_title": "You already have a rule like this",
-    "duplicate_warning_body": "“{rule}” has the same account, currency, type and amount. You can create it anyway if they are different expenses.",
-    "duplicate_warning_body_untitled": "You already have an active rule with the same account, currency, type and amount. You can create it anyway if they are different expenses.",
+    "duplicate_warning_body": "“{rule}” has the same account, currency and type, and an equal or nearly equal amount. You can create it anyway if they are different expenses.",
+    "duplicate_warning_body_untitled": "You already have an active rule with the same account, currency and type, and an equal or nearly equal amount. You can create it anyway if they are different expenses.",
     "route": {
       "form_loading": "Loading the form…"
     }

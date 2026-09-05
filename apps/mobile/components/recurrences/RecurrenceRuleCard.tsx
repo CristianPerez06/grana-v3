@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
-import { ChevronRight, Repeat } from 'lucide-react-native'
+import { AlertTriangle, ChevronRight, Repeat } from 'lucide-react-native'
 import type { RecurrenceSummary } from '@grana/recurrences'
+import { colors } from '../../lib/colors'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
@@ -22,10 +23,13 @@ type Tab = 'active' | 'paused' | 'finished'
 export function RecurrenceRuleCard({
   rule,
   tab,
+  duplicate = false,
   onPress,
 }: {
   rule: RecurrenceSummary
   tab: Tab
+  /** The rule collides with another active one (see `duplicateRuleIds`). Informative badge, mirror of web's hub. */
+  duplicate?: boolean
   onPress: () => void
 }) {
   const t = useT()
@@ -85,6 +89,17 @@ export function RecurrenceRuleCard({
           <Text className="shrink-0 overflow-hidden rounded-md bg-border-soft px-2 py-0.5 text-[10.5px] font-extrabold uppercase text-text-muted">
             {frequencyLabel(rule.frequency, t)}
           </Text>
+          {duplicate && (
+            <View
+              accessibilityLabel={t('recurrences.duplicate_hint')}
+              className="shrink-0 flex-row items-center gap-1 rounded-md bg-warning-soft px-2 py-0.5"
+            >
+              <AlertTriangle size={11} color={colors.warningDeep} />
+              <Text className="text-[10.5px] font-extrabold uppercase text-warning-deep">
+                {t('recurrences.duplicate_badge')}
+              </Text>
+            </View>
+          )}
         </View>
         <Text numberOfLines={1} className="text-[13px] font-medium text-text-muted">
           {meta}
