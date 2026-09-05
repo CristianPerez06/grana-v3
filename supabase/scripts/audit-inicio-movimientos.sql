@@ -930,7 +930,10 @@ select case when r.category_id is null then '(sin categoría → la UI dice "Sin
             when c.name is null or btrim(c.name) = '' then '⚠ NOMBRE VACÍO'
             else c.name end as categoria,
        c.canonical_name as canonical,
-       case when c.id is null then null when c.user_id is null then 'sistema (la UI traduce por canonical)' else 'propia' end as origen,
+       case when c.id is null then null
+            when c.user_id is null then 'sistema (la UI traduce por canonical)'
+            when c.household_id is not null then 'del hogar (la ven los dos; marca "Hogar")'
+            else 'propia' end as origen,
        r.category_id,
        r.currency_code as moneda,
        sum(case when r.kind = 'expense' then r.own else 0 end) as gastos,
@@ -1115,6 +1118,13 @@ found as (
          'Σ splits = ' || (select sum(s.amount_assigned) from public.shared_expense_split s where s.transaction_id = t.id)
   from tx t where t.is_shared and not t.is_parent
     and abs(coalesce((select sum(s.amount_assigned) from public.shared_expense_split s where s.transaction_id = t.id), 0) - t.amount) > 0.05
+  union all
+  select 'compartido con categoría o subcategoría propia (el otro miembro no la lee; 0063 la pasa al hogar → debe dar cero)', t.id, t.date, t.type::text, t.amount, t.currency_code,
+         concat_ws(' · ', 'categoría ' || c.name, 'subcategoría ' || s.name)
+  from tx t
+  left join public.categories c on c.id = t.category_id and c.user_id is not null and c.household_id is null
+  left join public.subcategories s on s.id = t.subcategory_id and s.user_id is not null and s.household_id is null
+  where t.is_shared and t.household_id is not null and (c.id is not null or s.id is not null)
   union all
   select 'reintegro "en resumen" sin card_period_id', t.id, t.date, t.type::text, t.amount, t.currency_code, 'reimbursement_target = statement'
   from tx t where t.type::text = 'reimbursement' and t.reimbursement_target = 'statement' and t.card_period_id is null

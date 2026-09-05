@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert } from '../ui/Alert'
 import { Button } from '../ui/Button'
 import { FormField } from '../ui/FormField'
 import { FormError } from '../ui/FormError'
 import { updateCategory, type Category } from '../../lib/categories'
 import { invalidateAfterCategoryMutation } from '../../lib/categories-invalidate'
+import { getHousehold } from '../../lib/shared/queries'
 import { useT } from '../../lib/locale-context'
+import { HouseholdScopeRow } from './HouseholdScopeRow'
 
 type Props = {
   category: Category
@@ -21,10 +23,20 @@ export function EditCategoryForm({ category, onSuccess }: Props) {
   const queryClient = useQueryClient()
   const router = useRouter()
   const isSystem = category.user_id === null
+  // Already the household's: the row shows on and locked (no way back).
+  const isHousehold = category.household_id !== null
 
   const [name, setName] = useState(category.name)
   const [icon, setIcon] = useState(category.icon ?? '')
   const [color, setColor] = useState(category.color ?? '')
+  const [household, setHousehold] = useState(isHousehold)
+
+  const householdQuery = useQuery({
+    queryKey: ['shared', 'household'] as const,
+    queryFn: () => getHousehold(),
+    retry: false,
+  })
+  const hasHousehold = householdQuery.data != null
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -45,6 +57,7 @@ export function EditCategoryForm({ category, onSuccess }: Props) {
       name,
       icon: icon || null,
       color: color || null,
+      scope: household ? 'household' : 'own',
     })
     setSubmitting(false)
     if (result.ok) {
@@ -96,6 +109,10 @@ export function EditCategoryForm({ category, onSuccess }: Props) {
         placeholder={t('settings.categories.form.color_placeholder')}
         error={fieldErrors.color}
       />
+
+      {(hasHousehold || isHousehold) && (
+        <HouseholdScopeRow checked={household} onChange={setHousehold} locked={isHousehold} />
+      )}
 
       <FormError message={formError} />
 

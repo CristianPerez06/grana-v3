@@ -15,7 +15,7 @@ Una categoría propia SHALL poder pasar al hogar por decisión de su dueño. El 
 #### Scenario: Un miembro ve y usa la categoría del hogar que creó el otro
 
 - **WHEN** Cristian crea la categoría del hogar "Hogar - La Foresta" y Julieta abre el selector de categoría de un movimiento nuevo, propio o compartido
-- **THEN** "Hogar - La Foresta" aparece en el grupo "Del hogar" con la marca "Hogar"
+- **THEN** "Hogar - La Foresta" aparece en el selector con la marca "Hogar"
 - **AND** Julieta puede seleccionarla y guardar el movimiento
 
 #### Scenario: Cualquier miembro edita una categoría del hogar
@@ -68,7 +68,7 @@ La app nativa SHALL ofrecer las mismas capacidades sobre categorías del hogar q
 #### Scenario: Paridad del selector
 
 - **WHEN** un miembro abre el selector de categoría de un movimiento en la app nativa
-- **THEN** las categorías del hogar aparecen agrupadas y marcadas igual que en la web
+- **THEN** las categorías del hogar aparecen con la marca "Hogar", igual que en la web
 
 ## MODIFIED Requirements
 
@@ -114,7 +114,7 @@ Las mutaciones de alta y edición SHALL ocurrir en un **drawer modal** disparado
 
 El estado abierto/cerrado del drawer SHALL ser estado local del componente y NO SHALL representarse en la URL.
 
-#### Scenario: Lista de categorías con distinción sistema/hogar/propias
+#### Scenario: Lista de categorías con distinción sistema/propias
 
 - **WHEN** un usuario con hogar navega a Configuración > Categorías
 - **THEN** ve las categorías del sistema (sin acciones de editar/archivar), las del hogar (con acciones y la marca "Hogar") y las propias (con acciones)

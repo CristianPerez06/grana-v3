@@ -1,5 +1,5 @@
 import { Text, View } from 'react-native'
-import { getCategoryName, type CategoryWithSubcategories } from '../../lib/categories'
+import { categoryScope, getCategoryName, type CategoryWithSubcategories } from '../../lib/categories'
 import { useT } from '../../lib/locale-context'
 import { CategoryRow } from './CategoryRow'
 
@@ -10,8 +10,9 @@ type Props = {
 
 export function CategoryList({ categories, onChanged }: Props) {
   const t = useT()
-  const system = categories.filter((c) => c.user_id === null)
-  const own = categories.filter((c) => c.user_id !== null)
+  const system = categories.filter((c) => categoryScope(c) === 'system')
+  const household = categories.filter((c) => categoryScope(c) === 'household')
+  const own = categories.filter((c) => categoryScope(c) === 'own')
 
   if (categories.length === 0) {
     return (
@@ -36,7 +37,28 @@ export function CategoryList({ categories, onChanged }: Props) {
                 category={category}
                 displayName={getCategoryName(category, t)}
                 subcategoryCount={category.subcategories.filter((s) => s.is_active).length}
-                isSystem
+                scope="system"
+                onChanged={onChanged}
+              />
+            </View>
+          ))}
+        </Group>
+      )}
+
+      {/* The household's vocabulary, shared by every member. Absent while empty
+          (mirror of the web list). */}
+      {household.length > 0 && (
+        <Group heading={t('settings.categories.list.household_heading')}>
+          {household.map((category, index) => (
+            <View
+              key={category.id}
+              className={index === 0 ? '' : 'border-t border-border-soft'}
+            >
+              <CategoryRow
+                category={category}
+                displayName={getCategoryName(category, t)}
+                subcategoryCount={category.subcategories.filter((s) => s.is_active).length}
+                scope="household"
                 onChanged={onChanged}
               />
             </View>
@@ -55,7 +77,7 @@ export function CategoryList({ categories, onChanged }: Props) {
                 category={category}
                 displayName={getCategoryName(category, t)}
                 subcategoryCount={category.subcategories.filter((s) => s.is_active).length}
-                isSystem={false}
+                scope="own"
                 onChanged={onChanged}
               />
             </View>
