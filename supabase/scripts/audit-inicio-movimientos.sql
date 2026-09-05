@@ -635,6 +635,11 @@ select t.date as fecha,
        t.is_shared as compartido,
        t.status as status_tarjeta,
        case when t.card_period_id is not null then 'sí' else '' end as en_resumen,
+       -- Fecha en que se pagó el resumen que contiene este consumo (null = todavía no).
+       -- Un consumo "paid" cuenta igual en "Por pagar": el tile mide medio de pago, no estado.
+       (select string_agg(pt.date::text, ', ' order by pt.date)
+          from public.period_payments pp join public.transactions pt on pt.id = pp.transaction_id
+         where pp.period_id = t.card_period_id) as resumen_pagado_el,
        t.installment_n || '/' || t.installments_total as cuota,
        case
          when t.is_parent then 'EXCLUIDO: parent de cuotas (cuentan las cuotas por su fecha)'
