@@ -200,14 +200,15 @@ export function CategorySpendingOverviewContainer({ filters, patchFilters, optio
       selectedRowId={drilled ? filters.subcategoryId : null}
       credits={credits}
       onSetMode={(next) => {
-        // Leaving egresos abandons the category drill: the income donut has no
-        // in-category view, so keeping the filter would narrow the feed by a
-        // category the card no longer shows.
-        patchFilters(
-          next === 'ingresos'
-            ? { overviewMode: next, categoryId: null, subcategoryId: null }
-            : { overviewMode: next },
-        )
+        // The drill filters belong to the mode that set them: an income row
+        // pins `type: 'income'` + its category, an expense row pins a category
+        // (+ subcategory). Flipping the mode drops them in both directions, or
+        // the feed keeps showing the previous mode's rows under a card that no
+        // longer explains them (the "stuck Ingresos chip"). Same rule as web's
+        // `setOverviewMode`; `patchFilters` resets the limit only if the query
+        // actually moved.
+        if (next === mode) return
+        patchFilters({ overviewMode: next, type: null, categoryId: null, subcategoryId: null })
       }}
       onSetCurrency={(next) => patchFilters({ currency: next })}
       onSelectCategory={(id) => {
