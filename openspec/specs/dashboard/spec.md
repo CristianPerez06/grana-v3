@@ -1215,7 +1215,11 @@ Dos estados SHALL tratarse como estados de primera clase, no como bordes excepci
 
 - **Ritmo indeterminado** (ingresos del mes en cero, típico a comienzo de mes): el sistema SHALL mostrar un mensaje explicativo **en lugar del anillo**, y NO SHALL mostrar 0% ni dividir por cero.
 - **Ritmo mayor a 100%**: el anillo y la barra SHALL pasar al color de alerta (terracota), y tanto el anillo como el copy SHALL expresar la relación como **múltiplo**, no como porcentaje. Pasado el 100% el porcentaje deja de ser la unidad adecuada: "el 1020%" hay que decodificarlo, "10 veces" no. Además un porcentaje de cuatro cifras no entra en el agujero del anillo y se recorta, que en un número de dinero es la peor falla posible.
-- **Ritmo desbordado**: cuando el cociente supera un umbral de escala, el sistema NO SHALL mostrar el anillo ni el porcentaje, y SHALL mostrar en su lugar un mensaje con un ícono, en el tono de la app, acompañado de **los dos montos que lo produjeron**. Con un denominador cercano a cero —un mes cuyo único ingreso fueron centavos— el cociente se va a los millones: es aritméticamente correcto y no es una lectura, y un número capeado tampoco lo sería. Este estado NO SHALL confundirse con el indeterminado: acá **sí hubo ingresos**, solo que ínfimos, y decir que no se registró ninguno sería falso. El umbral SHALL ubicarse donde el número deja de informar, no donde se pone grande: un mes en que se gastó diez veces el ingreso es extraordinario pero perfectamente legible y SHALL conservar su porcentaje.
+- **Ritmo desbordado**: cuando el cociente supera un umbral de escala, el sistema NO SHALL mostrar el anillo ni el porcentaje, y SHALL mostrar en su lugar un mensaje con un ícono, en el tono de la app, acompañado de **los dos montos que lo produjeron**. Con un denominador cercano a cero —un mes cuyo único ingreso fueron centavos— el cociente se va a los millones: es aritméticamente correcto y no es una lectura, y un número capeado tampoco lo sería. Este estado NO SHALL confundirse con el indeterminado: acá **sí hubo ingresos**, solo que ínfimos, y decir que no se registró ninguno sería falso. El umbral SHALL ubicarse donde el número deja de informar, no donde se pone grande: un mes en que se gastó diez veces el ingreso es extraordinario pero perfectamente legible y SHALL conservar su porcentaje, y uno de veinticinco veces también.
+
+El umbral SHALL ser **30×**. Estuvo en 100×, que quedaba muy por encima del punto en que el múltiplo deja de decir algo, y el caso que lo movió no es exótico: **una cuenta remunerada acredita intereses sola, todos los meses**, y para quien no registra su sueldo acá esos rendimientos SON el ingreso del mes. Contra el gasto real eso da "gastaste 100 veces tus ingresos" —aritméticamente cierto, y la reacción de quien lo lee es la misma frase que el estado desbordado existe para decir en voz alta—. El mes real que lo destapó midió 9.971%: quedaba del lado del múltiplo por 29 puntos.
+
+30× es el corte más bajo que NO contradice nada de lo ya decidido: diez veces y veinticinco veces conservan su número, y solo se mueve el rango donde el múltiplo dejó de significar algo. Lo que ese rango gana a cambio son **los dos montos**, que es lo único que le permite a la persona ver que el denominador eran intereses — un porcentaje, por preciso que sea, no se lo puede decir.
 
 #### Scenario: Mes con ingresos y gasto por debajo
 
@@ -1247,6 +1251,12 @@ Dos estados SHALL tratarse como estados de primera clase, no como bordes excepci
 - **WHEN** un tile tiene que mostrar un monto de diez dígitos con centavos
 - **THEN** el monto se renderiza completo, con el cuerpo achicado
 - **AND** las dos plataformas achican en el mismo punto
+
+#### Scenario: El único ingreso del mes son intereses de una cuenta remunerada
+
+- **WHEN** el mes acredita unos miles de pesos de intereses ganados como único ingreso, contra cientos de miles de gasto
+- **THEN** la tira muestra el estado desbordado, con los dos montos
+- **AND** NO muestra un múltiplo como "100 veces", que es cierto y no dice nada
 
 #### Scenario: Un mes con ingresos de centavos
 
