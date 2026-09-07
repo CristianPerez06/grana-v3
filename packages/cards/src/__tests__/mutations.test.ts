@@ -379,26 +379,49 @@ describe('deleteInstallmentParent', () => {
     expect(calls.deletes.some((d) => d.table === 'transactions')).toBe(true)
   })
 })
-
 // ── payCardPeriod ────────────────────────────────────────────────────────────
+// El dinero de un pago lo mueve `pay_card_period_legs`, no una serie de inserts
+// desde el cliente. Lo que queda de este lado —y lo único que estos tests pueden
+// mirar— son tres cosas: las lecturas previas que dan buenos mensajes, la
+// traducción de los errores del RPC a `messageKey`s, y la alícuota del sello, que
+// es un aprendizaje y vive a propósito fuera de la transacción del dinero.
+//
+// La otra mitad —que el RPC efectivamente asiente lo que promete— se prueba
+// contra Postgres de verdad en
+// `apps/web/lib/cards/__tests__/card-payment-legs-migration.test.ts`. Duplicarlo
+// acá con un doble sería probar el doble.
 
 const TODAY = new Date(2026, 6, 12) // 2026-07-12, after the paid period's close
 const PERIOD_ID = '33333333-3333-4333-8333-333333333333'
 const BANK_ID = '44444444-4444-4444-8444-444444444444'
+
+// El input viaja ANIDADO: un pago es un débito real de una cuenta, y sus
+// allocations dicen qué cancela. El monto NO viaja — se deriva de las
+// imputaciones, porque un importe libre puede no corresponder a ninguna deuda.
 const payInput = (over: Record<string, unknown> = {}) => ({
   period_id: PERIOD_ID,
-  payment_account_id: BANK_ID,
-  amount: 10000,
-  payment_date: '2026-07-10',
+  payments: [
+    {
+      payment_account_id: BANK_ID,
+      payment_date: '2026-07-10',
+      allocations: [{ settles_currency: 'ARS', settles_amount: 10000 }],
+    },
+  ],
   next_end_date: '2026-07-31',
   next_due_date: '2026-08-10',
   ...over,
 })
 
 // A closed period (end 2026-06-30 < today) owned by the user, unpaid.
-const closedPeriod = { id: PERIOD_ID, account_id: 'acc-1', start_date: '2026-06-01', end_date: '2026-06-30', due_date: '2026-07-10' }
+const closedPeriod = {
+  id: PERIOD_ID,
+  account_id: 'acc-1',
+  start_date: '2026-06-01',
+  end_date: '2026-06-30',
+  due_date: '2026-07-10',
+}
 
-describe('payCardPeriod › guards', () => {
+describe('payCardPeriod › guards de lectura', () => {
   it('period_not_found', async () => {
     const { supabase } = makeSupabase((c) =>
       c.table === 'card_periods' ? { data: null, error: { code: 'PGRST116' } } : OK,
@@ -407,7 +430,7 @@ describe('payCardPeriod › guards', () => {
     expect(result).toEqual({ ok: false, messageKey: 'cards.errors.period_not_found' })
   })
 
-  it('period_no_access when the account is not the user\'s', async () => {
+  it('period_no_access when the period belongs to someone else', async () => {
     const { supabase } = makeSupabase((c) => {
       if (c.table === 'card_periods') return { data: closedPeriod, error: null }
       if (c.table === 'accounts') return { data: null, error: { code: 'PGRST116' } }
@@ -420,8 +443,9 @@ describe('payCardPeriod › guards', () => {
   it('period_already_paid', async () => {
     const { supabase } = makeSupabase((c) => {
       if (c.table === 'card_periods') return { data: closedPeriod, error: null }
-      if (c.table === 'accounts') return { data: { user_id: USER, name: 'Galicia', stamp_tax_rate: null }, error: null }
-      if (c.table === 'period_payments') return { data: { id: 'pay1' }, error: null }
+      if (c.table === 'accounts')
+        return { data: { user_id: USER, name: 'Galicia', stamp_tax_rate: null }, error: null }
+      if (c.table === 'period_payments') return { data: { id: 'pay-1' }, error: null }
       return OK
     })
     const result = await payCardPeriod({ supabase, userId: USER, input: payInput(), today: TODAY })
@@ -429,10 +453,16 @@ describe('payCardPeriod › guards', () => {
   })
 
   it('period_not_closed when the period is still open', async () => {
-    const openPeriod = { ...closedPeriod, end_date: '2026-07-31', due_date: '2026-08-10' }
+    const openPeriod = {
+      ...closedPeriod,
+      start_date: '2026-07-01',
+      end_date: '2026-07-31',
+      due_date: '2026-08-10',
+    }
     const { supabase } = makeSupabase((c) => {
       if (c.table === 'card_periods') return { data: openPeriod, error: null }
-      if (c.table === 'accounts') return { data: { user_id: USER, name: 'Galicia', stamp_tax_rate: null }, error: null }
+      if (c.table === 'accounts')
+        return { data: { user_id: USER, name: 'Galicia', stamp_tax_rate: null }, error: null }
       if (c.table === 'period_payments') return { data: null, error: null }
       return OK
     })
@@ -440,118 +470,162 @@ describe('payCardPeriod › guards', () => {
     expect(result).toEqual({ ok: false, messageKey: 'cards.errors.period_not_closed' })
   })
 
-  it('payment_from_card when the payment account is a credit card', async () => {
-    const { supabase } = makeSupabase((c) => {
-      if (c.table === 'card_periods') return { data: closedPeriod, error: null }
-      if (c.table === 'accounts' && c.cols.includes('stamp_tax_rate'))
-        return { data: { user_id: USER, name: 'Galicia', stamp_tax_rate: null }, error: null }
-      if (c.table === 'accounts' && c.cols.includes('is_active'))
-        return { data: { type: 'credit', is_active: true }, error: null }
-      if (c.table === 'period_payments') return { data: null, error: null }
-      return OK
+  it('un input con la forma plana vieja muere en la validación, sin tocar la base', async () => {
+    // El monto suelto es exactamente lo que dejaba un resumen marcado como pagado
+    // con cualquier número. Si esta forma volviera a pasar, el resto no importa.
+    const { supabase, calls } = makeSupabase(() => OK)
+    const result = await payCardPeriod({
+      supabase,
+      userId: USER,
+      input: { period_id: PERIOD_ID, payment_account_id: BANK_ID, amount: 10000, payment_date: '2026-07-10' },
+      today: TODAY,
     })
-    const result = await payCardPeriod({ supabase, userId: USER, input: payInput(), today: TODAY })
-    expect(result).toEqual({ ok: false, messageKey: 'cards.errors.payment_from_card' })
-  })
-
-  it('usd_fx_required when there is USD debt but no rate', async () => {
-    const { supabase } = makeSupabase((c) => {
-      if (c.table === 'card_periods') return { data: closedPeriod, error: null }
-      if (c.table === 'accounts' && c.cols.includes('stamp_tax_rate'))
-        return { data: { user_id: USER, name: 'Galicia', stamp_tax_rate: null }, error: null }
-      if (c.table === 'accounts' && c.cols.includes('is_active'))
-        return { data: { type: 'bank', is_active: true }, error: null }
-      if (c.table === 'period_payments') return { data: null, error: null }
-      if (c.table === 'transactions' && c.op === 'select')
-        return { data: [{ type: 'expense', amount: 50, currency_code: 'USD', status: 'pending', received_at: null, cancelled_at: null }], error: null }
-      return OK
-    })
-    const result = await payCardPeriod({ supabase, userId: USER, input: payInput({ fx_rate_to_ars: null }), today: TODAY })
-    expect(result).toEqual({ ok: false, messageKey: 'cards.errors.usd_fx_required' })
+    expect(result.ok).toBe(false)
+    expect(calls.rpcs).toHaveLength(0)
   })
 })
 
-describe('payCardPeriod › happy path + stamp tax', () => {
-  // A running next period whose dates already equal the confirmed ones → no
-  // cascade; plus a nextNext so no eager estimated is created. Minimal writes.
-  const laterPeriods = [
-    { id: 'per-2', start_date: '2026-07-01', end_date: '2026-07-31', due_date: '2026-08-10', is_estimated: true },
-    { id: 'per-3', start_date: '2026-08-01', end_date: '2026-08-31', due_date: '2026-09-10', is_estimated: true },
-  ]
+// Estas reglas ya NO se chequean en el cliente: se mudaron al RPC, que es donde
+// pueden garantizarse. Lo que queda acá es traducirlas, y eso también se rompe.
+describe('payCardPeriod › traducción de los errores del RPC', () => {
+  const upToRpc = (c: Ctx) => {
+    if (c.table === 'card_periods' && c.terminal === 'single') return { data: closedPeriod, error: null }
+    if (c.table === 'card_periods') return { data: [], error: null }
+    if (c.table === 'accounts')
+      return { data: { user_id: USER, name: 'Galicia', stamp_tax_rate: null }, error: null }
+    if (c.table === 'period_payments') return { data: null, error: null }
+    return OK
+  }
+  const rpcFailing =
+    (message: string, extra: Record<string, unknown> = {}) =>
+    (fn: string) =>
+      fn === 'pay_card_period_legs'
+        ? { data: null, error: { message, ...extra } }
+        : { data: null, error: null }
 
+  it('usd_fx_required cuando el RPC rechaza el cruce de monedas', async () => {
+    const { supabase } = makeSupabase(
+      upToRpc,
+      rpcFailing('I-PAY-2: settling USD debt with an ARS transaction requires fx_rate_to_ars'),
+    )
+    const result = await payCardPeriod({ supabase, userId: USER, input: payInput(), today: TODAY })
+    expect(result).toEqual({ ok: false, messageKey: 'cards.errors.usd_fx_required' })
+  })
+
+  it('pagar un resumen desde una tarjeta lo rechaza el RPC, no el cliente', async () => {
+    // La cuenta de pago ya no se lee de este lado: el RPC exige `type <> credit`
+    // y levanta `payment_account_invalid`.
+    const { supabase } = makeSupabase(upToRpc, rpcFailing('payment_account_invalid'))
+    const result = await payCardPeriod({ supabase, userId: USER, input: payInput(), today: TODAY })
+    expect(result).toEqual({ ok: false, messageKey: 'cards.errors.payment_account_not_found' })
+  })
+
+  it('una operación que no salda el resumen nombra lo que queda', async () => {
+    const { supabase } = makeSupabase(
+      upToRpc,
+      rpcFailing('statement_not_settled', { code: 'GRN04', details: '5000|0' }),
+    )
+    const result = await payCardPeriod({ supabase, userId: USER, input: payInput(), today: TODAY })
+    expect(result).toMatchObject({
+      ok: false,
+      messageKey: 'cards.errors.statement_not_settled',
+      messageParams: { ars: '5000', usd: '0' },
+    })
+  })
+})
+
+describe('payCardPeriod › happy path + alícuota del sello', () => {
   const baseHandler =
     (opts: { stampRate?: number | null } = {}) =>
     (c: Ctx) => {
-      if (c.table === 'card_periods' && c.op === 'select' && c.cols.includes('account_id'))
-        return { data: closedPeriod, error: null }
-      if (c.table === 'card_periods' && c.op === 'select')
-        return { data: laterPeriods, error: null } // laterPeriods lookup (list)
-      if (c.table === 'card_periods' && c.op === 'update') return OK // confirm running cycle
-      if (c.table === 'accounts' && c.op === 'select' && c.cols.includes('stamp_tax_rate'))
-        return { data: { user_id: USER, name: 'Galicia', stamp_tax_rate: opts.stampRate ?? null }, error: null }
-      if (c.table === 'accounts' && c.op === 'select' && c.cols.includes('is_active'))
-        return { data: { type: 'bank', is_active: true }, error: null }
-      if (c.table === 'accounts' && c.op === 'update') return OK // remember stamp_tax_rate
-      if (c.table === 'period_payments' && c.op === 'select' && c.terminal === 'maybeSingle')
-        return { data: null, error: null } // not-yet-paid check
-      if (c.table === 'period_payments' && c.op === 'select') return { data: [], error: null } // laterPayments
-      if (c.table === 'period_payments' && c.op === 'insert') return OK
-      if (c.table === 'categories') return { data: { id: 'cat-imp' }, error: null }
-      if (c.table === 'subcategories') return { data: { id: 'sub-sello' }, error: null }
-      if (c.table === 'transactions' && c.op === 'select' && c.terminal === 'maybeSingle')
-        return { data: null, error: null } // nextNext has no tx
-      if (c.table === 'transactions' && c.op === 'select')
-        return { data: [{ type: 'expense', amount: 10000, currency_code: 'ARS', status: 'pending', received_at: null, cancelled_at: null }], error: null }
-      if (c.table === 'transactions' && c.op === 'insert')
-        return { data: { id: c.cols === '' ? 'tx' : 'tx' }, error: null }
-      if (c.table === 'transactions' && c.op === 'update') return OK // sweep to paid
+      if (c.table === 'card_periods' && c.terminal === 'single') return { data: closedPeriod, error: null }
+      if (c.table === 'card_periods') return { data: [], error: null } // sin períodos posteriores
+      if (c.table === 'accounts' && c.op === 'select')
+        return {
+          data: { user_id: USER, name: 'Galicia', stamp_tax_rate: opts.stampRate ?? null },
+          error: null,
+        }
+      if (c.table === 'period_payments') return { data: null, error: null }
       return OK
     }
 
-  it('pays a simple ARS statement (no stamp tax)', async () => {
-    const { supabase, calls } = makeSupabase(baseHandler())
+  const rpcOk = (stampBase: number | null) => (fn: string) =>
+    fn === 'pay_card_period_legs'
+      ? {
+          data: {
+            payment_group_id: 'grp-1',
+            transaction_ids: ['tx-1', 'tx-2'],
+            settled: true,
+            pending_ars: 0,
+            pending_usd: 0,
+            stamp_tax_base_ars: stampBase,
+          },
+          error: null,
+        }
+      : { data: null, error: null }
+
+  it('devuelve las patas que escribió el RPC, y la primera como expenseId', async () => {
+    // `expenseId` sobrevive para las shells que esperan un débito; `expenseIds`
+    // los tiene todos, porque dos monedas pagadas por separado son dos débitos.
+    const { supabase, calls } = makeSupabase(baseHandler(), rpcOk(null))
     const result = await payCardPeriod({ supabase, userId: USER, input: payInput(), today: TODAY })
-    expect(result).toEqual({ ok: true, expenseId: 'tx' })
-    // The payment expense + the period_payment were written; no stamp tx.
-    expect(calls.inserts.filter((i) => i.table === 'transactions')).toHaveLength(1)
-    expect(calls.inserts.some((i) => i.table === 'period_payments')).toBe(true)
+
+    expect(result).toEqual({
+      ok: true,
+      expenseId: 'tx-1',
+      expenseIds: ['tx-1', 'tx-2'],
+      paymentGroupId: 'grp-1',
+    })
+    expect(calls.rpcs.map((r) => r.fn)).toContain('pay_card_period_legs')
   })
 
-  it('inserts the stamp tax and remembers the derived rate on the first payment', async () => {
-    // base ARS = 10000; sello 210 → derived rate 0.021, persisted because the
-    // card had no remembered rate yet.
-    const { supabase, calls } = makeSupabase(baseHandler({ stampRate: null }))
+  it('deriva y recuerda la alícuota del sello en el primer pago', async () => {
+    // base ARS 10000, sello 210 → 0,021. Se persiste porque la tarjeta no tenía
+    // alícuota: es un aprendizaje para sugerirla sola la próxima vez.
+    const { supabase, calls } = makeSupabase(baseHandler({ stampRate: null }), rpcOk(10000))
     const result = await payCardPeriod({
       supabase,
       userId: USER,
       input: payInput({ stamp_tax_amount: 210 }),
       today: TODAY,
     })
-    expect(result).toEqual({ ok: true, expenseId: 'tx' })
-    // Two transaction inserts: the payment expense + the stamp-tax movement.
-    expect(calls.inserts.filter((i) => i.table === 'transactions')).toHaveLength(2)
-    const stampInsert = calls.inserts
-      .map((i) => i.payload as Record<string, unknown>)
-      .find((p) => p?.description === 'Impuesto de sellos')
-    expect(stampInsert).toMatchObject({ card_period_id: PERIOD_ID, currency_code: 'ARS', status: 'pending' })
-    // The derived rate (210 / 10000 = 0.021) was persisted on the account.
+
+    expect(result.ok).toBe(true)
     const rateUpdate = calls.updates.find(
       (u) => u.table === 'accounts' && (u.payload as Record<string, unknown>).stamp_tax_rate != null,
     )
     expect((rateUpdate?.payload as Record<string, number>).stamp_tax_rate).toBeCloseTo(0.021, 6)
   })
 
-  it('does not overwrite an existing remembered stamp rate', async () => {
-    const { supabase, calls } = makeSupabase(baseHandler({ stampRate: 0.012 }))
+  it('no pisa una alícuota ya recordada', async () => {
+    // Una corrección puntual del monto no reescribe lo aprendido.
+    const { supabase, calls } = makeSupabase(baseHandler({ stampRate: 0.012 }), rpcOk(10000))
     await payCardPeriod({
       supabase,
       userId: USER,
       input: payInput({ stamp_tax_amount: 210 }),
       today: TODAY,
     })
+
     const rateUpdate = calls.updates.find(
       (u) => u.table === 'accounts' && 'stamp_tax_rate' in (u.payload as Record<string, unknown>),
     )
     expect(rateUpdate).toBeUndefined()
+  })
+
+  it('el sello viaja al RPC — no se inserta desde el cliente', async () => {
+    // Era un insert de este lado y ahora entra en la misma transacción que el
+    // dinero. Un insert acá volvería a partir la operación en dos.
+    const { supabase, calls } = makeSupabase(baseHandler(), rpcOk(10000))
+    await payCardPeriod({
+      supabase,
+      userId: USER,
+      input: payInput({ stamp_tax_amount: 210 }),
+      today: TODAY,
+    })
+
+    const payCall = calls.rpcs.find((r) => r.fn === 'pay_card_period_legs')
+    expect((payCall?.args as Record<string, unknown>).p_stamp_tax_amount).toBe(210)
+    expect(calls.inserts.filter((i) => i.table === 'transactions')).toHaveLength(0)
   })
 })

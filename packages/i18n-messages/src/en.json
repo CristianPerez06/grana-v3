@@ -987,7 +987,6 @@
       "period_already_paid": "This statement was already paid.",
       "period_not_closed": "The statement hasn’t closed yet. You can only pay closed or overdue statements.",
       "payment_account_not_found": "Payment account not found.",
-      "payment_from_card": "You can’t pay a statement from another card.",
       "debt_check_failed": "Couldn’t verify the statement’s balance.",
       "usd_fx_required": "The statement has USD debt: the payment-day rate is missing.",
       "running_cycle_undetermined": "Couldn’t determine the card’s running cycle.",
