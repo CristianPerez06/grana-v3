@@ -66,7 +66,13 @@ function stubClient(rule: RuleRow | null, rec: Recorder): GranaSupabaseClient {
       }
       if (table === 'period_payments') {
         return {
-          select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }),
+          // `.limit(1)` antes del terminal: un mismo débito puede tener varias patas
+          // (los pesos y los dólares de un mismo resumen), así que la consulta pregunta
+          // "¿existe alguna?". El fake tiene que ofrecer el mismo eslabón que la cadena
+          // real o el guard explota antes de llegar a lo que estos tests miran.
+          select: () => ({
+            eq: () => ({ limit: () => ({ maybeSingle: async () => ({ data: null }) }) }),
+          }),
         }
       }
       if (table === 'recurrences') {
