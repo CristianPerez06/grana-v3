@@ -4,7 +4,7 @@
 # Jobs run in parallel:
 #   - quality        : eslint + tsc --noEmit for both apps
 #   - web-build      : next build for apps/web with placeholder env
-#   - web-test       : vitest tests for apps/web
+#   - test           : vitest tests for apps/web AND every package
 #   - monorepo-health: pnpm-lock.yaml freshness + peer dep dedup
 #   - specs          : openspec master-spec validation + TBD placeholder gate
 #
@@ -81,8 +81,15 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci
         run: pnpm --filter web build
 
-  web-test:
-    name: Web tests
+  # Corre TODO el monorepo, no solo `apps/web`. Mientras fue `--filter web`, los
+  # 432 tests de los paquetes —donde vive la lógica de plata: saldos, ventanas de
+  # resumen, los orquestadores de compra con tarjeta y de cuotas— estaban escritos
+  # y no protegían nada: se podía romper `@grana/dashboard`, ver el verde y
+  # mergear. Peor todavía, empujaba a escribir tests de paquetes bajo
+  # `apps/web/lib/**` solo para que corrieran, torciendo dónde vive el código para
+  # complacer a la config de CI.
+  test:
+    name: Tests (web + packages)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -98,7 +105,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests (vitest)
-        run: pnpm --filter web test
+        run: pnpm -r test
 
   # The spec is the memory of this project — lint, build, tests and the
   # lockfile are all guarded by CI, and until this job existed the specs
