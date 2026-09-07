@@ -51,7 +51,7 @@ Change: `openspec/changes/<nombre>/`
 
 #### Validaciones locales (mismas que corre CI)
 
-<!-- CI corre 5 jobs en paralelo sobre cada PR a `main`: quality, web-build, test, monorepo-health y specs. Correlos localmente antes de abrir el PR. -->
+<!-- CI corre 5 jobs en paralelo sobre cada PR a `main`: quality, web-build, web-test, monorepo-health y specs. Correlos localmente antes de abrir el PR. -->
 
 - [ ] Lint web y mobile pasan (`pnpm lint` + `pnpm lint:mobile`)
 - [ ] Typecheck web y mobile pasan (`pnpm typecheck` + `pnpm typecheck:mobile`)
