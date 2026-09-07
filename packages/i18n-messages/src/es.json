@@ -987,7 +987,6 @@
       "period_already_paid": "Este período ya fue pagado.",
       "period_not_closed": "El período aún no cerró. Solo podés pagar períodos cerrados o vencidos.",
       "payment_account_not_found": "Cuenta de pago no encontrada.",
-      "payment_from_card": "No podés pagar un resumen desde otra tarjeta.",
       "debt_check_failed": "No se pudo verificar la deuda del período.",
       "usd_fx_required": "El resumen tiene deuda en dólares: falta la cotización del día de pago.",
       "running_cycle_undetermined": "No se pudo determinar el ciclo en curso de la tarjeta.",
