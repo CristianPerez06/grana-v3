@@ -39,7 +39,9 @@ otro:
 
 Una ocurrencia **sin resolver** SHALL tener únicamente vencimiento: los otros tres nacen al
 resolverla. `scheduled_date` NO SHALL usarse como fecha de pago; se retira, y durante la transición
-solo puede sobrevivir como alias de lectura del vencimiento.
+sobrevive únicamente como **columna legada de compatibilidad**: NO SHALL leerse como vencimiento ni
+como fecha de pago, porque un cliente anterior al despliegue puede sobrescribirla al resolver una
+ocurrencia, y en las ocurrencias históricas conserva un valor que no es un vencimiento confiable.
 
 El sistema SHALL registrar además **cómo** se resolvió cada ocurrencia: con un movimiento **creado**
 por la recurrencia, o con un movimiento preexistente **vinculado** por el usuario. Ese dato SHALL

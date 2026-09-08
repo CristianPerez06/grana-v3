@@ -287,7 +287,8 @@ negativo que sí tiene web, y el feed nativo ni siquiera dispara la generación.
 
 - **Migración**: se elimina el índice `recurrence_instances_one_pending_per_rule`; se agrega la
   identidad de ocurrencia (`due_date`) protegida en todos los estados; `scheduled_date` deja de ser
-  pisado al confirmar y **se retira** (alias de lectura durante la transición, nunca fecha de pago).
+  pisado al confirmar y **se retira**; durante la transición queda como columna legada de
+  compatibilidad, que el código nuevo no lee.
 - `packages/money-logic/src/recurrences.ts` — `decideRecurrenceInstance` devuelve una **lista** de
   ocurrencias en vez de una decisión única; una sola definición de `max_occurrences`.
 - `packages/recurrences/src/queries.ts` — el generador camina el calendario; los reads dejan de

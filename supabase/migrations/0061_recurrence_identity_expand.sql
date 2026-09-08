@@ -533,6 +533,11 @@ begin
   -- se deriva. Solo en INSERT: en un UPDATE la fila ya tiene su `due_date`, y
   -- una confirmación vieja pisa `scheduled_date` con la fecha de pago —
   -- derivarlo ahí sería fabricar la identidad equivocada.
+  --
+  -- Por eso `scheduled_date` NO es un alias de `due_date`: acá se refleja una
+  -- vez al insertar, y desde ese momento un cliente viejo puede hacerlas
+  -- divergir. Es una columna legada de compatibilidad, y el código nuevo no
+  -- debe leerla ni como vencimiento ni como fecha de pago.
   if TG_OP = 'INSERT' and NEW.due_date is null then
     NEW.due_date := NEW.scheduled_date;
     NEW.due_date_is_unknown := false;

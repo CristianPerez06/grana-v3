@@ -70,8 +70,20 @@ no pueden reservar ninguna identidad (decisión 23).
 
 `scheduled_date` **se retira**. Una versión anterior de este documento decía que "pasa a ser la fecha
 del movimiento", y eso no cierra: una ocurrencia sin resolver todavía no tiene pago, así que no puede
-tener fecha de pago. Durante la transición queda como alias de lectura de `due_date` y después se
-elimina; en ningún momento se convierte en fecha de pago.
+tener fecha de pago.
+
+Durante la transición queda como **columna legada de compatibilidad**, y conviene no llamarla "alias
+de lectura de `due_date`" —como decía una versión anterior— porque no lo es en ninguno de los dos
+casos que importan:
+
+- un cliente viejo que confirma **pisa** `scheduled_date` con la fecha de pago mientras `due_date`
+  conserva el vencimiento: las dos divergen;
+- en las confirmadas históricas `due_date` es `NULL` y `scheduled_date` guarda un valor legado que no
+  es un vencimiento confiable.
+
+El código nuevo NO debe leerla como vencimiento ni como fecha de pago. Al **insertar**, el trigger la
+refleja desde `due_date` para que los clientes viejos sigan funcionando; a partir de ahí esos mismos
+clientes pueden sobrescribirla al confirmar, y eso es esperado. Se elimina en la migración C.
 
 ### 2. El avance de la generación se separa de la resolución de un pago
 

@@ -56,8 +56,10 @@ que habilita el backlog.
       backlog mientras la app sigue mostrando una sola ocurrencia — invisible, y peor que hoy.
 - [ ] 1.4 `confirmRecurrenceInstance` deja de escribir `scheduled_date`. `due_date` es inmutable; la
       fecha de pago vive en `transactions.date`, la de carga en `transactions.created_at` y la de
-      resolución en `resolved_at`. `scheduled_date` queda como alias de lectura de `due_date` durante
-      la transición y **nunca** pasa a ser fecha de pago (una ocurrencia sin resolver no tiene pago).
+      resolución en `resolved_at`. `scheduled_date` queda como **columna legada de compatibilidad**,
+      no como alias: un cliente viejo la pisa con la fecha de pago al confirmar, y en las históricas
+      `due_date` es `NULL` mientras ella guarda un valor que no es vencimiento. El código nuevo no la
+      lee ni como vencimiento ni como fecha de pago; el trigger solo la refleja al insertar.
 - [x] 1.4b Agregar `resolution_kind` (`created` | `linked`) y `linked_conversion`, poblar
       `resolution_kind = 'created'` en las confirmadas, y **agregar sus constraints en esta misma
       migración, después del trigger**: el trigger completa el campo antes de que el `CHECK` corra,
@@ -87,7 +89,7 @@ que habilita el backlog.
 - [ ] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
       saltea junio, y no mueve el cronograma.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
-      paralelo y queda como alias de lectura de `due_date`. Su retiro es una entrega posterior, cuando
+      paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.
 - [ ] 1.12 Tests de migración con el **caso exacto del #96** (regla cada 3 días, cursor 2026-06-10,
       pendiente del 13/06, hoy 2026-09-08): `reconstruct_from` queda en el cursor y las ocurrencias a
