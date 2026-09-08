@@ -21,7 +21,7 @@ Cada apertura SHALL sumar exactamente su total, al centavo. Los montos NO SHALL 
 
 Una fila en cero NO SHALL mostrarse. "Otros" es cero en el mes corriente ordinario, y una fila que no dice nada igual ocupa un renglón e invita a preguntar qué significa.
 
-SHALL haber **una sola apertura abierta por vez**: dos paneles apilados bajo una tira de tres columnas dejan de leerse como "esto pertenece a aquella columna". La apertura SHALL renderizarse **debajo** de la tira (web) o inmediatamente debajo de su propia fila (nativo), nunca adentro de la columna: un tercio de una card de ancho de teléfono son ~105px y "Pago de tarjetas $968.558,83" no entra sin partirse o achicarse hasta dejar de leerse.
+SHALL haber **una sola apertura abierta por vez**: dos paneles apilados bajo una tira de tres columnas dejan de leerse como "esto pertenece a aquella columna". La apertura SHALL renderizarse **inmediatamente debajo de la fila que la abrió** con la tira apilada, y debajo de la tira cuando se muestra en tres columnas, nunca adentro de la columna: un tercio de una card de ancho de teléfono son ~105px y "Pago de tarjetas $968.558,83" no entra sin partirse o achicarse hasta dejar de leerse.
 
 La apertura SHALL existir en **ambas plataformas** y SHALL respetar la regla bimoneda de la tira: el monto USD de cada concepto acompaña al ARS bajo las mismas condiciones que los totales.
 

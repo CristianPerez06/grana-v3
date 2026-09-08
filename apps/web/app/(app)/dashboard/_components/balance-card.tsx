@@ -256,14 +256,16 @@ const Flow = ({
 const BreakdownPanel = ({
   rows,
   showUsd,
+  className,
 }: {
   rows: Array<{ label: string; ars: number; usd: number }>
   showUsd: boolean
+  className?: string
 }) => {
   const shown = rows.filter((row) => row.ars !== 0 || row.usd !== 0)
   if (shown.length === 0) return null
   return (
-    <ul className="mt-3.5 flex flex-col gap-2 border-t border-border pt-3.5">
+    <ul className={cn('mt-3.5 flex flex-col gap-2 border-t border-border pt-3.5', className)}>
       {shown.map((row) => (
         <li key={row.label} className="flex items-baseline justify-between gap-3">
           <span className="min-w-0 truncate text-[13px] font-semibold text-text-muted">
@@ -411,6 +413,52 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
   const [openFlow, setOpenFlow] = useState<'entro' | 'seFue' | null>(null)
   const toggleFlow = (flow: 'entro' | 'seFue') =>
     setOpenFlow((current) => (current === flow ? null : flow))
+
+  // Rows of whichever flow is open. Built once and rendered in two places, at
+  // two widths — see the two `BreakdownPanel`s below.
+  const breakdownRows =
+    !summary || !openFlow
+      ? []
+      : openFlow === 'entro'
+        ? [
+            {
+              label: t('month.came_in_ingresos'),
+              ars: summary.ARS.entroParts.ingresos,
+              usd: summary.USD.entroParts.ingresos,
+            },
+            {
+              label: t('month.came_in_ingresos_financieros'),
+              ars: summary.ARS.entroParts.ingresosFinancieros,
+              usd: summary.USD.entroParts.ingresosFinancieros,
+            },
+            {
+              label: t('month.came_in_devoluciones'),
+              ars: summary.ARS.entroParts.devoluciones,
+              usd: summary.USD.entroParts.devoluciones,
+            },
+            {
+              label: t('month.other'),
+              ars: summary.ARS.entroParts.otros,
+              usd: summary.USD.entroParts.otros,
+            },
+          ]
+        : [
+            {
+              label: t('month.went_out_gastos'),
+              ars: summary.ARS.seFueParts.gastos,
+              usd: summary.USD.seFueParts.gastos,
+            },
+            {
+              label: t('month.went_out_card_payments'),
+              ars: summary.ARS.seFueParts.pagosDeTarjeta,
+              usd: summary.USD.seFueParts.pagosDeTarjeta,
+            },
+            {
+              label: t('month.other'),
+              ars: summary.ARS.seFueParts.otros,
+              usd: summary.USD.seFueParts.otros,
+            },
+          ]
 
   const placement = derivePlacement(hero?.accounts ?? [])
   // One type step for the whole block, so the amounts never shrink at different
@@ -565,6 +613,9 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             expanded={openFlow === 'entro'}
             onToggle={isLoading ? undefined : () => toggleFlow('entro')}
           />
+          {openFlow === 'entro' && (
+            <BreakdownPanel rows={breakdownRows} showUsd={summaryHasUsd} className="sm:hidden" />
+          )}
           <Flow
             label={t('month.went_out')}
             dotClassName="bg-slate"
@@ -579,57 +630,21 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             expanded={openFlow === 'seFue'}
             onToggle={isLoading ? undefined : () => toggleFlow('seFue')}
           />
+          {openFlow === 'seFue' && (
+            <BreakdownPanel rows={breakdownRows} showUsd={summaryHasUsd} className="sm:hidden" />
+          )}
         </div>
 
-        {openFlow === 'entro' && summary && (
-          <BreakdownPanel
-            showUsd={summaryHasUsd}
-            rows={[
-              {
-                label: t('month.came_in_ingresos'),
-                ars: summary.ARS.entroParts.ingresos,
-                usd: summary.USD.entroParts.ingresos,
-              },
-              {
-                label: t('month.came_in_ingresos_financieros'),
-                ars: summary.ARS.entroParts.ingresosFinancieros,
-                usd: summary.USD.entroParts.ingresosFinancieros,
-              },
-              {
-                label: t('month.came_in_devoluciones'),
-                ars: summary.ARS.entroParts.devoluciones,
-                usd: summary.USD.entroParts.devoluciones,
-              },
-              {
-                label: t('month.other'),
-                ars: summary.ARS.entroParts.otros,
-                usd: summary.USD.entroParts.otros,
-              },
-            ]}
-          />
-        )}
-        {openFlow === 'seFue' && summary && (
-          <BreakdownPanel
-            showUsd={summaryHasUsd}
-            rows={[
-              {
-                label: t('month.went_out_gastos'),
-                ars: summary.ARS.seFueParts.gastos,
-                usd: summary.USD.seFueParts.gastos,
-              },
-              {
-                label: t('month.went_out_card_payments'),
-                ars: summary.ARS.seFueParts.pagosDeTarjeta,
-                usd: summary.USD.seFueParts.pagosDeTarjeta,
-              },
-              {
-                label: t('month.other'),
-                ars: summary.ARS.seFueParts.otros,
-                usd: summary.USD.seFueParts.otros,
-              },
-            ]}
-          />
-        )}
+        {/* At `sm`+ the strip is three columns and the panel goes under all of
+            them, its own chevron the only cue of which one is open. Below `sm`
+            the three STACK, and a panel after the last row reads as belonging to
+            it: there it renders inline, right under the row that opened it (the
+            two above, `sm:hidden`). Same rows, built once. */}
+        <BreakdownPanel
+          rows={breakdownRows}
+          showUsd={summaryHasUsd}
+          className="hidden sm:block"
+        />
 
         {savings.ARS && (
           <SavingsLine
