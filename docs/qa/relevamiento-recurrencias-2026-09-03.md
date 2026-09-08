@@ -169,6 +169,50 @@ mes viejo usaría los montos de hoy, perdería las reglas retiradas e inventarí
 
 ---
 
+### Tres defectos que sólo se ven cuando se relaja el invariante
+
+Los primeros doce son problemas de hoy. Estos tres están **latentes**: hoy no pueden ocurrir porque
+sólo hay una pendiente por regla y siempre se resuelve en orden. En el momento en que se permite un
+backlog, se vuelven reales. Aparecieron revisando la propuesta de arreglo, no la app.
+
+**D13 · El cursor puede retroceder si resolvés fuera de orden. (verificado)**
+Tanto confirmar como omitir escriben `last_generated_date = instance.scheduled_date`
+**incondicionalmente** (`mutations.ts:443` y `:500`). Con una sola pendiente por vez eso es correcto,
+porque siempre se resuelve la más vieja. Con backlog no: si Julieta registra el alquiler de agosto y
+después el de julio, el cursor va de agosto **para atrás** a julio, y el generador puede volver a
+proponer agosto. Es decir: la solución al #96, mal implementada, fabrica duplicados.
+
+La consecuencia de diseño es que **el avance de la generación tiene que dejar de ser un efecto de
+resolver un pago**. Son dos cosas distintas y hoy están pegadas.
+
+**D14 · Confirmar borra el vencimiento original. (verificado)**
+`confirmRecurrenceInstance` escribe `scheduled_date: effective.scheduled_date`
+(`mutations.ts:415`), o sea la fecha que el usuario eligió al confirmar. La instancia **pierde para
+siempre** el vencimiento que le dio origen. Hoy casi no molesta; con backlog rompe dos cosas a la
+vez: no se puede usar la fecha como identidad de la ocurrencia, y el historial no puede contestar
+"¿qué vencimiento pagué el 3 de septiembre?".
+
+Por eso una ocurrencia necesita **vencimiento previsto** y **fecha de pago** como dos campos
+separados. Es la base de todo lo demás y va primero.
+
+**D15 · El dashboard cuenta dos veces la misma recurrencia. (verificado numéricamente)**
+Este no es latente: **está pasando hoy** y es un error de plata a la vista. "Gastos fijos" suma dos
+fuentes —las instancias materializadas de la ventana y la proyección de las reglas activas— y el
+comentario del código afirma que *«the two never overlap»*. Se contradice con el contrato de
+`walkOccurrences`, que dice lo opuesto con todas las letras: una pendiente **no** mueve el cursor,
+así que su fecha **se sigue emitiendo** en la proyección.
+
+Reproducido: hoy 08/09, el navegador en agosto (⇒ ventana septiembre), una regla mensual de $100.000
+del día 5 con su instancia pendiente ya generada. `generatedExpenses` aporta $100.000, la proyección
+aporta otros $100.000 → **"Gastos fijos" muestra $200.000 para una regla que vale $100.000.**
+
+Alcance exacto, que importa: bajo el lente `live` no puede pasar —la ventana es el mes **siguiente**
+al seleccionado y una pendiente siempre está fechada hoy o antes—, así que se manifiesta en la
+posición "mes anterior" del navegador. Merece su propio ticket: es independiente del #96 y no espera
+a nada de esto.
+
+---
+
 ## Parte 2 — Arreglos de funcionalidad
 
 Esta parte está escrita para decidir, no para implementar. Cada arreglo dice **qué pasa hoy**, **qué
@@ -200,12 +244,22 @@ no una regresión.
 Por eso propongo cortar en un número (12) y que el resto se muestre agrupado en una sola línea:
 *"y 78 ocurrencias anteriores"*, con una sola acción para resolverlas.
 
-**Lo que tenés que decidir:**
-1. **¿12 está bien como tope?** Para el alquiler nunca se llega. Para algo semanal son 3 meses. Para
-   algo diario son 12 días y el resto se agrupa enseguida.
-2. **¿Cuánto atrás mira?** Si una regla arrancó en 2024 y nunca se usó, ¿generamos desde 2024 o sólo
-   los últimos N meses? Mi propuesta: **desde donde quedó el cursor, con el tope como único límite** —
-   pero se puede acotar a "no más de 12 meses hacia atrás" si preferís.
+**El "12" no es una decisión tuya, y una versión anterior de este documento te la pasaba mal.**
+Confundía tres cosas que hay que separar:
+
+| | Qué es | Quién decide |
+|---|---|---|
+| Tamaño de tanda | De a cuántas procesa el generador por corrida | Implementación |
+| Tope visual | Cuántas se muestran antes de agrupar el resto | Diseño, se prueba en pantalla |
+| Alcance del modelo | Cuántas ocurrencias la app **reconoce que existen** | **Ninguna se pierde. No es negociable.** |
+
+El error de la versión anterior era usar 12 como límite de lo que la app reconoce. Si Julieta tiene
+90 atrasos y el generador toma "las 12 más viejas", **la de este mes no se genera** — que es
+exactamente el bug #96 otra vez, con otro número. Sea cual sea la tanda, la ocurrencia vigente
+siempre entra, y a todas las anteriores se llega desde el grupo.
+
+**Lo que sí tenés que decidir:** si una regla arrancó en 2024 y nunca se usó, ¿le mostramos todo el
+historial o cortamos en algún punto razonable hacia atrás?
 
 ---
 
@@ -220,18 +274,31 @@ elegir cuáles.
 **Qué va a ver distinto.** Antes de aplicar, un resumen del impacto:
 *"Vas a registrar 3 gastos por $1.350.000 en total. El saldo de Santander pasa de $X a $Y."*
 
-**Lo que tenés que decidir — y es la decisión más delicada de la lista.**
-Cuando Julieta confirma el alquiler de junio **hoy, 3 de septiembre**, ¿con qué fecha se registra?
+**La pregunta correcta no es "¿qué fecha usamos?".** Una versión anterior de este documento la
+planteaba como una política a elegir —vencimiento vs. hoy— y estaba mal planteada: son dos hechos
+distintos, no dos opciones. El vencimiento es del alquiler; la fecha de pago es de Julieta. La app
+tiene que guardar los dos y **preguntarle cuándo pagó**, no adivinarlo con una regla general.
 
-| Opción | Qué significa | Costo |
-|---|---|---|
-| **Con la fecha real (23/06)** | El gasto queda en junio, donde ocurrió. Los informes de junio se corrigen. | El saldo y los totales de **meses ya cerrados cambian**. Si Julieta ya miró junio, junio ahora dice otra cosa. |
-| **Con la fecha de hoy (03/09)** | Nada del pasado se mueve. | Septiembre queda con tres alquileres y junio sigue mintiendo. Los informes quedan mal para siempre. |
-| **Que elija ella, por grupo** | Control total. | Una decisión más que tomar, en un momento en el que ya está incómoda. |
+| Lo que realmente pasó | Qué tiene que hacer Grana |
+|---|---|
+| Pagó el 23/06 y recién lo carga en septiembre | Registrar el pago el **23/06**. Junio se corrige, y está bien que se corrija. |
+| Vencía el 23/06 pero pagó recién el 03/09 | Registrar el pago el **03/09**, dejando asentado que corresponde al vencimiento de junio. |
+| Vencía el 23/09 y pagó el 03/09 | Registrar el pago el **03/09**. El próximo vencimiento sigue siendo el 23/10. |
+| Ya lo había cargado como movimiento suelto | **Vincularlo**, sin crear otro gasto. |
+| Todavía no lo pagó | Queda pendiente. No descuenta plata. |
 
-Mi recomendación es **fecha real**, porque el propósito del arreglo es que el pasado deje de mentir —
-pero implica aceptar que confirmar algo viejo mueve números viejos, y eso hay que decirlo en pantalla
-antes de aplicar, no después.
+Que septiembre termine con tres alquileres es **correcto** si efectivamente pagó los tres en
+septiembre. Que cambien los números de junio es **correcto** si está agregando un pago que realmente
+hizo en junio. Lo incorrecto es que la app decida por ella.
+
+**Consecuencia sobre el lenguaje, y no es cosmética:** tres recurrencias sin confirmar **no** son
+tres alquileres impagos. Pueden ser tres pagos que hizo y no registró. La app sabe que le falta
+información; no sabe que Julieta debe esa plata. Por eso el grupo tiene que decir **"3 pagos por
+revisar"**, no "3 pagos pendientes" ni "debés $1.350.000".
+
+**Lo que sí tenés que decidir:** cuánto detalle querés poder revisar por fila al ponerte al día
+—sólo fecha, o fecha e importe— y si querés una cuarta salida además de registrar / vincular /
+omitir / dejar pendiente.
 
 ---
 
@@ -299,14 +366,15 @@ pantalla de "próximas" muestra **2**. Tres números distintos para el mismo cam
 
 **Después.** Un solo número, el que dice la pantalla.
 
-**Lo que tenés que decidir.** Julieta carga la cuota 1 de la heladera y la marca como recurrente en
-**12 cuotas**. ¿Esa que acaba de cargar es la cuota 1, o la 0?
+**Ojo con el ejemplo.** Una versión anterior ilustraba esto con "la heladera en 12 cuotas", y estaba
+mal elegido: **las compras en cuotas con tarjeta tienen su propio circuito en Grana** y no pasan por
+recurrencias. El caso real acá es otro: una cuota de colegio de marzo a diciembre, un seguro con 6
+pagos, un préstamo entre particulares.
 
-- **Es la cuota 1** (mi propuesta): la app le va a proponer 11 más. Total: 12. Es lo que cualquiera
-  entiende por "12 cuotas".
-- **Es la 0**: la app le propone 12 más. Total: 13.
-
-Parece obvio, pero hoy el código hace lo segundo y nadie lo había mirado.
+**Más que una decisión, es un problema de rótulo.** No hay que elegir entre dos comportamientos
+equivalentes: hay que escribir en la pantalla cuál de los dos es, sin ambigüedad —
+**"12 pagos en total"** o **"12 repeticiones además de esta"**. Hoy el campo dice "12" a secas, el
+código hace lo segundo y la pantalla de próximas muestra un tercer número.
 
 ---
 
@@ -339,13 +407,22 @@ adelante, el horizonte de la app son 7 días.
 
 Para el que implemente. Nada de esto cambia lo de arriba.
 
-- **A** — Reemplazar el índice único `recurrence_instances_one_pending_per_rule` por uno sobre
-  `(recurrence_id, scheduled_date) WHERE status = 'pending'`. El invariante que de verdad importa no
-  es "una pendiente por regla" —eso rompe el calendario— sino "una instancia por ocurrencia".
-  `decideRecurrenceInstance` pierde el parámetro `hasPending` y devuelve una **lista** de fechas,
-  caminando con el `walkOccurrences` que ya existe desde el cursor hasta hoy, con tope
-  `RECURRENCE_MAX_BACKLOG`. Arregla D2, D3 y D9 juntos: con el backlog materializado, el "Próximo"
-  del calendario y lo que el motor va a hacer vuelven a coincidir solos.
+- **A** — El invariante que importa no es "una pendiente por regla" —eso rompe el calendario— sino
+  "una instancia por ocurrencia". **Un índice parcial sobre `(recurrence_id, scheduled_date) WHERE
+  status = 'pending'` NO alcanza**, y una versión anterior de este documento lo proponía como si sí:
+  al confirmarse, la fila sale del índice parcial y deja de estar protegida, con lo que la misma
+  ocurrencia puede volver a generarse. Y como `confirm` además **pisa** `scheduled_date` (D14), la
+  fecha ni siquiera sirve como identidad. Hace falta una identidad de ocurrencia estable, derivada
+  del calendario y no de lo que el usuario elija al pagar, protegida en **todos** los estados.
+  Recién sobre esa base, `decideRecurrenceInstance` pierde el parámetro `hasPending` y devuelve una
+  **lista** de fechas caminando con el `walkOccurrences` que ya existe. Además hay que separar el
+  avance de la generación de la resolución de un pago (D13), y adaptar consultas y tipos que hoy
+  asumen **una** pendiente por regla (`getPendingInstancesByRecurrenceId` devuelve un
+  `Map<string, RecurrenceInstance>`, uno solo por regla; `RecurrenceSummary.pending_instance` es
+  singular) — si no, parte del atraso queda invisible aunque exista en la base.
+  **Dependencia cruzada con #104:** su plan de arreglo se apoya explícitamente en que el índice
+  `one_pending_per_rule` exista (pasa la instancia a `skipped` en vez de `pending` para no chocar con
+  él). Los dos changes tocan la misma restricción y hay que ordenarlos, no correrlos en paralelo.
 - **B** — Acción de resolución en lote sobre el grupo, con preview del delta de saldo por cuenta.
 - **C** — Materializar la próxima ocurrencia bajo demanda y abrir el drawer de confirmación que ya
   existe. El cursor avanza a `scheduled_date`, no a la fecha de pago —`confirmRecurrenceInstance` ya
@@ -371,8 +448,10 @@ tarjeta: la mitad de los gastos fijos de cualquiera.
 `adjustment: none | percentage | index | usd_linked` + `adjustment_period`. Un alquiler que ajusta
 cada 3 meses por ICL o IPC, una cuota que sube 8% por trimestre, un servicio en USD. Hoy hay que
 editar la regla a mano cada vez, y si te olvidás, la proyección del dashboard queda vieja y sigue
-mostrando el número del año pasado con cara de certeza. Ninguna app internacional resuelve esto
-porque en sus mercados no hace falta.
+mostrando el número del año pasado con cara de certeza. No encontré esta función en la documentación
+de las apps que revisé, lo cual es esperable —en sus mercados el problema no existe con esta
+intensidad—, pero no revisé el mercado entero: tomalo como una oportunidad a validar, no como un
+hecho establecido.
 
 **U3 · Débito automático → auto-confirmación.** `auto_confirm: true` en reglas donde la plata sale
 sí o sí (débito en cuenta, débito en tarjeta). Al llegar la fecha, la instancia se confirma sola y
@@ -458,9 +537,10 @@ y —sin ironía— **Excel y Google Sheets, que siguen siendo el competidor má
 | **Grana propuesto** | Propuesta + confirmación | Sí, acotado | Sí ("Registrar ahora") | Dashboard + badge + push | Sí (U2) |
 | **Mobills** | Cuenta fija con estado (pendiente/pagado) | Sí, se apilan | **Sí** — marcar como pagado | Push + mail de vencimiento | No |
 | **YNAB** | Transacción programada, **auto-postea** | Sí, entran todas y quedan sin aprobar | **Sí** — "Enter Now" | En el registro | No |
-| **Money Manager / Monefy** | Auto-inserción al llegar la fecha | Sí, se insertan solas | Parcial | Notificación local | No |
+| **Money Manager** (Realbyte) | Registros repetidos, con opción de mostrarlos en su fecha o desde el 1º | Sí | No verificado | Notificación local | No |
+| **Monefy** | Auto-inserción al llegar la fecha | Sí, se insertan solas | No verificado | Notificación local | No |
 | **Wallet (BudgetBakers)** | Plantilla recurrente | Sí | Sí | Push | No |
-| **MP / Ualá / Naranja X** | Débito automático real | N/A — la plata sale | N/A | **Push, lo mejor del mercado** | N/A |
+| **MP / Ualá / Naranja X** | Débito automático real | N/A — lo ejecuta el banco | N/A | Push nativo | N/A |
 | **Excel** | Vos | Vos | Vos | No | Vos, y por eso funciona |
 
 ### Lo que se lee de la tabla
@@ -475,30 +555,47 @@ como pagado", YNAB tiene "Enter Now" — las dos son la misma idea: *el calendar
 dispone, en cualquier momento*. Grana propone y después no te deja disponer hasta que el calendario
 le dé permiso. Esa es la queja del usuario, textual, y es un agujero que ninguna competidora tiene.
 
-**En avisos perdemos contra las billeteras y no hay vuelta.** MP y Ualá te pushean. Mobills manda
-mail. Grana tiene un bloque plegado en una ruta que no es la landing. Esto es X1+X3+D-3.
+**En avisos perdemos, aunque la comparación no es del todo pareja.** MP y Ualá pushean, Mobills manda
+mail; Grana tiene un bloque plegado en una ruta que no es la landing. La salvedad: una billetera
+avisa de un débito **que ella misma ejecutó** —tiene el hecho—, mientras Grana avisaría de un
+vencimiento previsto. Es información distinta, y la de Grana necesita que el usuario confirme. Aun
+con esa salvedad, la brecha en avisos es real. Esto es X1+X3+D-3.
 
-**En inflación no hay competencia — el campo está vacío.** Ninguna app internacional ajusta montos
-por índice, porque en sus mercados no hace falta. Un alquiler que se ajusta solo por ICL, o una regla
+**En inflación puede haber una oportunidad, y es una hipótesis a validar, no una conclusión.** No
+encontré ajuste por índice en la documentación que revisé. Un alquiler que se ajusta solo por ICL, o una regla
 en USD que proyecta a la cotización de hoy, es una feature que **sólo tiene sentido acá** y que
 ninguna de las apps de la tabla ofrece. Si Grana quiere un diferencial real frente a Mobills, U2 es
 ese diferencial, no una pantalla más linda.
 
 **Y donde ya ganamos, conviene no perderlo:** bimoneda de verdad, gasto compartido con hogar,
 resúmenes de tarjeta reales con período y vencimiento, y detección de patrones para sugerir
-recurrencias. Nada de la tabla hace esas cuatro cosas bien para Argentina.
+recurrencias. No encontré ese conjunto reunido en ninguna de las apps que miré — con el alcance que
+eso tiene: revisé documentación de producto, no las apps en uso.
 
 ---
 
 ## Recomendación de orden
 
+**Tanda 0 — los cimientos** (sin esto, la Tanda 1 fabrica duplicados)
+Identidad estable de ocurrencia · vencimiento previsto y fecha de pago como campos separados (D14) ·
+separar el avance de la generación de la resolución de un pago (D13). Va primero porque todo lo
+demás se apoya acá, no porque sea prolijo.
+
 **Tanda 1 — parar la hemorragia** (arregla los tres síntomas reportados y #96)
-`A` invariante por (regla, fecha) · `B` ponerse al día · `C` registrar ahora · `D-1` generar en el
-layout y en el feed nativo · `X1` pendiente en el dashboard · `X2` plegado invertido
+`A` backlog · `B` ponerse al día · `C` registrar ahora · `U4` vincular un movimiento ya cargado ·
+`E` contar bien los pagos · `D-1` generar en el layout y en el feed nativo · `X1` pendiente en el
+dashboard · `X2` plegado invertido
+
+`U4` y `E` subieron acá desde la Tanda 2: sin poder vincular lo ya cargado, ponerse al día empuja al
+usuario a duplicar gastos; y sin contar bien, el pago anticipado descuadra el total de una regla con
+límite. Los dos sostienen la Tanda 1, no la adornan.
+
+**Tanda 1b — independiente, no espera a nada**
+`D15` el doble conteo del dashboard · `#104` deshacer una confirmación
 
 **Tanda 2 — que el dato deje de mentir**
-`E` `max_occurrences` · `F` pausada · `G` ventana de próximas · `X4` decir qué va a pasar ·
-`X5` avisar cuando algo está trabado · `U4` vincular movimiento existente
+`F` pausada · `G` ventana de próximas · `X4` decir qué va a pasar ·
+`X5` avisar cuando algo está trabado
 
 **Tanda 3 — que la app trabaje sola**
 `D-3` `pg_cron` · `U3` auto-confirmación · `U5` recordatorios · `X3` badge
@@ -513,18 +610,29 @@ layout y en el feed nativo · `X1` pendiente en el dashboard · `X2` plegado inv
 Ambas se resolvieron el 3 de septiembre y quedan acá para que el change que las implemente no las
 vuelva a discutir.
 
-**1 · El invariante se relaja: de "una pendiente por regla" a "una por (regla, fecha)".**
-Con backlog acotado a 12 ocurrencias y el excedente colapsado en una fila agrupada. Esto **modifica**
-la requirement "El sistema genera instancias recurrentes de forma secuencial" del spec de
-`transactions` —en particular el escenario "Usuario vuelve después de varios meses"—, así que el
-change tiene que escribirla como `## MODIFIED Requirements`, no agregar una nueva al lado.
+**1 · El invariante se relaja: una regla puede tener varias ocurrencias sin resolver a la vez.**
+Esto **modifica** la requirement "El sistema genera instancias recurrentes de forma secuencial" del
+spec de `transactions` —en particular el escenario "Usuario vuelve después de varios meses"—, así que
+el change tiene que escribirla como `## MODIFIED Requirements`, no agregar una nueva al lado.
 
-**2 · El pasado no se reconstruye: se marca.**
-Los meses cerrados afectados quedan señalados como incompletos ("faltan datos de recurrencias en este
-período") en vez de re-proyectarse. Re-proyectar usaría los montos de hoy, perdería las reglas
-retiradas e inventaría las creadas después: sería fabricar un pasado que no ocurrió. Materializar el
-backlog viejo con fechas reales sí repararía el dato, pero mueve saldos y agregados de meses ya
-cerrados, y eso hay que quererlo a propósito.
+Lo que **no** queda decidido acá, y una versión anterior de este documento daba por cerrado: el
+número 12 (ver el arreglo A — es tamaño de tanda y de presentación, no alcance del modelo) y **cómo
+se identifica una ocurrencia**. `(regla, fecha_programada)` NO alcanza: ver D13 y D14. Esa es la
+primera tarea del change, no un detalle de implementación.
+
+**2 · El pasado no se re-proyecta: se marca como incompleto y se deja completar con datos reales.**
+Re-proyectar automáticamente usaría los montos de hoy, perdería las reglas retiradas e inventaría las
+creadas después: sería fabricar un pasado que no ocurrió. Eso queda descartado.
+
+Lo que **no** queda descartado —y una versión anterior de este documento lo mezclaba— es que Julieta
+complete el pasado con pagos que realmente hizo. El aviso correcto es *"estos meses tienen
+información incompleta, podés registrar los pagos que falten"*, no un cartel de sólo lectura.
+
+Una precisión contable que la versión anterior tenía mal: **crear una instancia pendiente no mueve
+ningún saldo.** El saldo se mueve cuando se crea un movimiento confirmado. Lo que una pendiente sí
+cambia es la vista de compromisos — y para meses cerrados el cambio es real, porque bajo el lente
+`snapshot` el total cuenta las instancias materializadas `pending` **y** `confirmed`. Son dos efectos
+distintos y conviene no confundirlos al comunicarlo.
 
 ---
 
