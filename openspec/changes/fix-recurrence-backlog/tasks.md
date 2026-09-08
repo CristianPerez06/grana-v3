@@ -10,14 +10,15 @@ Ver "Modelo persistente" en `design.md`. Son **dos migraciones con un despliegue
 (decisión 17): la expansión es aditiva y no cambia el comportamiento; la activación —tarea 2.8— es la
 que habilita el backlog.
 
-- [x] 1.1 Migración: agregar `recurrence_instances.due_date` (DATE NOT NULL) y poblarla derivando el
-      vencimiento del cronograma de cada regla. Para instancias ya confirmadas cuyo `scheduled_date`
-      fue pisado al confirmar, el vencimiento original no es recuperable: se deriva del cronograma y
-      se acepta la aproximación (afecta historial, no montos).
-- [x] 1.2 **Política de colisiones** (decisión 18): derivar, detectar duplicados de
-      `(recurrence_id, due_date)` y, si hay alguno, **abortar la transacción** con un informe de la
-      regla, las instancias en conflicto y el `due_date` derivado. Nunca adivinar. Recién en una
-      corrida limpia, agregar `UNIQUE (recurrence_id, due_date)` **sin** cláusula `WHERE`.
+- [x] 1.1 Migración: agregar `recurrence_instances.due_date` (**nullable**) y `due_date_is_unknown`.
+      `pending` y `skipped` conservan un vencimiento exacto; las `confirmed` históricas quedan en
+      `NULL` + marca, porque su vencimiento es irrecuperable y una fecha dudosa ocuparía la identidad
+      del vencimiento verdadero (decisión 23).
+- [x] 1.2 **Política de colisiones** (decisión 18): detectar duplicados de `(recurrence_id, due_date)`
+      **solo entre vencimientos exactos** —las desconocidas tienen `NULL` y no compiten por ninguna
+      identidad— y, si hay alguno, **abortar la transacción** con un informe de la regla, las
+      instancias en conflicto y el `due_date` derivado. Nunca adivinar. Recién en una corrida limpia,
+      agregar el índice **parcial** `UNIQUE (recurrence_id, due_date) WHERE due_date IS NOT NULL`.
 - [x] 1.2b Crear `recurrence_schedule_versions` con una versión por regla, marcada
       **`is_assumed = true`** y con **`effective_from = reconstruct_from`, no `start_date`**: la marca
       sola no cambia el cálculo, y anclar en `start_date` proyectaría la frecuencia actual sobre un
@@ -41,8 +42,12 @@ que habilita el backlog.
       insertar, agregan una versión vigente desde hoy al cambiar el cronograma, y abren/cierran el
       intervalo al pausar/reanudar. Sin esto el backfill solo cubre lo preexistente y las reglas más
       nuevas quedan sin versión. **La base es el dueño único**: el código nuevo no debe escribir esas
-      tablas. Y un `BEFORE INSERT` que deriva `reconstruct_from`, sin el cual la expansión rompía el
-      alta de recurrencias (`NOT NULL` sin default).
+      tablas — y no puede: quedan **sin políticas de escritura**, así que son de solo lectura para
+      `authenticated` y los triggers son `SECURITY DEFINER` con `search_path` cerrado. Al editar el
+      cronograma se **reemplazan las versiones futuras** aún no vigentes y la nueva rige desde
+      `GREATEST(hoy, start_date)`: sin eso, una regla que empieza en el futuro y se edita antes de
+      arrancar resucita su cronograma viejo el día de inicio. Incluye el `BEFORE INSERT` que deriva
+      `reconstruct_from`, sin el cual la expansión rompía el alta de recurrencias.
 - [x] 1.2e Instalar el **trigger de compatibilidad** para clientes nativos viejos (decisión 17):
       `BEFORE INSERT OR UPDATE` que deriva `due_date` de `scheduled_date` y pone
       `resolution_kind = 'created'` al confirmar, cuando no vienen provistos.
@@ -148,8 +153,8 @@ que habilita el backlog.
       deuda. Actualizar `es.json` y `en.json`.
 - [ ] 2.8 **Migración B · activación**, en archivo aparte
       (`00XY_recurrence_backlog_activate.sql`), y solo con los reads del paso 2.2 ya desplegados en
-      web y nativo: agregar las constraints de `resolution_kind` y `linked_conversion`, y eliminar
-      `recurrence_instances_one_pending_per_rule`. Desde acá existe el backlog.
+      web y nativo: eliminar `recurrence_instances_one_pending_per_rule`. Desde acá existe el
+      backlog. Las constraints de `resolution_kind` ya entraron en la expansión (tarea 1.4b).
 - [ ] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo
       nunca ejecuta el generador nuevo, así que su atraso no se materializa y el #96 sigue vivo para
       él. Hace falta **una de dos**: gate de versión mínima al arrancar la app nativa, o generación

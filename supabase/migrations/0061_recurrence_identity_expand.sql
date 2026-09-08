@@ -255,6 +255,8 @@ alter table public.recurrences
 create or replace function public.recurrence_reconstruct_from_default()
 returns trigger
 language plpgsql
+security definer
+set search_path = public, pg_temp
 as $$
 begin
   if NEW.reconstruct_from is null then
@@ -349,18 +351,10 @@ create policy "users select own recurrence_schedule_versions"
   on public.recurrence_schedule_versions for SELECT
   using (user_id = auth.uid());
 
-create policy "users insert own recurrence_schedule_versions"
-  on public.recurrence_schedule_versions for INSERT
-  with check (user_id = auth.uid());
-
-create policy "users update own recurrence_schedule_versions"
-  on public.recurrence_schedule_versions for UPDATE
-  using (user_id = auth.uid())
-  with check (user_id = auth.uid());
-
-create policy "users delete own recurrence_schedule_versions"
-  on public.recurrence_schedule_versions for DELETE
-  using (user_id = auth.uid());
+-- SIN políticas de INSERT / UPDATE / DELETE, a propósito: el historial de
+-- cronogramas lo mantiene la base (ver el trigger de la sección 6b). Con
+-- políticas de escritura, "la base es el dueño único" sería solo una convención
+-- que cualquier cliente podría saltarse, duplicando o alterando el historial.
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 6 · recurrence_pauses — los intervalos de pausa
@@ -409,18 +403,8 @@ create policy "users select own recurrence_pauses"
   on public.recurrence_pauses for SELECT
   using (user_id = auth.uid());
 
-create policy "users insert own recurrence_pauses"
-  on public.recurrence_pauses for INSERT
-  with check (user_id = auth.uid());
-
-create policy "users update own recurrence_pauses"
-  on public.recurrence_pauses for UPDATE
-  using (user_id = auth.uid())
-  with check (user_id = auth.uid());
-
-create policy "users delete own recurrence_pauses"
-  on public.recurrence_pauses for DELETE
-  using (user_id = auth.uid());
+-- Sin políticas de escritura, misma razón que en `recurrence_schedule_versions`:
+-- los intervalos de pausa los abre y cierra el trigger, no el cliente.
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 6b · Dual-write: la BASE mantiene el historial nuevo durante la transición
@@ -443,9 +427,15 @@ create policy "users delete own recurrence_pauses"
 -- atómico con la escritura de la regla, sin depender de que cada cliente se
 -- acuerde.
 
+-- SECURITY DEFINER con `search_path` cerrado: las tablas son de SOLO LECTURA
+-- para `authenticated` (ver más abajo), así que el trigger necesita escribir por
+-- encima de RLS. Es lo que convierte "la base es el dueño" de convención en
+-- garantía: la app no puede duplicar ni alterar el historial aunque quiera.
 create or replace function public.recurrence_sync_schedule_and_pauses()
 returns trigger
 language plpgsql
+security definer
+set search_path = public, pg_temp
 as $$
 declare
   hoy date := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
@@ -469,15 +459,30 @@ begin
     return NEW;
   end if;
 
-  -- Cambio de cronograma ⇒ versión nueva vigente desde hoy. No reinterpreta el
-  -- pasado: las ocurrencias anteriores siguen leyéndose con la versión previa.
+  -- Cambio de cronograma ⇒ versión nueva. No reinterpreta el pasado: las
+  -- ocurrencias anteriores siguen leyéndose con la versión previa.
   if NEW.interval_count is distinct from OLD.interval_count
      or NEW.interval_unit is distinct from OLD.interval_unit
      or NEW.start_date    is distinct from OLD.start_date then
+
+    -- Las versiones que TODAVÍA NO ENTRARON EN VIGENCIA se reemplazan, no se
+    -- conservan. Sin esto, una regla que empieza en el futuro y se edita antes
+    -- de arrancar resucita su cronograma viejo el día de inicio:
+    --
+    --   8/9  se crea con start 1/10  ⇒ versión con effective_from = 1/10
+    --   8/9  se edita la frecuencia  ⇒ versión con effective_from = 8/9
+    --   1/10 llega                   ⇒ la del 1/10 vuelve a ser la más reciente
+    --                                   y restaura el cronograma anterior.
+    delete from public.recurrence_schedule_versions
+     where recurrence_id = NEW.id and effective_from > hoy;
+
+    -- Vigencia: hoy, o el inicio si la regla todavía no arrancó. Una versión no
+    -- puede regir antes de que la regla exista.
     insert into public.recurrence_schedule_versions
       (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)
     values
-      (NEW.id, NEW.user_id, hoy, NEW.interval_count, NEW.interval_unit, NEW.start_date, false)
+      (NEW.id, NEW.user_id, greatest(hoy, NEW.start_date),
+       NEW.interval_count, NEW.interval_unit, NEW.start_date, false)
     on conflict (recurrence_id, effective_from) do update
       set interval_count = excluded.interval_count,
           interval_unit  = excluded.interval_unit,

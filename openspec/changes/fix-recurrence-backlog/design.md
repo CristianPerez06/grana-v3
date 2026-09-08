@@ -710,24 +710,32 @@ Tres cosas concretas que "por tandas" no define:
 **Dos migraciones con un despliegue en el medio** (decisión 17). Cada una corre en su propia
 transacción; no hay una sola transacción que abarque las dos.
 
-### A · Expansión — `00XX_recurrence_identity_expand.sql`
+### A · Expansión — `0061_recurrence_identity_expand.sql`
 
 Aditiva. Al terminar, **el comportamiento de la app es idéntico**: el índice de pendiente única sigue
 vivo y nada genera backlog todavía.
 
-1. Agregar `due_date` y poblarlo derivándolo del cronograma de cada regla.
-2. **Detectar colisiones** de `due_date` derivado (decisión 18). Si hay alguna, **abortar** emitiendo
-   el informe; el resto de la migración no corre.
-3. Agregar `UNIQUE (recurrence_id, due_date)`, sin cláusula `WHERE`.
-4. Agregar `resolution_kind` (nullable, **sin constraint todavía**) y `linked_conversion`. Poblar
-   `resolution_kind = 'created'` en las confirmadas: hasta hoy la única forma de resolver con
-   movimiento era creándolo.
-5. Agregar `recurrences.reconstruct_from` y poblarlo con la política conservadora de la decisión 21
-   (`COALESCE(last_generated_date, start_date)` en activas; la fecha de la migración en pausadas).
-6. Crear `recurrence_schedule_versions` con una versión por regla, marcada `is_assumed = true`.
-7. Crear `recurrence_pauses` con una fila abierta por cada regla hoy pausada.
-8. Instalar el **trigger de compatibilidad** para clientes viejos (decisión 17): deriva `due_date` de
-   `scheduled_date` y pone `resolution_kind = 'created'` al confirmar, cuando no vienen provistos.
+1. Agregar `due_date` (**nullable**) y `due_date_is_unknown`. `pending` y `skipped` conservan un
+   vencimiento exacto; las `confirmed` históricas quedan en `NULL` + marca (decisión 23).
+2. **Detectar colisiones solo entre vencimientos exactos** (decisión 18). Si hay alguna, **abortar**
+   emitiendo el informe; el resto de la migración no corre.
+3. Índice **parcial** `UNIQUE (recurrence_id, due_date) WHERE due_date IS NOT NULL`, y `CHECK` que
+   mantiene `(due_date is null) = due_date_is_unknown`.
+4. Agregar `resolution_kind` y `linked_conversion`. Poblar `resolution_kind = 'created'` en las
+   confirmadas: hasta hoy la única forma de resolver con movimiento era creándolo.
+5. Agregar `recurrences.reconstruct_from` con la política de la decisión 21 —`last_generated_date` en
+   activas con cursor, **`start_date - 1`** en activas sin cursor, fecha de la migración en pausadas—
+   más el trigger que lo deriva en `INSERT`, sin el cual la columna `NOT NULL` rompería el alta.
+6. Crear `recurrence_schedule_versions` (versión por regla, `effective_from = reconstruct_from`
+   salvo sin cursor, donde es `start_date`; `is_assumed = true`) y `recurrence_pauses` (una fila
+   abierta por regla pausada). Ambas con FK compuesta `(recurrence_id, user_id)` y **sin políticas de
+   escritura**: son de solo lectura para el cliente.
+7. Instalar los triggers: **dual-write** que mantiene las dos tablas nuevas al crear, editar el
+   cronograma y pausar/reanudar (`SECURITY DEFINER`, porque las tablas son de solo lectura), y
+   **compatibilidad** para clientes viejos, que deriva `due_date` en `INSERT` y completa
+   `resolution_kind` al confirmar, además de imponer la **inmutabilidad de la identidad**.
+8. Constraints de `resolution_kind` y `linked_conversion`, **después** del trigger: éste completa el
+   campo antes de que el `CHECK` se evalúe, así que no hay incompatibilidad con clientes viejos.
 
 `scheduled_date` y `last_generated_date` se siguen escribiendo. Nada se elimina acá.
 
