@@ -57,10 +57,10 @@ describe('occurrenceOrdinal', () => {
 })
 
 describe('a cursor off the schedule keeps the behaviour it has today', () => {
-  // Only day/week rules can drift: `addInterval` advances them by plain days, so
-  // a cursor left off-schedule by an edit keeps its own phase. Month and year
-  // rules re-anchor the day-of-month to `start_date` on every step, so their
-  // next date always lands back on the calendar.
+  // ANY unit can drift. `addInterval` resumes the cadence from the cursor, and
+  // `anchorDate` only restores the DAY OF MONTH — not the phase of months or
+  // years. The one combination that cannot drift is month with
+  // `interval_count = 1`, because every month is on its schedule.
   const everyThreeDays = (cap: number | null, cursor: string): RuleForProjection => ({
     id: 'r',
     start_date: '2026-05-01',
@@ -71,14 +71,65 @@ describe('a cursor off the schedule keeps the behaviour it has today', () => {
     last_generated_date: cursor,
   })
 
-  it('a month rule re-anchors, so its next date is always on the schedule', () => {
-    // start 2026-05-01, cursor 2026-06-10 ⇒ next is 2026-07-01, not 2026-07-10.
+  it('a month rule with interval_count 1 re-anchors, so it cannot drift', () => {
+    // start 2026-05-01, cursor 2026-06-10 ⇒ next is 2026-07-01, not 2026-07-10:
+    // the day is restored, and every month is on the schedule anyway.
     const decision = decideRecurrenceInstance(
       { ...seededRule(3), last_generated_date: '2026-06-10' },
       FAR_FUTURE,
       false,
     )
     expect(decision).toEqual({ generate: true, scheduled_date: '2026-07-01' })
+  })
+
+  it('REGRESSION: an every-2-months rule drifts even though the day is restored', () => {
+    // Schedule: 2026-01-01, 03-01, 05-01, 07-01… The cursor at 2026-02-10 is off
+    // it, and the next date the generator computes, 2026-04-01, is off it too —
+    // the day of month came back, the phase of months did not.
+    const everyTwoMonths = {
+      start_date: '2026-01-01',
+      end_date: null,
+      interval_count: 2,
+      interval_unit: 'month' as const,
+      max_occurrences: 2,
+      last_generated_date: '2026-02-10',
+    }
+    expect(occurrenceAt(everyTwoMonths, 1)).toBe('2026-03-01')
+    expect(occurrenceOrdinal(everyTwoMonths, '2026-04-01')).toBeNull()
+
+    // No ordinal ⇒ the row count decides, exactly as it does today.
+    expect(decideRecurrenceInstance(everyTwoMonths, FAR_FUTURE, false, 1)).toEqual({
+      generate: true,
+      scheduled_date: '2026-04-01',
+    })
+    expect(decideRecurrenceInstance(everyTwoMonths, FAR_FUTURE, false, 2)).toEqual({
+      generate: false,
+      reason: 'max_occurrences_reached',
+    })
+  })
+
+  it('REGRESSION: a yearly rule whose cursor landed in another month drifts', () => {
+    // Schedule: every 2026-01-01. The cursor at 2026-06-10 puts the next date at
+    // 2027-06-01 — right day, wrong month, so no ordinal.
+    const yearly = {
+      start_date: '2026-01-01',
+      end_date: null,
+      interval_count: 1,
+      interval_unit: 'year' as const,
+      max_occurrences: 3,
+      last_generated_date: '2026-06-10',
+    }
+    expect(occurrenceAt(yearly, 1)).toBe('2027-01-01')
+    expect(occurrenceOrdinal(yearly, '2027-06-01')).toBeNull()
+
+    expect(decideRecurrenceInstance(yearly, FAR_FUTURE, false, 1)).toEqual({
+      generate: true,
+      scheduled_date: '2027-06-01',
+    })
+    expect(decideRecurrenceInstance(yearly, FAR_FUTURE, false, 3)).toEqual({
+      generate: false,
+      reason: 'max_occurrences_reached',
+    })
   })
 
   it('REGRESSION: a day rule off phase is not charged against another occurrence', () => {

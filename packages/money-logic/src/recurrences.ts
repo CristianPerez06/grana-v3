@@ -184,10 +184,15 @@ export function decideRecurrenceInstance(
   //
   //    The ordinal is the single number: it does not depend on what the user
   //    resolved, on what a client wrote, or on rows being deleted. But it only
-  //    exists if `nextDate` is on the schedule, and for a day/week rule it may
-  //    not be: `addInterval` advances those by plain days, so a cursor left off
-  //    the schedule by an edit keeps its own phase forever (month/year rules
-  //    re-anchor their day to `start_date`, so they cannot drift this way).
+  //    exists if `nextDate` is on the schedule, and it may not be. `addInterval`
+  //    resumes the cadence FROM the cursor, so a cursor left off the schedule by
+  //    an edit keeps its own phase. `anchorDate` restores the DAY OF MONTH, not
+  //    the phase of months or years, so this is not a day/week-only problem:
+  //    measured, the only combination that cannot drift is MONTH WITH
+  //    `interval_count = 1`, because every month is on its schedule. Every 2
+  //    months from 2026-01-01 with the cursor at 2026-02-10 gives 2026-04-01,
+  //    while the schedule runs 01-01, 03-01, 05-01 — no ordinal. A yearly rule
+  //    whose cursor landed in another month drifts the same way.
   //
   //    While the phase is unknown the cap CANNOT be read off the calendar —
   //    rounding to the next occurrence would charge this one against a date it
