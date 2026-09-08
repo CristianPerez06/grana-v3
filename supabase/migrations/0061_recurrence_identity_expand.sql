@@ -247,6 +247,33 @@ update public.recurrences r
 alter table public.recurrences
   alter column reconstruct_from set not null;
 
+-- Sin esto la expansión ROMPE el alta de recurrencias: la columna es NOT NULL,
+-- una DEFAULT no puede referirse a otra columna de la misma fila, y ni el código
+-- actual ni los clientes instalados la escriben. La expansión tiene que preservar
+-- el comportamiento, así que el valor se deriva con el MISMO criterio del
+-- backfill de arriba.
+create or replace function public.recurrence_reconstruct_from_default()
+returns trigger
+language plpgsql
+as $$
+begin
+  if NEW.reconstruct_from is null then
+    NEW.reconstruct_from := case
+      when NEW.status = 'paused'               then (now() at time zone 'America/Argentina/Buenos_Aires')::date
+      when NEW.last_generated_date is not null then NEW.last_generated_date
+      -- Sin cursor la primera ocurrencia cae EN start_date, y el contrato genera
+      -- estrictamente después del piso.
+      else NEW.start_date - 1
+    end;
+  end if;
+  return NEW;
+end $$;
+
+create trigger trg_recurrence_reconstruct_from_default
+  before insert on public.recurrences
+  for each row
+  execute function public.recurrence_reconstruct_from_default();
+
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 5 · recurrence_schedule_versions — el cronograma a lo largo del tiempo
 -- ═══════════════════════════════════════════════════════════════════════════
