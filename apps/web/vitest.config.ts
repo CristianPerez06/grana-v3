@@ -22,6 +22,11 @@ export default defineConfig({
       '@grana/validation': path.resolve(__dirname, '../../packages/validation/src/index.ts'),
       '@grana/money-logic': path.resolve(__dirname, '../../packages/money-logic/src/index.ts'),
       '@grana/ui-contracts': path.resolve(__dirname, '../../packages/ui-contracts/src/index.ts'),
+      '@grana/recurrences': path.resolve(__dirname, '../../packages/recurrences/src/index.ts'),
+      '@grana/transactions-mutations': path.resolve(
+        __dirname,
+        '../../packages/transactions-mutations/src/index.ts',
+      ),
     },
   },
 })

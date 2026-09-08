@@ -414,7 +414,10 @@ export async function confirmRecurrenceInstance(
       confirmed_transaction_id: transactionId,
       resolved_at: new Date().toISOString(),
       amount: effective.amount,
-      scheduled_date: effective.scheduled_date,
+      // `scheduled_date` NO se escribe. Antes se pisaba con la fecha que el
+      // usuario elegía al confirmar, y con eso la ocurrencia perdía su
+      // vencimiento: la fecha de pago vive en el movimiento (`transactions.date`)
+      // y el vencimiento en `due_date`, que es inmutable. Son datos distintos.
       // La cuenta con la que REALMENTE se confirmó, no la de la regla: el
       // historial de instancias tiene que coincidir con el movimiento creado.
       account_id: effective.account_id,
@@ -437,16 +440,20 @@ export async function confirmRecurrenceInstance(
     }
   }
 
-  // D6: si el usuario cambió el monto al confirmar, propagá a la regla.
-  // last_generated_date usa el scheduled_date ORIGINAL (no la override), para
-  // que la siguiente generación mantenga el ritmo de la regla.
-  const ruleUpdates: { last_generated_date: string; amount?: number } = {
-    last_generated_date: instance.scheduled_date,
-  }
-  if (payload.amount !== undefined && payload.amount !== Number(rule.amount)) {
-    ruleUpdates.amount = payload.amount
-  }
-  await supabase.from('recurrences').update(ruleUpdates).eq('id', rule.id)
+  // El importe que el usuario ajusta al resolver vale SOLO para esta ocurrencia
+  // y NO reescribe el de la regla. Antes lo propagaba (la vieja D6), y con una
+  // sola pendiente por vez pasaba por conveniente; con resolución en bloque es
+  // incorrecto: resolver junio, julio y agosto con importes distintos dejaría la
+  // regla con el que se haya guardado último — un resultado que depende del
+  // ORDEN DE EJECUCIÓN. Actualizar la regla es una acción explícita y aparte
+  // ("Usar este importe de acá en más"), aplicada una sola vez.
+  //
+  // `last_generated_date` se sigue escribiendo por ahora (tarea 1.5): sacarlo
+  // depende de la auditoría de fase contra producción.
+  await supabase
+    .from('recurrences')
+    .update({ last_generated_date: instance.scheduled_date })
+    .eq('id', rule.id)
 
   return { ok: true, transactionId }
 }

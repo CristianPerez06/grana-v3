@@ -54,7 +54,7 @@ que habilita el backlog.
 - [x] 1.3 **NO** eliminar todavía `recurrence_instances_one_pending_per_rule`: va al final (tarea
       2.8), con todos los reads ya aceptando colecciones. Sacarlo antes dejaría a la base acumulando
       backlog mientras la app sigue mostrando una sola ocurrencia — invisible, y peor que hoy.
-- [ ] 1.4 `confirmRecurrenceInstance` deja de escribir `scheduled_date`. `due_date` es inmutable; la
+- [x] 1.4 `confirmRecurrenceInstance` deja de escribir `scheduled_date`. `due_date` es inmutable; la
       fecha de pago vive en `transactions.date`, la de carga en `transactions.created_at` y la de
       resolución en `resolved_at`. `scheduled_date` queda como **columna legada de compatibilidad**,
       no como alias: un cliente viejo la pisa con la fecha de pago al confirmar, y en las históricas
@@ -75,7 +75,7 @@ que habilita el backlog.
       exacta→igual, desconocida→desconocida, desconocida→exacta (una vez). El flag se deriva en el
       trigger. Tests: mover una exacta rechaza · convertirla en desconocida rechaza · corregir una
       desconocida funciona y no se puede repetir · un cliente viejo confirma sin tocar `due_date`.
-- [ ] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
+- [x] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
       (`mutations.ts:446`): con resolución en bloque el resultado dependería del orden.
 - [ ] 1.5 Quitar de `confirmRecurrenceInstance` y `skipRecurrenceInstance` la escritura de
       `last_generated_date` (`mutations.ts:443` y `:500`). Conservar la columna durante la
