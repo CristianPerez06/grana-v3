@@ -79,12 +79,15 @@ describe('decideRecurrenceInstance — custom interval', () => {
     expect(decision).toEqual({ generate: true, scheduled_date: '2026-02-28' })
   })
 
+  // The cap is an ordinal on the calendar, not a row count. `customRule` starts
+  // 2026-05-01 every 3 months and its seed already covers start_date (the 1st
+  // occurrence), so the cursor at 2026-05-01 makes the next one 2026-08-01 —
+  // the 2nd.
   it('stops generating once max_occurrences is reached', () => {
     const decision = decideRecurrenceInstance(
-      customRule({ max_occurrences: 3 }),
+      customRule({ max_occurrences: 1 }),
       '2027-01-01',
       false,
-      3, // already materialized 3 instances
     )
     expect(decision).toEqual({
       generate: false,
@@ -97,9 +100,18 @@ describe('decideRecurrenceInstance — custom interval', () => {
       customRule({ max_occurrences: 5 }),
       '2027-01-01',
       false,
-      4,
     )
-    expect(decision.generate).toBe(true)
+    expect(decision).toEqual({ generate: true, scheduled_date: '2026-08-01' })
+  })
+
+  it('generates the very occurrence that reaches the cap', () => {
+    // The 2nd occurrence with a cap of 2 is the last one, not one too many.
+    const decision = decideRecurrenceInstance(
+      customRule({ max_occurrences: 2 }),
+      '2027-01-01',
+      false,
+    )
+    expect(decision).toEqual({ generate: true, scheduled_date: '2026-08-01' })
   })
 
   it('has_pending takes precedence over max_occurrences', () => {
@@ -107,7 +119,6 @@ describe('decideRecurrenceInstance — custom interval', () => {
       customRule({ max_occurrences: 1 }),
       '2027-01-01',
       true,
-      5,
     )
     expect(decision).toEqual({ generate: false, reason: 'has_pending' })
   })

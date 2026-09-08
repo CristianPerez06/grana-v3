@@ -83,9 +83,17 @@ que habilita el backlog.
 - [ ] 1.6 `decideRecurrenceInstance` pierde el parámetro `hasPending` y pasa a devolver la **lista**
       de ocurrencias faltantes, derivada de `walkOccurrences` y del conjunto de `due_date` ya
       existentes.
-- [ ] 1.7 Unificar `max_occurrences`: el generador cuenta contra el cronograma, no filas de
+- [x] 1.7 Unificar `max_occurrences`: el generador cuenta contra el cronograma, no filas de
       `recurrence_instances`. Test que fija el número único (regla creada desde movimiento con
-      límite 3 ⇒ 3 ocurrencias totales, 2 materializadas, 2 proyectadas).
+      límite 3 ⇒ 3 ocurrencias totales, 2 materializadas, 2 proyectadas). Medida la divergencia
+      antes de tocar nada: con esa regla el generador producía **4** ocurrencias (semilla + 3 filas)
+      y la proyección **3**, y la sobrante —`2026-08-01`— aparecía como pendiente en una fecha que
+      la proyección nunca había anunciado. La causa es que una ocurrencia puede existir sin fila: el
+      movimiento semilla cubre `start_date` y no materializa instancia. El tope pasa a ser el
+      **ordinal de `nextDate` sobre el calendario** (`occurrenceOrdinal`), que no depende de lo
+      resuelto, de lo que escriba un cliente ni de que se borren filas. `decideRecurrenceInstance`
+      pierde el parámetro `materializedCount`, y el generador dejó de traer todas las instancias:
+      ahora pide solo las `pending`, que es lo único para lo que las necesita.
 - [ ] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
       saltea junio, y no mueve el cronograma.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en

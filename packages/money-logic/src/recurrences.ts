@@ -119,27 +119,30 @@ export function decideRecurrenceInstance(
   rule: RuleForDecision,
   today: string,
   hasPending: boolean,
-  // Number of instances already materialized for the rule (any status). Used to
-  // enforce `max_occurrences`. Defaults to 0 for callers that don't track it.
-  materializedCount = 0,
 ): GenerationDecision {
   // 1. Skip if there's already a pending instance for this rule. The DB-level
   //    UNIQUE INDEX recurrence_instances_one_pending_per_rule enforces this
   //    invariant; we also short-circuit it here to avoid useless inserts.
   if (hasPending) return { generate: false, reason: 'has_pending' }
 
-  // 2. Stop once the rule has produced its maximum number of occurrences.
-  if (rule.max_occurrences != null && materializedCount >= rule.max_occurrences) {
-    return { generate: false, reason: 'max_occurrences_reached' }
-  }
-
-  // 3. Compute the next occurrence anchored to start_date so the day-of-month
+  // 2. Compute the next occurrence anchored to start_date so the day-of-month
   //    is preserved across short months (e.g. monthly rule starting on 31
   //    becomes 28/29 in February but goes back to 31 the next month).
   const { count, unit } =
     rule.interval_count != null && rule.interval_unit != null
       ? { count: rule.interval_count, unit: rule.interval_unit }
       : presetToInterval(rule.frequency ?? 'monthly')
+  // The same calendar the projection and the "próximo" walk. `max_occurrences`
+  // is deliberately left out: the cap is applied below, against the ordinal,
+  // and a capped schedule would make the ordinal lookup stop short of the very
+  // date we are asking about.
+  const schedule: OccurrenceSchedule = {
+    start_date: rule.start_date,
+    end_date: rule.end_date,
+    interval_count: count,
+    interval_unit: unit,
+    max_occurrences: null,
+  }
   // First instance of a directly-created rule (no seed transaction): when
   // last_generated_date is null, the first occurrence falls ON start_date — we
   // do NOT add an interval. Rules created from a movement or a suggestion carry
@@ -152,14 +155,36 @@ export function decideRecurrenceInstance(
           anchorDate: rule.start_date,
         })
 
-  // 4. If the next date is still in the future, nothing to do yet.
+  // 3. If the next date is still in the future, nothing to do yet.
   if (nextDate > today) return { generate: false, reason: 'not_due' }
 
-  // 5. If the rule has an end_date and we've moved past it, the rule is
+  // 4. If the rule has an end_date and we've moved past it, the rule is
   //    finished — no more instances generated. Status remains 'active' in DB
   //    (the UI labels it "Finalizada" by comparing today vs end_date).
   if (rule.end_date != null && nextDate > rule.end_date) {
     return { generate: false, reason: 'past_end_date' }
+  }
+
+  // 5. Stop once the rule has produced its maximum number of occurrences. The
+  //    cap is counted ON THE CALENDAR — `nextDate`'s own ordinal from
+  //    `start_date` — and NOT by counting rows in `recurrence_instances`.
+  //
+  //    Counting rows gave the cap a different meaning on every surface, because
+  //    an occurrence can exist without a row: a rule created from a movement is
+  //    seeded by that movement, which covers `start_date` and materializes no
+  //    instance. So with a cap of 3, the row count reached 3 only after three
+  //    MORE occurrences, and the rule produced four in total — while the
+  //    projection and the "próximo", which both walk the calendar, stopped at
+  //    three. The extra one appeared as a pending instance on a date the
+  //    projection had never announced.
+  //
+  //    The ordinal is the single number. It does not depend on what the user
+  //    resolved, on what a client wrote, or on rows being deleted.
+  if (
+    rule.max_occurrences != null &&
+    occurrenceOrdinal(schedule, nextDate) > rule.max_occurrences
+  ) {
+    return { generate: false, reason: 'max_occurrences_reached' }
   }
 
   return { generate: true, scheduled_date: nextDate }
@@ -273,6 +298,18 @@ function occurrenceIndexAt(
     if (n > MAX_WALK_STEPS) break
   }
   return n
+}
+
+// Which occurrence of the schedule `date` is, counting `start_date` as the 1st.
+// A date that is not itself on the schedule takes the ordinal of the next
+// occurrence on or after it.
+//
+// This is what `max_occurrences` counts. Expressing the cap as an ordinal — a
+// property of the calendar alone — is what keeps the generator, the projection
+// and the "próximo" agreeing on how many occurrences a rule has: the number
+// cannot drift with what got materialized, resolved or deleted.
+export function occurrenceOrdinal(schedule: OccurrenceSchedule, date: string): number {
+  return occurrenceIndexAt(schedule, date, 'on-or-after') + 1
 }
 
 // THE calendar walker. Every question about when a rule fires — the next

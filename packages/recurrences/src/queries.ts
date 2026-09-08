@@ -323,20 +323,21 @@ export async function generateDueRecurrenceInstances(
   const typedRules = rules as unknown as RecurrenceRuleForGeneration[]
   const ruleIds = typedRules.map((rule) => rule.id)
 
-  // Fetch every instance (any status) for these rules so we can: (a) skip rules
-  // that already have a pending instance, and (b) enforce `max_occurrences`.
+  // Only the pending ones. `max_occurrences` used to be enforced by counting
+  // every instance row of a rule, which is why this fetched all statuses; the
+  // cap is now an ordinal on the calendar (see decideRecurrenceInstance), so the
+  // rows are needed for one thing only: knowing which rules already have a
+  // pending occurrence.
   const { data: instances } = await supabase
     .from('recurrence_instances')
-    .select('recurrence_id, status')
+    .select('recurrence_id')
     .eq('user_id', userId)
+    .eq('status', 'pending')
     .in('recurrence_id', ruleIds)
 
   const rulesWithPending = new Set<string>()
-  const materializedByRule = new Map<string, number>()
   for (const row of instances ?? []) {
-    const ruleId = row.recurrence_id as string
-    materializedByRule.set(ruleId, (materializedByRule.get(ruleId) ?? 0) + 1)
-    if (row.status === 'pending') rulesWithPending.add(ruleId)
+    rulesWithPending.add(row.recurrence_id as string)
   }
 
   let created = 0
@@ -353,7 +354,6 @@ export async function generateDueRecurrenceInstances(
       },
       today,
       rulesWithPending.has(rule.id),
-      materializedByRule.get(rule.id) ?? 0,
     )
 
     if (!decision.generate) continue
