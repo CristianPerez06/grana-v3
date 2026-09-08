@@ -1105,7 +1105,11 @@ De ahí salen los tres montos y las dos aperturas a la vez, y la identidad se so
 
 El conjunto de movimientos que entra SHALL ser el mismo que el del desglose por categoría de Movimientos —mismo corte temporal, mismas exclusiones (la fila madre de una compra en cuotas y el pago de resumen, que cancela deuda y no es gasto nuevo), misma resolución de la parte propia—, de modo que las dos superficies nunca discrepen sobre **qué** cuenta como gasto del usuario aunque lo agrupen distinto.
 
-**Reintegros recibidos.** Un reintegro SHALL restar del cajón donde efectivamente cayó: acreditado a una cuenta baja "Ya se pagó", acreditado a un resumen baja "Por pagar". Restarlo en otro lado rompería la identidad. Cada cajón SHALL tener **piso en cero**: un reintegro mayor que el gasto de su cajón es un crédito, no un gasto negativo, y un monto negativo bajo el rótulo "ya se pagó" no significa nada.
+**Reintegros recibidos — cuándo y dónde.** Un reintegro SHALL contar en el mes en que **se percibió**, no en el del gasto que devuelve, y SHALL restar del cajón donde efectivamente cayó: acreditado a una cuenta baja "Ya se pagó", acreditado a un resumen baja "Por pagar". Restarlo en otro lado rompería la identidad.
+
+Lo percibido es la base, y es una decisión, no una omisión. La alternativa —que el reintegro siga a su gasto vinculado y baje el mes en que ese gasto ocurrió— es más contable y hace que cada mes muestre lo que "realmente costó", pero **vuelve mutable el pasado**: alguien que miró un mes cerrado y anotó el número lo ve distinto semanas después sin haber cargado nada en ese mes, y esta card se sostiene sobre ser verificable contra las cuentas del usuario. Además separa la lente de gasto de la de caja, donde la plata entró cuando entró — y las dos conviven en la misma pantalla.
+
+La consecuencia asumida es que un reintegro de un gasto de un mes anterior **puede dejar una categoría en crédito**: el mes que lo recibe muestra una devolución sin el gasto que la originó. Eso NO SHALL corregirse moviendo el reintegro de mes; SHALL explicarse donde aparece (ver el requirement del desglose por categoría, que cierra con el neto). Cada cajón SHALL tener **piso en cero**: un reintegro mayor que el gasto de su cajón es un crédito, no un gasto negativo, y un monto negativo bajo el rótulo "ya se pagó" no significa nada.
 
 **Movimiento sin cuenta identificable.** Un movimiento cuya cuenta no se puede resolver SHALL omitirse en lugar de asignarse a un cajón por defecto. Adivinar movería plata entre "ya está saldado" y "todavía lo debés", que es precisamente la distinción que esta card existe para sostener.
 
@@ -1150,6 +1154,12 @@ El texto que invita a abrir NO SHALL repetir el del link del header de la card: 
 
 Lo que el usuario **adelantó por el otro miembro** NO SHALL aparecer en esta card. No es un gasto propio —es un préstamo—, su unidad es la de caja y no la de esta card, ya está reflejado en "Se fué" de la card de saldo, y el neto del hogar vive en la tira "Compartido". Mostrarlo acá agregaría un monto bruto del mes que competiría con el neto histórico de esa tira sin nada que explique la diferencia.
 
+#### Scenario: Un reintegro de un gasto de otro mes cuenta en el mes que se recibió
+
+- **WHEN** un gasto de julio se reintegra en agosto
+- **THEN** julio sigue mostrando el gasto que mostraba, sin cambiar por algo que pasó después
+- **AND** agosto resta el reintegro del cajón donde cayó la plata
+
 #### Scenario: Mes con gasto de caja y de tarjeta
 
 - **WHEN** el usuario gastó en el mes tanto desde sus cuentas como con tarjeta de crédito
@@ -1184,8 +1194,6 @@ Lo que el usuario **adelantó por el otro miembro** NO SHALL aparecer en esta ca
 - **WHEN** el usuario navega a un mes sin gastos
 - **THEN** la card muestra su estado vacío
 - **AND** no se desmonta ni deja un hueco en la grilla
-
----
 
 ### Requirement: La tira de ritmo compara el gasto del mes contra los ingresos del mes
 
