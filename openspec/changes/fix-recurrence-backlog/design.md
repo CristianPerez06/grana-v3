@@ -603,6 +603,22 @@ reserva el lugar de una conocida. Si algún día el usuario corrige el históric
 
 Un `CHECK` mantiene los dos campos en acuerdo: `(due_date is null) = due_date_is_unknown`.
 
+**Y la identidad es inmutable, lo que un `CHECK` no puede garantizar.** Un `CHECK` valida el estado
+final de la fila, no la transición, así que por sí solo deja pasar dos escrituras que rompen el
+contrato: mover una identidad ya establecida (`set due_date = otra fecha`) y borrarla
+(`set due_date = null`), que además devolvería la ocurrencia al pozo de las materializables. El
+trigger compara `OLD` contra `NEW` y admite solo estas transiciones:
+
+| De | A | |
+|---|---|---|
+| exacta | la misma | ✅ |
+| desconocida | sigue desconocida | ✅ |
+| desconocida | exacta | ✅ una sola vez — el usuario corrige el histórico |
+| exacta | otra fecha, o desconocida | ❌ rechazado |
+
+`due_date_is_unknown` se **deriva** en el trigger en vez de declararse, para que una corrección de
+histórico que complete `due_date` no falle por olvidarse de bajar el flag.
+
 **La política de colisiones cambia en consecuencia** (decisión 18): solo se comparan vencimientos
 exactos. Una confirmada desconocida que "coincidía" con un vencimiento exacto no es motivo para
 abortar — pueden ser dos ocurrencias distintas, y esa era justamente la trampa.

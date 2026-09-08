@@ -57,6 +57,11 @@ que habilita el backlog.
       guardada bloquearía el vencimiento verdadero e reproduciría el #96. Índice parcial
       (`WHERE due_date IS NOT NULL`), colisiones solo entre exactas, y `CHECK` que mantiene
       `(due_date is null) = due_date_is_unknown`.
+- [x] 1.4e **Inmutabilidad de la identidad** por trigger: un `CHECK` valida el estado final y no la
+      transición, así que dejaba mover o borrar una identidad exacta por `UPDATE`. Permitidas solo:
+      exacta→igual, desconocida→desconocida, desconocida→exacta (una vez). El flag se deriva en el
+      trigger. Tests: mover una exacta rechaza · convertirla en desconocida rechaza · corregir una
+      desconocida funciona y no se puede repetir · un cliente viejo confirma sin tocar `due_date`.
 - [ ] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
       (`mutations.ts:446`): con resolución en bloque el resultado dependería del orden.
 - [ ] 1.5 Quitar de `confirmRecurrenceInstance` y `skipRecurrenceInstance` la escritura de

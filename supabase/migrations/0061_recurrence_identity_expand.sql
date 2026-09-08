@@ -426,6 +426,36 @@ begin
     NEW.resolution_kind := 'created';
   end if;
 
+  -- ── Inmutabilidad de la identidad ────────────────────────────────────────
+  --
+  -- El CHECK de coherencia valida el ESTADO FINAL de la fila, no la TRANSICIÓN,
+  -- así que por sí solo deja pasar dos escrituras que rompen el contrato:
+  --
+  --   update … set due_date = '2026-09-11' where due_date = '2026-09-10';
+  --   update … set due_date = null, due_date_is_unknown = true;
+  --
+  -- La primera mueve una identidad ya establecida; la segunda la borra, y con
+  -- ella la protección del índice parcial — la misma ocurrencia podría volver a
+  -- materializarse. Las transiciones permitidas son solo estas:
+  --
+  --   exacta      → la misma, sin cambios.
+  --   desconocida → sigue desconocida.
+  --   desconocida → exacta, una sola vez (el usuario corrige el histórico).
+  --   exacta      → otra fecha, o desconocida  ⇒  RECHAZADO.
+  if TG_OP = 'UPDATE' and OLD.due_date is not null
+     and (NEW.due_date is distinct from OLD.due_date) then
+    raise exception
+      'due_date es inmutable: la ocurrencia % ya tiene la identidad %, y se intentó %.',
+      OLD.id, OLD.due_date,
+      case when NEW.due_date is null then 'borrarla'
+           else 'moverla a ' || NEW.due_date end
+      using errcode = '23514';
+  end if;
+
+  -- La marca se deriva, nunca se declara: así una corrección de histórico que
+  -- complete `due_date` no falla por olvidarse de bajar el flag.
+  NEW.due_date_is_unknown := (NEW.due_date is null);
+
   return NEW;
 end $$;
 
