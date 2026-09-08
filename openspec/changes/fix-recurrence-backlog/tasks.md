@@ -94,14 +94,18 @@ que habilita el backlog.
       ni de que se borren filas.
       **Lo que queda abierto:** una fecha fuera del cronograma NO tiene ordinal. `occurrenceOrdinal`
       devuelve `null` en ese caso —antes devolvía el de la próxima fecha válida, que es OTRA
-      ocurrencia, y con eso el tope descartaba un vencimiento que la regla sí tenía—. El desfase
-      **no es exclusivo de día/semana**: `anchorDate` restaura el día del mes, no la fase de meses ni
-      de años. Medido, la única combinación que NO puede desfasarse es **mes con `interval_count = 1`**
-      —todos los meses están en su cronograma—; cada 2 meses desde el `2026-01-01` con cursor
-      `2026-02-10` da `2026-04-01` contra un cronograma `01/01, 01/03, 01/05…`, y una regla anual cuyo
-      cursor cayó en otro mes se desfasa igual. Mientras la fase sea desconocida, esas reglas
-      **conservan el conteo de filas que usan hoy**, así que el cambio no las toca. Regresiones
-      fijadas: cada 3 días con cursor `2026-06-10`, cada 2 meses, y anual desfasada. La auditoría
+      ocurrencia, y con eso el tope descartaba un vencimiento que la regla sí tenía—. **Ninguna forma
+      de regla es inmune**, así que el criterio es la fecha concreta y nunca la unidad ni el
+      intervalo. Dos mecanismos independientes la sacan del cronograma: **(1) la fase** —`anchorDate`
+      restaura el día del mes, no la fase de meses ni de años: cada 2 meses desde el `2026-01-01` con
+      cursor `2026-02-10` da `2026-04-01` contra un cronograma `01/01, 01/03, 01/05…`, y una regla
+      anual cuyo cursor cayó en otro mes se desfasa igual—; y **(2) el inicio movido** —`updateRecurrence`
+      mueve `start_date` sin tocar el cursor, así que el cursor queda ANTES del inicio: con inicio
+      nuevo `2026-06-15` y cursor `2026-01-10` la próxima es `2026-02-15`, anterior a la regla misma.
+      Esto alcanza incluso a una regla mensual o diaria de intervalo 1, que por fase no se desfasarían
+      nunca. Mientras la fase sea desconocida, esas reglas **conservan el conteo de filas que usan
+      hoy**, así que el cambio no las toca. Regresiones fijadas: cada 3 días con cursor `2026-06-10`,
+      cada 2 meses, anual desfasada, y `cursor < start_date` en mes y en día. La auditoría
       (`docs/qa/auditoria-fase-cursor.sql`) devuelve `con_tope_sin_ordinal` —reglas con tope cuya
       próxima fecha de hoy no pertenece al cronograma, **sin filtrar por unidad**—: si da 0, el
       ordinal queda como número único y el fallback se retira del generador; si da ≥1, primero hay que
@@ -139,9 +143,10 @@ que habilita el backlog.
       cursor caiga sobre el cronograma —el caso normal—, y divergen por unos días cuando no.
       Anclar en el calendario es lo correcto (no depende de cuándo se resolvió la última ocurrencia),
       pero hay que confirmar que ninguna regla de producción tenga hoy el cursor fuera de cronograma
-      antes de cambiar la semántica. Documentado en `walk-positioning.test.ts`. **Cualquier unidad
-      puede desfasarse**: `anchorDate` restaura el día del mes, no la fase de meses ni de años; la
-      única excepción medida es mes con `interval_count = 1`. La misma auditoría decide 1.7.
+      antes de cambiar la semántica. Documentado en `walk-positioning.test.ts`. **Ninguna forma de
+      regla es inmune**: `anchorDate` restaura el día del mes, no la fase de meses ni de años, y mover
+      `start_date` sin tocar el cursor lo deja antes del inicio, lo que desfasa hasta una regla
+      mensual o diaria de intervalo 1. La misma auditoría decide 1.7.
 - [x] 1.0 **Sincronizar con `main`** antes de seguir: la branch quedó 12 commits atrás y
       redescubrió un defecto que **#114** ya había arreglado (los tests de `packages/` no corrían;
       ahora `pnpm -r test`). Colisión de migraciones resuelta: `main` ocupó `0061`–`0063`, así que la

@@ -35,14 +35,24 @@
 --   ≥1 ⇒ hay que persistir la fase de esas reglas antes de unificar, o dejar
 --         escrita una compatibilidad explícita para ellas.
 --
--- NO SE FILTRA POR UNIDAD, a propósito. `anchorDate` restaura el DÍA DEL MES,
--- no la fase de meses ni de años, así que el desfase no es exclusivo de día y
--- semana. Medido: la única combinación que no puede desfasarse es **mes con
--- `interval_count = 1`**, porque todos los meses están en su cronograma. Con
--- `count = 2` (inicio 01/01, cursor 10/02 ⇒ próxima 01/04, cronograma 01/01,
--- 01/03, 01/05…) o con cualquier regla anual cuyo cursor cayó en otro mes
--- (inicio 01/01, cursor 10/06 ⇒ próxima 01/06/2027, cronograma cada 01/01),
--- la próxima fecha queda fuera del cronograma igual.
+-- NO SE FILTRA POR UNIDAD NI POR INTERVALO, a propósito: **ninguna combinación
+-- es inmune**, así que no hay atajo que evite comprobar la fecha concreta —que
+-- es justamente lo que hace esta consulta—. Dos mecanismos independientes la
+-- sacan del cronograma:
+--
+--   1. La FASE. `anchorDate` restaura el DÍA DEL MES, no la fase de meses ni de
+--      años. Cada 2 meses desde el 01/01 con cursor 10/02 ⇒ próxima 01/04,
+--      contra un cronograma 01/01, 01/03, 01/05… Una regla anual cuyo cursor
+--      cayó en otro mes (inicio 01/01, cursor 10/06 ⇒ próxima 01/06/2027) se
+--      desfasa igual.
+--
+--   2. El INICIO MOVIDO. `updateRecurrence` permite mover `start_date` sin
+--      tocar el cursor, y entonces el cursor queda ANTES del inicio. Con inicio
+--      nuevo 15/06/2026 y cursor 10/01/2026, la próxima es 02/15 —anterior al
+--      inicio, fuera del cronograma nuevo—. Esto le pasa hasta a una regla
+--      mensual o diaria de intervalo 1, que por fase no se desfasarían nunca.
+--
+-- Por eso el criterio es la fecha, no la forma de la regla.
 --
 -- CÓMO CORRERLA: pegar en el SQL Editor de Supabase. Devuelve dos resultados:
 -- primero el resumen, después el detalle.

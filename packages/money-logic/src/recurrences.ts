@@ -184,15 +184,22 @@ export function decideRecurrenceInstance(
   //
   //    The ordinal is the single number: it does not depend on what the user
   //    resolved, on what a client wrote, or on rows being deleted. But it only
-  //    exists if `nextDate` is on the schedule, and it may not be. `addInterval`
-  //    resumes the cadence FROM the cursor, so a cursor left off the schedule by
-  //    an edit keeps its own phase. `anchorDate` restores the DAY OF MONTH, not
-  //    the phase of months or years, so this is not a day/week-only problem:
-  //    measured, the only combination that cannot drift is MONTH WITH
-  //    `interval_count = 1`, because every month is on its schedule. Every 2
-  //    months from 2026-01-01 with the cursor at 2026-02-10 gives 2026-04-01,
-  //    while the schedule runs 01-01, 03-01, 05-01 — no ordinal. A yearly rule
-  //    whose cursor landed in another month drifts the same way.
+  //    exists if `nextDate` is on the schedule, and it may not be —
+  //    `addInterval` resumes the cadence FROM the cursor, and NO shape of rule
+  //    is immune. Two independent mechanisms take it off:
+  //
+  //      · PHASE. `anchorDate` restores the DAY OF MONTH, not the phase of
+  //        months or years. Every 2 months from 2026-01-01 with the cursor at
+  //        2026-02-10 gives 2026-04-01, against a schedule of 01-01, 03-01,
+  //        05-01. A yearly rule whose cursor landed in another month drifts the
+  //        same way.
+  //      · A MOVED START. `updateRecurrence` moves `start_date` without touching
+  //        the cursor, leaving the cursor BEFORE the start. New start
+  //        2026-06-15 with the cursor at 2026-01-10 gives 2026-02-15 — earlier
+  //        than the rule itself. This hits even a monthly or daily rule of
+  //        interval 1, which phase alone could never drift.
+  //
+  //    So the check is on the date, never on the shape of the rule.
   //
   //    While the phase is unknown the cap CANNOT be read off the calendar —
   //    rounding to the next occurrence would charge this one against a date it

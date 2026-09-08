@@ -57,10 +57,12 @@ describe('occurrenceOrdinal', () => {
 })
 
 describe('a cursor off the schedule keeps the behaviour it has today', () => {
-  // ANY unit can drift. `addInterval` resumes the cadence from the cursor, and
-  // `anchorDate` only restores the DAY OF MONTH — not the phase of months or
-  // years. The one combination that cannot drift is month with
-  // `interval_count = 1`, because every month is on its schedule.
+  // NO shape of rule is immune, so the check is always on the concrete date.
+  // Two independent mechanisms take it off the schedule: the PHASE (`anchorDate`
+  // restores the day of month, not the phase of months or years) and a MOVED
+  // START (`updateRecurrence` moves `start_date` without touching the cursor,
+  // leaving the cursor before the rule begins) — the second reaches even a
+  // monthly or daily rule of interval 1.
   const everyThreeDays = (cap: number | null, cursor: string): RuleForProjection => ({
     id: 'r',
     start_date: '2026-05-01',
@@ -71,9 +73,10 @@ describe('a cursor off the schedule keeps the behaviour it has today', () => {
     last_generated_date: cursor,
   })
 
-  it('a month rule with interval_count 1 re-anchors, so it cannot drift', () => {
+  it('a month rule with interval_count 1 does not drift BY PHASE', () => {
     // start 2026-05-01, cursor 2026-06-10 ⇒ next is 2026-07-01, not 2026-07-10:
-    // the day is restored, and every month is on the schedule anyway.
+    // the day is restored, and every month is on the schedule anyway. This says
+    // nothing about a moved start — see the two cases below.
     const decision = decideRecurrenceInstance(
       { ...seededRule(3), last_generated_date: '2026-06-10' },
       FAR_FUTURE,
@@ -149,6 +152,53 @@ describe('a cursor off the schedule keeps the behaviour it has today', () => {
     })
     // And the row count still stops it where it stops it today.
     expect(decideRecurrenceInstance(rule, FAR_FUTURE, false, 15)).toEqual({
+      generate: false,
+      reason: 'max_occurrences_reached',
+    })
+  })
+
+  it('REGRESSION: a moved start_date leaves the cursor before the rule begins', () => {
+    // `updateRecurrence` moves `start_date` without touching the cursor. Monthly,
+    // interval 1 — the shape that cannot drift by phase — with a start pushed to
+    // 2026-06-15 and the cursor still at 2026-01-10: the next date is
+    // 2026-02-15, EARLIER than the rule's own start, so it is not on the
+    // schedule and has no ordinal.
+    const movedStart = {
+      start_date: '2026-06-15',
+      end_date: null,
+      interval_count: 1,
+      interval_unit: 'month' as const,
+      max_occurrences: 2,
+      last_generated_date: '2026-01-10',
+    }
+    expect(occurrenceAt(movedStart, 0)).toBe('2026-06-15')
+    expect(occurrenceOrdinal(movedStart, '2026-02-15')).toBeNull()
+
+    expect(decideRecurrenceInstance(movedStart, FAR_FUTURE, false, 0)).toEqual({
+      generate: true,
+      scheduled_date: '2026-02-15',
+    })
+    expect(decideRecurrenceInstance(movedStart, FAR_FUTURE, false, 2)).toEqual({
+      generate: false,
+      reason: 'max_occurrences_reached',
+    })
+  })
+
+  it('REGRESSION: a moved start_date reaches a daily rule of interval 1 too', () => {
+    const movedStart = {
+      start_date: '2026-06-15',
+      end_date: null,
+      interval_count: 1,
+      interval_unit: 'day' as const,
+      max_occurrences: 2,
+      last_generated_date: '2026-01-10',
+    }
+    expect(occurrenceOrdinal(movedStart, '2026-01-11')).toBeNull()
+    expect(decideRecurrenceInstance(movedStart, FAR_FUTURE, false, 0)).toEqual({
+      generate: true,
+      scheduled_date: '2026-01-11',
+    })
+    expect(decideRecurrenceInstance(movedStart, FAR_FUTURE, false, 2)).toEqual({
       generate: false,
       reason: 'max_occurrences_reached',
     })
