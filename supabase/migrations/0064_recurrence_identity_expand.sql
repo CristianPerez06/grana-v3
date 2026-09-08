@@ -1,6 +1,6 @@
 -- Recurrencias — expansión del modelo de identidad de ocurrencia.
 --
--- Run AFTER 0060_available_sums_initial_balance.sql.
+-- Run AFTER 0063_household_categories.sql.
 --
 -- Change: openspec/changes/fix-recurrence-backlog/
 --
@@ -13,7 +13,7 @@
 -- per_rule`, así que la app sigue viendo exactamente una ocurrencia pendiente
 -- por regla, igual que hoy.
 --
--- El backlog se habilita en 00XY_recurrence_backlog_activate.sql, DESPUÉS de
+-- El backlog se habilita en 0065_recurrence_backlog_activate.sql, DESPUÉS de
 -- desplegar web y nativo con el modelo nuevo. El orden importa: sacar el índice
 -- antes del despliegue dejaría a la base acumulando atraso mientras la app
 -- sigue mostrando una sola ocurrencia — invisible, y peor que el bug actual.

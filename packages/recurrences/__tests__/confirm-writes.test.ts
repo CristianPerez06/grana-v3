@@ -11,7 +11,7 @@ vi.mock('@grana/transactions-mutations', () => ({
   deleteTransaction: async () => ({ ok: true }),
 }))
 
-const { confirmRecurrenceInstance } = await import('@grana/recurrences')
+const { confirmRecurrenceInstance } = await import('../src/mutations')
 
 /**
  * Qué escribe `confirmRecurrenceInstance`, y sobre todo qué NO escribe. Dos
