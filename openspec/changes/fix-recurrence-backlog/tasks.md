@@ -10,35 +10,35 @@ Ver "Modelo persistente" en `design.md`. Son **dos migraciones con un despliegue
 (decisión 17): la expansión es aditiva y no cambia el comportamiento; la activación —tarea 2.8— es la
 que habilita el backlog.
 
-- [ ] 1.1 Migración: agregar `recurrence_instances.due_date` (DATE NOT NULL) y poblarla derivando el
+- [x] 1.1 Migración: agregar `recurrence_instances.due_date` (DATE NOT NULL) y poblarla derivando el
       vencimiento del cronograma de cada regla. Para instancias ya confirmadas cuyo `scheduled_date`
       fue pisado al confirmar, el vencimiento original no es recuperable: se deriva del cronograma y
       se acepta la aproximación (afecta historial, no montos).
-- [ ] 1.2 **Política de colisiones** (decisión 18): derivar, detectar duplicados de
+- [x] 1.2 **Política de colisiones** (decisión 18): derivar, detectar duplicados de
       `(recurrence_id, due_date)` y, si hay alguno, **abortar la transacción** con un informe de la
       regla, las instancias en conflicto y el `due_date` derivado. Nunca adivinar. Recién en una
       corrida limpia, agregar `UNIQUE (recurrence_id, due_date)` **sin** cláusula `WHERE`.
-- [ ] 1.2b Crear `recurrence_schedule_versions` con una versión por regla, marcada
+- [x] 1.2b Crear `recurrence_schedule_versions` con una versión por regla, marcada
       **`is_assumed = true`**: no sabemos qué cronograma rigió antes (decisión 21).
       `recurrences.interval_*` queda como la versión vigente para la UI y el `CHECK` de 0053.
-- [ ] 1.2c Crear `recurrence_pauses` (`paused_from`, `resumed_at` nullable) con una fila abierta por
+- [x] 1.2c Crear `recurrence_pauses` (`paused_from`, `resumed_at` nullable) con una fila abierta por
       cada regla hoy pausada. El `status = 'paused'` se conserva; el intervalo es lo que impide que
       el período pausado se lea como huecos al reanudar.
-- [ ] 1.2d Agregar `recurrences.reconstruct_from` con la política conservadora (decisión 21):
+- [x] 1.2d Agregar `recurrences.reconstruct_from` con la política conservadora (decisión 21):
       `COALESCE(last_generated_date, start_date)` en activas, **fecha de la migración** en pausadas.
       El generador nunca materializa antes de `GREATEST(reconstruct_from, borde del horizonte)`.
       Consecuencia buscada: ninguna regla existente estrena backlog retroactivo.
-- [ ] 1.2e Instalar el **trigger de compatibilidad** para clientes nativos viejos (decisión 17):
+- [x] 1.2e Instalar el **trigger de compatibilidad** para clientes nativos viejos (decisión 17):
       `BEFORE INSERT OR UPDATE` que deriva `due_date` de `scheduled_date` y pone
       `resolution_kind = 'created'` al confirmar, cuando no vienen provistos.
-- [ ] 1.3 **NO** eliminar todavía `recurrence_instances_one_pending_per_rule`: va al final (tarea
+- [x] 1.3 **NO** eliminar todavía `recurrence_instances_one_pending_per_rule`: va al final (tarea
       2.8), con todos los reads ya aceptando colecciones. Sacarlo antes dejaría a la base acumulando
       backlog mientras la app sigue mostrando una sola ocurrencia — invisible, y peor que hoy.
 - [ ] 1.4 `confirmRecurrenceInstance` deja de escribir `scheduled_date`. `due_date` es inmutable; la
       fecha de pago vive en `transactions.date`, la de carga en `transactions.created_at` y la de
       resolución en `resolved_at`. `scheduled_date` queda como alias de lectura de `due_date` durante
       la transición y **nunca** pasa a ser fecha de pago (una ocurrencia sin resolver no tiene pago).
-- [ ] 1.4b Agregar `resolution_kind` (`created` | `linked`, **nullable y sin constraint todavía**) y
+- [x] 1.4b Agregar `resolution_kind` (`created` | `linked`, **nullable y sin constraint todavía**) y
       `linked_conversion` (boolean). Poblar `resolution_kind = 'created'` en las confirmadas
       existentes. Las constraints van en la activación (2.8): un cliente viejo que confirme no
       escribe `resolution_kind` y las violaría. `skipped` lleva `resolution_kind = NULL`.
