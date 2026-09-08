@@ -171,84 +171,191 @@ mes viejo usaría los montos de hoy, perdería las reglas retiradas e inventarí
 
 ## Parte 2 — Arreglos de funcionalidad
 
-### A · Cambiar el invariante: de "una pendiente por regla" a "una por (regla, fecha)"
+Esta parte está escrita para decidir, no para implementar. Cada arreglo dice **qué pasa hoy**, **qué
+pasaría después**, **qué vas a ver distinto en la pantalla** y, cuando corresponde, **qué tenés que
+decidir vos**. El detalle técnico de cada uno vive al final de la sección, en "Cómo se hace".
 
-Es el arreglo de fondo, y es más chico de lo que parece. El invariante que de verdad importa —el que
-evita duplicados— es que no haya dos instancias para la **misma ocurrencia**. "Una pendiente por
-regla" es una aproximación grosera de eso que además rompe el calendario.
+Para que se entienda, un solo ejemplo que atraviesa todo:
 
-```sql
-drop index recurrence_instances_one_pending_per_rule;
-create unique index recurrence_instances_one_pending_per_rule_date
-  on public.recurrence_instances (recurrence_id, scheduled_date)
-  where status = 'pending';
-```
-
-Y el generador pasa de "preguntar una vez" a "caminar el calendario desde el cursor hasta hoy",
-usando el `walkOccurrences` que ya existe, con un tope de backlog (`RECURRENCE_MAX_BACKLOG`, propongo
-**12**) y `end_date`/`max_occurrences` respetados como siempre. `decideRecurrenceInstance` deja de
-tener el parámetro `hasPending` y pasa a devolver una **lista** de fechas.
-
-Esto arregla D2, D3 y D9 de una sola vez: con el backlog materializado, el "Próximo" del calendario
-y lo que el motor va a hacer vuelven a ser lo mismo, sin código extra.
-
-**Decisión abierta:** qué pasa cuando el backlog supera el tope. Propongo colapsar el excedente en
-una fila agrupada ("12 ocurrencias anteriores sin resolver") con una sola acción, en vez de
-materializar 90 filas de una regla diaria abandonada.
-
-### B · "Ponerse al día" como una acción, no como 30
-
-Con el backlog acumulado hace falta resolverlo en bloque: seleccionar todas / confirmar todas /
-omitir todas, con preview del impacto ("vas a crear 6 gastos por $15.000 total; el saldo de Santander
-queda en $X"). Hoy no existe nada equivalente y es lo que vuelve inservible la recuperación.
-
-### C · "Registrar ahora" — adelantar una ocurrencia (arregla D6)
-
-En el detalle de la regla y en la fila del hub, una acción que **materializa la próxima ocurrencia
-aunque falte** y abre el mismo drawer de confirmación, con la fecha por defecto en hoy y editable.
-
-Un detalle importante de diseño: el **cursor avanza a la fecha programada original, no a hoy**. Si
-la regla vence el 23 y pagás el 3, la siguiente sigue siendo el 23 del mes que viene. El ritmo de la
-regla no se desplaza porque pagaste antes. (La lógica ya existe: `confirmRecurrenceInstance` usa
-`instance.scheduled_date` y no la override para el cursor.)
-
-Es literalmente el "Enter Now" de YNAB y el "marcar como pagado" de Mobills. Es el arreglo con mejor
-relación valor/esfuerzo de toda la lista.
-
-### D · Mover la generación al servidor
-
-Tres opciones, de menos a más:
-
-| | Qué | Arregla | Costo |
-|---|---|---|---|
-| D-1 | Subir el trigger al layout `(app)` (web) y agregarlo al feed nativo | D1 parcial, D5 | Trivial |
-| D-2 | Un RPC `generate_due_recurrence_instances()` que el cliente llama una vez por sesión | D1 parcial, D5 | Bajo |
-| D-3 | `pg_cron` diario + función `SECURITY DEFINER` que corre para todos los usuarios | D1 completo | Medio |
-
-**Recomiendo D-1 ahora (es media hora y tapa el 90% del síntoma) y D-3 después**, porque D-3 es la
-única que hace que el dato sea correcto sin que el usuario tenga que pasar por una puerta — y es
-condición necesaria para cualquier aviso por push o mail, y para que las recurrencias compartidas del
-hogar se materialicen sin depender de qué miembro abrió la app.
-
-### E · Una sola definición de `max_occurrences` (arregla D4)
-
-El generador tiene que preguntarle al calendario cuántas ocurrencias van, no contar filas. Decisión
-de producto a tomar de paso: **¿la semilla cuenta?** Propongo que sí (`max_occurrences = 3` en una
-regla creada desde un movimiento ⇒ el movimiento original más 2 instancias), porque es lo que
-significa "3 cuotas" para cualquiera. Hay que decidirlo y escribirlo en el spec, porque hoy el campo
-no significa nada verificable.
-
-### F · Regla pausada, aviso pausado (arregla D10)
-
-O el pendiente de una regla pausada no aparece en "Por confirmar", o aparece con un sello "Pausada".
-Prefiero lo segundo: esconderlo perdería una instancia que el usuario todavía puede querer resolver.
-
-### G · Ampliar la ventana de "Próximas" (arregla D8)
-
-Bucket 2 pasa de "resto del mes" a **"próximos 30 días"**, o directamente a un tercer bucket "mes que
-viene". La regla de negocio real es "lo que se viene", no "lo que cabe en el mes calendario".
+> Julieta tiene el alquiler cargado como recurrencia: **$450.000, todos los 23**. La instancia de
+> junio le apareció, no la confirmó —estaba de viaje— y nunca más la tocó. Hoy es 3 de septiembre.
 
 ---
+
+### A · Que el atraso se acumule, en vez de cortar la recurrencia
+
+**Hoy.** Julieta tiene una sola cosa pendiente: el alquiler del 23 de junio. Julio y agosto **no
+existen** en la app. No están pendientes, no están pagos, no están omitidos: no están. Si mira el
+mes de julio, sus gastos fijos dan $0. Y mientras no toque la de junio, esto no se destraba nunca.
+
+**Después.** Julieta ve tres cosas pendientes: alquiler de junio, de julio y de agosto. La cadena
+sigue corriendo aunque ella no conteste.
+
+**Qué va a ver distinto.** Más pendientes que hoy. Esto es importante y conviene decirlo sin
+maquillaje: **el arreglo hace que la app se vea más "cargada", no menos.** Hoy se ve prolija porque
+está escondiendo trabajo sin hacer. La sensación de "uf, tengo 8 cosas" es el dato real apareciendo,
+no una regresión.
+
+**El tope.** Si en vez del alquiler fuera algo diario abandonado hace tres meses, serían 90 filas.
+Por eso propongo cortar en un número (12) y que el resto se muestre agrupado en una sola línea:
+*"y 78 ocurrencias anteriores"*, con una sola acción para resolverlas.
+
+**Lo que tenés que decidir:**
+1. **¿12 está bien como tope?** Para el alquiler nunca se llega. Para algo semanal son 3 meses. Para
+   algo diario son 12 días y el resto se agrupa enseguida.
+2. **¿Cuánto atrás mira?** Si una regla arrancó en 2024 y nunca se usó, ¿generamos desde 2024 o sólo
+   los últimos N meses? Mi propuesta: **desde donde quedó el cursor, con el tope como único límite** —
+   pero se puede acotar a "no más de 12 meses hacia atrás" si preferís.
+
+---
+
+### B · Poder resolver el atraso de una vez
+
+**Hoy.** No aplica, porque hoy el atraso no existe (ver A). Pero apenas exista, resolverlo de a una
+sería insoportable: hoy incluso confirmar dos seguidas requiere recargar la página entre medio.
+
+**Después.** Un botón "Ponerse al día" que resuelve el grupo entero: confirmar todas, omitir todas, o
+elegir cuáles.
+
+**Qué va a ver distinto.** Antes de aplicar, un resumen del impacto:
+*"Vas a registrar 3 gastos por $1.350.000 en total. El saldo de Santander pasa de $X a $Y."*
+
+**Lo que tenés que decidir — y es la decisión más delicada de la lista.**
+Cuando Julieta confirma el alquiler de junio **hoy, 3 de septiembre**, ¿con qué fecha se registra?
+
+| Opción | Qué significa | Costo |
+|---|---|---|
+| **Con la fecha real (23/06)** | El gasto queda en junio, donde ocurrió. Los informes de junio se corrigen. | El saldo y los totales de **meses ya cerrados cambian**. Si Julieta ya miró junio, junio ahora dice otra cosa. |
+| **Con la fecha de hoy (03/09)** | Nada del pasado se mueve. | Septiembre queda con tres alquileres y junio sigue mintiendo. Los informes quedan mal para siempre. |
+| **Que elija ella, por grupo** | Control total. | Una decisión más que tomar, en un momento en el que ya está incómoda. |
+
+Mi recomendación es **fecha real**, porque el propósito del arreglo es que el pasado deje de mentir —
+pero implica aceptar que confirmar algo viejo mueve números viejos, y eso hay que decirlo en pantalla
+antes de aplicar, no después.
+
+---
+
+### C · Poder decir "esto ya lo pagué" antes de que venza
+
+Este es tu síntoma, textual, y el arreglo con mejor relación valor/esfuerzo de toda la lista.
+
+**Hoy.** El alquiler vence el 23. Julieta lo paga el 3. Entra a la app y **no hay ningún botón**. La
+recurrencia aparece listada en el hub con "Próximo: 23 de septiembre" y nada más — ni confirmar, ni
+marcar, ni adelantar. Sus dos opciones son esperar 20 días, o cargar el gasto a mano.
+
+**Y cargarlo a mano es peor que no hacer nada**: ese gasto queda suelto, sin vínculo con la regla. El
+23 la app le va a proponer el alquiler igual, como si no lo hubiera pagado. Ahí Julieta o lo confirma
+—y el alquiler queda cargado dos veces— o lo omite, y pierde el rastro de que sí lo pagó.
+
+**Después.** En la fila de la recurrencia, un botón **"Ya lo pagué"**. Abre el mismo formulario de
+confirmación de siempre, con la fecha en hoy y editable. Se registra el gasto, la recurrencia queda
+saldada, y el 23 no le pregunta nada.
+
+**Lo que tenés que decidir.** Julieta pagó el 3 el alquiler que vencía el 23. **¿Cuándo vence el
+próximo?**
+
+- **El 23 de octubre** (mi propuesta): el ritmo de la regla es del alquiler, no de cuándo ella pagó.
+  Pagar antes no adelanta el calendario.
+- **El 3 de octubre**: el ciclo se recalcula desde el pago real.
+
+Con la primera, si Julieta paga siempre unos días antes, el calendario se mantiene estable año tras
+año. Con la segunda, la fecha va a ir corriéndose para atrás mes a mes hasta desfasarse del alquiler
+real. Por eso recomiendo la primera — pero es una decisión de producto, no técnica.
+
+---
+
+### D · Que la app se entere sola de que pasó el tiempo
+
+**Hoy.** Esto es lo más sorprendente de todo el relevamiento, y explica tu "tengo recurrencias que no
+veo": **la app sólo revisa si venció algo cuando entrás a Movimientos.** No cuando abrís la app, no
+cuando entrás al inicio, no de noche. Si Julieta abre Grana, mira el inicio y sale, la app **nunca se
+entera** de que hoy venció el alquiler. Puede pasar un mes entero así.
+
+**Después.** Un proceso diario del lado del servidor revisa las recurrencias de todos, todas las
+noches, sin que nadie tenga que entrar.
+
+**Qué va a ver distinto.** Al abrir la app, lo pendiente ya está ahí — no aparece recién cuando pasa
+por la pantalla correcta.
+
+**Por qué importa más allá del síntoma.** Tres cosas dependen de esto y hoy son directamente
+imposibles:
+- **Notificaciones.** No se puede avisar "vence hoy el alquiler" si nadie miró que vencía.
+- **Gastos compartidos del hogar.** Hoy, si vos y tu pareja comparten una recurrencia, la instancia
+  sólo se crea cuando **el dueño de la regla** abre la app. El otro puede estar esperando algo que no
+  existe todavía.
+- **Que los informes del mes estén bien** sin depender de por dónde navegó cada uno.
+
+Se puede hacer en dos etapas: primero un parche chico (que la revisión corra en cualquier pantalla,
+no sólo en Movimientos) que tapa la mayor parte del síntoma en poco tiempo, y después el proceso
+nocturno de verdad.
+
+---
+
+### E · Que "12 cuotas" signifique 12 cuotas
+
+**Hoy.** El campo existe y no significa nada verificable. Lo verifiqué corriendo el cálculo: una
+recurrencia creada desde un movimiento con el límite en 3 termina generando **4 movimientos**, y la
+pantalla de "próximas" muestra **2**. Tres números distintos para el mismo campo.
+
+**Después.** Un solo número, el que dice la pantalla.
+
+**Lo que tenés que decidir.** Julieta carga la cuota 1 de la heladera y la marca como recurrente en
+**12 cuotas**. ¿Esa que acaba de cargar es la cuota 1, o la 0?
+
+- **Es la cuota 1** (mi propuesta): la app le va a proponer 11 más. Total: 12. Es lo que cualquiera
+  entiende por "12 cuotas".
+- **Es la 0**: la app le propone 12 más. Total: 13.
+
+Parece obvio, pero hoy el código hace lo segundo y nadie lo había mirado.
+
+---
+
+### F · Que una recurrencia pausada no te siga pidiendo cosas
+
+**Hoy.** Julieta pausa el gimnasio. La app le sigue mostrando la cuota de febrero en "Por confirmar",
+sin ninguna marca de que está pausada. Pausar no se siente como pausar.
+
+**Después.** Sigue apareciendo —puede querer resolverla— pero con un sello **"Pausada"** para que se
+entienda por qué está ahí y que no van a venir más.
+
+**Alternativa:** esconderla del todo. No la recomiendo: le sacaría de la vista algo que todavía puede
+querer confirmar u omitir.
+
+---
+
+### G · Que "lo que viene" no se corte a fin de mes
+
+**Hoy.** Las tarjetas de próximas ocurrencias son "Próximos 7 días" y "Más adelante este mes". El 25
+de septiembre, la segunda **está vacía por definición** —arranca el 3 de octubre y termina el 30 de
+septiembre— así que el alquiler del 23 de octubre no aparece en ninguna parte. Del día 24 en
+adelante, el horizonte de la app son 7 días.
+
+**Después.** "Próximos 30 días" en vez de "lo que queda del mes". La pregunta real de cualquiera es
+"qué se me viene", no "qué entra en el mes calendario".
+
+---
+
+### Cómo se hace (detalle técnico)
+
+Para el que implemente. Nada de esto cambia lo de arriba.
+
+- **A** — Reemplazar el índice único `recurrence_instances_one_pending_per_rule` por uno sobre
+  `(recurrence_id, scheduled_date) WHERE status = 'pending'`. El invariante que de verdad importa no
+  es "una pendiente por regla" —eso rompe el calendario— sino "una instancia por ocurrencia".
+  `decideRecurrenceInstance` pierde el parámetro `hasPending` y devuelve una **lista** de fechas,
+  caminando con el `walkOccurrences` que ya existe desde el cursor hasta hoy, con tope
+  `RECURRENCE_MAX_BACKLOG`. Arregla D2, D3 y D9 juntos: con el backlog materializado, el "Próximo"
+  del calendario y lo que el motor va a hacer vuelven a coincidir solos.
+- **B** — Acción de resolución en lote sobre el grupo, con preview del delta de saldo por cuenta.
+- **C** — Materializar la próxima ocurrencia bajo demanda y abrir el drawer de confirmación que ya
+  existe. El cursor avanza a `scheduled_date`, no a la fecha de pago —`confirmRecurrenceInstance` ya
+  hace exactamente eso hoy, no hay que cambiarlo—.
+- **D** — Etapa 1: subir el trigger al layout `(app)` en web y agregarlo al feed nativo (arregla
+  también la paridad rota D5). Etapa 2: `pg_cron` diario + función `SECURITY DEFINER`.
+- **E** — El generador tiene que contar ocurrencias contra el calendario, no filas en
+  `recurrence_instances`: la semilla de una regla creada desde un movimiento no es una fila.
+- **F** — `getPendingRecurrenceInstances` trae el estado de la regla y la UI lo sella.
+- **G** — El segundo bucket pasa de "resto del mes" a 30 días.
 
 ## Parte 3 — Upgrades de funcionalidad
 
