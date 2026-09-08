@@ -169,11 +169,17 @@ mes viejo usaría los montos de hoy, perdería las reglas retiradas e inventarí
 
 ---
 
-### Tres defectos que sólo se ven cuando se relaja el invariante
+### Tres defectos que aparecieron al revisar la propuesta de arreglo
 
-Los primeros doce son problemas de hoy. Estos tres están **latentes**: hoy no pueden ocurrir porque
-sólo hay una pendiente por regla y siempre se resuelve en orden. En el momento en que se permite un
-backlog, se vuelven reales. Aparecieron revisando la propuesta de arreglo, no la app.
+Se encontraron mirando el diseño del arreglo, no la app — pero **no son todos futuros**, y una
+versión anterior de esta sección los presentaba a los tres como latentes, contradiciendo su propio
+contenido:
+
+| | ¿Pasa hoy? |
+|---|---|
+| **D13** cursor que retrocede | **No.** Hoy sólo hay una pendiente y siempre se resuelve en orden. Se vuelve real en el momento en que se permite backlog. |
+| **D14** se pierde el vencimiento original | **Sí.** Ocurre cada vez que alguien cambia la fecha al confirmar. Hoy pasa desapercibido; con backlog además rompe la identidad. |
+| **D15** compromiso contado dos veces | **Sí.** Es plata mal mostrada ahora mismo, y no depende de nada de esto. |
 
 **D13 · El cursor puede retroceder si resolvés fuera de orden. (verificado)**
 Tanto confirmar como omitir escriben `last_generated_date = instance.scheduled_date`
@@ -296,9 +302,11 @@ tres alquileres impagos. Pueden ser tres pagos que hizo y no registró. La app s
 información; no sabe que Julieta debe esa plata. Por eso el grupo tiene que decir **"3 pagos por
 revisar"**, no "3 pagos pendientes" ni "debés $1.350.000".
 
-**Lo que sí tenés que decidir:** cuánto detalle querés poder revisar por fila al ponerte al día
-—sólo fecha, o fecha e importe— y si querés una cuarta salida además de registrar / vincular /
-omitir / dejar pendiente.
+**Poder revisar fecha, importe y cuenta de cada fila antes de guardar es parte del funcionamiento
+básico, no una opción.** Una versión anterior te lo preguntaba: si estás registrando pagos reales
+—que ya ocurrieron, con el importe que efectivamente salió— necesitás poder corregirlos. Un alquiler
+que ajustó, un mes que pagaste desde otra cuenta. No hay versión útil de "ponerse al día" que te
+obligue a aceptar el importe que la regla suponía.
 
 ---
 
@@ -425,8 +433,12 @@ Para el que implemente. Nada de esto cambia lo de arriba.
   él). Los dos changes tocan la misma restricción y hay que ordenarlos, no correrlos en paralelo.
 - **B** — Acción de resolución en lote sobre el grupo, con preview del delta de saldo por cuenta.
 - **C** — Materializar la próxima ocurrencia bajo demanda y abrir el drawer de confirmación que ya
-  existe. El cursor avanza a `scheduled_date`, no a la fecha de pago —`confirmRecurrenceInstance` ya
-  hace exactamente eso hoy, no hay que cambiarlo—.
+  existe. **Definición única del avance, que reemplaza cualquier otra en versiones anteriores de este
+  documento:** resolver un pago NO avanza el cursor de generación (D13). Que hoy
+  `confirmRecurrenceInstance` use el `scheduled_date` original en vez de la fecha elegida es correcto
+  pero insuficiente — el problema no es *qué* fecha escribe, es *que escriba*. El calendario de la
+  regla se deriva de su propio cronograma y del conjunto de ocurrencias ya resueltas, no del último
+  pago registrado.
 - **D** — Etapa 1: subir el trigger al layout `(app)` en web y agregarlo al feed nativo (arregla
   también la paridad rota D5). Etapa 2: `pg_cron` diario + función `SECURITY DEFINER`.
 - **E** — El generador tiene que contar ocurrencias contra el calendario, no filas en
@@ -453,11 +465,17 @@ de las apps que revisé, lo cual es esperable —en sus mercados el problema no 
 intensidad—, pero no revisé el mercado entero: tomalo como una oportunidad a validar, no como un
 hecho establecido.
 
-**U3 · Débito automático → auto-confirmación.** `auto_confirm: true` en reglas donde la plata sale
-sí o sí (débito en cuenta, débito en tarjeta). Al llegar la fecha, la instancia se confirma sola y
-notifica en vez de preguntar. Esto elimina la mayor fuente de fricción y de instancias trabadas:
-nadie quiere confirmarle a mano a la app algo que el banco ya hizo. Ojo con el orden: **esto sólo se
-puede construir después de D-3** (generación en servidor).
+**U3 · Débito automático — pero separando dos cosas que una versión anterior mezclaba.**
+Esa versión daba por sentado que en un débito automático "la plata sale sí o sí". **Es falso:** un
+débito se rechaza por falta de fondos, cambia de importe o se ejecuta otro día. Tener un débito
+programado no prueba que ocurrió.
+
+Son dos funciones distintas:
+- **Avisar que esperabas un débito** — planificación. Segura, útil, no afirma nada.
+- **Registrar que el débito ocurrió** — requiere confirmación del usuario o evidencia del movimiento.
+
+Un registro automático puede existir como opción explícita del producto, siempre revisable y
+reversible. **Fuera de la primera entrega**, y en ningún caso como solución al bloqueo del #96.
 
 **U4 · Vincular un movimiento existente a una instancia** (arregla D11). "Esto que cargué el martes
 es el alquiler de septiembre" → la instancia queda `confirmed`, `confirmed_transaction_id` apunta al
@@ -574,7 +592,46 @@ eso tiene: revisé documentación de producto, no las apps en uso.
 
 ---
 
+## El alcance de la primera entrega
+
+Esto es lo que hay que acordar antes de escribir código. Está en forma de **comportamientos que
+podés validar vos mismo usando la app** — no de tareas técnicas. Si al terminar la entrega los ocho
+se cumplen, la entrega está bien; si alguno no, no importa qué se haya construido.
+
+1. Dejo junio sin revisar y **igual puedo registrar septiembre**.
+2. Pago hoy algo que vence dentro de veinte días y **lo registro hoy**, sin esperar el aviso.
+3. Después de eso, **el próximo vencimiento conserva la fecha que configuré** (el 23, no el día que pagué).
+4. Si el pago ya estaba cargado como movimiento suelto, **lo vinculo sin duplicarlo**.
+5. Reviso varios meses juntos y, en cada uno, **puedo corregir fecha, importe y cuenta** antes de guardar.
+6. Si me equivoco, **puedo deshacerlo**.
+7. Lo que falta revisar **sigue visible**, y la app no afirma que necesariamente debo esa plata.
+8. **Todo funciona igual en web y en la app nativa.**
+
+### Una distinción que hay que definir antes de tocar el #104
+
+El punto 6 esconde dos intenciones distintas que hoy terminarían en el mismo estado:
+
+| Lo que quiso decir el usuario | Qué tiene que quedar |
+|---|---|
+| **"Me equivoqué al registrar este pago"** | El pago se borra y el vencimiento **vuelve a estar por revisar**. |
+| **"Este período no corresponde"** | La ocurrencia queda **omitida**. No se espera ningún pago. |
+
+El plan actual del #104 convierte **siempre** el pago borrado en "omitido". Eso resuelve una
+restricción técnica de la base, pero le hace decir al dato algo que el usuario puede no haber
+querido: que ese mes no correspondía, cuando quizá sólo se equivocó al cargarlo. La diferencia tiene
+que quedar escrita antes de implementar cualquiera de los dos changes.
+
+### Qué NO entra en la primera entrega
+
+Recordatorios y notificaciones · registro automático de débitos (U3) · ajuste de importes por índice
+(U2) · calendarios tipo "segundo jueves" (#35) · pausa con fecha · historial de importes.
+
+---
+
 ## Recomendación de orden
+
+Cómo se organiza el trabajo para cumplir el alcance de arriba es una **recomendación técnica**, no
+algo que haya que aprobar: lo que se aprueba son los ocho comportamientos.
 
 **Tanda 0 — los cimientos** (sin esto, la Tanda 1 fabrica duplicados)
 Identidad estable de ocurrencia · vencimiento previsto y fecha de pago como campos separados (D14) ·
@@ -590,8 +647,14 @@ dashboard · `X2` plegado invertido
 usuario a duplicar gastos; y sin contar bien, el pago anticipado descuadra el total de una regla con
 límite. Los dos sostienen la Tanda 1, no la adornan.
 
-**Tanda 1b — independiente, no espera a nada**
-`D15` el doble conteo del dashboard · `#104` deshacer una confirmación
+**Tanda 1b — en paralelo, con distinto grado de independencia**
+`D15` el doble conteo del dashboard — **totalmente independiente**: se arregla sin tocar nada de
+recurrencias y es plata mal mostrada hoy. Ticket y arreglo propios, prioritario.
+
+`#104` deshacer una confirmación — **no es independiente**, y una versión anterior de este documento
+lo listaba como si lo fuera. Puede tener un arreglo previo compatible, pero no debe implementarse con
+una interpretación de "deshacer" distinta de la que quede acordada acá (ver abajo), y su plan actual
+se apoya en el índice que este change elimina.
 
 **Tanda 2 — que el dato deje de mentir**
 `F` pausada · `G` ventana de próximas · `X4` decir qué va a pasar ·
