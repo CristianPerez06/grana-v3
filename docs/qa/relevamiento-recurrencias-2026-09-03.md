@@ -214,8 +214,16 @@ aporta otros $100.000 → **"Gastos fijos" muestra $200.000 para una regla que v
 
 Alcance exacto, que importa: bajo el lente `live` no puede pasar —la ventana es el mes **siguiente**
 al seleccionado y una pendiente siempre está fechada hoy o antes—, así que se manifiesta en la
-posición "mes anterior" del navegador. Merece su propio ticket: es independiente del #96 y no espera
-a nada de esto.
+posición "mes anterior" del navegador. Sólo afecta a `recurringExpense`: `recurringIncome` se calcula
+únicamente con la proyección, sin concatenar instancias, así que no tiene este defecto.
+
+Al deduplicar hay que decidir **cuál de los dos valores sobrevive, y no es indistinto**: gana la
+**instancia existente**, no la estimación de la regla. La instancia es un snapshot de cuando se
+generó; la regla puede haberse editado después. Si la instancia dice $100.000 y la regla se editó a
+$120.000, ese vencimiento tiene que contar una vez **por $100.000**. Un arreglo que saque el
+duplicado pero deje el importe de la proyección queda igual de mal, sólo que sin que se note.
+
+Ticket propio: **#118**. Es independiente del #96 y no espera a nada de esto.
 
 ---
 
@@ -648,7 +656,7 @@ usuario a duplicar gastos; y sin contar bien, el pago anticipado descuadra el to
 límite. Los dos sostienen la Tanda 1, no la adornan.
 
 **Tanda 1b — en paralelo, con distinto grado de independencia**
-`D15` el doble conteo del dashboard — **totalmente independiente**: se arregla sin tocar nada de
+`D15` (#118) el doble conteo del dashboard — **totalmente independiente**: se arregla sin tocar nada de
 recurrencias y es plata mal mostrada hoy. Ticket y arreglo propios, prioritario.
 
 `#104` deshacer una confirmación — **no es independiente**, y una versión anterior de este documento
