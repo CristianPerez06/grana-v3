@@ -157,8 +157,26 @@ que habilita el backlog.
       64 migraciones, y el delta revalidado contra la maestra — **#111** tocó recurrencias pero solo
       el requirement de duplicados, que este delta no modifica; los cinco que sí modifica están
       intactos.
-- [ ] 1.11 Regenerar los tipos de Supabase y actualizar `supabase/validate_schema.sql` (una tabla
-      modificada, dos nuevas).
+- [x] 1.11 Regenerar los tipos de Supabase y actualizar `supabase/validate_schema.sql` (una tabla
+      modificada, dos nuevas). El CLI de Supabase necesita Docker, que no hay en el entorno, así que
+      los tipos se escribieron con la forma exacta del generador —orden alfabético, `Row`/`Insert`/
+      `Update`/`Relationships`, opcionalidad derivada de `is_nullable` + `column_default`— y se
+      validaron con `pnpm typecheck`. **Eso destapó un defecto de la migración**: `reconstruct_from`
+      era `NOT NULL` sin default, así que el generador la marca REQUERIDA en `Insert` y obligaba a
+      cada cliente a mandar un valor que la base es la dueña de calcular —incluidos los clientes
+      viejos, que no pueden—. `createRecurrenceFromMovement` dejó de compilar. Corregido en `0064`:
+      la columna lleva `DEFAULT 'infinity'::date` —un placeholder que **falla cerrado**: si el
+      trigger desapareciera, el generador no materializa nada en vez de reconstruir toda la historia
+      de la regla— y el trigger pasa a derivarla **incondicionalmente**, no solo cuando llega `NULL`,
+      porque la base es la dueña única de la columna igual que del historial de cronogramas.
+      Verificado contra el esquema reconstruido: las tres derivaciones (`start_date - 1`, cursor, hoy
+      para pausadas) siguen dando lo mismo, y un cliente que manda un valor no lo impone.
+      `validate_schema.sql` suma la sección **8.1J**, con las cuatro columnas nuevas, las dos tablas,
+      los cinco índices, las FK compuestas, los tres triggers, `SECURITY DEFINER` + `search_path` en
+      las dos funciones escritoras, la ausencia de policies de escritura sobre el historial, el
+      default y el placeholder de `reconstruct_from`, los invariantes de datos, y —clave en una
+      expansión— que `recurrence_instances_one_pending_per_rule` **siga vivo**. Cada aserción se
+      probó también en negativo: rompiendo el objeto, la sección falla con su mensaje.
 
 ## 2. El backlog existe y se puede resolver
 

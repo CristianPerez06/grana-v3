@@ -248,13 +248,28 @@ update public.recurrences r
        end;
 
 alter table public.recurrences
-  alter column reconstruct_from set not null;
+  alter column reconstruct_from set not null,
+  -- A placeholder, never a stored value: the BEFORE INSERT trigger below
+  -- overwrites it on every insert. It exists so the column is not NOT NULL
+  -- WITHOUT a default, which would make `supabase gen types` mark
+  -- `reconstruct_from` as REQUIRED on Insert and force every client to send a
+  -- value the database owns — including old clients that know nothing about it.
+  --
+  -- `infinity` and not `-infinity` on purpose: if the trigger were ever dropped,
+  -- this value FAILS CLOSED. The generator never materializes before
+  -- `reconstruct_from`, so `infinity` produces nothing, while `-infinity` would
+  -- rebuild a rule's entire history as backlog.
+  alter column reconstruct_from set default 'infinity'::date;
 
--- Without this the expansion BREAKS recurrence creation: the column is NOT
--- NULL, a DEFAULT cannot reference another column of the same row, and neither
--- the current code nor the installed clients write it. The expansion has to
--- preserve behaviour, so the value is derived with the SAME criterion as the
--- backfill above.
+-- Without this the expansion BREAKS recurrence creation: a DEFAULT cannot
+-- reference another column of the same row, and neither the current code nor the
+-- installed clients write this column. The expansion has to preserve behaviour,
+-- so the value is derived with the SAME criterion as the backfill above.
+--
+-- It is computed UNCONDITIONALLY, not only when the incoming value is null: the
+-- database is the sole owner of this column, exactly as it is of the schedule
+-- history, and a client value — the placeholder default included — must never
+-- survive.
 create or replace function public.recurrence_reconstruct_from_default()
 returns trigger
 language plpgsql
@@ -262,15 +277,13 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
-  if NEW.reconstruct_from is null then
-    NEW.reconstruct_from := case
-      when NEW.status = 'paused'               then (now() at time zone 'America/Argentina/Buenos_Aires')::date
-      when NEW.last_generated_date is not null then NEW.last_generated_date
-      -- With no cursor the first occurrence lands ON start_date, and the
-      -- contract generates strictly after the floor.
-      else NEW.start_date - 1
-    end;
-  end if;
+  NEW.reconstruct_from := case
+    when NEW.status = 'paused'               then (now() at time zone 'America/Argentina/Buenos_Aires')::date
+    when NEW.last_generated_date is not null then NEW.last_generated_date
+    -- With no cursor the first occurrence lands ON start_date, and the
+    -- contract generates strictly after the floor.
+    else NEW.start_date - 1
+  end;
   return NEW;
 end $$;
 

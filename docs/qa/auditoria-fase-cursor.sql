@@ -41,16 +41,17 @@
 -- sacan del cronograma:
 --
 --   1. La FASE. `anchorDate` restaura el DÍA DEL MES, no la fase de meses ni de
---      años. Cada 2 meses desde el 01/01 con cursor 10/02 ⇒ próxima 01/04,
---      contra un cronograma 01/01, 01/03, 01/05… Una regla anual cuyo cursor
---      cayó en otro mes (inicio 01/01, cursor 10/06 ⇒ próxima 01/06/2027) se
---      desfasa igual.
+--      años. Cada 2 meses desde el 2026-01-01 con cursor 2026-02-10 ⇒ próxima
+--      2026-04-01, contra un cronograma 2026-01-01, 2026-03-01, 2026-05-01…
+--      Una regla anual cuyo cursor cayó en otro mes (inicio 2026-01-01, cursor
+--      2026-06-10 ⇒ próxima 2027-06-01) se desfasa igual.
 --
 --   2. El INICIO MOVIDO. `updateRecurrence` permite mover `start_date` sin
 --      tocar el cursor, y entonces el cursor queda ANTES del inicio. Con inicio
---      nuevo 15/06/2026 y cursor 10/01/2026, la próxima es 02/15 —anterior al
---      inicio, fuera del cronograma nuevo—. Esto le pasa hasta a una regla
---      mensual o diaria de intervalo 1, que por fase no se desfasarían nunca.
+--      nuevo 2026-06-15 y cursor 2026-01-10, la próxima es 2026-02-15
+--      —anterior al inicio, fuera del cronograma nuevo—. Esto le pasa hasta a
+--      una regla mensual o diaria de intervalo 1, que por fase no se
+--      desfasarían nunca.
 --
 -- Por eso el criterio es la fecha, no la forma de la regla.
 --

@@ -596,9 +596,13 @@ export type Database = {
           created_at: string
           currency_code: string
           description: string | null
+          due_date: string | null
+          due_date_is_unknown: boolean
           household_id: string | null
           id: string
+          linked_conversion: boolean
           recurrence_id: string
+          resolution_kind: string | null
           resolved_at: string | null
           scheduled_date: string
           split: Json | null
@@ -615,9 +619,13 @@ export type Database = {
           created_at?: string
           currency_code: string
           description?: string | null
+          due_date?: string | null
+          due_date_is_unknown?: boolean
           household_id?: string | null
           id?: string
+          linked_conversion?: boolean
           recurrence_id: string
+          resolution_kind?: string | null
           resolved_at?: string | null
           scheduled_date: string
           split?: Json | null
@@ -634,9 +642,13 @@ export type Database = {
           created_at?: string
           currency_code?: string
           description?: string | null
+          due_date?: string | null
+          due_date_is_unknown?: boolean
           household_id?: string | null
           id?: string
+          linked_conversion?: boolean
           recurrence_id?: string
+          resolution_kind?: string | null
           resolved_at?: string | null
           scheduled_date?: string
           split?: Json | null
@@ -704,6 +716,85 @@ export type Database = {
           },
         ]
       }
+      recurrence_pauses: {
+        Row: {
+          created_at: string
+          id: string
+          paused_from: string
+          recurrence_id: string
+          resumed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          paused_from: string
+          recurrence_id: string
+          resumed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          paused_from?: string
+          recurrence_id?: string
+          resumed_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurrence_pauses_recurrence_fk"
+            columns: ["recurrence_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "recurrences"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      recurrence_schedule_versions: {
+        Row: {
+          anchor_date: string
+          created_at: string
+          effective_from: string
+          id: string
+          interval_count: number
+          interval_unit: string
+          is_assumed: boolean
+          recurrence_id: string
+          user_id: string
+        }
+        Insert: {
+          anchor_date: string
+          created_at?: string
+          effective_from: string
+          id?: string
+          interval_count: number
+          interval_unit: string
+          is_assumed?: boolean
+          recurrence_id: string
+          user_id: string
+        }
+        Update: {
+          anchor_date?: string
+          created_at?: string
+          effective_from?: string
+          id?: string
+          interval_count?: number
+          interval_unit?: string
+          is_assumed?: boolean
+          recurrence_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurrence_schedule_versions_recurrence_fk"
+            columns: ["recurrence_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "recurrences"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       recurrence_suggestion_dismissals: {
         Row: {
           created_at: string
@@ -747,6 +838,7 @@ export type Database = {
           last_generated_date: string | null
           max_occurrences: number | null
           movement_type: string
+          reconstruct_from: string
           start_date: string
           status: string
           subcategory_id: string | null
@@ -771,6 +863,7 @@ export type Database = {
           last_generated_date?: string | null
           max_occurrences?: number | null
           movement_type: string
+          reconstruct_from?: string
           start_date: string
           status?: string
           subcategory_id?: string | null
@@ -795,6 +888,7 @@ export type Database = {
           last_generated_date?: string | null
           max_occurrences?: number | null
           movement_type?: string
+          reconstruct_from?: string
           start_date?: string
           status?: string
           subcategory_id?: string | null
