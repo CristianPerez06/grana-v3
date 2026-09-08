@@ -2,6 +2,16 @@
 
 pnpm workspaces monorepo with two apps: `apps/web` (Next.js App Router) and `apps/mobile` (Expo). Mobile mirrors web feature-by-feature with parallel native implementations sharing typed prop contracts via `@grana/ui-contracts` and pure business logic via `@grana/money-logic` (see "Web ↔ Mobile policy" below).
 
+## Pre-flight — MANDATORY
+
+Antes de la primera acción de git de cualquier unidad de trabajo, en este orden. Cada punto apunta a su sección canónica: la regla vive ahí, este bloque solo garantiza que se lea a tiempo.
+
+1. **Validá el nombre de la branch** — `git branch --show-current`, y comparalo contra el formato de [§ Branching](#branching). Si no valida, renombrala **antes del primer commit**: después ya hay commits y pushes sobre un nombre que hay que corregir igual.
+   - Esto aplica también cuando **la branch no la elegiste vos**. Claude Code on the web provisiona la branch de la sesión derivándola del primer prompt: `claude/iol-financial-entities-table-q2wflp`. Prefijo fuera de la lista y sufijo random — viola la convención igual que si la hubieras tipeado. Venir dada no la hace válida.
+   - Si tenés instrucciones de sesión que te fijan a una branch asignada y no podés renombrarla por tu cuenta, **decíselo al usuario antes del primer commit**. Commitear en silencio sobre un nombre inválido no es una opción.
+2. **Si el output dice `main`, no commitees** — [§ Pre-commit check](#pre-commit-check--mandatory). Es el mismo comando: un solo `git branch --show-current` responde las dos preguntas.
+3. **Si vas a agregar una migración, elegí el número contra `main`**, no contra tu working tree — ver la fila "Migration numbers are picked against `main`" en la tabla de [§ Cross-cutting principles](#cross-cutting-principles). Ya hubo una colisión de `0057` por saltear esto.
+
 ## V3 Rebuild Standard
 
 Grana V3 is not a rewrite for its own sake. It is a rebuild whose goal is to make the product functionally explicit, technically reliable, and documented enough that a fresh LLM session can continue the app without relying on hidden chat context.
@@ -98,8 +108,18 @@ All scripts work from the repo root (orchestrator forwards to `pnpm --filter web
 - `pnpm dev` — Next dev server (web)
 - `pnpm build` — production build (web)
 - `pnpm lint` — ESLint (web)
+- `pnpm test` — **vitest across the whole monorepo**: `apps/web` AND every package
+- `pnpm test:web` — only `apps/web`, when you are iterating on one suite
 - `pnpm storybook` — Storybook on :6006 (web)
 - `pnpm --filter web <script>` — explicit form if you ever add another app
+
+`pnpm test` runs what CI runs, on purpose. It used to be `--filter web` alone,
+and the packages' tests — where the money logic lives — were written but guarded
+nothing: you could break `@grana/dashboard`, see the green and merge. It also
+pushed people to put package tests under `apps/web/lib/**` just so they would
+run, bending where code lives to satisfy a CI flag. **A package with a `test`
+script and no test files must pass `--passWithNoTests`**, or it exits 1 and reds
+the whole run for having nothing to say.
 
 ## Shared packages — TypeScript paths to source
 
@@ -276,13 +296,13 @@ The table below tracks **product modules** in build order. Meta capabilities —
 | 2 | `schema-base` | ✅ Done | Monedas, instituciones, redes de tarjeta, tipo `Money`, fecha contable y zona horaria financiera |
 | 3 | `profiles` | ✅ Done | Perfil del usuario, zona horaria financiera, flag de onboarding |
 | 4 | `card-networks` | ✅ Done | Catálogo de redes de tarjeta con BIN ranges y branding |
-| 5 | `categories` | ✅ Done | 18 categorías sistema + subcategorías, categorías propias del usuario, i18n |
+| 5 | `categories` | ✅ Done | 18 categorías sistema + subcategorías, categorías propias del usuario, categorías **del hogar** (las ven y editan los dos miembros; un compartido siempre apunta a una del hogar o del sistema; quien sale se lleva copias propias — migración 0063), i18n |
 | 6 | `i18n` | ✅ Done | Estrategia de mensajes (next-intl + helper RN), catálogos JSON compartidos, fallback |
 | 7 | `accounts` | ✅ Done | Cuentas efectivo (ARS/USD), cuentas bancarias/débito (las de crédito viven en `cards`) |
 | 8 | `transactions` | ✅ Done | Ingresos, gastos, transferencias, ajustes, cambios de moneda, reintegros/cashback; reglas de balance |
 | 9 | `cards` | ✅ Done | Tarjetas de crédito: alta de tarjeta (4 fechas), períodos (resúmenes), consumos, cuotas en pesos, pago de resumen, reversión |
 | 10 | `recurring-movements` | ✅ Done | Plantillas de recurrencias e instancias generadas; confirmar, saltar, posponer |
-| 11 | `dashboard` | ✅ Done | Landing universal post-login, idéntica en web y nativo (rediseño `redesign-dashboard-home-v2`): "Saldo disponible total" (card de dos zonas: disponible bimoneda + "Dónde está", y "Resumen del mes" Tenías/Entró/Se fué que cierra contra el saldo), "Cuánto gastaste" (`Ya se pagó + Por pagar = Gastaste`, con desglose por miembro y tira de ritmo), "Compromisos del próximo mes" (resúmenes que vencen + gastos fijos, vencido aparte) y la tira "Compartido". Selector de mes compartido en el header; Compromisos NO lo sigue (su ventana es el próximo mes respecto de hoy). El desglose **por categoría** salió del dashboard: superficie única en Movimientos. Tarjetas tampoco vive acá: el resumen vive en `/cards` |
+| 11 | `dashboard` | ✅ Done | Landing universal post-login, idéntica en web y nativo (rediseño `redesign-dashboard-home-v2`): "Saldo disponible total" (card de dos zonas: disponible bimoneda + "Dónde está", y "Resumen del mes" Tenías/Entró/Se fué que cierra contra el saldo), "Cuánto gastaste" (`Ya se pagó + Por pagar = Gastaste`, con desglose por miembro y tira de ritmo), "Compromisos del próximo mes" (resúmenes que vencen + gastos fijos, vencido aparte) y la tira "Compartido". El selector de mes **es la línea de la fecha del header**: se toca y abre una hoja con los 12 meses alcanzables (`date-line-as-month-lens`). Compromisos **sí** lo sigue, con un mes de desfasaje: parada en M muestra M+1 (`committed-outlook-follows-month`). El eye toggle vive en la card de saldo, donde empiezan los montos. El desglose **por categoría** salió del dashboard: superficie única en Movimientos. Tarjetas tampoco vive acá: el resumen vive en `/cards` |
 | 12 | `onboarding` | ✅ Done | Wizard post-signup (web + mobile), bimoneda default, gate logic |
 | 13 | `mobile-app-shell` | ✅ Done | Expo app shell, navegación tabs, gating de auth y onboarding, presentación visual del tab bar y `AppMenu` |
 | 13b | `web-app-shell` | ✅ Done | Shell de navegación web: sidebar island único y paleta de marca en `md+`. **Bajo `md` espeja el chrome nativo** (`mirror-native-chrome-on-web-mobile`): header navy full-bleed, tab bar fija de cuatro slots (`Inicio · Movimientos · Hogar · ⋯`), menú como bottom sheet con Cuentas, Tarjetas, Ahorro e inversión y Ajustes, y los `Drawer` presentándose como bottom sheets. Las secciones que cuelgan del menú van sin barra y declaran `backLink`; la barra se esconde con el teclado. Estado activo derivado de la ruta |

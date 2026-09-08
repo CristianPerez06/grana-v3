@@ -258,10 +258,12 @@ export async function updatePeriodDates(args: {
     return { ok: false, messageKey: 'cards.errors.period_no_access' }
   }
 
+  // Alguna pata alcanza: un resumen pagado en dos monedas tiene dos.
   const { data: existingPayment } = await supabase
     .from('period_payments')
     .select('id')
     .eq('period_id', periodId)
+    .limit(1)
     .maybeSingle()
 
   if (existingPayment) {
@@ -292,6 +294,7 @@ export async function updatePeriodDates(args: {
         .from('period_payments')
         .select('id')
         .eq('period_id', nextPeriod.id)
+        .limit(1)
         .maybeSingle()
 
       if (nextPayment) {

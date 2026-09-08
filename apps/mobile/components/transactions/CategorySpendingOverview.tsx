@@ -7,6 +7,7 @@ import {
   DONUT_FALLBACK,
   generateSubTints,
   INCOME_PALETTE,
+  netAfterCredits,
   RANKING_VISIBLE,
   type CategoryBreakdown,
   type CategorySlice,
@@ -353,6 +354,19 @@ export const CategorySpendingOverview = ({
               </Text>
             </View>
           ))}
+          {/* Closing row: the centre sums the DRAWN slices — a donut cannot draw
+              a negative arc — so with a category in credit it is neither gross
+              nor net. Web puts this in the card footer, next to the card-spending
+              note; a phone has no width to share that row (the note would wrap to
+              three lines), so here it costs one tight row inside this block. */}
+          <View className="flex-row items-center gap-2 border-t border-border-soft pt-2">
+            <Text numberOfLines={1} className="min-w-0 flex-1 text-[12px] font-bold text-text">
+              {t('transactions.spending.net_total_label')}
+            </Text>
+            <Text className="text-[12px] font-extrabold text-text">
+              {fmt(netAfterCredits(breakdown.total, credits))}
+            </Text>
+          </View>
         </View>
       ) : null}
 

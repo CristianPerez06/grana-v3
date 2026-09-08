@@ -58,16 +58,25 @@ export default function PayStatementScreen() {
     const runningDueDate = runningPeriod?.due_date ?? projection.suggestedDueDate
     const runningIsEstimated = runningPeriod?.is_estimated ?? true
 
-    // Debit accounts: cash + bank, active, with an active ARS currency.
-    const debitEligible = [...query.data.accounts.cash, ...query.data.accounts.bank].filter(
-      (a) => a.is_active && a.currencies.some((c) => c.currency_code === 'ARS' && c.is_active),
+    // Cuentas de débito, por moneda: la deuda en dólares se puede cancelar CON dólares.
+    // Espejo exacto del web — las dos listas se arman por separado y sus saldos nunca se
+    // comparan entre monedas.
+    const eligible = [...query.data.accounts.cash, ...query.data.accounts.bank].filter(
+      (a) => a.is_active,
     )
-    const paymentAccounts: PaymentAccount[] = debitEligible.map((a) => ({
+    const withCurrency = (code: 'ARS' | 'USD') =>
+      eligible.filter((a) => a.currencies.some((c) => c.currency_code === code && c.is_active))
+    const toOption = (code: 'ARS' | 'USD') => (a: (typeof eligible)[number]): PaymentAccount => ({
       id: a.id,
       name: a.name,
       subtitle: a.institution && a.institution.name !== a.name ? a.institution.name : null,
-      balanceARS: a.balances.ARS,
-    }))
+      balance: a.balances[code],
+    })
+
+    const debitEligible = withCurrency('ARS')
+    const paymentAccounts = debitEligible.map(toOption('ARS'))
+    const usdEligible = withCurrency('USD')
+    const usdAccounts = usdEligible.map(toOption('USD'))
 
     // Default to an account of the CARD's own bank; fall back to the first.
     const cardInstitutionId = cardDetail.institution?.id ?? null
@@ -77,6 +86,13 @@ export default function PayStatementScreen() {
         : undefined) ??
       paymentAccounts[0]?.id ??
       ''
+    // En dólares NO se cae a la primera: elegir entre varias cuentas equivalentes por el
+    // usuario, para una operación que le mueve dólares, sería arbitrario. Se le pide.
+    const usdSameInstitution = cardInstitutionId
+      ? usdEligible.find((a) => a.institution?.id === cardInstitutionId)?.id
+      : undefined
+    const defaultUsdAccountId =
+      usdSameInstitution ?? (usdAccounts.length === 1 ? usdAccounts[0].id : '')
 
     return {
       periodId,
@@ -90,6 +106,8 @@ export default function PayStatementScreen() {
       stampTaxRate: period.stampTaxRate,
       paymentAccounts,
       defaultPaymentAccountId,
+      usdAccounts,
+      defaultUsdAccountId,
     }
   })()
 

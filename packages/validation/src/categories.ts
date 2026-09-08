@@ -21,6 +21,10 @@ export const createCategorySchema = yup
       .nullable()
       .optional()
       .matches(/^#[0-9A-Fa-f]{6}$/, 'color'),
+    // Who owns it: the user (`own`, default) or the user's household
+    // (`household`). The mutation resolves the household id and rejects
+    // `household` when the caller has no active household.
+    scope: yup.string().label('scope').oneOf(['own', 'household'] as const).optional(),
   })
   .strict()
 
@@ -40,6 +44,10 @@ export const updateCategorySchema = yup
       .nullable()
       .optional()
       .matches(/^#[0-9A-Fa-f]{6}$/, 'color'),
+    // `household` moves an own category to the household. `own` on a household
+    // category is ignored: the way back is not offered (other members may
+    // already point movements at it).
+    scope: yup.string().label('scope').oneOf(['own', 'household'] as const).optional(),
   })
   .strict()
 

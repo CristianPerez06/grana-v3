@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../ui/Button'
 import { FormField } from '../ui/FormField'
 import { FormError } from '../ui/FormError'
 import { createCategory, type CategoryType } from '../../lib/categories'
 import { invalidateAfterCategoryMutation } from '../../lib/categories-invalidate'
+import { getHousehold } from '../../lib/shared/queries'
 import { useT } from '../../lib/locale-context'
+import { HouseholdScopeRow } from './HouseholdScopeRow'
 
 const TYPE_OPTIONS: CategoryType[] = ['expense', 'income', 'both']
 
@@ -25,9 +27,19 @@ export function CreateCategoryForm({ onSuccess }: Props = {}) {
   const [type, setType] = useState<CategoryType>('expense')
   const [icon, setIcon] = useState('')
   const [color, setColor] = useState('')
+  const [household, setHousehold] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  // Gates the "Es del hogar" row: without a household there is nothing to put
+  // the category into. Same key the dashboard uses for the household read.
+  const householdQuery = useQuery({
+    queryKey: ['shared', 'household'] as const,
+    queryFn: () => getHousehold(),
+    retry: false,
+  })
+  const hasHousehold = householdQuery.data != null
 
   const handleSubmit = async () => {
     setFormError(null)
@@ -38,6 +50,7 @@ export function CreateCategoryForm({ onSuccess }: Props = {}) {
       type,
       icon: icon || null,
       color: color || null,
+      scope: household ? 'household' : 'own',
     })
     setSubmitting(false)
     if (result.ok) {
@@ -110,6 +123,8 @@ export function CreateCategoryForm({ onSuccess }: Props = {}) {
         autoCapitalize="none"
         error={fieldErrors.color}
       />
+
+      {hasHousehold && <HouseholdScopeRow checked={household} onChange={setHousehold} />}
 
       <FormError message={formError} />
 

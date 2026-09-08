@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
+import { ChevronDown } from 'lucide-react-native'
 import {
   densestAmountDensity,
   derivePlacement,
@@ -21,6 +23,7 @@ import {
   PlacementStackSkeleton,
   SummaryAmountSkeleton,
 } from './BalanceCardSkeleton'
+import { EyeMaskToggle } from './EyeMaskToggle'
 import { MaskedAmount } from './MaskedAmount'
 import { MaskedAmountDisplay } from './MaskedAmountDisplay'
 
@@ -110,6 +113,8 @@ const Flow = ({
   signPrefix,
   density,
   loading,
+  expanded,
+  onToggle,
 }: {
   label: string
   dotColor: string
@@ -128,16 +133,38 @@ const Flow = ({
   density: AmountDensity
   /** While the new month loads: the label stays, the amount goes to skeleton. */
   loading?: boolean
+  /** Set (with `onToggle`) when this flow can be opened by concept. */
+  expanded?: boolean
+  /** Opens the breakdown, rendered as its own rows right under this one. */
+  onToggle?: () => void
 }) => (
   // ONE ROW per amount — label left, amount right — not three columns. Three
   // amounts across a phone-width card leave ~100px each, and `fitOneLine` was
   // shrinking eight-figure amounts down to something nobody can read. A full row
   // each fits them at their real size. Web does the same below its `sm` break.
   <View className="flex-row items-center justify-between gap-3">
-    <View className="flex-row items-center gap-1.5">
-      <View className="size-[7px] rounded-full" style={{ backgroundColor: dotColor }} />
-      <Text className="text-[10.5px] font-bold text-text-muted">{label}</Text>
-    </View>
+    {onToggle ? (
+      <Pressable
+        onPress={onToggle}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        className="flex-row items-center gap-1.5"
+      >
+        <View className="size-[7px] rounded-full" style={{ backgroundColor: dotColor }} />
+        <Text className="text-[10.5px] font-bold text-text-muted">{label}</Text>
+        <ChevronDown
+          size={11}
+          color={colors.textMuted}
+          style={expanded ? { transform: [{ rotate: '180deg' }] } : undefined}
+        />
+      </Pressable>
+    ) : (
+      <View className="flex-row items-center gap-1.5">
+        <View className="size-[7px] rounded-full" style={{ backgroundColor: dotColor }} />
+        <Text className="text-[10.5px] font-bold text-text-muted">{label}</Text>
+      </View>
+    )}
     {loading ? (
       <SummaryAmountSkeleton />
     ) : (
@@ -163,6 +190,52 @@ const Flow = ({
     )}
   </View>
 )
+
+/**
+ * The concepts behind one flow, listed right under it.
+ *
+ * Indented and one type step down, so they read as belonging to the row above
+ * rather than as three more flows. Rows at zero are dropped: "Otros" is zero in
+ * the ordinary month, and a row that says nothing still costs a line.
+ */
+const BreakdownRows = ({
+  rows,
+  showUsd,
+}: {
+  rows: { label: string; ars: number; usd: number }[]
+  showUsd: boolean
+}) => {
+  const shown = rows.filter((row) => row.ars !== 0 || row.usd !== 0)
+  if (shown.length === 0) return null
+  return (
+    <View className="ml-3.5 gap-1.5 border-l border-border-soft pl-3">
+      {shown.map((row) => (
+        <View key={row.label} className="flex-row items-center justify-between gap-3">
+          <Text numberOfLines={1} className="min-w-0 flex-1 text-[10.5px] font-semibold text-text-muted">
+            {row.label}
+          </Text>
+          <View className="items-end">
+            <MaskedAmount
+              amount={row.ars}
+              currency="ARS"
+              fitOneLine
+              className="text-[11.5px] font-extrabold text-text"
+            />
+            {showUsd && row.usd !== 0 && (
+              <MaskedAmount
+                amount={row.usd}
+                currency="USD"
+                showCentsOverride
+                fitOneLine
+                className="mt-0.5 text-[9.5px] font-semibold text-text-soft"
+              />
+            )}
+          </View>
+        </View>
+      ))}
+    </View>
+  )
+}
 
 /**
  * The savings row — BELOW A RULE, never a fourth member of the strip.
@@ -250,6 +323,11 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
   })
   const hasUsd = hero != null && (placement!.USD.rows.length > 0 || displayed.USD !== 0)
 
+  // Which flow is open, if any. One at a time, as on web.
+  const [openFlow, setOpenFlow] = useState<'entro' | 'seFue' | null>(null)
+  const toggleFlow = (flow: 'entro' | 'seFue') =>
+    setOpenFlow((current) => (current === flow ? null : flow))
+
   const summaryHasUsd =
     (venia?.USD ?? 0) !== 0 ||
     (summary?.USD.entro ?? 0) !== 0 ||
@@ -269,6 +347,15 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
     <View className="overflow-hidden rounded-2xl border border-border bg-card">
       {/* Dark zone — today's balance; does NOT follow the month selector. */}
       <View className="bg-navy px-[18px] pb-[17px] pt-5">
+        {/* The eye toggle lives HERE, not in the header: it masks amounts, so
+            its place is where the amounts begin, and it is a privacy
+            preference rather than a scope control — it shares nothing with the
+            month lens. Absolutely positioned so it does not push the centred
+            label off centre. */}
+        <View style={{ position: 'absolute', right: 6, top: 6, zIndex: 1 }}>
+          <EyeMaskToggle />
+        </View>
+
         <Text className="text-center text-[10.5px] font-extrabold uppercase tracking-widest text-white/50">
           {isCurrent
             ? t('dashboard.hero.total_label')
@@ -360,7 +447,36 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             signPrefix="+"
             density={summaryDensity}
             loading={isLoading}
+            expanded={openFlow === 'entro'}
+            onToggle={isLoading ? undefined : () => toggleFlow('entro')}
           />
+          {openFlow === 'entro' && summary && (
+            <BreakdownRows
+              showUsd={summaryHasUsd}
+              rows={[
+                {
+                  label: t('dashboard.month.came_in_ingresos'),
+                  ars: summary.ARS.entroParts.ingresos,
+                  usd: summary.USD.entroParts.ingresos,
+                },
+                {
+                  label: t('dashboard.month.came_in_ingresos_financieros'),
+                  ars: summary.ARS.entroParts.ingresosFinancieros,
+                  usd: summary.USD.entroParts.ingresosFinancieros,
+                },
+                {
+                  label: t('dashboard.month.came_in_devoluciones'),
+                  ars: summary.ARS.entroParts.devoluciones,
+                  usd: summary.USD.entroParts.devoluciones,
+                },
+                {
+                  label: t('dashboard.month.other'),
+                  ars: summary.ARS.entroParts.otros,
+                  usd: summary.USD.entroParts.otros,
+                },
+              ]}
+            />
+          )}
           <Flow
             label={t('dashboard.month.went_out')}
             dotColor={colors.slate}
@@ -371,7 +487,31 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             signPrefix="−"
             density={summaryDensity}
             loading={isLoading}
+            expanded={openFlow === 'seFue'}
+            onToggle={isLoading ? undefined : () => toggleFlow('seFue')}
           />
+          {openFlow === 'seFue' && summary && (
+            <BreakdownRows
+              showUsd={summaryHasUsd}
+              rows={[
+                {
+                  label: t('dashboard.month.went_out_gastos'),
+                  ars: summary.ARS.seFueParts.gastos,
+                  usd: summary.USD.seFueParts.gastos,
+                },
+                {
+                  label: t('dashboard.month.went_out_card_payments'),
+                  ars: summary.ARS.seFueParts.pagosDeTarjeta,
+                  usd: summary.USD.seFueParts.pagosDeTarjeta,
+                },
+                {
+                  label: t('dashboard.month.other'),
+                  ars: summary.ARS.seFueParts.otros,
+                  usd: summary.USD.seFueParts.otros,
+                },
+              ]}
+            />
+          )}
         </View>
 
         {/* La fila EXPLICA el disponible —la identidad de la card cierra con

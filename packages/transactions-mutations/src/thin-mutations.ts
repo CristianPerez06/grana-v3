@@ -747,10 +747,14 @@ export async function deleteTransaction(
   // Deleting it in isolation is blocked by the RESTRICT FK on period_payments
   // anyway; undoing it properly is a cards operation (revertCardPeriodPayment),
   // from the period detail where the magnitude of the reversal is visible.
+  // `.limit(1)`: un mismo débito puede tener VARIAS patas (los pesos y los dólares del
+  // mismo resumen), así que la pregunta es "¿existe alguna?", no "¿existe exactamente
+  // una?" — sin el límite, `.maybeSingle()` falla en vez de responder.
   const { data: statementPayment } = await supabase
     .from('period_payments')
     .select('period_id')
     .eq('transaction_id', id)
+    .limit(1)
     .maybeSingle()
   if (statementPayment) return { ok: false, errorCode: DELETE_GUARD_CODES.cardPayment }
 
@@ -899,10 +903,12 @@ export async function confirmReimbursement(
         formError: 'No se pudo determinar el período de la tarjeta para esa fecha.',
       }
     }
+    // Un resumen pagado tiene una pata por moneda: alcanza con que exista alguna.
     const { data: payment } = await supabase
       .from('period_payments')
       .select('id')
       .eq('period_id', periodId)
+      .limit(1)
       .maybeSingle()
     if (payment) {
       return {

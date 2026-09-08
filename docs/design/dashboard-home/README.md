@@ -102,8 +102,8 @@ Una card (blanca, borde `1px solid #E8ECF1`, radio 20px) con dos zonas.
   - **Por pagar** = `Gastaste − Ya se pagó` (los gastos con tarjeta de crédito + lo que le debés a alguien).
 - **Pie: ritmo del mes** — bloque `background:#F7F9FB`, borde `1px solid #E8ECF1`, radio 15/16px, padding `11px 13px` / `14px 16px`, `display:flex;align-items:center;gap:13/15px`. **Tres estados**:
   1. **Con ingresos**: anillo 46/52px `conic-gradient(#11B981 0 <pct>, #DFE6EC <pct> 100%)` con agujero (`::after{inset:7/8px;background:#F7F9FB}`) y el `%` al centro (11.5/12.5px 800 `#0E9E6E`); a la derecha “Gastaste el **21%** de tus ingresos” (12.5/13.5px 700 `#6B7683`, número `#0E9E6E`), barra 6/7px (`#DFE6EC` con relleno `#11B981`) y pie “$ 212.494,67 de $ 1.000.000,00” 10.5/11.5px 600 `#AEB6C0`.
-  2. **El porcentaje no dice nada** (hay ingresos pero son ínfimos frente al gasto): **sin anillo**; título con el emoji 👀 al inicio (`margin-right:7px`) + texto “Acá el porcentaje ya no ayuda” (13.5px/800 `#142231`) y bajada “Gastaste $483.740,94 y este mes entraron $0,39.” (12.5px/600 `#8A94A3`).
-  3. **Todavía no entró nada**: **sin ícono ni anillo**, solo “Todavía no entró plata este mes” (13.5px/800) + “Cuando entre, vas a ver tu ritmo de gasto acá.” (12.5px/600).
+  2. **El porcentaje no dice nada** (hay ingresos pero son ínfimos frente al gasto): **sin anillo**; título con el emoji 👀 al inicio (`margin-right:7px`) + texto “Acá el porcentaje ya no ayuda” (13.5px/800 `#142231`) y bajada “Gastaste $483.740,94 y tus ingresos del mes fueron $0,39.” (12.5px/600 `#8A94A3`).
+  3. **Todavía no hubo ingresos**: **sin ícono ni anillo**, solo “Todavía no registraste ingresos este mes” (13.5px/800) + “Reintegros y ajustes no cuentan. Cuando entre un ingreso, vas a ver tu ritmo acá.” (12.5px/600). El copy nombra **ingresos** y evita “entró”: esa palabra es la de “Resumen del mes”, donde incluye reintegros y ajustes, y reusarla acá hace que las dos cards se contradigan en la misma pantalla.
   - Regla de corte entre 1 y 2 a definir con producto (p. ej. ingresos del mes por debajo de un mínimo o ritmo por encima de un umbral).
 
 ### 3) Card “Compromisos del próximo mes”

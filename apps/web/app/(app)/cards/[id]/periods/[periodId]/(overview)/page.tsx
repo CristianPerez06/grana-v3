@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { CheckCircle2, Undo2 } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
@@ -17,10 +18,15 @@ const formatDate = (iso: string) => {
 
 type Props = {
   params: Promise<{ id: string; periodId: string }>
+  // `?pagado=1` lo pone el formulario de pago al terminar y `?deshecho=1` la
+  // reversión: esta pantalla es el acuse de la operación anterior, y tiene que DECIR
+  // qué pasó, no solo mostrar un estado consistente.
+  searchParams: Promise<{ pagado?: string; deshecho?: string; sello?: string }>
 }
 
-const PeriodDetailPage = async ({ params }: Props) => {
+const PeriodDetailPage = async ({ params, searchParams }: Props) => {
   const { id, periodId } = await params
+  const { pagado, deshecho, sello } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -76,8 +82,34 @@ const PeriodDetailPage = async ({ params }: Props) => {
     return Array.from(groups.entries())
   })()
 
+  const justPaid = pagado === '1' && period.has_payment
+  // El resumen ya no tiene pago: la reversión terminó. La condición es la inversa de
+  // la del acuse de pago, así que los dos avisos nunca pueden convivir.
+  const justReverted = deshecho === '1' && !period.has_payment
+
   return (
     <>
+      {justPaid && (
+        <div className="flex items-start gap-2.5 rounded-[13px] border border-emerald/30 bg-emerald-soft px-4 py-3 text-sm text-emerald-deep">
+          <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>{t('period.just_paid')}</span>
+        </div>
+      )}
+
+      {justReverted && (
+        <div className="flex flex-col gap-1.5 rounded-[13px] border border-border bg-card px-4 py-3 text-sm text-text-muted">
+          <div className="flex items-start gap-2.5">
+            <Undo2 className="mt-0.5 size-4 shrink-0 text-slate" aria-hidden />
+            <span>{t('period.just_reverted')}</span>
+          </div>
+          {/* El sello ambiguo es lo único que la reversión NO pudo terminar: quedó un
+              movimiento en pie y hay que decirlo acá, que es donde se lo ve. */}
+          {sello === 'ambiguo' && (
+            <p className="pl-[26px] text-[13px]">{t('revert.stamp_tax_ambiguous')}</p>
+          )}
+        </div>
+      )}
+
       {/* Date range + edit-dates action — dynamic chrome sub-header. The
           layout chrome is sync (back-link + generic title); this is the
           per-period detail that depends on data. */}
@@ -113,17 +145,28 @@ const PeriodDetailPage = async ({ params }: Props) => {
             USD
           </p>
         )}
-        {period.has_payment && period.paymentDate && (
-          <p className="text-xs text-green-700 mt-1">
-            {t('period.paid_on_prefix')} {formatDate(period.paymentDate)}
-          </p>
-        )}
+        {/* Un renglón por DÉBITO real: la lista se parece a lo que muestra el banco.
+            Un pago en pesos que cancela pesos y dólares pesificados es un solo débito;
+            pagar cada moneda por su cuenta son dos. */}
+        {period.has_payment &&
+          period.paymentDebits.map((d) => (
+            <p key={d.transactionId} className="text-xs text-green-700 mt-1">
+              {t('period.paid_on_prefix')} {d.date ? formatDate(d.date) : '—'}
+              {d.accountName ? ` · ${d.accountName}` : ''} ·{' '}
+              {d.currencyCode === 'USD'
+                ? formatUSD(d.amount, showCents)
+                : formatARS(d.amount, showCents)}
+            </p>
+          ))}
         {period.has_payment && (
           <div className="mt-3 flex flex-col gap-2">
             <RevertPaymentAction
               periodId={period.id}
-              paymentAmount={period.paymentAmount ?? 0}
-              paymentAccountName={period.paymentAccountName}
+              debits={period.paymentDebits.map((d) => ({
+                amount: d.amount,
+                currencyCode: d.currencyCode,
+                accountName: d.accountName,
+              }))}
               // Los movimientos que vuelven a pendiente son los `paid` del resumen; si
               // el pago registró un sello, ese se elimina y se enuncia aparte.
               movementCount={

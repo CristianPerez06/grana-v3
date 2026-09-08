@@ -24,10 +24,10 @@ describe('revertCardPeriodPayment', () => {
   it('calls the RPC with the period and maps the summary', async () => {
     const { supabase, calls } = makeSupabase({
       data: {
-        reverted_amount: '120000.00',
-        payment_account_name: 'Banco Galicia',
+        reverted: [{ amount: '120000.00', currency_code: 'ARS', account_name: 'Banco Galicia' }],
         movements_reverted: 4,
         stamp_tax: 'deleted',
+        fully_reverted: true,
       },
       error: null,
     })
@@ -38,21 +38,47 @@ describe('revertCardPeriodPayment', () => {
     expect(result).toEqual({
       ok: true,
       summary: {
-        revertedAmount: 120000,
-        paymentAccountName: 'Banco Galicia',
+        reverted: [{ amount: 120000, currencyCode: 'ARS', accountName: 'Banco Galicia' }],
         movementsReverted: 4,
         stampTax: 'deleted',
+        fullyReverted: true,
       },
     })
+  })
+
+  it('devuelve un débito por cuenta y moneda — nunca los suma', async () => {
+    // Es la razón por la que el summary dejó de ser un monto: un resumen mixto se
+    // paga con dos débitos, y sumar pesos con dólares da un número que no es plata
+    // de nadie. `fullyReverted: false` dice que el resumen conserva otro pago.
+    const { supabase } = makeSupabase({
+      data: {
+        reverted: [
+          { amount: 120000, currency_code: 'ARS', account_name: 'Banco Galicia' },
+          { amount: 50, currency_code: 'USD', account_name: 'Caja de ahorro USD' },
+        ],
+        movements_reverted: 6,
+        stamp_tax: 'none',
+        fully_reverted: false,
+      },
+      error: null,
+    })
+
+    const result = await revertCardPeriodPayment({ supabase, periodId: PERIOD })
+
+    expect(result.ok === true && result.summary?.reverted).toEqual([
+      { amount: 120000, currencyCode: 'ARS', accountName: 'Banco Galicia' },
+      { amount: 50, currencyCode: 'USD', accountName: 'Caja de ahorro USD' },
+    ])
+    expect(result.ok === true && result.summary?.fullyReverted).toBe(false)
   })
 
   it('surfaces an ambiguous sello so the consumer can warn the user', async () => {
     const { supabase } = makeSupabase({
       data: {
-        reverted_amount: 5000,
-        payment_account_name: 'Efectivo',
+        reverted: [{ amount: 5000, currency_code: 'ARS', account_name: 'Efectivo' }],
         movements_reverted: 2,
         stamp_tax: 'ambiguous',
+        fully_reverted: true,
       },
       error: null,
     })

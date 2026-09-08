@@ -122,6 +122,55 @@ describe('transactionsFiltersReducer — filters', () => {
     expect(next.subcategoryId).toBeNull()
   })
 
+  it('setOverviewMode drops the drill filters of the previous mode (type, category, subcategory)', () => {
+    // An income row pins type=income + its category; flipping back to egresos
+    // must not leave the list filtered by incomes under an expenses donut.
+    const state = baseState({
+      overviewMode: 'ingresos',
+      type: 'income',
+      categoryId: 'cat-sueldo',
+      subcategoryId: null,
+      limit: 200,
+    })
+    const next = transactionsFiltersReducer(state, { type: 'setOverviewMode', mode: 'egresos' })
+    expect(next.overviewMode).toBe('egresos')
+    expect(next.type).toBeNull()
+    expect(next.categoryId).toBeNull()
+    expect(next.subcategoryId).toBeNull()
+    expect(next.limit).toBe(DEFAULT_MOVEMENTS_LIMIT)
+  })
+
+  it('setOverviewMode keeps the user\'s own filters (month, currency, search, account, amounts)', () => {
+    const state = baseState({
+      overviewMode: 'egresos',
+      categoryId: 'cat-comida',
+      currency: 'USD',
+      query: 'coto',
+      accountId: 'acc-1',
+      amountMin: 10,
+      amountMax: 500,
+    })
+    const next = transactionsFiltersReducer(state, { type: 'setOverviewMode', mode: 'ingresos' })
+    expect(next.categoryId).toBeNull()
+    expect(next.currency).toBe('USD')
+    expect(next.query).toBe('coto')
+    expect(next.accountId).toBe('acc-1')
+    expect(next.amountMin).toBe(10)
+    expect(next.amountMax).toBe(500)
+    expect(next.month).toBe(state.month)
+  })
+
+  it('setOverviewMode without a drill filter keeps the expanded list limit', () => {
+    const state = baseState({ overviewMode: 'egresos', limit: 200 })
+    const next = transactionsFiltersReducer(state, { type: 'setOverviewMode', mode: 'ingresos' })
+    expect(next.limit).toBe(200)
+  })
+
+  it('setOverviewMode to the current mode is a no-op', () => {
+    const state = baseState({ overviewMode: 'egresos', categoryId: 'cat-comida' })
+    expect(transactionsFiltersReducer(state, { type: 'setOverviewMode', mode: 'egresos' })).toBe(state)
+  })
+
   it('setSubcategory without a parent category is a no-op', () => {
     const state = baseState({ categoryId: null })
     expect(

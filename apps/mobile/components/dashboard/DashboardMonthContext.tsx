@@ -15,9 +15,12 @@ type DashboardMonthContextValue = {
   /** Current month per the financial timezone. */
   current: DashboardMonth
   isCurrent: boolean
-  /** Undefined when the boundary is reached (MonthNavigator disables the arrow). */
-  goPrev?: () => void
-  goNext?: () => void
+  /**
+   * Jump to any month. Out-of-range months are ignored rather than clamped: the
+   * sheet only offers reachable ones, so a call outside the range is a bug and
+   * silently landing on a different month would hide it.
+   */
+  goToMonth: (month: DashboardMonth) => void
 }
 
 const MONTHS_BACK_LIMIT = 12
@@ -26,11 +29,6 @@ const DashboardMonthContext = createContext<DashboardMonthContextValue | null>(n
 
 const diffMonths = (a: DashboardMonth, b: DashboardMonth) =>
   (a.year - b.year) * 12 + (a.month - b.month)
-
-const addMonth = ({ year, month }: DashboardMonth, delta: number): DashboardMonth => {
-  const total = year * 12 + (month - 1) + delta
-  return { year: Math.floor(total / 12), month: (total % 12) + 1 }
-}
 
 export const DashboardMonthProvider = ({
   children,
@@ -46,15 +44,16 @@ export const DashboardMonthProvider = ({
   const [selected, setSelected] = useState<DashboardMonth>(current)
 
   const monthsBack = diffMonths(current, selected)
-  const canGoBack = monthsBack < MONTHS_BACK_LIMIT
-  const canGoForward = monthsBack > 0
 
   const value: DashboardMonthContextValue = {
     selected,
     current,
     isCurrent: monthsBack === 0,
-    goPrev: canGoBack ? () => setSelected((s) => addMonth(s, -1)) : undefined,
-    goNext: canGoForward ? () => setSelected((s) => addMonth(s, +1)) : undefined,
+    goToMonth: (month) => {
+      const back = diffMonths(current, month)
+      if (back < 0 || back > MONTHS_BACK_LIMIT) return
+      setSelected(month)
+    },
   }
 
   return (

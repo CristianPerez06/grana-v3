@@ -229,6 +229,17 @@ export async function leaveHouseholdCore(
     }
   }
 
+  // Household categories become unreadable to whoever leaves (RLS by
+  // membership, 0063). Before the membership goes, every household category or
+  // subcategory this user points at from their own, non-shared movements and
+  // rules is copied as an own one and those rows are repointed, in one atomic
+  // RPC. Shared rows keep the household classification on purpose: the
+  // invariant "a shared row never references a private classification" holds.
+  const { error: detachError } = await supabase.rpc('detach_household_classifications', {
+    p_household_id: householdId,
+  })
+  if (detachError) return { ok: false, formError: detachError.message }
+
   const { error } = await supabase
     .from('household_member')
     .delete()

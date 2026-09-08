@@ -121,10 +121,27 @@ export function transactionsFiltersReducer(
       return { ...state, customRange: action.range, limit: DEFAULT_MOVEMENTS_LIMIT }
     case 'setCurrency':
       return { ...state, currency: action.currency, limit: DEFAULT_MOVEMENTS_LIMIT }
-    case 'setOverviewMode':
-      // Mode toggle (Egresos / Ingresos) does NOT reset the movement list
-      // limit because it only affects the spending overview card.
-      return { ...state, overviewMode: action.mode }
+    case 'setOverviewMode': {
+      // Mode toggle (Egresos / Ingresos). The drill filters belong to the mode
+      // that set them: an income row pins `type=income` + its category, an
+      // expense row pins a category (+ subcategory). Flipping the mode drops
+      // them, or the list keeps showing the previous mode's rows under a card
+      // that no longer explains them (the "stuck Ingresos chip"). Month,
+      // currency, search, account and amounts are the user's own filters and
+      // stay. The limit resets only when a drill filter actually went away:
+      // a bare toggle must not collapse a list the user had expanded.
+      if (action.mode === state.overviewMode) return state
+      const hadDrill =
+        state.type !== null || state.categoryId !== null || state.subcategoryId !== null
+      return {
+        ...state,
+        overviewMode: action.mode,
+        type: null,
+        categoryId: null,
+        subcategoryId: null,
+        limit: hadDrill ? DEFAULT_MOVEMENTS_LIMIT : state.limit,
+      }
+    }
     case 'setType':
       return { ...state, type: action.movementType, limit: DEFAULT_MOVEMENTS_LIMIT }
     case 'setAccount':

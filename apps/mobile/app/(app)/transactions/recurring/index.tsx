@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react-native'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
-import type { RecurrenceSummary } from '@grana/recurrences'
+import { duplicateRuleIds, type RecurrenceSummary } from '@grana/recurrences'
 import { PageHeader } from '../../../../components/ui/PageHeader'
 import { Segmented } from '../../../../components/ui/Segmented'
 import { SkeletonBlock } from '../../../../components/ui/SkeletonBlock'
@@ -64,6 +64,9 @@ export default function RecurringHubScreen() {
   const paused = rules.filter((r) => r.status === 'paused' && !isFinished(r, today))
   const finished = rules.filter((r) => isFinished(r, today))
   const buckets: Record<Tab, RecurrenceSummary[]> = { active, paused, finished }
+  // Active rules that collide with another (same account, currency and type,
+  // equal or nearly equal amount) get an informative badge, as on web's hub.
+  const duplicateIds = useMemo(() => duplicateRuleIds(active), [active])
 
   const options = [
     { value: 'active', label: `${t('recurrences.statuses.active')} (${active.length})` },
@@ -128,6 +131,7 @@ export default function RecurringHubScreen() {
                 key={rule.id}
                 rule={rule}
                 tab={tab}
+                duplicate={duplicateIds.has(rule.id)}
                 onPress={() => router.push(`/transactions/recurring/${rule.id}`)}
               />
             ))}

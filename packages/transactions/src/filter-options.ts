@@ -25,6 +25,7 @@ export type MovementFilterOptions = {
     type: 'income' | 'expense' | 'both'
     canonical_name: string
     user_id: string | null
+    household_id: string | null
     icon: string | null
     color: string | null
   }>
@@ -51,7 +52,7 @@ export async function getMovementFilterOptions(
       .order('name'),
     supabase
       .from('categories')
-      .select('id, name, type, canonical_name, user_id, icon, color')
+      .select('id, name, type, canonical_name, user_id, household_id, icon, color')
       .eq('is_active', true)
       .order('type')
       .order('name'),

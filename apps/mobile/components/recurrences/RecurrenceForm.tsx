@@ -17,11 +17,13 @@ import { DateField } from '../ui/DateField'
 import { Segmented } from '../ui/Segmented'
 import { Switch } from '../ui/Switch'
 import { FormError } from '../ui/FormError'
+import { Alert } from '../ui/Alert'
 import { Spinner } from '../ui/Spinner'
 import { AccountSelectField, CategorySelectField } from '../transactions/form-pickers'
 import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 import { createRecurrence } from '../../lib/recurrences/mutators'
+import { getDuplicateRules, type DuplicateMatch } from '../../lib/recurrences/queries'
 import { invalidateAfterRecurrenceMutation } from '../../lib/recurrences/invalidate'
 
 type MovementType = 'income' | 'expense' | 'transfer'
@@ -92,6 +94,11 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
 
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Duplicate warning, mirror of web's create modal: the first submit that
+  // collides shows the existing rule and stops; `duplicateAck` lets the next
+  // submit through. It informs, it never blocks.
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[] | null>(null)
+  const [duplicateAck, setDuplicateAck] = useState(false)
 
   const categoryList = useMemo(
     () =>
@@ -184,6 +191,22 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
     }
 
     setSubmitting(true)
+    if (!duplicateAck) {
+      // A failed lookup must not stand between the user and the rule: treat it
+      // as "nothing found" and create.
+      const matches = await getDuplicateRules({
+        account_id: accountId,
+        currency_code: currencyCode,
+        movement_type: type,
+        amount: parsedAmount,
+      }).catch(() => [] as DuplicateMatch[])
+      if (matches.length > 0) {
+        setDuplicates(matches)
+        setDuplicateAck(true)
+        setSubmitting(false)
+        return
+      }
+    }
     const result = await createRecurrence(payload, t)
     setSubmitting(false)
     if (!result.ok) {
@@ -400,6 +423,13 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
         </View>
       )}
 
+      {duplicates && duplicates.length > 0 && (
+        <Alert variant="warning" title={t('recurrences.duplicate_warning_title')}>
+          {duplicates[0].description
+            ? t('recurrences.duplicate_warning_body', { rule: duplicates[0].description })
+            : t('recurrences.duplicate_warning_body_untitled')}
+        </Alert>
+      )}
       {formError && <FormError message={formError} />}
 
       {/* Submit */}

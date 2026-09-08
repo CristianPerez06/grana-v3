@@ -7,6 +7,7 @@ import {
   TextInput as RNTextInput,
   View,
 } from 'react-native'
+import { filterInstitutions } from '@grana/accounts'
 import { BottomSheet } from './BottomSheet'
 import { FormSheetKeyboardView } from '../layout/FormSheetKeyboardView'
 
@@ -42,11 +43,7 @@ export function InstitutionPickerModal({
 }: Props) {
   const [query, setQuery] = useState('')
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    if (!normalized) return institutions
-    return institutions.filter((i) => i.name.toLowerCase().includes(normalized))
-  }, [institutions, query])
+  const filtered = useMemo(() => filterInstitutions(institutions, query), [institutions, query])
 
   const handleSelect = (institution: Institution) => {
     onSelect(institution)

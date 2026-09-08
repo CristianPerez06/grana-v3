@@ -54,6 +54,8 @@ type MovementFiltersProps = {
     type: 'income' | 'expense' | 'both'
     canonical_name: string
     user_id: string | null
+    /** Set when the category belongs to the household (shown with the "Hogar" mark). */
+    household_id?: string | null
     /** Emoji glyph + tint; optional for the same reason as `accounts.avatar`. */
     icon?: string | null
     color?: string | null
@@ -125,8 +127,17 @@ export const MovementFilters = ({
   const locale = useLocale()
 
   // System categories/subcategories render localized; user-owned keep their name.
-  const categoryLabel = (c: { name: string; canonical_name: string; user_id: string | null }) =>
-    translateCategoryLabel(c.name, c.canonical_name, c.user_id === null, tRoot) ?? c.name
+  // A household category carries the "Hogar" mark so it is not mistaken for an
+  // own one with the same name (spec `categories`).
+  const categoryLabel = (c: {
+    name: string
+    canonical_name: string
+    user_id: string | null
+    household_id?: string | null
+  }) => {
+    const base = translateCategoryLabel(c.name, c.canonical_name, c.user_id === null, tRoot) ?? c.name
+    return c.household_id != null ? `${base} · ${tRoot('settings.categories.household_badge')}` : base
+  }
   const subcategoryLabel = (s: { name: string; canonical_name: string; user_id: string | null }) =>
     translateSubcategoryLabel(s.name, s.canonical_name, s.user_id === null, tRoot) ?? s.name
 

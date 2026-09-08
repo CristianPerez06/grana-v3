@@ -60,7 +60,23 @@ El **pago del resumen de tarjeta NO es gasto** (cancela deuda) y NO cuenta en "E
 
 Los reintegros **recibidos** (no cancelados) de esa categoría restan, por su **fecha**, sin importar su destino (`reimbursement_target`: "a cuenta" o "en resumen") — para la categorización solo importa que volvió plata a esa categoría. Les aplica el mismo corte de caja: un reintegro fechado adelante todavía no volvió.
 
+Cuando hay al menos un crédito, el total del centro deja de ser el gasto del mes: es la suma de lo dibujado, ni bruto ni neto. Por eso la card SHALL cerrar, sólo en ese caso, mostrando **el neto del mes** = total del centro − suma de los créditos. Ese número SHALL ir **inmediatamente debajo de los créditos**, cerrando ese mismo bloque, en ambas plataformas: los tres números tienen que leerse como una sola cuenta (gastado − te devolvieron = te costó), y separarlos deja dos montos grandes sin nada que los vincule, que es justamente la pregunta que la línea viene a contestar. Sin créditos esa línea NO SHALL mostrarse: el centro ya es el neto y repetirlo sería ruido. La línea SHALL existir en **ambas plataformas** y SHALL calcularse con aritmética de dinero, no con resta de floats.
+
+Esa línea es el puente con la card "Cuánto gastaste" del Inicio, que muestra el mismo neto en el caso corriente. Las dos pantallas PUEDEN seguir difiriendo por dos causas que esta línea no explica y que NO SHALL ocultarse detrás de ella: un balde de "Cuánto gastaste" pisado en cero (reintegro mayor que el gasto de ese medio de pago) y las filas sin cuenta asignada, que el Inicio saltea.
+
 El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando los reintegros recibidos de la categoría en el mes superan su gasto del mes (p. ej. un reintegro cuyo gasto original fue de un mes anterior, o un consumo de tarjeta aún no devengado). El sistema NO SHALL descartar ni capear a cero esos netos negativos: SHALL mostrarlos como **créditos** ("te devolvieron"), separados del peso de gasto y **fuera de la dona** (una dona no puede representar una porción negativa). El total/peso de la dona SHALL derivarse solo de los netos positivos. Los créditos SHALL mostrarse en **ambas plataformas**.
+
+#### Scenario: Con una categoría en crédito, la card cierra con el neto
+
+- **WHEN** el mes cierra con la dona en $2.211.312,91 y una categoría en crédito por $146.985,07
+- **THEN** justo debajo de ese bloque aparece $2.064.327,84, cerrando la cuenta
+- **AND** ese es el mismo número que la card "Cuánto gastaste" del Inicio muestra para ese mes
+
+#### Scenario: Sin créditos no aparece la línea de cierre
+
+- **WHEN** ninguna categoría del mes quedó en crédito
+- **THEN** la card no muestra ningún neto: sin bloque de créditos no hay cuenta que cerrar
+- **AND** el total del centro ya es el neto del mes
 
 #### Scenario: El neto descuenta los reintegros recibidos
 
@@ -119,8 +135,6 @@ El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando lo
 - **WHEN** hoy es el 1 de agosto y la categoría Hogar tiene una cuota de tarjeta de $50.000 fechada el 20 de agosto
 - **THEN** esa cuota SÍ cuenta en el desglose de agosto desde hoy (ya está incurrida: la compra ocurrió antes)
 
----
-
 ### Requirement: El desglose se presenta como donut más ranking
 
 El desglose SHALL mostrarse como un **donut** que representa el peso relativo de cada categoría, acompañado de un **ranking** ordenado de mayor a menor (categoría, monto y porcentaje). Las categorías de menor peso SHALL poder agruparse en una entrada **"Otros"** para mantener el donut legible.
@@ -145,6 +159,8 @@ Al tocar una categoría del desglose (donut o ranking), el sistema SHALL abrir, 
 Esta regla SHALL regir en **ambas plataformas**: web y nativo comparten la lente (`@grana/money-logic`) y la query de la lista (`getMonthCategoryLines` en `@grana/transactions`), de modo que la reconciliación no puede divergir entre ellas.
 
 La lista drilleada aplica cuando el **único** filtro de contenido activo es la categoría (opcionalmente acotada por subcategoría y por la moneda visualizada). Si el usuario superpone **otro** filtro (cuenta, tipo, rango de monto o búsqueda de texto), ya no está en el drill puro: el listado SHALL volver a la lente CAJA del listado general (`get_movements_page`), que respeta TODOS los filtros combinados. La reconciliación con el donut solo se promete en el estado de drill puro.
+
+Los filtros que pone el drill pertenecen al modo que los puso: una fila de ingresos fija el tipo `income` y su categoría; una fila de egresos fija una categoría (y opcionalmente una subcategoría). Al cambiar de modo (Egresos ↔ Ingresos) el sistema SHALL descartar esos filtros de drill (tipo, categoría y subcategoría) en ambas direcciones, y SHALL conservar los filtros propios del usuario: mes, moneda, búsqueda, cuenta y rango de montos. Dejar el tipo o la categoría del modo anterior hace que la lista muestre filas que la card de arriba ya no explica (el chip "Ingresos" pegado bajo un donut de egresos). Cambiar al modo ya activo no altera nada. La regla rige en web y en nativo.
 
 Reglas de composición de la lista drilleada (espejo del desglose):
 
@@ -215,6 +231,18 @@ Cuando el desglose está en modo subcategoría (una categoría activa con sus su
 - **WHEN** el usuario toca una categoría del desglose de egresos y luego vuelve a todas las categorías
 - **THEN** no queda ningún filtro de contenido activo por haber entrado al drill (ni categoría, ni subcategoría, ni un filtro de moneda "pegado" por la visualización)
 - **AND** el drill de egresos NO SHALL fijar un filtro de moneda: el gráfico y la lista derivan la moneda de la misma fuente, así que volver atrás deja el estado limpio
+
+#### Scenario: Cambiar de modo no deja filtros del modo anterior
+
+- **WHEN** el usuario toca "Sueldo" en el desglose de ingresos (la lista queda filtrada por tipo ingreso y esa categoría) y luego vuelve a "Egresos"
+- **THEN** la lista deja de filtrar por tipo ingreso y por categoría, y muestra el listado general del mes
+- **AND** no queda ningún chip de filtro de tipo ni de categoría activo
+- **AND** el mes, la moneda visualizada, la búsqueda, la cuenta y el rango de montos que el usuario hubiera fijado se conservan
+
+#### Scenario: Cambiar de modo en la app nativa limpia los mismos filtros (mobile)
+
+- **WHEN** el usuario hace lo mismo en la app nativa
+- **THEN** la hoja de filtros y los chips muestran el mismo estado que en web: sin tipo ni categoría, con los filtros propios intactos
 
 #### Scenario: Seleccionar una subcategoría no revierte el donut a todas las categorías
 

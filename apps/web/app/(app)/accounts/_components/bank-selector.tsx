@@ -9,6 +9,7 @@ import {
   ACCOUNT_COLOR_KEYS,
   type AccountColorKey,
 } from '@grana/ui-contracts'
+import { filterInstitutions } from '@grana/accounts'
 import { FieldIcon, FieldLabel } from '@/components/ui/form-primitives'
 import { useDrawerContainer } from '@/components/ui/drawer'
 import { createCustomInstitution } from '@/app/_actions/institutions'
@@ -52,9 +53,7 @@ export const BankSelector = ({
   // query typed yet), list everything so a click opens the full list to switch;
   // once the user starts typing, filter by the query.
   const isPristineSelection = selected != null && search.trim() === selected.name
-  const filtered = isPristineSelection
-    ? institutions
-    : institutions.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
+  const filtered = isPristineSelection ? institutions : filterInstitutions(institutions, search)
   const noMatches = filtered.length === 0 && search.trim().length > 0
   const showDropdown = focused && mode === 'list'
 

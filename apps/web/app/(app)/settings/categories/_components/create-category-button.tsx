@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useQuery } from '@tanstack/react-query'
+import { getHousehold } from '@grana/shared'
+import { createClient } from '@/lib/supabase/client'
+import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { CreateCategoryForm } from '../new/_components/create-category-form'
@@ -19,6 +23,15 @@ export function CreateCategoryButton() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [formInstance, setFormInstance] = useState(0)
+
+  // Same key the transactions header and drawer loader use, so this costs no
+  // extra fetch once the user has been through /transactions. Gates the "Es
+  // del hogar" switch: without a household there is nothing to put it into.
+  const householdQuery = useQuery({
+    queryKey: QUERY_KEYS.householdDetail,
+    queryFn: () => getHousehold(createClient()),
+  })
+  const hasHousehold = householdQuery.data != null
 
   // Bridge: open the create drawer when arriving with `?nuevaCategoria=1` (e.g.
   // the "+ Agregar nueva categoría" shortcut in the movement form), so category
@@ -53,6 +66,7 @@ export function CreateCategoryButton() {
       <Drawer open={open} onClose={() => setOpen(false)} widthPx={540} ariaLabel={t('new.title')}>
         <CreateCategoryForm
           key={formInstance}
+          hasHousehold={hasHousehold}
           variant="drawer"
           onClose={() => setOpen(false)}
           onSuccess={() => setOpen(false)}

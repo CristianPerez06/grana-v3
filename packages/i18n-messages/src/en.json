@@ -120,6 +120,12 @@
     "new_movement": "New movement",
     "mask_show": "Show amounts",
     "mask_hide": "Hide amounts",
+    "month_lens": {
+      "open": "Change the month",
+      "sheet_title": "Which month do you want to see?",
+      "back_to_today": "Back to today",
+      "committed_note": "Committed shows the month after the one you pick."
+    },
     "hero": {
       "total_label": "Total available balance",
       "balance_as_of": "Balance at the end of {month}"
@@ -128,6 +134,14 @@
       "summary_title": "Month summary",
       "came_in": "Came in",
       "went_out": "Went out",
+      "open_breakdown": "See breakdown",
+      "close_breakdown": "Hide",
+      "came_in_ingresos": "Income",
+      "came_in_ingresos_financieros": "Financial income",
+      "came_in_devoluciones": "Refunds",
+      "went_out_gastos": "Spending",
+      "went_out_card_payments": "Card payments",
+      "other": "Other",
       "carried_in": "You had"
     },
     "hero_loading": "Loading your available balance…",
@@ -190,11 +204,11 @@
       "pending_on_cards": "on your cards",
       "pending_owed_other": "you owe {name}",
       "pace": "You spent {pct} of your income",
-      "pace_over": "👀 You spent {times}× what came in this month",
-      "pace_unknown": "No income has come in yet this month",
-      "pace_unknown_note": "Once it does, your spending pace shows up here.",
+      "pace_over": "👀 You spent {times}× your income this month",
+      "pace_unknown": "No income recorded yet this month",
+      "pace_unknown_note": "Refunds and adjustments don’t count. Once income comes in, your pace shows up here.",
       "pace_overflow": "A percentage stops helping here 👀",
-      "pace_overflow_note": "You spent {spent} and {income} came in this month.",
+      "pace_overflow_note": "You spent {spent} and your income this month was {income}.",
       "pace_foot": "{spent} of {income}",
       "empty": "No expenses this month.",
       "loading": "Loading this month’s spending…",
@@ -243,7 +257,8 @@
         "system_heading": "System",
         "user_heading": "Custom",
         "empty": "No categories yet.",
-        "subcategory_count": "{count} subcategories"
+        "subcategory_count": "{count} subcategories",
+        "household_heading": "Household"
       },
       "types": {
         "income": "Income",
@@ -272,7 +287,8 @@
         "delete_in_use_subcategory": "This subcategory has linked movements or recurrences. Archive it instead of deleting it.",
         "system_readonly": "System categories cannot be edited.",
         "not_found": "Category not found.",
-        "generic": "Something went wrong. Please try again."
+        "generic": "Something went wrong. Please try again.",
+        "household_required": "You need an active household to create a household category."
       },
       "form": {
         "name_label": "Name",
@@ -287,7 +303,10 @@
         "color_none": "No color",
         "color_custom": "Custom color",
         "submit_create": "Save category",
-        "submit_update": "Save changes"
+        "submit_update": "Save changes",
+        "household_label": "Household category",
+        "household_help": "Both members see and use it, in shared and personal expenses.",
+        "household_locked": "Already a household category. It cannot go back to personal."
       },
       "new": {
         "title": "New category"
@@ -308,7 +327,8 @@
         "list_loading": "Loading the categories…",
         "subcategories_loading": "Loading the subcategories…",
         "form_loading": "Loading the category…"
-      }
+      },
+      "household_badge": "Household"
     },
     "security": {
       "label": "Security",
@@ -657,7 +677,8 @@
       "movements_with_count": "Transactions ({count})",
       "current_movements": "Transactions in the current statement",
       "amount_to_pay": "Amount to pay",
-      "amount_to_pay_helper": "Pre-filled with the total outstanding. You can edit it.",
+      "amount_to_pay_helper": "Leaves your peso account. Computed from what you are settling of the statement.",
+      "amount_to_pay_helper_usd": "Leaves your dollar account. Computed from what you are settling of the statement.",
       "debit_account": "Debit account",
       "payment_date": "Payment date",
       "next_period_helper": "Your statement announces the running cycle's close and due dates. Confirm them here.",
@@ -709,6 +730,8 @@
       "of_connector": "of"
     },
     "period": {
+      "just_reverted": "Done — the payment is undone and the statement is unpaid again.",
+      "just_paid": "Done — this statement's payment is recorded.",
       "detail_title": "Statement",
       "future": "Future",
       "current": "Current",
@@ -904,7 +927,7 @@
       "header_context": "{card} · closed on {close} · due {due}",
       "available_label": "available",
       "usd_note_prefix": "Dollar purchases:",
-      "usd_note_description": "This statement has USD debt. Enter the payment-day rate below: the ARS total to pay is computed with it.",
+      "usd_note_description": "This statement has USD debt. You can settle it with dollars, from a dollar account, or convert it at the payment-day rate.",
       "fx_label": "Payment-day rate (ARS per 1 USD)",
       "fx_helper": "USD debt converts at the rate of the day you pay the statement.",
       "fx_placeholder": "E.g. 1230.50",
@@ -922,7 +945,15 @@
       "stamp_tax_relation_note": "The stamp tax is a separate charge: it's debited from the same account along with the payment. {total} is debited = {consumos} (statement) + {stamp} (stamp tax).",
       "stamp_tax_other_placeholder": "Other amount",
       "stamp_tax_none": "No stamp tax charged",
-      "warning": "Once confirmed, the payment cannot be reverted. If you recorded a wrong amount or account, fix it with a balance adjustment."
+      "warning": "If you get it wrong, you can undo this payment from the statement: the money returns to your accounts and the charges go back to pending. It stops being undoable once you pay a later statement of this card.",
+      "usd_mode_label": "How are you paying the statement's dollars?",
+      "usd_mode_in_usd": "In dollars",
+      "usd_mode_in_ars": "In pesos",
+      "usd_no_account": "You have no account with dollars enabled, so this part is paid in pesos.",
+      "usd_account_label": "Dollar account",
+      "debits_helper": "Two debits, one per currency. Computed from what you are settling of the statement.",
+      "debit_from": "From {account}",
+      "debit_account_pending": "Pick the account"
     },
     "edit_dates": {
       "dialog_title": "Edit statement dates",
@@ -964,7 +995,6 @@
       "period_already_paid": "This statement was already paid.",
       "period_not_closed": "The statement hasn’t closed yet. You can only pay closed or overdue statements.",
       "payment_account_not_found": "Payment account not found.",
-      "payment_from_card": "You can’t pay a statement from another card.",
       "debt_check_failed": "Couldn’t verify the statement’s balance.",
       "usd_fx_required": "The statement has USD debt: the payment-day rate is missing.",
       "running_cycle_undetermined": "Couldn’t determine the card’s running cycle.",
@@ -989,7 +1019,11 @@
       "installment_no_cuotas": "The purchase has no installments to recalculate.",
       "shared_update_failed": "Couldn’t update the shared split: {error}",
       "shared_unshare_settlement": "Can’t un-share: a settlement is dated after this purchase. Reverse that settlement first.",
-      "installment_delete_paid": "You can’t delete a purchase with already-paid installments."
+      "installment_delete_paid": "You can’t delete a purchase with already-paid installments.",
+      "statement_not_settled": "The payment must settle the whole statement. It would leave {ars} in pesos and {usd} in dollars unpaid.",
+      "leg_exceeds_pending": "You are paying more than the statement owes. {pending} remains.",
+      "payment_currency_inactive": "That account does not have the payment currency enabled.",
+      "revert_not_latest_group": "Undo the most recent payment of this statement first."
     }
   },
   "transactions": {
@@ -1030,7 +1064,7 @@
         "cancel": "Cancel",
         "delete_warning_default": "This action can't be undone.",
         "delete_warning_parent": "This will delete the purchase and all its installments. This action can't be undone.",
-        "delete_warning_card_payment": "If you delete this payment, the installments for the period will go back to pending. Continue?",
+        "delete_warning_card_payment": "If you delete this payment, the period's charges will go back to pending. Continue?",
         "delete_blocked_card_payment": "This movement is the payment of a card statement. To undo it — and send the statement's charges back to pending — go to the period detail, under Cards.",
         "got_it": "Got it"
       },
@@ -1067,7 +1101,7 @@
       "context": {
         "card_pending": "This card spending won't reduce your available balance until you pay the {periodo} statement.",
         "card_paid_installment": "This installment is already included in the {periodo} statement you paid.",
-        "card_payment": "With this payment, the installments for the {periodo} period moved to paid.",
+        "card_payment": "With this payment, the {periodo} period's charges moved to paid.",
         "reimbursement_pending": "You're expecting this refund. When it lands, mark it as received and it'll add to your available balance.",
         "reimbursement_cancelled": "You marked this reimbursement as cancelled. If it does come in, you can reopen it."
       },
@@ -1155,6 +1189,7 @@
       "no_subcategory": "No subcategory",
       "center_label": "Spent",
       "credits_label": "Refunded to you",
+      "net_total_label": "Actually spent",
       "mode_egresos": "Expenses",
       "mode_ingresos": "Income",
       "subtitle_egresos": "This month's spending",
@@ -1757,10 +1792,10 @@
     "created_on": "Created on {date}",
     "edit_title": "Edit recurring rule",
     "duplicate_badge": "Duplicate",
-    "duplicate_hint": "You already have another active rule with the same account, currency, type and amount. If they are different expenses, ignore this.",
+    "duplicate_hint": "You already have another active rule with the same account, currency and type, and an equal or nearly equal amount (within 1%). If they are different expenses, ignore this.",
     "duplicate_warning_title": "You already have a rule like this",
-    "duplicate_warning_body": "“{rule}” has the same account, currency, type and amount. You can create it anyway if they are different expenses.",
-    "duplicate_warning_body_untitled": "You already have an active rule with the same account, currency, type and amount. You can create it anyway if they are different expenses.",
+    "duplicate_warning_body": "“{rule}” has the same account, currency and type, and an equal or nearly equal amount. You can create it anyway if they are different expenses.",
+    "duplicate_warning_body_untitled": "You already have an active rule with the same account, currency and type, and an equal or nearly equal amount. You can create it anyway if they are different expenses.",
     "route": {
       "form_loading": "Loading the form…"
     }

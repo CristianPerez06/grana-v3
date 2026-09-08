@@ -17,9 +17,12 @@ import { updateCategorySchema } from '@grana/validation'
 import type { Category } from '@/lib/categories/types'
 import { IconPicker } from '../../../_components/icon-picker'
 import { ColorPicker } from '../../../_components/color-picker'
+import { HouseholdScopeField } from '../../../_components/household-scope-field'
 
 type Props = {
   category: Category
+  /** Whether the user belongs to an active household. Shows the "Es del hogar" control. */
+  hasHousehold?: boolean
   /** `'drawer'` renders the hi-fi shell; `'page'` renders the body inline (fallback route). */
   variant?: 'drawer' | 'page'
   /** Drawer chrome: close handler for the header ✕ / footer cancel. */
@@ -28,13 +31,22 @@ type Props = {
   onSuccess?: () => void
 }
 
-export const EditCategoryForm = ({ category, variant = 'page', onClose, onSuccess }: Props) => {
+export const EditCategoryForm = ({
+  category,
+  hasHousehold = false,
+  variant = 'page',
+  onClose,
+  onSuccess,
+}: Props) => {
   const t = useTranslations('settings.categories')
   const tCommon = useTranslations('common')
   const router = useRouter()
   const queryClient = useQueryClient()
   const [formError, setFormError] = useState<string | null>(null)
   const isDrawer = variant === 'drawer'
+  // Already the household's: the switch shows on and locked. The row also
+  // shows for a member who lost the household since (locked, informational).
+  const isHousehold = category.household_id !== null
 
   const {
     register,
@@ -48,6 +60,7 @@ export const EditCategoryForm = ({ category, variant = 'page', onClose, onSucces
       name: category.name,
       icon: category.icon ?? '',
       color: category.color ?? '',
+      scope: isHousehold ? ('household' as const) : ('own' as const),
     },
   })
 
@@ -70,7 +83,7 @@ export const EditCategoryForm = ({ category, variant = 'page', onClose, onSucces
     }
     if (result.fieldErrors) {
       for (const [field, message] of Object.entries(result.fieldErrors)) {
-        if (message) setError(field as 'name' | 'icon' | 'color', { message })
+        if (message) setError(field as 'name' | 'icon' | 'color' | 'scope', { message })
       }
     }
     if (result.formError) setFormError(result.formError)
@@ -99,6 +112,19 @@ export const EditCategoryForm = ({ category, variant = 'page', onClose, onSucces
       />
       {errors.color?.message && (
         <p className="text-xs text-destructive">{errors.color.message}</p>
+      )}
+      {(hasHousehold || isHousehold) && (
+        <Controller
+          control={control}
+          name="scope"
+          render={({ field }) => (
+            <HouseholdScopeField
+              checked={field.value === 'household'}
+              onChange={(checked) => field.onChange(checked ? 'household' : 'own')}
+              locked={isHousehold}
+            />
+          )}
+        />
       )}
     </>
   )

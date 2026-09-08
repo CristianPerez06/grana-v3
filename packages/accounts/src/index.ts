@@ -8,6 +8,8 @@ export {
 
 export { computeBalance } from './balance'
 
+export { filterInstitutions } from './institution-search'
+
 export {
   createAccount,
   updateAccount,

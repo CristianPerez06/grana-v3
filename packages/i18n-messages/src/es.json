@@ -120,6 +120,12 @@
     "new_movement": "Nuevo movimiento",
     "mask_show": "Mostrar importes",
     "mask_hide": "Ocultar importes",
+    "month_lens": {
+      "open": "Cambiar el mes",
+      "sheet_title": "¿Qué mes querés ver?",
+      "back_to_today": "Volver a hoy",
+      "committed_note": "Comprometido muestra el mes siguiente al elegido."
+    },
     "hero": {
       "total_label": "Saldo disponible total",
       "balance_as_of": "Saldo al cierre de {month}"
@@ -128,6 +134,14 @@
       "summary_title": "Resumen del mes",
       "came_in": "Entró",
       "went_out": "Se fué",
+      "open_breakdown": "Ver apertura",
+      "close_breakdown": "Ocultar",
+      "came_in_ingresos": "Ingresos",
+      "came_in_ingresos_financieros": "Ingresos financieros",
+      "came_in_devoluciones": "Devoluciones",
+      "went_out_gastos": "Gastos",
+      "went_out_card_payments": "Pago de tarjetas",
+      "other": "Otros",
       "carried_in": "Tenías"
     },
     "hero_loading": "Cargando tu disponible…",
@@ -190,11 +204,11 @@
       "pending_on_cards": "en tus tarjetas",
       "pending_owed_other": "se lo debés a {name}",
       "pace": "Gastaste el {pct} de tus ingresos",
-      "pace_over": "👀 Gastaste {times} veces lo que entró este mes",
-      "pace_unknown": "Todavía no entró plata este mes",
-      "pace_unknown_note": "Cuando entre, vas a ver tu ritmo de gasto acá.",
+      "pace_over": "👀 Gastaste {times} veces tus ingresos de este mes",
+      "pace_unknown": "Todavía no registraste ingresos este mes",
+      "pace_unknown_note": "Reintegros y ajustes no cuentan. Cuando entre un ingreso, vas a ver tu ritmo acá.",
       "pace_overflow": "Acá el porcentaje ya no ayuda 👀",
-      "pace_overflow_note": "Gastaste {spent} y este mes entraron {income}.",
+      "pace_overflow_note": "Gastaste {spent} y tus ingresos del mes fueron {income}.",
       "pace_foot": "{spent} de {income}",
       "empty": "Sin gastos este mes.",
       "loading": "Cargando tus gastos del mes…",
@@ -243,7 +257,8 @@
         "system_heading": "Del sistema",
         "user_heading": "Propias",
         "empty": "No hay categorías todavía.",
-        "subcategory_count": "{count} subcategorías"
+        "subcategory_count": "{count} subcategorías",
+        "household_heading": "Del hogar"
       },
       "types": {
         "income": "Ingreso",
@@ -272,7 +287,8 @@
         "delete_in_use_subcategory": "Esta subcategoría tiene movimientos o recurrencias asociadas. Archivala en lugar de eliminarla.",
         "system_readonly": "Las categorías del sistema no se pueden editar.",
         "not_found": "Categoría no encontrada.",
-        "generic": "Algo salió mal. Intentá de nuevo."
+        "generic": "Algo salió mal. Intentá de nuevo.",
+        "household_required": "Necesitás un hogar activo para crear una categoría del hogar."
       },
       "form": {
         "name_label": "Nombre",
@@ -287,7 +303,10 @@
         "color_none": "Sin color",
         "color_custom": "Color personalizado",
         "submit_create": "Guardar categoría",
-        "submit_update": "Guardar cambios"
+        "submit_update": "Guardar cambios",
+        "household_label": "Es del hogar",
+        "household_help": "La ven y la usan los dos miembros, en gastos compartidos y propios.",
+        "household_locked": "Ya es del hogar. Una categoría del hogar no vuelve a ser propia."
       },
       "new": {
         "title": "Nueva categoría"
@@ -308,7 +327,8 @@
         "list_loading": "Cargando las categorías…",
         "subcategories_loading": "Cargando las subcategorías…",
         "form_loading": "Cargando la categoría…"
-      }
+      },
+      "household_badge": "Hogar"
     },
     "security": {
       "label": "Seguridad",
@@ -657,7 +677,8 @@
       "movements_with_count": "Movimientos ({count})",
       "current_movements": "Movimientos del resumen actual",
       "amount_to_pay": "Monto a pagar",
-      "amount_to_pay_helper": "Pre-llenado con el total pendiente. Podés editarlo.",
+      "amount_to_pay_helper": "Sale de tu cuenta en pesos. Se calcula con lo que estás cancelando del resumen.",
+      "amount_to_pay_helper_usd": "Sale de tu cuenta en dólares. Se calcula con lo que estás cancelando del resumen.",
       "debit_account": "Cuenta de débito",
       "payment_date": "Fecha del pago",
       "next_period_helper": "Tu resumen anuncia el cierre y vencimiento del ciclo en curso. Confirmalos acá.",
@@ -709,6 +730,8 @@
       "of_connector": "de"
     },
     "period": {
+      "just_reverted": "Listo, deshicimos el pago. El resumen volvió a quedar impago.",
+      "just_paid": "Listo, registramos el pago de este resumen.",
       "detail_title": "Resumen",
       "future": "Futuro",
       "current": "En curso",
@@ -904,7 +927,7 @@
       "header_context": "{card} · cerró el {close} · vence el {due}",
       "available_label": "disponible",
       "usd_note_prefix": "Consumos en dólares:",
-      "usd_note_description": "Este resumen tiene deuda en USD. Cargá la cotización del día de pago abajo: el total a pagar en ARS se calcula con ella.",
+      "usd_note_description": "Este resumen tiene deuda en dólares. Podés cancelarla con dólares, desde una cuenta en dólares, o pesificarla con la cotización del día de pago.",
       "fx_label": "Cotización del día (ARS por 1 USD)",
       "fx_helper": "La deuda en dólares se convierte con la cotización del día en que pagás el resumen.",
       "fx_placeholder": "Ej: 1230,50",
@@ -922,7 +945,15 @@
       "stamp_tax_relation_note": "El sello es un cargo aparte: se debita de la misma cuenta junto al pago. Se debita {total} = {consumos} (resumen) + {stamp} (sellos).",
       "stamp_tax_other_placeholder": "Otro monto",
       "stamp_tax_none": "No me cobraron sellos",
-      "warning": "Una vez confirmado, el pago no se puede revertir. Si registraste un monto o cuenta incorrectos, podés corregirlo con un ajuste de saldo."
+      "warning": "Si te equivocaste, vas a poder deshacer este pago desde el resumen: vuelve la plata a tus cuentas y los consumos a pendientes. Deja de poder deshacerse cuando pagás un resumen posterior de esta tarjeta.",
+      "usd_mode_label": "¿Cómo pagás los dólares del resumen?",
+      "usd_mode_in_usd": "En dólares",
+      "usd_mode_in_ars": "En pesos",
+      "usd_no_account": "No tenés ninguna cuenta con dólares habilitados, así que esta parte se paga en pesos.",
+      "usd_account_label": "Cuenta en dólares",
+      "debits_helper": "Dos débitos: uno por moneda. Se calculan con lo que estás cancelando del resumen.",
+      "debit_from": "De {account}",
+      "debit_account_pending": "Falta elegir la cuenta"
     },
     "edit_dates": {
       "dialog_title": "Editar fechas del resumen",
@@ -964,7 +995,6 @@
       "period_already_paid": "Este período ya fue pagado.",
       "period_not_closed": "El período aún no cerró. Solo podés pagar períodos cerrados o vencidos.",
       "payment_account_not_found": "Cuenta de pago no encontrada.",
-      "payment_from_card": "No podés pagar un resumen desde otra tarjeta.",
       "debt_check_failed": "No se pudo verificar la deuda del período.",
       "usd_fx_required": "El resumen tiene deuda en dólares: falta la cotización del día de pago.",
       "running_cycle_undetermined": "No se pudo determinar el ciclo en curso de la tarjeta.",
@@ -989,7 +1019,11 @@
       "installment_no_cuotas": "La compra no tiene cuotas para recalcular.",
       "shared_update_failed": "No se pudo actualizar el compartido: {error}",
       "shared_unshare_settlement": "No se puede descompartir: hay una liquidación registrada después de esta compra. Revertí esa liquidación primero.",
-      "installment_delete_paid": "No podés eliminar una compra con cuotas ya pagadas."
+      "installment_delete_paid": "No podés eliminar una compra con cuotas ya pagadas.",
+      "statement_not_settled": "El pago tiene que cancelar el resumen completo. Quedarían {ars} en pesos y {usd} en dólares sin pagar.",
+      "leg_exceeds_pending": "Estás pagando más de lo que debe el resumen. Restan {pending}.",
+      "payment_currency_inactive": "Esa cuenta no tiene habilitada la moneda del pago.",
+      "revert_not_latest_group": "Primero deshacé el pago más reciente de este resumen."
     }
   },
   "transactions": {
@@ -1030,7 +1064,7 @@
         "cancel": "Cancelar",
         "delete_warning_default": "Esta acción no se puede deshacer.",
         "delete_warning_parent": "Se van a eliminar la compra y todas sus cuotas. Esta acción no se puede deshacer.",
-        "delete_warning_card_payment": "Al eliminar este pago, las cuotas del período volverán a pendientes. ¿Continuar?",
+        "delete_warning_card_payment": "Al eliminar este pago, los consumos del período volverán a pendientes. ¿Continuar?",
         "delete_blocked_card_payment": "Este movimiento es el pago de un resumen de tarjeta. Para deshacerlo —y que los movimientos del resumen vuelvan a pendientes— andá al detalle del período, en Tarjetas.",
         "got_it": "Entendido"
       },
@@ -1067,7 +1101,7 @@
       "context": {
         "card_pending": "Este consumo no afecta tu disponible hasta que pagues el resumen del {periodo}.",
         "card_paid_installment": "Esta cuota ya está incluida en el resumen del {periodo} que pagaste.",
-        "card_payment": "Con este pago, las cuotas del período {periodo} quedaron en estado pagado.",
+        "card_payment": "Con este pago, los consumos del período {periodo} quedaron en estado pagado.",
         "reimbursement_pending": "Esperás que te lo devuelvan. Cuando llegue, marcalo como recibido y se va a sumar a tu disponible.",
         "reimbursement_cancelled": "Marcaste este reintegro como cancelado. Si finalmente lo recibís, podés reabrirlo."
       },
@@ -1155,6 +1189,7 @@
       "no_subcategory": "Sin subcategoría",
       "center_label": "Gastado",
       "credits_label": "Te devolvieron",
+      "net_total_label": "Te costó",
       "mode_egresos": "Egresos",
       "mode_ingresos": "Ingresos",
       "subtitle_egresos": "Gastos del mes",
@@ -1757,10 +1792,10 @@
     "created_on": "Creada el {date}",
     "edit_title": "Editar regla recurrente",
     "duplicate_badge": "Duplicada",
-    "duplicate_hint": "Ya tenés otra regla activa con la misma cuenta, moneda, tipo y monto. Si son gastos distintos, ignorá el aviso.",
+    "duplicate_hint": "Ya tenés otra regla activa con la misma cuenta, moneda y tipo, y un monto igual o casi igual (hasta 1 % de diferencia). Si son gastos distintos, ignorá el aviso.",
     "duplicate_warning_title": "Ya tenés una regla así",
-    "duplicate_warning_body": "«{rule}» tiene la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos.",
-    "duplicate_warning_body_untitled": "Ya tenés una regla activa con la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos.",
+    "duplicate_warning_body": "«{rule}» tiene la misma cuenta, moneda y tipo, y un monto igual o casi igual. Podés crearla igual si son gastos distintos.",
+    "duplicate_warning_body_untitled": "Ya tenés una regla activa con la misma cuenta, moneda y tipo, y un monto igual o casi igual. Podés crearla igual si son gastos distintos.",
     "route": {
       "form_loading": "Cargando el formulario…"
     }

@@ -5,8 +5,9 @@ export async function getAllCategories(
   supabase: DbClient,
 ): Promise<CategoryWithSubcategories[]> {
   // No explicit user filter: the RLS select policy on categories is exactly
-  // "system (user_id IS NULL) or own", so the visible set is already right
-  // for any caller (browser or server).
+  // "system (user_id IS NULL), own, or of a household the caller belongs to"
+  // (0063), so the visible set is already right for any caller (browser or
+  // server).
   //
   // Both levels filter `is_active`, and both filters live HERE rather than in
   // each consumer. `eq('is_active')` narrows the parent rows; the embedded

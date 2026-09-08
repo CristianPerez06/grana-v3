@@ -140,8 +140,11 @@ export function MovementFiltersSheet({
 
   // System categories translate via `categories.{canonical}`; user ones use their
   // own name. Same rule as `resolveCategoryLabel`, over the catalog row shape.
-  const categoryLabel = (c: MovementFilterOptions['categories'][number]) =>
-    c.user_id === null ? t(`categories.${c.canonical_name}`) : c.name
+  // A household category carries the "Hogar" mark, as in the web filters.
+  const categoryLabel = (c: MovementFilterOptions['categories'][number]) => {
+    const base = c.user_id === null ? t(`categories.${c.canonical_name}`) : c.name
+    return c.household_id != null ? `${base} · ${t('settings.categories.household_badge')}` : base
+  }
   const subcategoryLabel = (s: MovementFilterOptions['subcategories'][number]) =>
     s.user_id === null ? t(`subcategories.${s.canonical_name}`) : s.name
 

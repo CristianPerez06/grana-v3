@@ -623,3 +623,44 @@ export type Household = {
   members: HouseholdMember[]
   defaultSplit: { user_id: string; percentage: number }[]
 }
+
+// ── MonthSheet (dashboard month lens) ────────────────────────────────────────
+
+// The sheet the dashboard's date line opens to pick which month the numbers are
+// read from. Two implementations — a bottom sheet below `md` on web, a `Modal`
+// overlay on native — one contract, so a divergence breaks TypeScript on the
+// other side.
+//
+// The month data (`years`) is NOT shaped here: it comes from
+// `reachableMonths()` in `@grana/dashboard`, which owns the range rule and the
+// labels so both platforms show the same grid by construction.
+
+export type MonthSheetSelection = {
+  year: number
+  month: number
+}
+
+export type MonthSheetMonth = MonthSheetSelection & {
+  /** Short label already localized ("Sep"). */
+  label: string
+  /** Out-of-range months render visible but disabled, never absent. */
+  reachable: boolean
+}
+
+export type MonthSheetYear = {
+  year: number
+  /** The full calendar year, January first. */
+  months: MonthSheetMonth[]
+}
+
+export type MonthSheetProps = {
+  open: boolean
+  /** Calendar years to render, newest first. */
+  years: MonthSheetYear[]
+  /** The month currently being looked at, marked as such in the grid. */
+  selected: MonthSheetSelection
+  /** Picking a month applies it and closes the sheet. */
+  onSelect: (month: MonthSheetSelection) => void
+  /** Scrim, gesture or Escape. MUST NOT change the selection. */
+  onDismiss: () => void
+}

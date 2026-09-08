@@ -55,7 +55,7 @@ Change: `openspec/changes/<nombre>/`
 
 - [ ] Lint web y mobile pasan (`pnpm lint` + `pnpm lint:mobile`)
 - [ ] Typecheck web y mobile pasan (`pnpm typecheck` + `pnpm typecheck:mobile`)
-- [ ] Tests pasan (`pnpm test`)
+- [ ] Tests pasan (`pnpm test` — web **y** paquetes)
 - [ ] Build de producción de web pasa (`pnpm build`)
 - [ ] `pnpm openspec:check` pasa (sin placeholders `TBD` en los master specs)
 - [ ] Si toqué dependencias: `pnpm-lock.yaml` actualizado y commiteado (`pnpm install --frozen-lockfile` pasa)

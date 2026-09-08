@@ -8,7 +8,8 @@ La ruta `/dashboard` ya tiene una composición sólida y especificada: header pe
 
 Datos disponibles:
 
-- Header: saludo con nombre o fallback, fecha contable de hoy, selector de mes, eye toggle y acción desktop `Nuevo movimiento`.
+- Header: saludo con nombre o fallback, y la línea de la fecha, que **es** el selector de mes (se toca y abre la hoja de meses; lleva caret). Más la acción desktop `Nuevo movimiento`. El header NO aloja ni el pill `‹ Mes Año ›` ni el eye toggle: el par ocupaba ~190px de una fila de ~330px y hacía truncar la fecha.
+- Card de saldo: aloja el **eye toggle**, arriba a la derecha de la zona oscura. Enmascara montos, así que su lugar es donde los montos empiezan; y es preferencia de privacidad, no control de alcance, así que no comparte fila con la lente.
 - Hero "Para gastar · hoy": saldo disponible total ARS, saldo disponible total USD y caption.
 - Card "Dónde está": hasta 6 cuentas activas `cash`/`bank`, avatar, nombre, saldo ARS, fila agregada "En dólares" con saldo USD total y link `Ver todas`.
 - Card "Balance del mes": neto ARS del mes seleccionado, ingresos ARS, gastos ARS, balance USD, ingresos USD, gastos USD, y texto "vas {neto} este mes" anclado al mes actual.

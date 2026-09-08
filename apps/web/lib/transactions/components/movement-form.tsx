@@ -815,6 +815,13 @@ export const MovementForm = ({
             {t('drawer.archived')}
           </span>
         )
+        // A household category can share its name with an own one (unique per
+        // scope, spec `categories`): the mark is what tells them apart here.
+        const householdBadge = c.household_id != null && (
+          <span className="shrink-0 rounded-full bg-emerald/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-emerald-deep">
+            {tRoot('settings.categories.household_badge')}
+          </span>
+        )
         // Mobile-web: tapping the row assigns the bare category; a separate
         // chevron button drills into subcategories (no forced drill).
         if (drillable && isMobile) {
@@ -832,6 +839,7 @@ export const MovementForm = ({
                   {c.icon ? `${c.icon} ` : ''}
                   {getCategoryName(c, tRoot)}
                 </span>
+                {householdBadge}
                 {archivedBadge}
                 {categoryId === c.id && !subcategoryId && (
                   <Check className="size-4 shrink-0 text-emerald" aria-hidden />
@@ -859,6 +867,7 @@ export const MovementForm = ({
               {c.icon ? `${c.icon} ` : ''}
               {getCategoryName(c, tRoot)}
             </span>
+            {householdBadge}
             {archivedBadge}
             {drillable ? (
               <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
