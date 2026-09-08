@@ -44,14 +44,26 @@ export function deriveMonthSpending(accrued: number, cash: number): MonthSpendin
 
 /**
  * Past this ratio the percentage stops being a reading and becomes noise:
- * "124.036.138%" tells you nothing you can act on. Reachable with real data —
- * a month whose only income was a few cents, against ordinary spending.
+ * "124.036.138%" tells you nothing you can act on. The line is where the ratio
+ * stops being informative, not where it gets big.
  *
- * Set at 100× rather than something tighter so that a genuinely extreme but
- * still legible month (spending ten times your income) keeps showing its number.
- * The line is where the ratio stops being informative, not where it gets big.
+ * Set at 30× — lowered from 100×, which sat past the point where the multiple
+ * says anything. The case that moved it is ordinary, not exotic: an account
+ * that pays interest credits a few thousand pesos a month on its own, and for
+ * someone who does not register a salary here those interest rows ARE the
+ * month's income. Against real spending that reads "you spent 100× your
+ * income" — arithmetically right, and the reader's reaction to it is the same
+ * sentence the overflow state exists to say out loud. It was a hair from
+ * saying it: the real month measured 9.971%, under the old line by 29 points.
+ *
+ * 30× is the LOWEST line that contradicts nothing already decided: a month at
+ * ten times your income keeps its number (extraordinary but perfectly legible,
+ * which is why the tests below pin it), and so does one at twenty-five. Only
+ * the range where the multiple stopped meaning anything moves to the state
+ * that shows the two amounts instead — and those amounts are what let the
+ * reader see the denominator is interest, which no percentage could tell them.
  */
-export const PACE_OVERFLOW_PCT = 10_000
+export const PACE_OVERFLOW_PCT = 3_000
 
 export type SpendingPace =
   | {

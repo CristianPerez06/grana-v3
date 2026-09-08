@@ -108,8 +108,18 @@ All scripts work from the repo root (orchestrator forwards to `pnpm --filter web
 - `pnpm dev` — Next dev server (web)
 - `pnpm build` — production build (web)
 - `pnpm lint` — ESLint (web)
+- `pnpm test` — **vitest across the whole monorepo**: `apps/web` AND every package
+- `pnpm test:web` — only `apps/web`, when you are iterating on one suite
 - `pnpm storybook` — Storybook on :6006 (web)
 - `pnpm --filter web <script>` — explicit form if you ever add another app
+
+`pnpm test` runs what CI runs, on purpose. It used to be `--filter web` alone,
+and the packages' tests — where the money logic lives — were written but guarded
+nothing: you could break `@grana/dashboard`, see the green and merge. It also
+pushed people to put package tests under `apps/web/lib/**` just so they would
+run, bending where code lives to satisfy a CI flag. **A package with a `test`
+script and no test files must pass `--passWithNoTests`**, or it exits 1 and reds
+the whole run for having nothing to say.
 
 ## Shared packages — TypeScript paths to source
 

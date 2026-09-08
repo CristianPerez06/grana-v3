@@ -253,6 +253,27 @@ describe('deriveSpendingPace — desborde', () => {
 
     expect(pace).toMatchObject({ status: 'over', pct: PACE_OVERFLOW_PCT })
   })
+
+  it('un mes cuyo unico ingreso fueron intereses ganados desborda', () => {
+    // Caso real, y NO exotico: una cuenta remunerada acredita rendimientos
+    // sola, todos los meses. Para quien no registra su sueldo en la app esos
+    // intereses SON el ingreso del mes, y el cociente contra el gasto real deja
+    // de ser una lectura. Con el umbral viejo (100x) este mes caia del lado de
+    // 'over' por 29 puntos y mostraba "100 veces", que no dice nada.
+    const pace = deriveSpendingPace(287_094.76, 2_879.27)
+
+    expect(pace).toMatchObject({ status: 'overflow', pct: 9_971 })
+  })
+
+  it('veinticinco veces sigue siendo legible y conserva su numero', () => {
+    // El umbral bajo a 30x, no mas: lo que ya se habia decidido que se lee,
+    // se sigue leyendo. Este es el caso mas alto que conserva su multiplo.
+    expect(deriveSpendingPace(2_500_000, 100_000)).toMatchObject({
+      status: 'over',
+      pct: 2_500,
+      times: 25,
+    })
+  })
 })
 
 describe('deriveSpendingPace — multiplo', () => {
