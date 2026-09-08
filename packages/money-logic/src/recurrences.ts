@@ -119,6 +119,10 @@ export function decideRecurrenceInstance(
   rule: RuleForDecision,
   today: string,
   hasPending: boolean,
+  // Instances already materialized for the rule (any status). TRANSITIONAL: it
+  // is the cap's fallback for a rule whose cursor sits off its own schedule,
+  // and it goes away once the cursor-phase audit closes 1.10b. See step 5.
+  materializedCount = 0,
 ): GenerationDecision {
   // 1. Skip if there's already a pending instance for this rule. The DB-level
   //    UNIQUE INDEX recurrence_instances_one_pending_per_rule enforces this
@@ -165,10 +169,10 @@ export function decideRecurrenceInstance(
     return { generate: false, reason: 'past_end_date' }
   }
 
-  // 5. Stop once the rule has produced its maximum number of occurrences. The
-  //    cap is counted ON THE CALENDAR — `nextDate`'s own ordinal from
-  //    `start_date` — and NOT by counting rows in `recurrence_instances`.
+  // 5. Stop once the rule has produced its maximum number of occurrences.
   //
+  //    The cap is counted ON THE CALENDAR — `nextDate`'s own ordinal from
+  //    `start_date` — and NOT by counting rows in `recurrence_instances`.
   //    Counting rows gave the cap a different meaning on every surface, because
   //    an occurrence can exist without a row: a rule created from a movement is
   //    seeded by that movement, which covers `start_date` and materializes no
@@ -178,13 +182,25 @@ export function decideRecurrenceInstance(
   //    three. The extra one appeared as a pending instance on a date the
   //    projection had never announced.
   //
-  //    The ordinal is the single number. It does not depend on what the user
-  //    resolved, on what a client wrote, or on rows being deleted.
-  if (
-    rule.max_occurrences != null &&
-    occurrenceOrdinal(schedule, nextDate) > rule.max_occurrences
-  ) {
-    return { generate: false, reason: 'max_occurrences_reached' }
+  //    The ordinal is the single number: it does not depend on what the user
+  //    resolved, on what a client wrote, or on rows being deleted. But it only
+  //    exists if `nextDate` is on the schedule, and for a day/week rule it may
+  //    not be: `addInterval` advances those by plain days, so a cursor left off
+  //    the schedule by an edit keeps its own phase forever (month/year rules
+  //    re-anchor their day to `start_date`, so they cannot drift this way).
+  //
+  //    While the phase is unknown the cap CANNOT be read off the calendar —
+  //    rounding to the next occurrence would charge this one against a date it
+  //    is not, and drop a due date the rule was owed. Until the cursor-phase
+  //    audit closes 1.10b, such a rule keeps the behaviour it has today, the
+  //    row count, so nothing changes for it either way.
+  if (rule.max_occurrences != null) {
+    const ordinal = occurrenceOrdinal(schedule, nextDate)
+    const reached =
+      ordinal != null
+        ? ordinal > rule.max_occurrences
+        : materializedCount >= rule.max_occurrences
+    if (reached) return { generate: false, reason: 'max_occurrences_reached' }
   }
 
   return { generate: true, scheduled_date: nextDate }
@@ -301,15 +317,26 @@ function occurrenceIndexAt(
 }
 
 // Which occurrence of the schedule `date` is, counting `start_date` as the 1st.
-// A date that is not itself on the schedule takes the ordinal of the next
-// occurrence on or after it.
+// NULL when `date` is not on the schedule at all.
+//
+// The null matters. An earlier version returned the ordinal of the next
+// occurrence on or after the date, and that silently answers a different
+// question: for a rule every 3 days from 2026-05-01, the off-schedule
+// 2026-06-13 came back as the 16th — which is the 2026-06-15's ordinal, a
+// different occurrence. Used as a cap that drops a due date the rule was owed.
+// A date the schedule does not contain has no ordinal, and saying so lets the
+// caller decide what to do instead of rounding on its behalf.
 //
 // This is what `max_occurrences` counts. Expressing the cap as an ordinal — a
 // property of the calendar alone — is what keeps the generator, the projection
 // and the "próximo" agreeing on how many occurrences a rule has: the number
 // cannot drift with what got materialized, resolved or deleted.
-export function occurrenceOrdinal(schedule: OccurrenceSchedule, date: string): number {
-  return occurrenceIndexAt(schedule, date, 'on-or-after') + 1
+export function occurrenceOrdinal(
+  schedule: OccurrenceSchedule,
+  date: string,
+): number | null {
+  const n = occurrenceIndexAt(schedule, date, 'on-or-after')
+  return occurrenceAt(schedule, n) === date ? n + 1 : null
 }
 
 // THE calendar walker. Every question about when a rule fires — the next

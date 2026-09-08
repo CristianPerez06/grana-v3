@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   decideRecurrenceInstance,
   getNextExpectedOccurrence,
+  occurrenceAt,
   occurrenceOrdinal,
   projectRuleOccurrences,
   type RuleForProjection,
@@ -48,8 +49,74 @@ describe('occurrenceOrdinal', () => {
     expect(occurrenceOrdinal(s, '2026-07-01')).toBe(3)
   })
 
-  it('gives a date off the schedule the ordinal of the next one on or after it', () => {
-    expect(occurrenceOrdinal(seededRule(null), '2026-06-15')).toBe(3)
+  it('returns null for a date the schedule does not contain', () => {
+    // NOT the ordinal of the next occurrence: 2026-06-15 is not the 3rd, the
+    // 2026-07-01 is. Rounding here is what made the cap drop a real due date.
+    expect(occurrenceOrdinal(seededRule(null), '2026-06-15')).toBeNull()
+  })
+})
+
+describe('a cursor off the schedule keeps the behaviour it has today', () => {
+  // Only day/week rules can drift: `addInterval` advances them by plain days, so
+  // a cursor left off-schedule by an edit keeps its own phase. Month and year
+  // rules re-anchor the day-of-month to `start_date` on every step, so their
+  // next date always lands back on the calendar.
+  const everyThreeDays = (cap: number | null, cursor: string): RuleForProjection => ({
+    id: 'r',
+    start_date: '2026-05-01',
+    end_date: null,
+    interval_count: 3,
+    interval_unit: 'day',
+    max_occurrences: cap,
+    last_generated_date: cursor,
+  })
+
+  it('a month rule re-anchors, so its next date is always on the schedule', () => {
+    // start 2026-05-01, cursor 2026-06-10 ⇒ next is 2026-07-01, not 2026-07-10.
+    const decision = decideRecurrenceInstance(
+      { ...seededRule(3), last_generated_date: '2026-06-10' },
+      FAR_FUTURE,
+      false,
+    )
+    expect(decision).toEqual({ generate: true, scheduled_date: '2026-07-01' })
+  })
+
+  it('REGRESSION: a day rule off phase is not charged against another occurrence', () => {
+    // Cursor 2026-06-10 is 40 days from start; 40 % 3 = 1, so it is off the
+    // schedule, and the next date, 2026-06-13, is off it too. The calendar's
+    // 16th occurrence is 2026-06-15 — a DIFFERENT date. Reading the cap off that
+    // ordinal made a cap of 15 refuse 2026-06-13, dropping a due date the rule
+    // was owed.
+    const rule = everyThreeDays(15, '2026-06-10')
+    expect(occurrenceOrdinal(rule, '2026-06-13')).toBeNull()
+    expect(occurrenceAt(rule, 15)).toBe('2026-06-15')
+
+    // With 3 rows materialized and a cap of 15, today's behaviour generates.
+    expect(decideRecurrenceInstance(rule, FAR_FUTURE, false, 3)).toEqual({
+      generate: true,
+      scheduled_date: '2026-06-13',
+    })
+    // And the row count still stops it where it stops it today.
+    expect(decideRecurrenceInstance(rule, FAR_FUTURE, false, 15)).toEqual({
+      generate: false,
+      reason: 'max_occurrences_reached',
+    })
+  })
+
+  it('a day rule ON phase uses the calendar, not the rows', () => {
+    // 2026-06-09 is 39 days from start; 39 % 3 = 0 ⇒ the 14th occurrence, so the
+    // next one, 2026-06-12, is the 15th. A cap of 15 lets it through and a cap
+    // of 14 does not, whatever the row count says.
+    const rule = everyThreeDays(15, '2026-06-09')
+    expect(occurrenceOrdinal(rule, '2026-06-12')).toBe(15)
+    expect(decideRecurrenceInstance(rule, FAR_FUTURE, false, 99)).toEqual({
+      generate: true,
+      scheduled_date: '2026-06-12',
+    })
+    expect(decideRecurrenceInstance(everyThreeDays(14, '2026-06-09'), FAR_FUTURE, false, 0)).toEqual({
+      generate: false,
+      reason: 'max_occurrences_reached',
+    })
   })
 })
 

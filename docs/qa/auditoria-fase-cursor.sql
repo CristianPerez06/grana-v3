@@ -23,12 +23,24 @@
 --                                  produce `addInterval(cursor, …)`.
 --                                  NO normalizar en silencio.
 --
+-- TAMBIÉN DECIDE LA TAREA 1.7 (el tope `max_occurrences`). El tope se cuenta
+-- como el ORDINAL de la próxima fecha sobre el cronograma, y una fecha fuera del
+-- cronograma no tiene ordinal. Mientras eso no se resuelva, esas reglas
+-- conservan el conteo de filas que usan hoy. La columna que lo responde es
+-- `con_tope_dia_semana`:
+--
+--   0  ⇒ ninguna regla con tope puede desfasarse, el ordinal es el único
+--         número y el conteo de filas se puede retirar del generador.
+--   ≥1 ⇒ hay que persistir la fase de esas reglas antes de unificar, o dejar
+--         escrita una compatibilidad explícita para ellas.
+--
 -- CÓMO CORRERLA: pegar en el SQL Editor de Supabase. Devuelve dos resultados:
 -- primero el resumen, después el detalle.
 -- ════════════════════════════════════════════════════════════════════════════
 
 with reglas as (
   select r.id, r.status, r.start_date, r.interval_count, r.interval_unit,
+         r.max_occurrences,
          r.last_generated_date as cursor
     from public.recurrences r
    where r.status <> 'deleted'
@@ -79,11 +91,11 @@ candidatas as (
    where n >= 0
 ),
 analisis as (
-  select c.id, c.status, c.start_date, c.interval_count, c.interval_unit, c.cursor,
+  select c.id, c.status, c.start_date, c.interval_count, c.interval_unit, c.max_occurrences, c.cursor,
          bool_or(c.fecha = c.cursor)                     as cursor_en_cronograma,
          min(c.fecha) filter (where c.fecha > c.cursor)   as proxima_calendario_nuevo
     from candidatas c
-   group by c.id, c.status, c.start_date, c.interval_count, c.interval_unit, c.cursor
+   group by c.id, c.status, c.start_date, c.interval_count, c.interval_unit, c.max_occurrences, c.cursor
 ),
 comparacion as (
   select a.*,
@@ -110,12 +122,21 @@ select
   count(*)                                        as reglas_totales,
   count(*) filter (where not cursor_en_cronograma) as fuera_de_cronograma,
   count(*) filter (where proxima_comportamiento_actual
-                      is distinct from proxima_calendario_nuevo) as con_proxima_distinta
+                      is distinct from proxima_calendario_nuevo) as con_proxima_distinta,
+  -- Para la tarea 1.7: solo una regla CON TOPE y de unidad día/semana puede
+  -- quedar desfasada. Las mensuales y anuales reanclan el día en `start_date`
+  -- en cada paso, así que su próxima fecha siempre vuelve al cronograma.
+  count(*) filter (where not cursor_en_cronograma
+                     and max_occurrences is not null)            as con_tope_y_fuera,
+  count(*) filter (where not cursor_en_cronograma
+                     and max_occurrences is not null
+                     and interval_unit in ('day', 'week'))       as con_tope_dia_semana
 from comparacion;
 
 -- ── Detalle, solo las que divergen ──────────────────────────────────────────
 with reglas as (
   select r.id, r.status, r.start_date, r.interval_count, r.interval_unit,
+         r.max_occurrences,
          r.last_generated_date as cursor
     from public.recurrences r
    where r.status <> 'deleted' and r.last_generated_date is not null
@@ -160,11 +181,11 @@ candidatas as (
    where n >= 0
 ),
 analisis as (
-  select c.id, c.status, c.start_date, c.interval_count, c.interval_unit, c.cursor,
+  select c.id, c.status, c.start_date, c.interval_count, c.interval_unit, c.max_occurrences, c.cursor,
          bool_or(c.fecha = c.cursor)                    as cursor_en_cronograma,
          min(c.fecha) filter (where c.fecha > c.cursor)  as proxima_calendario_nuevo
     from candidatas c
-   group by c.id, c.status, c.start_date, c.interval_count, c.interval_unit, c.cursor
+   group by c.id, c.status, c.start_date, c.interval_count, c.interval_unit, c.max_occurrences, c.cursor
 ),
 comparacion as (
   select a.*,
@@ -191,6 +212,7 @@ select
   c.start_date,
   c.interval_count,
   c.interval_unit,
+  c.max_occurrences,
   c.cursor                            as last_generated_date,
   c.cursor_en_cronograma,
   c.proxima_comportamiento_actual     as proxima_hoy,

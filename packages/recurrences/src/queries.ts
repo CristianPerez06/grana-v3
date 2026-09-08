@@ -340,6 +340,29 @@ export async function generateDueRecurrenceInstances(
     rulesWithPending.add(row.recurrence_id as string)
   }
 
+  // TRANSITIONAL, and normally not a query at all: only a CAPPED rule can need
+  // the row count, and only then if its cursor sits off its own schedule, where
+  // the calendar cannot say which occurrence the next date is. Uncapped rules —
+  // every rule, for most users — skip this entirely. It goes away with 1.10b,
+  // once the cursor-phase audit says whether such rules exist at all.
+  const cappedRuleIds = typedRules
+    .filter((rule) => rule.max_occurrences != null)
+    .map((rule) => rule.id)
+
+  const materializedByRule = new Map<string, number>()
+  if (cappedRuleIds.length > 0) {
+    const { data: cappedInstances } = await supabase
+      .from('recurrence_instances')
+      .select('recurrence_id')
+      .eq('user_id', userId)
+      .in('recurrence_id', cappedRuleIds)
+
+    for (const row of cappedInstances ?? []) {
+      const ruleId = row.recurrence_id as string
+      materializedByRule.set(ruleId, (materializedByRule.get(ruleId) ?? 0) + 1)
+    }
+  }
+
   let created = 0
 
   for (const rule of typedRules) {
@@ -354,6 +377,7 @@ export async function generateDueRecurrenceInstances(
       },
       today,
       rulesWithPending.has(rule.id),
+      materializedByRule.get(rule.id) ?? 0,
     )
 
     if (!decision.generate) continue

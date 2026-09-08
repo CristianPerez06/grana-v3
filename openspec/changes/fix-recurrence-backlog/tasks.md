@@ -83,17 +83,27 @@ que habilita el backlog.
 - [ ] 1.6 `decideRecurrenceInstance` pierde el parámetro `hasPending` y pasa a devolver la **lista**
       de ocurrencias faltantes, derivada de `walkOccurrences` y del conjunto de `due_date` ya
       existentes.
-- [x] 1.7 Unificar `max_occurrences`: el generador cuenta contra el cronograma, no filas de
-      `recurrence_instances`. Test que fija el número único (regla creada desde movimiento con
-      límite 3 ⇒ 3 ocurrencias totales, 2 materializadas, 2 proyectadas). Medida la divergencia
-      antes de tocar nada: con esa regla el generador producía **4** ocurrencias (semilla + 3 filas)
-      y la proyección **3**, y la sobrante —`2026-08-01`— aparecía como pendiente en una fecha que
-      la proyección nunca había anunciado. La causa es que una ocurrencia puede existir sin fila: el
-      movimiento semilla cubre `start_date` y no materializa instancia. El tope pasa a ser el
-      **ordinal de `nextDate` sobre el calendario** (`occurrenceOrdinal`), que no depende de lo
-      resuelto, de lo que escriba un cliente ni de que se borren filas. `decideRecurrenceInstance`
-      pierde el parámetro `materializedCount`, y el generador dejó de traer todas las instancias:
-      ahora pide solo las `pending`, que es lo único para lo que las necesita.
+- [ ] 1.7 Unificar `max_occurrences`: el generador cuenta contra el cronograma, no filas de
+      `recurrence_instances`. **Hecho para las reglas alineadas; abierto hasta la auditoría de fase**
+      (ver 1.10b). Medida la divergencia antes de tocar nada: con una regla creada desde movimiento y
+      tope 3, el generador producía **4** ocurrencias (semilla + 3 filas) y la proyección **3**, y la
+      sobrante —`2026-08-01`— aparecía como pendiente en una fecha que la proyección nunca había
+      anunciado. La causa es que una ocurrencia puede existir sin fila: el movimiento semilla cubre
+      `start_date` y no materializa instancia. El tope pasa a ser el **ordinal de `nextDate` sobre el
+      calendario** (`occurrenceOrdinal`), que no depende de lo resuelto, de lo que escriba un cliente
+      ni de que se borren filas.
+      **Lo que queda abierto:** una fecha fuera del cronograma NO tiene ordinal. `occurrenceOrdinal`
+      devuelve `null` en ese caso —antes devolvía el de la próxima fecha válida, que es OTRA
+      ocurrencia, y con eso el tope descartaba un vencimiento que la regla sí tenía—. Solo se
+      desfasan las reglas de unidad **día/semana**: `addInterval` las avanza en días crudos, mientras
+      las mensuales y anuales reanclan el día en `start_date` en cada paso y siempre vuelven al
+      cronograma. Mientras la fase sea desconocida, esas reglas **conservan el conteo de filas que
+      usan hoy**, así que el cambio no las toca. Regresión fijada con el caso `start 2026-05-01` cada
+      3 días y cursor `2026-06-10`. La auditoría (`docs/qa/auditoria-fase-cursor.sql`) ahora devuelve
+      `con_tope_dia_semana`: si da 0, el ordinal queda como número único y el conteo de filas se
+      retira del generador; si da ≥1, primero hay que persistir la fase de esas reglas o dejar escrita
+      una compatibilidad explícita. El generador ya no trae todas las instancias para el tope: pide
+      las `pending` y, solo si hay reglas **con tope**, sus filas.
 - [ ] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
       saltea junio, y no mueve el cronograma.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
@@ -125,7 +135,9 @@ que habilita el backlog.
       cursor caiga sobre el cronograma —el caso normal—, y divergen por unos días cuando no.
       Anclar en el calendario es lo correcto (no depende de cuándo se resolvió la última ocurrencia),
       pero hay que confirmar que ninguna regla de producción tenga hoy el cursor fuera de cronograma
-      antes de cambiar la semántica. Documentado en `walk-positioning.test.ts`.
+      antes de cambiar la semántica. Documentado en `walk-positioning.test.ts`. **Solo pueden
+      desfasarse las reglas de día/semana**: las mensuales y anuales reanclan el día en `start_date`
+      en cada paso. La misma auditoría decide 1.7.
 - [x] 1.0 **Sincronizar con `main`** antes de seguir: la branch quedó 12 commits atrás y
       redescubrió un defecto que **#114** ya había arreglado (los tests de `packages/` no corrían;
       ahora `pnpm -r test`). Colisión de migraciones resuelta: `main` ocupó `0061`–`0063`, así que la
