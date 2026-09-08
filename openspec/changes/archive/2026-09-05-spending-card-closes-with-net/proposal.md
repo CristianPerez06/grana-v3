@@ -6,7 +6,7 @@ Medido sobre los datos reales del usuario: en cinco meses con actividad, la brec
 
 ## What Changes
 
-- Cuando hay categorías en crédito, la card "En qué se fue" cierra con **"Te costó"** = total del centro − créditos. En web comparte la fila del pie con la nota de tarjeta, para no sumar altura; en nativo esa fila no tiene ancho libre, así que va como cierre del bloque de créditos. Sin créditos no aparece, porque el centro ya es ese número.
+- Cuando hay categorías en crédito, la card "En qué se fue" cierra con **"Te costó"** = total del centro − créditos, justo debajo de los créditos y en las dos plataformas, para que gastado − devuelto = te costó se lea como una sola cuenta. Sin créditos no aparece, porque el centro ya es ese número.
 - La resta usa aritmética de dinero (`netAfterCredits` en `@grana/money-logic`), no resta de floats: la card no puede inventar un centavo.
 - Web y nativo en la misma entrega.
 
