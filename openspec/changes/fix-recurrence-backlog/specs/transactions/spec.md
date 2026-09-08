@@ -17,6 +17,18 @@ resolverla. Esa identidad SHALL ser única por regla y SHALL estar protegida en 
 de la ocurrencia —pendiente, resuelta con pago, u omitida—, de modo que una ocurrencia ya resuelta no
 pueda volver a materializarse.
 
+**Excepción histórica.** Las ocurrencias resueltas **antes** de que el sistema distinguiera el
+vencimiento de la fecha de pago no tienen vencimiento recuperable: el dato fue sobrescrito y no
+quedó registrado en ningún lado. Para ellas el sistema SHALL declarar el vencimiento **desconocido**
+en vez de aproximarlo, y una ocurrencia con vencimiento desconocido NO SHALL participar de la
+identidad ni impedir que se materialice el vencimiento verdadero que le corresponda a esa fecha —
+una fecha incierta ocupando una identidad real volvería a bloquear la ocurrencia legítima. El
+sistema SHALL permitir corregir un vencimiento desconocido a uno exacto; hecho eso, pasa a ser
+inmutable como cualquier otro.
+
+Una vez establecido, un vencimiento exacto SHALL ser inmutable: NO SHALL poder moverse a otra fecha
+ni volver a desconocido.
+
 El sistema SHALL distinguir cuatro instantes que hoy se pisan entre sí, y ninguno SHALL derivarse de
 otro:
 
@@ -58,6 +70,20 @@ cualquier orden NO SHALL producir duplicados ni saltear ocurrencias.
 - **WHEN** el sistema materializa una ocurrencia vencida que el usuario todavía no resolvió
 - **THEN** la ocurrencia tiene vencimiento
 - **AND** no tiene fecha de pago, ni de carga, ni de resolución
+
+#### Scenario: Un vencimiento histórico desconocido no bloquea el verdadero
+
+- **WHEN** una ocurrencia resuelta antes de la distinción quedó con su vencimiento desconocido, y el
+  sistema debe materializar el vencimiento real que cae en la fecha que esa ocurrencia tiene
+  registrada como fecha de pago
+- **THEN** el vencimiento real se materializa
+- **AND** la ocurrencia histórica se conserva, con su vencimiento declarado desconocido
+
+#### Scenario: Un vencimiento exacto no se puede mover ni borrar
+
+- **WHEN** se intenta cambiar el vencimiento de una ocurrencia que ya lo tiene establecido, o
+  declararlo desconocido
+- **THEN** el sistema rechaza la operación
 
 #### Scenario: La misma ocurrencia no puede existir dos veces
 

@@ -97,6 +97,12 @@ que habilita el backlog.
       sin cursor con inicio vencido (incluye `start_date`), y nacida de un movimiento (no repite la
       semilla). Y el de identidad: regla mensual del día 10 con agosto confirmado el 10/09 — el
       vencimiento exacto del 10/09 se materializa igual.
+- [ ] 1.12b Regresión de la transición, hoy verificada a mano y sin exigir por ninguna tarea:
+      **(a)** editar una regla que empieza en el futuro **antes** de que arranque deja una sola
+      versión de cronograma — la anterior no resucita el día de inicio; **(b)** bajo el rol
+      `authenticated`, `INSERT`/`UPDATE`/`DELETE` sobre `recurrence_schedule_versions` y
+      `recurrence_pauses` no alteran nada, mientras `SELECT` sigue funcionando y crear, editar,
+      pausar y reanudar una regla siguen manteniendo ambas tablas.
 - [x] 1.10 Reescribir el caminante para **posicionarse en el borde del horizonte por aritmética de
       fechas**, sin recorrer desde `start_date` (decisión 19). Medido: una regla diaria de hace tres
       años agota los 750 pasos el `2024-09-26`, **347 días antes** del horizonte, sin llegar nunca a

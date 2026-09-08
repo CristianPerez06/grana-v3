@@ -61,8 +61,12 @@ conviene decirlo porque fue la primera propuesta: al confirmarse, la fila sale d
 la ocurrencia queda desprotegida. La restricción tiene que valer en **todos** los estados.
 
 **Recomendación concreta:** una columna `due_date` que guarda el vencimiento **derivado del
-calendario** —nunca lo que el usuario elija al pagar— con `UNIQUE (recurrence_id, due_date)` sin
-cláusula `WHERE`.
+calendario** —nunca lo que el usuario elija al pagar— con `UNIQUE (recurrence_id, due_date)`.
+
+Ese índice terminó siendo **parcial**, pero por una razón distinta de la que lo hacía insuficiente
+arriba: `WHERE due_date IS NOT NULL`. No excluye estados —sigue protegiendo pendientes, resueltas y
+omitidas por igual— sino las ocurrencias históricas cuyo vencimiento se **desconoce** y por lo tanto
+no pueden reservar ninguna identidad (decisión 23).
 
 `scheduled_date` **se retira**. Una versión anterior de este documento decía que "pasa a ser la fecha
 del movimiento", y eso no cierra: una ocurrencia sin resolver todavía no tiene pago, así que no puede
@@ -696,10 +700,11 @@ Tres cosas concretas que "por tandas" no define:
 - **La app se va a ver más cargada.** Reglas hoy trabadas van a mostrar varios vencimientos. Es el
   dato real apareciendo. Mitigación: agrupar, rotular "por revisar" y ofrecer resolución en bloque
   desde el primer día — no después.
-- **Migración con datos vivos.** Hay que derivar el `due_date` de instancias ya confirmadas cuyo
-  `scheduled_date` fue pisado. Para esas, el vencimiento original **no es recuperable**: se deriva del
-  cronograma de la regla y se acepta que puede no coincidir con lo que pasó. Afecta solo al historial,
-  no a montos ni saldos.
+- **Migración con datos vivos.** El vencimiento original de las instancias ya confirmadas **no es
+  recuperable**, así que no se deriva ni se aproxima: quedan con `due_date = NULL` y
+  `due_date_is_unknown` (decisión 23), conservando `scheduled_date` como único dato legado. Afecta
+  solo al historial, no a montos ni saldos, y **no bloquea** la materialización del vencimiento
+  verdadero.
 - **Colisión con #104.** Los dos tocan la misma restricción. Hay que ordenarlos explícitamente.
 - **Superficie amplia.** Toca money-logic, el paquete de recurrencias, dos apps y una migración. Se
   mitiga con las etapas de `tasks.md`, no partiendo el change: los once comportamientos son un solo
@@ -776,9 +781,7 @@ cualquier cálculo va con `(now() at time zone 'America/Argentina/Buenos_Aires')
 
 ## Decisiones de producto cerradas
 
-Decisiones de **producto** que siguen abiertas. Ninguna bloquea empezar por los cimientos.
-
-No queda ninguna abierta. Estas cuatro estuvieron listadas como preguntas mientras ya estaban
+**No queda ninguna abierta.** Estas cuatro estuvieron listadas como preguntas mientras ya estaban
 decididas en el spec o en las tareas —lo que dejaba al implementador sin saber qué regía—, así que
 quedan cerradas acá con su respuesta:
 
