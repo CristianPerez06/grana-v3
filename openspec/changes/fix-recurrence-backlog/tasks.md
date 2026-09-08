@@ -51,11 +51,12 @@ que habilita el backlog.
       `resolution_kind = 'created'` en las confirmadas, y **agregar sus constraints en esta misma
       migración, después del trigger**: el trigger completa el campo antes de que el `CHECK` corra,
       así que no hay incompatibilidad con clientes viejos. `skipped` lleva `NULL`.
-- [x] 1.4d `due_date_is_approximate` (decisión 23): `pending` y `skipped` exactas; **todas** las
-      `confirmed` anteriores a la migración aproximadas. Sin inferencias — caer en el cronograma no
-      prueba exactitud: una cuota del 10/08 confirmada el 10/09 cae perfecto y es otra ocurrencia.
-      Las posteriores a la migración son exactas por construcción. No se presentan como vencimiento
-      exacto en ninguna pantalla.
+- [x] 1.4d `due_date_is_unknown` (decisión 23): `pending` y `skipped` exactas; **todas** las
+      `confirmed` anteriores a la migración con `due_date NULL` y la marca en true. Sin inferencias
+      —caer en el cronograma no prueba exactitud— y **sin ocupar identidad**: una fecha dudosa
+      guardada bloquearía el vencimiento verdadero e reproduciría el #96. Índice parcial
+      (`WHERE due_date IS NOT NULL`), colisiones solo entre exactas, y `CHECK` que mantiene
+      `(due_date is null) = due_date_is_unknown`.
 - [ ] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
       (`mutations.ts:446`): con resolución en bloque el resultado dependería del orden.
 - [ ] 1.5 Quitar de `confirmRecurrenceInstance` y `skipRecurrenceInstance` la escritura de
@@ -78,7 +79,8 @@ que habilita el backlog.
       test con una regla cuya frecuencia fue editada, que no debe producir fechas anteriores a
       `effective_from`. Y los tres casos de regla directa: sin cursor con inicio hoy (genera hoy),
       sin cursor con inicio vencido (incluye `start_date`), y nacida de un movimiento (no repite la
-      semilla).
+      semilla). Y el de identidad: regla mensual del día 10 con agosto confirmado el 10/09 — el
+      vencimiento exacto del 10/09 se materializa igual.
 - [ ] 1.10 Reescribir el caminante para **posicionarse en el borde del horizonte por aritmética de
       fechas**, sin recorrer desde `start_date` (decisión 19). Medido: una regla diaria de hace tres
       años agota los 750 pasos el `2024-09-26`, **347 días antes** del horizonte, sin llegar nunca a

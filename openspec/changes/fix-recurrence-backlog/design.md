@@ -354,8 +354,8 @@ en el frontend**: el generador las necesita para decidir qué materializar, y co
 
 | Columna | Para qué | Nota |
 |---|---|---|
-| `due_date` DATE NOT NULL | Identidad de la ocurrencia (decisión 1) | `UNIQUE (recurrence_id, due_date)`, sin `WHERE` |
-| `due_date_is_approximate` BOOLEAN NOT NULL DEFAULT false | El vencimiento histórico no es exacto | Ver decisión 23 |
+| `due_date` DATE **NULL** | Identidad de la ocurrencia (decisión 1) | `UNIQUE (recurrence_id, due_date) WHERE due_date IS NOT NULL` |
+| `due_date_is_unknown` BOOLEAN NOT NULL DEFAULT false | El vencimiento histórico se desconoce (`due_date` NULL) | Ver decisión 23 |
 | `resolution_kind` TEXT NULL | `created` \| `linked` — qué hace deshacer (decisión 14) | Ver la tabla de estados |
 | `linked_conversion` BOOLEAN NOT NULL DEFAULT false | Si al vincular se convirtió el movimiento a compartido | Sin esto, deshacer no sabe si debe revertir la conversión (decisión 14) |
 
@@ -575,18 +575,37 @@ mensual del día 10 — y pertenece a otra ocurrencia. La comprobación sirve pa
 fechas, nunca para probar que las demás son exactas. Y si la frecuencia fue editada, comparar contra
 el cronograma **actual** tampoco dice qué calendario regía cuando se creó la instancia.
 
-**Política, sin inferencias:**
+**Y una fecha incierta no puede ocupar una identidad.** Una versión anterior guardaba la fecha dudosa
+igual, marcada como aproximada — y eso **reproduce el #96 por otro camino**:
 
-| | `due_date` |
-|---|---|
-| `pending` y `skipped` existentes | **exacto** |
-| `confirmed` **anterior** a la migración | **aproximado**, todas sin excepción |
-| `confirmed` **posterior** a la migración | exacto por construcción: `due_date` ya no se pisa |
+1. El vencimiento de agosto era el 10/08.
+2. Se confirmó tarde, el 10/09; el código viejo dejó `scheduled_date = 10/09`.
+3. La migración copiaba eso a `due_date = 10/09` — marcado, pero **presente**.
+4. El cursor real seguía en 10/08.
+5. El generador intenta crear el vencimiento **verdadero** del 10/09…
+6. …y el índice único lo rechaza: la fila dudosa ya ocupa esa identidad.
 
-Esas fechas se conservan como aproximación histórica **marcada** y no se presentan como vencimiento
-exacto en ninguna pantalla. No se aborta: son datos legítimamente irrecuperables, y abortar dejaría
-la migración bloqueada para siempre sobre algo que nadie puede reconstruir — a diferencia de la
-decisión 18, donde la ambigüedad **sí** se resuelve a mano.
+Septiembre desaparece. Exactamente el bloqueo que este change existe para eliminar.
+
+**Política: lo desconocido se declara desconocido, no se aproxima.**
+
+| | `due_date` | `due_date_is_unknown` |
+|---|---|---|
+| `pending` y `skipped` existentes | **exacto** | false |
+| `confirmed` **anterior** a la migración | **NULL** | **true** |
+| `confirmed` **posterior** a la migración | exacto por construcción | false |
+
+`scheduled_date` conserva el único dato legado disponible durante la transición, sin pretender que
+sea un vencimiento. El índice de identidad es **parcial** (`WHERE due_date IS NOT NULL`) y el
+generador deduplica **solo** contra vencimientos exactos, así que una identidad desconocida nunca
+reserva el lugar de una conocida. Si algún día el usuario corrige el histórico a mano, se completa
+`due_date` y la fila deja de ser desconocida.
+
+Un `CHECK` mantiene los dos campos en acuerdo: `(due_date is null) = due_date_is_unknown`.
+
+**La política de colisiones cambia en consecuencia** (decisión 18): solo se comparan vencimientos
+exactos. Una confirmada desconocida que "coincidía" con un vencimiento exacto no es motivo para
+abortar — pueden ser dos ocurrencias distintas, y esa era justamente la trampa.
 
 ### Decisión 18 · El backfill aborta ante ambigüedad, no adivina
 

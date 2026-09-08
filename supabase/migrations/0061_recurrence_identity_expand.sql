@@ -86,37 +86,62 @@ create temporary table _migration_today on commit drop as
 -- exactas. Y si la frecuencia fue editada, comparar contra el cronograma ACTUAL
 -- tampoco dice qué calendario regía cuando se creó la instancia.
 --
--- Política, sin inferencias:
+-- Y una fecha incierta NO PUEDE OCUPAR UNA IDENTIDAD. Una versión anterior de
+-- esta migración guardaba la fecha dudosa igual, marcada como aproximada, y eso
+-- reproduce el #96 por otro camino:
 --
---   pending / skipped         EXACTAS.
---   confirmed pre-migración   APROXIMADAS, todas. El vencimiento original es
---                             irrecuperable y no hay dato que lo desempate.
+--   1. El vencimiento de agosto era el 10/08.
+--   2. Se confirmó tarde, el 10/09; el código viejo dejó scheduled_date=10/09.
+--   3. La migración copiaba eso a due_date=10/09 (marcado, pero presente).
+--   4. El cursor real seguía en 10/08.
+--   5. El generador intenta crear el vencimiento VERDADERO del 10/09…
+--   6. …y el índice único lo rechaza: la fila dudosa ya ocupa esa identidad.
+--
+--   ⇒ septiembre desaparece. Exactamente el bloqueo que este change elimina.
+--
+-- Política: lo desconocido se declara desconocido, no se aproxima.
+--
+--   pending / skipped         due_date EXACTO.
+--   confirmed pre-migración   due_date NULL + due_date_is_unknown = true.
+--                             `scheduled_date` conserva el único dato legado
+--                             disponible, sin pretender que sea un vencimiento.
 --   confirmed post-migración  exactas por construcción: desde el despliegue
---                             `due_date` ya no se pisa (DEFAULT false).
+--                             `due_date` ya no se pisa.
 --
--- Se conservan como aproximación histórica MARCADA, y no se presentan como
--- vencimiento exacto en ninguna pantalla. No se aborta: son datos legítimamente
--- irrecuperables, y abortar dejaría la migración bloqueada para siempre sobre
--- algo que nadie puede reconstruir. Se distingue del paso 2, donde la
--- ambigüedad SÍ es resoluble a mano.
+-- El índice de identidad aplica solo donde `due_date IS NOT NULL`, y el
+-- generador deduplica únicamente contra vencimientos exactos. Si algún día el
+-- usuario corrige el histórico a mano, se completa `due_date` y la fila deja de
+-- ser desconocida.
 
 alter table public.recurrence_instances
-  add column due_date                DATE,
-  add column due_date_is_approximate BOOLEAN NOT NULL DEFAULT false;
+  add column due_date             DATE,
+  add column due_date_is_unknown  BOOLEAN NOT NULL DEFAULT false;
 
 update public.recurrence_instances
-   set due_date = scheduled_date,
-       due_date_is_approximate = (status = 'confirmed');
+   set due_date            = case when status = 'confirmed' then null else scheduled_date end,
+       due_date_is_unknown = (status = 'confirmed');
+
+-- Lo desconocido y lo ausente son la misma cosa, y no pueden divergir.
+alter table public.recurrence_instances
+  add constraint chk_recurrence_instances_due_date_unknown check (
+    (due_date is null) = due_date_is_unknown
+  );
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2 · Política de colisiones: abortar con informe, nunca adivinar
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Dos instancias de la misma regla pueden haber quedado con el mismo
--- `scheduled_date` si una se confirmó con la fecha de otra. Resolver cuál
--- corresponde a qué vencimiento es caso por caso y ninguna regla automática lo
--- acierta; un `due_date` mal asignado es un movimiento atribuido al mes
--- equivocado, y se descubre meses después. Abortar es barato.
+-- Solo entre vencimientos EXACTOS: las confirmadas históricas tienen
+-- `due_date NULL` y no compiten por ninguna identidad. Una confirmada dudosa que
+-- "coincidía" con un vencimiento exacto no es motivo para abortar — justamente
+-- pueden ser dos ocurrencias distintas, y esa era la trampa de la versión
+-- anterior.
+--
+-- Lo que sí puede pasar es que dos pendientes/omitidas de la misma regla tengan
+-- el mismo `scheduled_date`. Resolver cuál corresponde a qué vencimiento es caso
+-- por caso y ninguna regla automática lo acierta; un `due_date` mal asignado es
+-- un movimiento atribuido al mes equivocado, y se descubre meses después.
+-- Abortar es barato.
 
 do $$
 declare
@@ -128,6 +153,7 @@ begin
     select recurrence_id, due_date, count(*) as n,
            string_agg(id::text || ' (' || status || ')', ', ' order by created_at) as instancias
       from public.recurrence_instances
+     where due_date is not null
      group by recurrence_id, due_date
     having count(*) > 1
   loop
@@ -144,11 +170,12 @@ begin
   end if;
 end $$;
 
-alter table public.recurrence_instances
-  alter column due_date set not null;
-
+-- `due_date` NO es NOT NULL: las confirmadas históricas lo tienen nulo a
+-- propósito. El índice es PARCIAL por la misma razón — una identidad
+-- desconocida no puede reservar el lugar de una conocida.
 create unique index recurrence_instances_one_per_rule_due_date
-  on public.recurrence_instances (recurrence_id, due_date);
+  on public.recurrence_instances (recurrence_id, due_date)
+  where due_date is not null;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 3 · Cómo se resolvió la ocurrencia
@@ -383,9 +410,14 @@ returns trigger
 language plpgsql
 as $$
 begin
-  -- Cliente viejo: escribió scheduled_date y no due_date.
-  if NEW.due_date is null then
+  -- Cliente viejo insertando una ocurrencia nueva: escribió `scheduled_date` y
+  -- no `due_date`. Ahí el dato SÍ es exacto (lo produjo el generador), así que
+  -- se deriva. Solo en INSERT: en un UPDATE la fila ya tiene su `due_date`, y
+  -- una confirmación vieja pisa `scheduled_date` con la fecha de pago —
+  -- derivarlo ahí sería fabricar la identidad equivocada.
+  if TG_OP = 'INSERT' and NEW.due_date is null then
     NEW.due_date := NEW.scheduled_date;
+    NEW.due_date_is_unknown := false;
   end if;
 
   -- Cliente viejo confirmando: hasta la migración C, confirmar siempre creaba
