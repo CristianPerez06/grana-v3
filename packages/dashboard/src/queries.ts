@@ -23,6 +23,7 @@ import {
   aggregateHero,
   buildMonthBalanceSeries,
   derivePaidAtSnapshot,
+  isFinancialIncome,
   projectRecurrenceItems,
   sumByCurrency,
   topCommittedItems,
@@ -191,12 +192,6 @@ export async function getAvailableTotals(
  *  `max-rows`: the loop advances by what came back and stops on an empty page. */
 const MONTH_ROWS_PAGE_SIZE = 1000
 
-/**
- * `canonical_name` of the category that marks an income as a yield: interest on
- * a remunerated account, a dividend, a return. It is the seeded system category,
- * and a user who names their own the same way means the same thing by it.
- */
-const FINANCIAL_CANONICAL = 'financiero'
 
 export async function getMonthBalanceSeries(
   supabase: SupabaseClient,
@@ -308,7 +303,7 @@ export async function getMonthBalanceSeries(
     // account types: what makes an income a yield is that it was filed under
     // "Financiero". An interest payment filed elsewhere counts as plain income,
     // which is the honest reading of what the user said it was.
-    is_financial_income: t.type === 'income' && t.category?.canonical_name === FINANCIAL_CANONICAL,
+    is_financial_income: isFinancialIncome(t.type, t.category?.canonical_name ?? null),
   }))
 
   return {

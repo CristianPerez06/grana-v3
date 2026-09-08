@@ -154,6 +154,38 @@ export type MonthBalanceTxInput = {
   is_financial_income?: boolean
 }
 
+/**
+ * `canonical_name`s that mark an income as a yield: interest on a remunerated
+ * account, a dividend, a return.
+ *
+ * TWO of them, and the second is the one that matters. The seed carries two
+ * categories both DISPLAYED as "Financiero": the expense one owns `financiero`
+ * (0006) and the income one had to settle for `financiero-ingresos`, because
+ * system canonical names are unique across types (0036 says so in its own
+ * header). Matching only `financiero` matches the expense category, which no
+ * income ever carries — the row just never appears. `financiero` stays in the
+ * set for the user who names their OWN income category "Financiero", which
+ * canonicalizes to it.
+ */
+const FINANCIAL_INCOME_CANONICALS = new Set(['financiero-ingresos', 'financiero'])
+
+/**
+ * Whether a movement is income the money earned on its own rather than income
+ * the user earned. Keyed on the classification the user already sees: an
+ * interest payment filed elsewhere counts as plain income, which is the honest
+ * reading of what they said it was.
+ *
+ * A predicate and not an inline test in the read, because it is a rule about
+ * seeded data that a string literal can silently stop matching.
+ *
+ * PROVISIONAL. What counts as a yield belongs to the Ahorro e inversión module,
+ * which is being built; when it settles that definition, this stops inferring it
+ * from the category and follows that instead.
+ */
+export function isFinancialIncome(type: string, categoryCanonical: string | null): boolean {
+  return type === 'income' && FINANCIAL_INCOME_CANONICALS.has(categoryCanonical ?? '')
+}
+
 /** Which display bucket a signed contribution belongs to (for the per-bucket totals). */
 type CashBucket =
   | 'income'

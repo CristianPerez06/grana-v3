@@ -1342,6 +1342,8 @@ La apertura de **"Entró"** SHALL listar:
 
 - **Ingresos** — lo que el usuario ganó: sueldo, una venta, un regalo.
 - **Ingresos financieros** — lo que ganó la plata sola: intereses de una cuenta remunerada, rendimientos, dividendos. Es la porción de los ingresos del mes clasificada en la categoría **Financiero**, separada de la fila anterior y NUNCA sumada encima de ella. La regla se apoya en la clasificación que el usuario ya ve: un interés archivado en otra categoría cuenta como ingreso común, que es la lectura honesta de lo que el usuario dijo que era.
+
+Esa definición es **provisoria**: el tratamiento de lo financiero pertenece al módulo de Ahorro e inversión, que está en curso. Cuando ese módulo defina qué es un rendimiento, esta regla SHALL revisarse contra esa definición en vez de seguir infiriéndola de la categoría.
 - **Devoluciones** — reintegros "a cuenta" recibidos: plata que VOLVIÓ, no plata ganada.
 - **Otros** — el lado positivo de los baldes con signo: una liquidación a favor, la pata destino de un cambio de moneda, un ajuste positivo.
 
