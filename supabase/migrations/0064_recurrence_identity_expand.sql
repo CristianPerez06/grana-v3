@@ -1,117 +1,121 @@
--- Recurrencias — expansión del modelo de identidad de ocurrencia.
+-- Recurrences — expansion of the occurrence identity model.
 --
 -- Run AFTER 0063_household_categories.sql.
 --
 -- Change: openspec/changes/fix-recurrence-backlog/
 --
 -- ═══════════════════════════════════════════════════════════════════════════
--- ESTA MIGRACIÓN NO CAMBIA NINGÚN COMPORTAMIENTO.
+-- THIS MIGRATION CHANGES NO BEHAVIOUR.
 --
--- Es la mitad "expansión" de un par expansión/activación (design.md, decisión
--- 17). Agrega columnas y tablas, hace el backfill e instala un trigger de
--- compatibilidad — pero deja vivo el índice `recurrence_instances_one_pending_
--- per_rule`, así que la app sigue viendo exactamente una ocurrencia pendiente
--- por regla, igual que hoy.
+-- It is the "expand" half of an expand/activate pair (design.md, decision 17).
+-- It adds columns and tables, backfills them and installs a compatibility
+-- trigger — but leaves the `recurrence_instances_one_pending_per_rule` index in
+-- place, so the app still sees exactly one pending occurrence per rule, just
+-- like today.
 --
--- El backlog se habilita en <próximo libre>_recurrence_backlog_activate.sql, DESPUÉS de
--- desplegar web y nativo con el modelo nuevo. El orden importa: sacar el índice
--- antes del despliegue dejaría a la base acumulando atraso mientras la app
--- sigue mostrando una sola ocurrencia — invisible, y peor que el bug actual.
+-- The backlog is enabled in <next free>_recurrence_backlog_activate.sql, AFTER
+-- deploying web and native with the new model. The order matters: dropping the
+-- index before that deploy would leave the database piling up backlog while the
+-- app still shows a single occurrence — invisible, and worse than the current
+-- bug.
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Qué agrega, y por qué cada cosa:
+-- What it adds, and why each piece:
 --
---   due_date            La identidad de la ocurrencia. Hoy `scheduled_date` hace
---                       de identidad y de fecha del movimiento a la vez, y al
---                       confirmar se PISA con la fecha que el usuario elige
---                       (mutations.ts), así que la ocurrencia pierde su
---                       vencimiento original. Con backlog eso además impide
---                       identificarla.
+--   due_date            The occurrence identity. Today `scheduled_date` doubles
+--                       as identity and as the movement date, and confirming
+--                       OVERWRITES it with the date the user picks
+--                       (mutations.ts), so the occurrence loses its original
+--                       due date. With a backlog that also makes it
+--                       unidentifiable.
 --
---   resolution_kind     Cómo se resolvió: `created` (la recurrencia creó el
---   linked_conversion   movimiento) o `linked` (el usuario vinculó uno suyo).
---                       Deshacer hace cosas distintas en cada caso: eliminar vs
---                       conservar. `linked_conversion` marca si al vincular se
---                       convirtió un movimiento personal en compartido, para
---                       poder revertir esa conversión.
+--   resolution_kind     How it was resolved: `created` (the recurrence created
+--   linked_conversion   the movement) or `linked` (the user linked one of their
+--                       own). Undo does different things in each case: delete
+--                       vs keep. `linked_conversion` records whether linking
+--                       converted a personal movement into a shared one, so
+--                       that conversion can be reverted.
 --
---   reconstruct_from    Hasta dónde hacia atrás puede reconstruir el generador.
---                       Política conservadora (decisión 21): NO reconstruir
---                       nada anterior al último punto conocido, porque no hay
---                       historial de ediciones de cronograma ni de pausas y
---                       suponerlo fabrica atraso que quizá nunca existió.
+--   reconstruct_from    How far back the generator may reconstruct.
+--                       Conservative policy (decision 21): do NOT reconstruct
+--                       anything earlier than the last known point, because
+--                       there is no history of schedule edits or pauses and
+--                       assuming one fabricates backlog that may never have
+--                       existed.
 --
---   schedule_versions   El cronograma a lo largo del tiempo. Un cambio de
---                       frecuencia rige desde una fecha y no reinterpreta el
---                       pasado; sin esto, el generador leería el calendario
---                       viejo como huecos.
+--   schedule_versions   The schedule over time. A frequency change applies from
+--                       a date onwards and does not reinterpret the past;
+--                       without this, the generator would read the old calendar
+--                       as gaps.
 --
---   pauses              Los intervalos de pausa. Un vencimiento que cae durante
---                       una pausa no existe y no se recupera al reanudar; sin
---                       el intervalo persistido, el período pausado también se
---                       lee como huecos.
+--   pauses              The pause intervals. A due date falling during a pause
+--                       does not exist and is not recovered on resume; without
+--                       the persisted interval, the paused period also reads as
+--                       gaps.
 --
 -- Supabase is online-only: apply this by pasting into the dashboard SQL Editor,
 -- then regenerate types. The whole migration runs in one transaction.
 
 begin;
 
--- El "hoy" de referencia. `current_date` a secas está PROHIBIDO: Supabase corre
--- en UTC y la app cierra el día en horario argentino.
+-- The reference "today". A bare `current_date` is FORBIDDEN: Supabase runs in
+-- UTC and the app closes the day on Argentine time.
 create temporary table _migration_today on commit drop as
   select (now() at time zone 'America/Argentina/Buenos_Aires')::date as d;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 1 · due_date — la identidad de la ocurrencia
+-- 1 · due_date — the occurrence identity
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- El punto de partida es `scheduled_date`, pero NO es igual de confiable según
--- el estado, y decir "se deriva del cronograma" a secas sería falso:
+-- The starting point is `scheduled_date`, but it is NOT equally trustworthy
+-- across statuses, and saying "it derives from the schedule" would be false:
 --
---   pending   EXACTO. Nada lo pisó: el generador lo escribió y nadie más.
---   skipped   EXACTO. `skipRecurrenceInstance` solo toca `status` y
---             `resolved_at` — el vencimiento sobrevive intacto.
---   confirmed SOSPECHOSO. `confirmRecurrenceInstance` escribe
---             `scheduled_date = payload.date ?? instance.scheduled_date`, así
---             que si el usuario cambió la fecha al confirmar, lo que hoy hay
---             guardado es la FECHA DE PAGO, no el vencimiento.
+--   pending   EXACT. Nothing overwrote it: the generator wrote it and nobody
+--             else.
+--   skipped   EXACT. `skipRecurrenceInstance` only touches `status` and
+--             `resolved_at` — the due date survives untouched.
+--   confirmed SUSPECT. `confirmRecurrenceInstance` writes
+--             `scheduled_date = payload.date ?? instance.scheduled_date`, so if
+--             the user changed the date while confirming, what is stored today
+--             is the PAYMENT DATE, not the due date.
 --
--- Para las confirmadas NO hay forma de demostrar cuál era el vencimiento.
--- Una versión anterior de esta migración intentaba deducirlo comprobando si la
--- fecha "cae sobre el cronograma", y ese razonamiento es INVÁLIDO: caer en el
--- cronograma es necesario, no suficiente. Una cuota que vencía el 10 de agosto
--- y se confirmó tarde, el 10 de septiembre, cae perfecto en un cronograma
--- mensual del día 10 — y pertenece a otra ocurrencia. La comprobación sirve
--- para sospechar de algunas fechas, nunca para probar que las demás son
--- exactas. Y si la frecuencia fue editada, comparar contra el cronograma ACTUAL
--- tampoco dice qué calendario regía cuando se creó la instancia.
+-- For confirmed rows there is NO way to prove what the due date was. An earlier
+-- version of this migration tried to infer it by checking whether the date
+-- "lands on the schedule", and that reasoning is INVALID: landing on the
+-- schedule is necessary, not sufficient. An instalment due on August 10th and
+-- confirmed late, on September 10th, lands perfectly on a monthly-10th schedule
+-- — and belongs to a different occurrence. The check can make some dates
+-- suspect, never prove the rest are exact. And if the frequency was ever
+-- edited, comparing against the CURRENT schedule does not even say which
+-- calendar was in force when the instance was created.
 --
--- Y una fecha incierta NO PUEDE OCUPAR UNA IDENTIDAD. Una versión anterior de
--- esta migración guardaba la fecha dudosa igual, marcada como aproximada, y eso
--- reproduce el #96 por otro camino:
+-- And an uncertain date CANNOT OCCUPY AN IDENTITY. An earlier version of this
+-- migration stored the doubtful date anyway, flagged as approximate, and that
+-- reproduces #96 by another route:
 --
---   1. El vencimiento de agosto era el 10/08.
---   2. Se confirmó tarde, el 10/09; el código viejo dejó scheduled_date=10/09.
---   3. La migración copiaba eso a due_date=10/09 (marcado, pero presente).
---   4. El cursor real seguía en 10/08.
---   5. El generador intenta crear el vencimiento VERDADERO del 10/09…
---   6. …y el índice único lo rechaza: la fila dudosa ya ocupa esa identidad.
+--   1. The August due date was 10/08.
+--   2. It was confirmed late, on 10/09; the old code left scheduled_date=10/09.
+--   3. The migration copied that into due_date=10/09 (flagged, but present).
+--   4. The real cursor was still at 10/08.
+--   5. The generator tries to create the TRUE 10/09 due date…
+--   6. …and the unique index rejects it: the doubtful row already holds that
+--      identity.
 --
---   ⇒ septiembre desaparece. Exactamente el bloqueo que este change elimina.
+--   ⇒ September disappears. Exactly the block this change removes.
 --
--- Política: lo desconocido se declara desconocido, no se aproxima.
+-- Policy: what is unknown is declared unknown, not approximated.
 --
---   pending / skipped         due_date EXACTO.
---   confirmed pre-migración   due_date NULL + due_date_is_unknown = true.
---                             `scheduled_date` conserva el único dato legado
---                             disponible, sin pretender que sea un vencimiento.
---   confirmed post-migración  exactas por construcción: desde el despliegue
---                             `due_date` ya no se pisa.
+--   pending / skipped         due_date EXACT.
+--   confirmed pre-migration   due_date NULL + due_date_is_unknown = true.
+--                             `scheduled_date` keeps the only legacy datum
+--                             available, without pretending it is a due date.
+--   confirmed post-migration  exact by construction: from the deploy onwards
+--                             `due_date` is no longer overwritten.
 --
--- El índice de identidad aplica solo donde `due_date IS NOT NULL`, y el
--- generador deduplica únicamente contra vencimientos exactos. Si algún día el
--- usuario corrige el histórico a mano, se completa `due_date` y la fila deja de
--- ser desconocida.
+-- The identity index applies only where `due_date IS NOT NULL`, and the
+-- generator dedupes only against exact due dates. If some day the user fixes
+-- the history by hand, `due_date` gets filled in and the row stops being
+-- unknown.
 
 alter table public.recurrence_instances
   add column due_date             DATE,
@@ -121,122 +125,121 @@ update public.recurrence_instances
    set due_date            = case when status = 'confirmed' then null else scheduled_date end,
        due_date_is_unknown = (status = 'confirmed');
 
--- Lo desconocido y lo ausente son la misma cosa, y no pueden divergir.
+-- Unknown and absent are the same thing, and they cannot diverge.
 alter table public.recurrence_instances
   add constraint chk_recurrence_instances_due_date_unknown check (
     (due_date is null) = due_date_is_unknown
   );
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 2 · Política de colisiones: abortar con informe, nunca adivinar
+-- 2 · Collision policy: abort with a report, never guess
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Solo entre vencimientos EXACTOS: las confirmadas históricas tienen
--- `due_date NULL` y no compiten por ninguna identidad. Una confirmada dudosa que
--- "coincidía" con un vencimiento exacto no es motivo para abortar — justamente
--- pueden ser dos ocurrencias distintas, y esa era la trampa de la versión
--- anterior.
+-- Only among EXACT due dates: historical confirmed rows have `due_date NULL`
+-- and compete for no identity. A doubtful confirmed row that "matched" an exact
+-- due date is no reason to abort — they may well be two different occurrences,
+-- and that was exactly the trap in the earlier version.
 --
--- Lo que sí puede pasar es que dos pendientes/omitidas de la misma regla tengan
--- el mismo `scheduled_date`. Resolver cuál corresponde a qué vencimiento es caso
--- por caso y ninguna regla automática lo acierta; un `due_date` mal asignado es
--- un movimiento atribuido al mes equivocado, y se descubre meses después.
--- Abortar es barato.
+-- What CAN happen is that two pending/skipped rows of the same rule share a
+-- `scheduled_date`. Deciding which one belongs to which due date is a
+-- case-by-case call and no automatic rule gets it right; a misassigned
+-- `due_date` is a movement attributed to the wrong month, and it surfaces
+-- months later. Aborting is cheap.
 
 do $$
 declare
-  colision record;
-  informe  text := '';
-  total    int  := 0;
+  collision record;
+  report    text := '';
+  total     int  := 0;
 begin
-  for colision in
+  for collision in
     select recurrence_id, due_date, count(*) as n,
-           string_agg(id::text || ' (' || status || ')', ', ' order by created_at) as instancias
+           string_agg(id::text || ' (' || status || ')', ', ' order by created_at) as instances
       from public.recurrence_instances
      where due_date is not null
      group by recurrence_id, due_date
     having count(*) > 1
   loop
     total := total + 1;
-    informe := informe || format(
-      E'\n  regla %s · vencimiento %s · %s instancias: %s',
-      colision.recurrence_id, colision.due_date, colision.n, colision.instancias
+    report := report || format(
+      E'\n  rule %s · due date %s · %s instances: %s',
+      collision.recurrence_id, collision.due_date, collision.n, collision.instances
     );
   end loop;
 
   if total > 0 then
-    raise exception E'Backfill de due_date abortado: % vencimiento(s) con más de una instancia.%\n\nResolver a mano cuál instancia corresponde a cada vencimiento, y volver a correr.',
-      total, informe;
+    raise exception E'due_date backfill aborted: % due date(s) with more than one instance.%\n\nResolve by hand which instance belongs to each due date, then run again.',
+      total, report;
   end if;
 end $$;
 
--- `due_date` NO es NOT NULL: las confirmadas históricas lo tienen nulo a
--- propósito. El índice es PARCIAL por la misma razón — una identidad
--- desconocida no puede reservar el lugar de una conocida.
+-- `due_date` is NOT NOT NULL: historical confirmed rows hold null on purpose.
+-- The index is PARTIAL for the same reason — an unknown identity cannot reserve
+-- the slot of a known one.
 create unique index recurrence_instances_one_per_rule_due_date
   on public.recurrence_instances (recurrence_id, due_date)
   where due_date is not null;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 3 · Cómo se resolvió la ocurrencia
+-- 3 · How the occurrence was resolved
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- `skipped` lleva `resolution_kind = NULL`: omitir resuelve sin movimiento, así
--- que no hay nada que deshacer ni forma de deshacerlo.
+-- `skipped` carries `resolution_kind = NULL`: skipping resolves without a
+-- movement, so there is nothing to undo and no way to undo it.
 --
--- Las constraints van EN ESTA MIGRACIÓN, después del trigger del paso 7. Una
--- versión anterior las postergaba a la activación por miedo a que un cliente
--- viejo las violara al confirmar — pero el trigger completa `resolution_kind`
--- antes de que la constraint se evalúe (BEFORE trigger → CHECK), así que la
--- incompatibilidad no existe. Postergarlas solo dejaría la base sin proteger
--- durante toda la transición.
+-- The constraints go IN THIS MIGRATION, after the step 7 trigger. An earlier
+-- version deferred them to the activation out of fear that an old client would
+-- violate them while confirming — but the trigger fills `resolution_kind` in
+-- before the constraint is evaluated (BEFORE trigger → CHECK), so the
+-- incompatibility does not exist. Deferring them would only leave the database
+-- unprotected for the whole transition.
 
 alter table public.recurrence_instances
   add column resolution_kind   TEXT    NULL,
   add column linked_conversion BOOLEAN NOT NULL DEFAULT false;
 
--- Hasta hoy la única forma de resolver con movimiento era creándolo.
+-- Until today the only way to resolve with a movement was by creating it.
 update public.recurrence_instances
    set resolution_kind = 'created'
  where status = 'confirmed';
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 4 · reconstruct_from — el piso de la reconstrucción
+-- 4 · reconstruct_from — the reconstruction floor
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- El generador nunca materializa antes de GREATEST(reconstruct_from, horizonte).
+-- The generator never materializes before GREATEST(reconstruct_from, horizon).
 --
---   activas   `last_generated_date` es, por definición, "hasta acá ya está
---             cubierto". Reconstruir antes propondría de nuevo ocurrencias que
---             la regla ya dio por resueltas.
---   pausadas  la fecha de la migración. No sabemos desde cuándo están pausadas,
---             y cualquier fecha anterior haría aparecer como atraso los períodos
---             de la pausa al reanudarlas — lo que la decisión 16 prohíbe.
+--   active  `last_generated_date` is, by definition, "covered up to here".
+--           Reconstructing earlier would re-propose occurrences the rule
+--           already considers resolved.
+--   paused  the migration date. We do not know since when they have been
+--           paused, and any earlier date would surface the paused periods as
+--           backlog on resume — which decision 16 forbids.
 --
--- Contrato, y conviene ser exacto porque una versión anterior de este comentario
--- lo decía al revés: `reconstruct_from` es el ÚLTIMO PUNTO CONOCIDO, y las
--- ocurrencias POSTERIORES a él, dentro del horizonte, SÍ se reconstruyen —
--- descontando las instancias que ya existan.
+-- The contract, and it is worth being exact because an earlier version of this
+-- comment stated it backwards: `reconstruct_from` is the LAST KNOWN POINT, and
+-- the occurrences AFTER it, within the horizon, ARE reconstructed — minus any
+-- instances that already exist.
 --
--- Eso ES el arreglo del #96, y tiene que serlo. En el caso del ticket el cursor
--- quedó clavado en junio con una pendiente sin resolver que no lo avanzó; al
--- reconstruir desde ahí, la de junio ya existe y se deduplica, pero julio,
--- agosto y septiembre aparecen. Si esto no reconstruyera hacia atrás, el bug
--- seguiría vivo.
+-- That IS the #96 fix, and it has to be. In the ticket's case the cursor was
+-- stuck in June with an unresolved pending occurrence that never advanced it;
+-- reconstructing from there, June already exists and is deduped, but July,
+-- August and September show up. If this did not reconstruct backwards, the bug
+-- would still be alive.
 --
--- Lo que NO se reconstruye es lo anterior al cursor: eso la regla ya lo dio por
--- cubierto. Y en las pausadas no se reconstruye nada previo a la migración,
--- porque no sabemos desde cuándo están pausadas.
+-- What is NOT reconstructed is anything before the cursor: the rule already
+-- considers that covered. And for paused rules nothing before the migration is
+-- reconstructed, because we do not know since when they have been paused.
 
 alter table public.recurrences
   add column reconstruct_from DATE;
 
--- `start_date - 1` cuando no hay cursor, y NO `start_date`: el contrato genera
--- ocurrencias ESTRICTAMENTE POSTERIORES a `reconstruct_from`, y el motor actual
--- dice que sin cursor la primera ocurrencia cae EN `start_date`
--- (`decideRecurrenceInstance`, packages/money-logic/src/recurrences.ts). Con
--- `start_date` a secas, una regla creada directamente y todavía nunca
--- materializada perdería su primera ocurrencia.
+-- `start_date - 1` when there is no cursor, and NOT `start_date`: the contract
+-- generates occurrences STRICTLY AFTER `reconstruct_from`, and the current
+-- engine puts the first occurrence ON `start_date` when there is no cursor
+-- (`decideRecurrenceInstance`, packages/money-logic/src/recurrences.ts). With a
+-- plain `start_date`, a directly created rule that has never materialized would
+-- lose its first occurrence.
 update public.recurrences r
    set reconstruct_from = case
          when r.status = 'paused'               then (select d from _migration_today)
@@ -247,11 +250,11 @@ update public.recurrences r
 alter table public.recurrences
   alter column reconstruct_from set not null;
 
--- Sin esto la expansión ROMPE el alta de recurrencias: la columna es NOT NULL,
--- una DEFAULT no puede referirse a otra columna de la misma fila, y ni el código
--- actual ni los clientes instalados la escriben. La expansión tiene que preservar
--- el comportamiento, así que el valor se deriva con el MISMO criterio del
--- backfill de arriba.
+-- Without this the expansion BREAKS recurrence creation: the column is NOT
+-- NULL, a DEFAULT cannot reference another column of the same row, and neither
+-- the current code nor the installed clients write it. The expansion has to
+-- preserve behaviour, so the value is derived with the SAME criterion as the
+-- backfill above.
 create or replace function public.recurrence_reconstruct_from_default()
 returns trigger
 language plpgsql
@@ -263,8 +266,8 @@ begin
     NEW.reconstruct_from := case
       when NEW.status = 'paused'               then (now() at time zone 'America/Argentina/Buenos_Aires')::date
       when NEW.last_generated_date is not null then NEW.last_generated_date
-      -- Sin cursor la primera ocurrencia cae EN start_date, y el contrato genera
-      -- estrictamente después del piso.
+      -- With no cursor the first occurrence lands ON start_date, and the
+      -- contract generates strictly after the floor.
       else NEW.start_date - 1
     end;
   end if;
@@ -277,12 +280,12 @@ create trigger trg_recurrence_reconstruct_from_default
   execute function public.recurrence_reconstruct_from_default();
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 5 · recurrence_schedule_versions — el cronograma a lo largo del tiempo
+-- 5 · recurrence_schedule_versions — the schedule over time
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- La FK compuesta de abajo necesita esta clave candidata. `id` ya es PK; esto
--- solo declara que (id, user_id) también identifica una fila, para que las
--- tablas hijas puedan exigir que la regla y el dueño coincidan.
+-- The composite FK below needs this candidate key. `id` is already the PK; this
+-- only declares that (id, user_id) identifies a row too, so child tables can
+-- require the rule and the owner to match.
 alter table public.recurrences
   add constraint recurrences_id_user_unique UNIQUE (id, user_id);
 
@@ -290,22 +293,23 @@ create table public.recurrence_schedule_versions (
   id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   recurrence_id  UUID        NOT NULL,
   user_id        UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  -- Desde cuándo rige ESTA versión. Para la que crea la migración es
-  -- `reconstruct_from`, NO `start_date`: no sabemos qué cronograma corrió antes
-  -- del último punto conocido, y afirmar que el actual rigió desde el principio
-  -- haría que el caminante produzca fechas que la regla nunca produjo.
+  -- Since when THIS version applies. For the one the migration creates it is
+  -- `reconstruct_from`, NOT `start_date`: we do not know which schedule ran
+  -- before the last known point, and claiming the current one applied from the
+  -- start would make the walker produce dates the rule never produced.
   effective_from DATE        NOT NULL,
   interval_count INT         NOT NULL,
   interval_unit  TEXT        NOT NULL,
-  -- Ancla del CLAMPING de fin de mes, no una afirmación sobre cuándo empezó el
-  -- cronograma: es lo que hace que una regla del 31 vuelva al 31 después de
-  -- febrero. Se conserva en `start_date` porque es exactamente lo que hace hoy
-  -- el generador (`addInterval(cursor, unit, count, { anchorDate: start_date })`),
-  -- así que la versión asumida reproduce el comportamiento actual sin inventar.
+  -- Anchor for end-of-month CLAMPING, not a claim about when the schedule
+  -- started: it is what makes a rule on the 31st go back to the 31st after
+  -- February. It is kept as `start_date` because that is exactly what the
+  -- generator does today
+  -- (`addInterval(cursor, unit, count, { anchorDate: start_date })`), so the
+  -- assumed version reproduces current behaviour without inventing anything.
   anchor_date    DATE        NOT NULL,
-  -- true ⇒ la creó esta migración. Significa: no sabemos qué cronograma rigió
-  -- antes de `effective_from`. Las versiones que cree el usuario al editar no
-  -- llevan la marca.
+  -- true ⇒ created by this migration. It means: we do not know which schedule
+  -- applied before `effective_from`. Versions the user creates by editing do
+  -- not carry the flag.
   is_assumed     BOOLEAN     NOT NULL DEFAULT false,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
 
@@ -314,10 +318,11 @@ create table public.recurrence_schedule_versions (
   CONSTRAINT chk_schedule_versions_interval_count_positive
     CHECK (interval_count > 0),
 
-  -- Con dos FK independientes (regla por un lado, usuario por otro) y un RLS que
-  -- solo mira `user_id = auth.uid()`, la base aceptaría una fila con MI usuario y
-  -- la recurrencia de OTRO. La FK compuesta lo hace imposible, y no depende de
-  -- que la política RLS se acuerde de comprobarlo.
+  -- With two independent FKs (rule on one side, user on the other) and an RLS
+  -- policy that only looks at `user_id = auth.uid()`, the database would accept
+  -- a row holding MY user and SOMEBODY ELSE'S recurrence. The composite FK makes
+  -- that impossible, and it does not depend on the RLS policy remembering to
+  -- check it.
   CONSTRAINT recurrence_schedule_versions_recurrence_fk
     FOREIGN KEY (recurrence_id, user_id)
     REFERENCES public.recurrences(id, user_id) ON DELETE CASCADE
@@ -329,13 +334,13 @@ create unique index recurrence_schedule_versions_one_per_date
 create index idx_recurrence_schedule_versions_lookup
   on public.recurrence_schedule_versions (recurrence_id, effective_from desc);
 
--- `effective_from = reconstruct_from` (el último punto conocido), no
--- `start_date`. Si la regla fue editada alguna vez —y no hay historial de
--- ediciones para saberlo— esta versión NO hace ninguna afirmación sobre lo
--- anterior. El caminante nunca mira antes de acá.
--- `effective_from` es `reconstruct_from`, salvo en la regla sin cursor, donde es
--- `start_date`: ahí `reconstruct_from` vale `start_date - 1`, que es un piso de
--- generación y no una fecha en la que el cronograma haya regido.
+-- `effective_from = reconstruct_from` (the last known point), not `start_date`.
+-- If the rule was ever edited — and there is no edit history to tell — this
+-- version makes NO claim about anything earlier. The walker never looks before
+-- this date.
+-- `effective_from` is `reconstruct_from`, except for a rule with no cursor,
+-- where it is `start_date`: there `reconstruct_from` holds `start_date - 1`,
+-- which is a generation floor and not a date on which the schedule ever applied.
 insert into public.recurrence_schedule_versions
   (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)
 select r.id, r.user_id,
@@ -351,18 +356,18 @@ create policy "users select own recurrence_schedule_versions"
   on public.recurrence_schedule_versions for SELECT
   using (user_id = auth.uid());
 
--- SIN políticas de INSERT / UPDATE / DELETE, a propósito: el historial de
--- cronogramas lo mantiene la base (ver el trigger de la sección 6b). Con
--- políticas de escritura, "la base es el dueño único" sería solo una convención
--- que cualquier cliente podría saltarse, duplicando o alterando el historial.
+-- NO INSERT / UPDATE / DELETE policies, on purpose: the schedule history is
+-- maintained by the database (see the trigger in section 6b). With write
+-- policies, "the database is the sole owner" would be a mere convention any
+-- client could sidestep, duplicating or altering the history.
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 6 · recurrence_pauses — los intervalos de pausa
+-- 6 · recurrence_pauses — the pause intervals
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- `recurrences.status = 'paused'` dice "ahora está pausada"; el intervalo dice
--- "estuvo pausada de acá a acá", que es lo que el generador necesita para no
--- leer el período como huecos al reanudar.
+-- `recurrences.status = 'paused'` says "it is paused right now"; the interval
+-- says "it was paused from here to here", which is what the generator needs in
+-- order not to read that period as gaps on resume.
 
 create table public.recurrence_pauses (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -375,14 +380,14 @@ create table public.recurrence_pauses (
   CONSTRAINT chk_recurrence_pauses_order
     CHECK (resumed_at IS NULL OR resumed_at >= paused_from),
 
-  -- Misma razón que en schedule_versions: la regla y el dueño tienen que ser
-  -- la misma persona, enforced por la base y no por la política RLS.
+  -- Same reason as in schedule_versions: the rule and the owner have to be the
+  -- same person, enforced by the database and not by the RLS policy.
   CONSTRAINT recurrence_pauses_recurrence_fk
     FOREIGN KEY (recurrence_id, user_id)
     REFERENCES public.recurrences(id, user_id) ON DELETE CASCADE
 );
 
--- A lo sumo una pausa abierta por regla: no se puede pausar algo ya pausado.
+-- At most one open pause per rule: you cannot pause something already paused.
 create unique index recurrence_pauses_one_open_per_rule
   on public.recurrence_pauses (recurrence_id)
   where resumed_at IS NULL;
@@ -390,8 +395,8 @@ create unique index recurrence_pauses_one_open_per_rule
 create index idx_recurrence_pauses_lookup
   on public.recurrence_pauses (recurrence_id, paused_from);
 
--- Las reglas hoy pausadas estrenan su intervalo en la fecha de la migración,
--- coherente con su `reconstruct_from` del paso 4.
+-- Rules that are paused today open their interval on the migration date,
+-- consistent with their `reconstruct_from` from step 4.
 insert into public.recurrence_pauses (recurrence_id, user_id, paused_from)
 select r.id, r.user_id, (select d from _migration_today)
   from public.recurrences r
@@ -403,34 +408,33 @@ create policy "users select own recurrence_pauses"
   on public.recurrence_pauses for SELECT
   using (user_id = auth.uid());
 
--- Sin políticas de escritura, misma razón que en `recurrence_schedule_versions`:
--- los intervalos de pausa los abre y cierra el trigger, no el cliente.
+-- No write policies, same reason as in `recurrence_schedule_versions`: pause
+-- intervals are opened and closed by the trigger, not by the client.
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 6b · Dual-write: la BASE mantiene el historial nuevo durante la transición
+-- 6b · Dual-write: the DATABASE maintains the new history during the transition
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- El backfill de los pasos 5 y 6 cubre SOLO las filas que existían al aplicar
--- esta migración. Entre la expansión y la activación la app sigue escribiendo
--- con el modelo viejo, así que sin esto:
+-- The step 5 and 6 backfills cover ONLY the rows that existed when this
+-- migration was applied. Between the expansion and the activation the app keeps
+-- writing with the old model, so without this:
 --
---   · una recurrencia creada desde cualquier cliente queda SIN versión;
---   · editar la frecuencia o `start_date` deja la versión existente VIEJA;
---   · pausar o reanudar no abre ni cierra ningún intervalo.
+--   · a recurrence created from any client ends up WITHOUT a version;
+--   · editing the frequency or `start_date` leaves the existing version STALE;
+--   · pausing or resuming opens and closes no interval.
 --
--- Cuando llegue el generador nuevo, esas reglas tendrían información faltante o
--- desactualizada — y son justamente las más recientes.
+-- By the time the new generator arrives, those rules would have missing or
+-- stale information — and they are precisely the most recent ones.
 --
--- DUEÑO ÚNICO DE ESTAS ESCRITURAS: la base. El código de la app NO debe insertar
--- en `recurrence_schedule_versions` ni en `recurrence_pauses`; si lo hiciera,
--- duplicaría lo que hacen estos triggers. Mantenerlo acá además lo vuelve
--- atómico con la escritura de la regla, sin depender de que cada cliente se
--- acuerde.
+-- SOLE OWNER OF THESE WRITES: the database. App code must NOT insert into
+-- `recurrence_schedule_versions` or `recurrence_pauses`; doing so would
+-- duplicate what these triggers do. Keeping it here also makes it atomic with
+-- the rule write, without depending on every client remembering.
 
--- SECURITY DEFINER con `search_path` cerrado: las tablas son de SOLO LECTURA
--- para `authenticated` (ver más abajo), así que el trigger necesita escribir por
--- encima de RLS. Es lo que convierte "la base es el dueño" de convención en
--- garantía: la app no puede duplicar ni alterar el historial aunque quiera.
+-- SECURITY DEFINER with a locked `search_path`: the tables are READ-ONLY for
+-- `authenticated` (see below), so the trigger needs to write above RLS. That is
+-- what turns "the database is the owner" from a convention into a guarantee:
+-- the app cannot duplicate or alter the history even if it wanted to.
 create or replace function public.recurrence_sync_schedule_and_pauses()
 returns trigger
 language plpgsql
@@ -438,12 +442,12 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  hoy date := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
+  today date := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
 begin
   if TG_OP = 'INSERT' then
-    -- Versión inicial. `is_assumed = false`: de una regla creada ahora SÍ
-    -- sabemos su cronograma desde el principio, a diferencia de las que la
-    -- migración tuvo que suponer.
+    -- Initial version. `is_assumed = false`: for a rule created right now we DO
+    -- know its schedule from the start, unlike the ones the migration had to
+    -- assume.
     insert into public.recurrence_schedule_versions
       (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)
     values
@@ -452,36 +456,36 @@ begin
 
     if NEW.status = 'paused' then
       insert into public.recurrence_pauses (recurrence_id, user_id, paused_from)
-      values (NEW.id, NEW.user_id, hoy)
+      values (NEW.id, NEW.user_id, today)
       on conflict do nothing;
     end if;
 
     return NEW;
   end if;
 
-  -- Cambio de cronograma ⇒ versión nueva. No reinterpreta el pasado: las
-  -- ocurrencias anteriores siguen leyéndose con la versión previa.
+  -- A schedule change ⇒ a new version. It does not reinterpret the past:
+  -- earlier occurrences keep being read with the previous version.
   if NEW.interval_count is distinct from OLD.interval_count
      or NEW.interval_unit is distinct from OLD.interval_unit
      or NEW.start_date    is distinct from OLD.start_date then
 
-    -- Las versiones que TODAVÍA NO ENTRARON EN VIGENCIA se reemplazan, no se
-    -- conservan. Sin esto, una regla que empieza en el futuro y se edita antes
-    -- de arrancar resucita su cronograma viejo el día de inicio:
+    -- Versions that HAVE NOT COME INTO EFFECT YET are replaced, not kept.
+    -- Without this, a rule starting in the future and edited before it begins
+    -- resurrects its old schedule on the start day:
     --
-    --   8/9  se crea con start 1/10  ⇒ versión con effective_from = 1/10
-    --   8/9  se edita la frecuencia  ⇒ versión con effective_from = 8/9
-    --   1/10 llega                   ⇒ la del 1/10 vuelve a ser la más reciente
-    --                                   y restaura el cronograma anterior.
+    --   8/9  created with start 1/10  ⇒ version with effective_from = 1/10
+    --   8/9  the frequency is edited  ⇒ version with effective_from = 8/9
+    --   1/10 arrives                  ⇒ the 1/10 one becomes the most recent
+    --                                    again and restores the old schedule.
     delete from public.recurrence_schedule_versions
-     where recurrence_id = NEW.id and effective_from > hoy;
+     where recurrence_id = NEW.id and effective_from > today;
 
-    -- Vigencia: hoy, o el inicio si la regla todavía no arrancó. Una versión no
-    -- puede regir antes de que la regla exista.
+    -- Effective from today, or from the start if the rule has not begun yet. A
+    -- version cannot apply before the rule exists.
     insert into public.recurrence_schedule_versions
       (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)
     values
-      (NEW.id, NEW.user_id, greatest(hoy, NEW.start_date),
+      (NEW.id, NEW.user_id, greatest(today, NEW.start_date),
        NEW.interval_count, NEW.interval_unit, NEW.start_date, false)
     on conflict (recurrence_id, effective_from) do update
       set interval_count = excluded.interval_count,
@@ -490,16 +494,16 @@ begin
           is_assumed     = false;
   end if;
 
-  -- Pausar abre el intervalo; reanudar lo cierra. Sin esto el período pausado se
-  -- leería como huecos al reanudar (decisión 16).
+  -- Pausing opens the interval; resuming closes it. Without this the paused
+  -- period would read as gaps on resume (decision 16).
   if OLD.status is distinct from NEW.status then
     if NEW.status = 'paused' then
       insert into public.recurrence_pauses (recurrence_id, user_id, paused_from)
-      values (NEW.id, NEW.user_id, hoy)
+      values (NEW.id, NEW.user_id, today)
       on conflict do nothing;
     elsif OLD.status = 'paused' then
       update public.recurrence_pauses
-         set resumed_at = greatest(hoy, paused_from)
+         set resumed_at = greatest(today, paused_from)
        where recurrence_id = NEW.id and resumed_at is null;
     end if;
   end if;
@@ -513,70 +517,70 @@ create trigger trg_recurrence_sync_schedule_and_pauses
   execute function public.recurrence_sync_schedule_and_pauses();
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 7 · Trigger de compatibilidad con clientes nativos viejos
+-- 7 · Compatibility trigger for old native clients
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Una app instalada NO se actualiza porque apliquemos una migración. Los
--- clientes viejos escriben `scheduled_date` y no saben de `due_date` ni de
--- `resolution_kind`, así que sus escrituras producirían filas inválidas en el
--- modelo nuevo. El trigger las completa sin que el cliente sepa nada.
+-- An installed app does NOT update because we applied a migration. Old clients
+-- write `scheduled_date` and know nothing about `due_date` or
+-- `resolution_kind`, so their writes would produce invalid rows in the new
+-- model. The trigger fills them in without the client knowing anything.
 --
--- Se retira en la migración C, junto con `scheduled_date`.
+-- It is retired in migration C, together with `scheduled_date`.
 
 create or replace function public.recurrence_instance_compat()
 returns trigger
 language plpgsql
 as $$
 begin
-  -- Cliente viejo insertando una ocurrencia nueva: escribió `scheduled_date` y
-  -- no `due_date`. Ahí el dato SÍ es exacto (lo produjo el generador), así que
-  -- se deriva. Solo en INSERT: en un UPDATE la fila ya tiene su `due_date`, y
-  -- una confirmación vieja pisa `scheduled_date` con la fecha de pago —
-  -- derivarlo ahí sería fabricar la identidad equivocada.
+  -- An old client inserting a new occurrence: it wrote `scheduled_date` and not
+  -- `due_date`. There the datum IS exact (the generator produced it), so it is
+  -- derived. Only on INSERT: on an UPDATE the row already has its `due_date`,
+  -- and an old confirmation overwrites `scheduled_date` with the payment date —
+  -- deriving it there would fabricate the wrong identity.
   --
-  -- Por eso `scheduled_date` NO es un alias de `due_date`: acá se refleja una
-  -- vez al insertar, y desde ese momento un cliente viejo puede hacerlas
-  -- divergir. Es una columna legada de compatibilidad, y el código nuevo no
-  -- debe leerla ni como vencimiento ni como fecha de pago.
+  -- That is why `scheduled_date` is NOT an alias of `due_date`: it is mirrored
+  -- once on insert, and from that moment an old client can make them diverge.
+  -- It is a legacy compatibility column, and new code must not read it either
+  -- as a due date or as a payment date.
   if TG_OP = 'INSERT' and NEW.due_date is null then
     NEW.due_date := NEW.scheduled_date;
     NEW.due_date_is_unknown := false;
   end if;
 
-  -- Cliente viejo confirmando: hasta la migración C, confirmar siempre creaba
-  -- el movimiento. Vincular no existe en esas versiones.
+  -- An old client confirming: until migration C, confirming always created the
+  -- movement. Linking does not exist in those versions.
   if NEW.status = 'confirmed' and NEW.resolution_kind is null then
     NEW.resolution_kind := 'created';
   end if;
 
-  -- ── Inmutabilidad de la identidad ────────────────────────────────────────
+  -- ── Identity immutability ────────────────────────────────────────────────
   --
-  -- El CHECK de coherencia valida el ESTADO FINAL de la fila, no la TRANSICIÓN,
-  -- así que por sí solo deja pasar dos escrituras que rompen el contrato:
+  -- The coherence CHECK validates the row's FINAL STATE, not the TRANSITION, so
+  -- on its own it lets through two writes that break the contract:
   --
   --   update … set due_date = '2026-09-11' where due_date = '2026-09-10';
   --   update … set due_date = null, due_date_is_unknown = true;
   --
-  -- La primera mueve una identidad ya establecida; la segunda la borra, y con
-  -- ella la protección del índice parcial — la misma ocurrencia podría volver a
-  -- materializarse. Las transiciones permitidas son solo estas:
+  -- The first moves an already established identity; the second erases it, and
+  -- with it the protection of the partial index — the same occurrence could
+  -- materialize again. The only allowed transitions are these:
   --
-  --   exacta      → la misma, sin cambios.
-  --   desconocida → sigue desconocida.
-  --   desconocida → exacta, una sola vez (el usuario corrige el histórico).
-  --   exacta      → otra fecha, o desconocida  ⇒  RECHAZADO.
+  --   exact    → the same, unchanged.
+  --   unknown  → still unknown.
+  --   unknown  → exact, once (the user fixes the history).
+  --   exact    → another date, or unknown  ⇒  REJECTED.
   if TG_OP = 'UPDATE' and OLD.due_date is not null
      and (NEW.due_date is distinct from OLD.due_date) then
     raise exception
-      'due_date es inmutable: la ocurrencia % ya tiene la identidad %, y se intentó %.',
+      'due_date is immutable: occurrence % already holds identity %, and the write tried to %.',
       OLD.id, OLD.due_date,
-      case when NEW.due_date is null then 'borrarla'
-           else 'moverla a ' || NEW.due_date end
+      case when NEW.due_date is null then 'clear it'
+           else 'move it to ' || NEW.due_date end
       using errcode = '23514';
   end if;
 
-  -- La marca se deriva, nunca se declara: así una corrección de histórico que
-  -- complete `due_date` no falla por olvidarse de bajar el flag.
+  -- The flag is derived, never declared: that way a history fix filling in
+  -- `due_date` does not fail for forgetting to lower the flag.
   NEW.due_date_is_unknown := (NEW.due_date is null);
 
   return NEW;
@@ -588,14 +592,14 @@ create trigger trg_recurrence_instance_compat
   execute function public.recurrence_instance_compat();
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 8 · Constraints de resolución
+-- 8 · Resolution constraints
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Van DESPUÉS del trigger a propósito. Un cliente viejo que confirme no escribe
--- `resolution_kind`, pero el trigger lo completa antes de que la constraint se
--- evalúe (BEFORE trigger → CHECK), así que no hay incompatibilidad que
--- justifique postergarlas a la activación: hacerlo solo dejaría la base sin
--- proteger durante toda la transición.
+-- They go AFTER the trigger on purpose. An old client confirming does not write
+-- `resolution_kind`, but the trigger fills it in before the constraint is
+-- evaluated (BEFORE trigger → CHECK), so there is no incompatibility that would
+-- justify deferring them to the activation: doing so would only leave the
+-- database unprotected for the whole transition.
 
 alter table public.recurrence_instances
   add constraint chk_recurrence_instances_resolution_kind check (
@@ -609,32 +613,31 @@ alter table public.recurrence_instances
 commit;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- Lo que NO hace esta migración, a propósito
+-- What this migration deliberately does NOT do
 -- ═══════════════════════════════════════════════════════════════════════════
 --
---   · NO elimina `recurrence_instances_one_pending_per_rule`  → activación
+--   · It does NOT drop `recurrence_instances_one_pending_per_rule` → activation
 --
--- El número de la activación NO se reserva acá: se elige contra `main` cuando se
--- la escriba, después del despliegue. Esta misma migración nació 0061 y terminó
--- 0064 por eso.
---   · NO toca `scheduled_date` ni `last_generated_date`       → migración C
+-- The activation number is NOT reserved here: it is picked against `main` when
+-- that migration is written, after the deploy. This very migration was born as
+-- 0061 and ended up as 0064 for that reason.
+--   · It does NOT touch `scheduled_date` or `last_generated_date` → migration C
 --
--- ⚠️  AVISO PARA LA MIGRACIÓN C
+-- ⚠️  NOTICE FOR MIGRATION C
 --
--- El trigger `trg_recurrence_instance_compat` NO se puede eliminar entero al
--- retirar `scheduled_date`. Su nombre engaña: además de la compatibilidad
--- temporal con clientes viejos, contiene una regla PERMANENTE de negocio — la
--- inmutabilidad de `due_date`. Borrarlo completo reabriría el agujero de poder
--- mover o borrar una identidad exacta por UPDATE, que es justamente el bloqueo
--- que este change elimina.
+-- The `trg_recurrence_instance_compat` trigger CANNOT be dropped wholesale when
+-- `scheduled_date` is retired. Its name is misleading: besides the temporary
+-- compatibility with old clients, it holds a PERMANENT business rule — the
+-- immutability of `due_date`. Dropping it whole would reopen the hole of being
+-- able to move or erase an exact identity via UPDATE, which is precisely the
+-- block this change removes.
 --
--- Al retirar `scheduled_date`, hacer UNA de estas dos:
---   a) quitar solo las ramas de compatibilidad (la derivación de `due_date` en
---      INSERT y el relleno de `resolution_kind`), conservando el guard; o
---   b) reemplazarlo por un trigger de guard permanente, con un nombre que diga
---      lo que hace.
+-- When retiring `scheduled_date`, do ONE of these two:
+--   a) remove only the compatibility branches (the `due_date` derivation on
+--      INSERT and the `resolution_kind` fill-in), keeping the guard; or
+--   b) replace it with a permanent guard trigger, named after what it does.
 --
--- Las constraints de `resolution_kind` SÍ entran acá (paso 8): el trigger de
--- compatibilidad las satisface para los clientes viejos.
+-- The `resolution_kind` constraints DO belong here (step 8): the compatibility
+-- trigger satisfies them for old clients.
 --
--- Después de aplicar: regenerar los tipos de Supabase.
+-- After applying: regenerate the Supabase types.
