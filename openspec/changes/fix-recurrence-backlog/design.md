@@ -32,7 +32,8 @@ sin ella, el arreglo al #96 fabrica duplicados.
 - Que se pueda registrar un pago antes del vencimiento, sin correr el calendario.
 - Que se pueda vincular un movimiento ya cargado, sin duplicar el gasto.
 - Que se pueda resolver el atraso en bloque, corrigiendo fecha, importe y cuenta de cada uno.
-- Que vencimiento, fecha de pago y fecha de carga sean tres datos distintos y sobrevivan los tres.
+- Que vencimiento, fecha de pago, fecha de carga y fecha de resolución sean cuatro instantes
+  distintos y sobrevivan los cuatro.
 - Paridad completa web ↔ nativo.
 
 **Non-Goals**
@@ -41,7 +42,8 @@ sin ella, el arreglo al #96 fabrica duplicados.
   mínima; el sistema de avisos es su propio change.
 - Registro automático de débitos. Ver decisión 6.
 - Ajuste de importes por índice, importes estimados, calendarios avanzados, pausa con fecha.
-- Reconstruir los meses cerrados. Ver decisión 7.
+- Crear movimientos históricos automáticamente, o reconstruir vencimientos anteriores al horizonte.
+  Ver decisión 7.
 - El doble conteo de Compromisos (#118): independiente, ticket propio.
 
 ## Decisions
@@ -122,9 +124,21 @@ tanda, se ordena de modo que lo vigente nunca quede afuera.
 este documento dejaba el spec pidiendo "todas las ocurrencias vencidas" mientras la decisión 7 decía
 que el pasado no se reconstruye: las dos reglas no se pueden cumplir a la vez.
 
-**Recomendación: 12 meses hacia atrás desde hoy.** Cubre cualquier atraso plausible de una regla en
-uso y evita materializar cientos de ocurrencias de reglas abandonadas hace años. Lo anterior no se
-materializa y se señala como período con información incompleta (decisión 7).
+**Recomendación: 12 meses hacia atrás desde hoy, inclusive.** Cubre un ciclo anual completo —una
+regla anual entra— y evita materializar años de una regla abandonada. Tres precisiones que hacen
+falta para implementarlo sin ambigüedad:
+
+- **Inclusivo**: una ocurrencia que cae exactamente en el límite entra.
+- **Calculado con la fecha financiera argentina** (`getTodayAR()`), como todo el resto del módulo.
+  `current_date` a secas está prohibido: Supabase corre en UTC.
+- **Aplica solo a la reconstrucción automática.** El usuario siempre puede registrar a mano un pago
+  más viejo; el horizonte limita lo que la app materializa sola, no lo que la persona puede cargar.
+
+**El horizonte no acota el volumen por sí solo, y conviene decirlo.** Doce meses de una regla diaria
+son ~365 ocurrencias; una cada 3 días, ~122. Por eso el horizonte va acompañado de dos cosas
+distintas: **materialización por tandas acotadas** —abrir Inicio nunca dispara cientos de escrituras;
+la tanda se completa a lo largo de sucesivas aperturas, con la ocurrencia vigente siempre primero— y
+**agrupación en la presentación**, para que el usuario vea un grupo y no 365 filas.
 
 ### 6. Un débito programado no prueba que el débito ocurrió
 
@@ -224,6 +238,13 @@ compartido pero no vinculado deja la deuda del hogar movida por algo que el usua
 por un gasto personal, con la deuda del hogar sin reflejarla — el módulo Compartido mostraría menos
 de lo que corresponde, en silencio.
 
+### 14b. Un movimiento vinculado se rotula como vinculado, no como originado
+
+**Recomendación.** Un movimiento que existía antes de la recurrencia NO SHALL mostrarse como
+"originado en esta recurrencia": no lo originó, el usuario lo cargó por su cuenta. El rótulo correcto
+es **"vinculado a esta recurrencia"**. La distinción es la misma que gobierna deshacer (decisión 14)
+y tiene que ser visible, no solo interna.
+
 ### 14. Deshacer distingue lo que la recurrencia creó de lo que el usuario vinculó
 
 **Recomendación.** La ocurrencia SHALL registrar **cómo** se resolvió:
@@ -236,12 +257,27 @@ de lo que corresponde, en silencio.
 Sin ese dato, deshacer una vinculación borraría un movimiento que la recurrencia nunca creó. Es la
 razón por la que "deshacer" no puede implementarse como una sola operación.
 
+**Y el caso compartido agrega una tercera rama.** Si al vincular el sistema convirtió un movimiento
+personal en compartido (decisión 13), deshacer tiene que revertir también esa conversión —devolverlo
+a personal y deshacer la deuda que generó—, no solo romper el vínculo. Si el movimiento **ya era**
+compartido antes de vincularse, la conversión no ocurrió y deshacer únicamente desvincula. La
+reversión y la desvinculación SHALL ser atómicas: un movimiento desvinculado que quedó compartido
+dejaría la deuda del hogar movida por una operación que el usuario deshizo.
+
+| Cómo se resolvió | Qué hace deshacer |
+|---|---|
+| `created` | Elimina el movimiento. |
+| `linked`, ya era compartido (o la regla no lo es) | Conserva el movimiento y desvincula. |
+| `linked`, convertido a compartido al vincular | Conserva el movimiento, **revierte la conversión y la deuda**, y desvincula. |
+
 ### 15. Deshacer y omitir son dos operaciones, no una
 
 **Recomendación.** Definirlas acá aunque el #104 las implemente:
 
-- **Deshacer un pago** — "me equivoqué al cargarlo". El movimiento se borra y la ocurrencia **vuelve
-  a estar por revisar**.
+- **Deshacer la resolución** — "me equivoqué". La ocurrencia **vuelve a estar por revisar**, y qué
+  pasa con el movimiento depende de cómo se había resuelto (decisión 14): si lo **creó** la
+  recurrencia se elimina; si el usuario había **vinculado** uno suyo, se conserva y solo se
+  desvincula. Deshacer NO es sinónimo de eliminar.
 - **Omitir un vencimiento** — "este período no corresponde". La ocurrencia queda resuelta sin pago y
   no se espera ninguno.
 
@@ -252,6 +288,27 @@ El plan actual del #104 convierte siempre el pago borrado en `skipped` para esqu
 dejaba "para después" en el design mientras el spec y las tareas ya lo incluían — una contradicción.
 Separarlo obligaría a escribir el arreglo del #104 contra un modelo que este change está por
 reemplazar, para reescribirlo enseguida.
+
+### 16. Una pausa no acumula deuda: lo que pasó durante la pausa no se recupera
+
+**Recomendación.** Pausar significa "esto no está corriendo", no "esto se sigue devengando y me lo
+vas a cobrar todo junto después".
+
+- Los vencimientos que **caen durante la pausa** NO se materializan, y al reanudar **no se recuperan**.
+- Los que **ya existían antes** de pausar siguen visibles y resolubles, con sello "Pausada": son
+  vencimientos reales que el usuario todavía puede querer registrar u omitir.
+- Al reanudar, el sistema toma el **próximo vencimiento futuro respetando el calendario original**.
+  Una regla mensual del día 23 pausada en junio y reanudada el 5 de septiembre vuelve con el 23 de
+  septiembre, no con junio, julio y agosto.
+
+**Por qué importa definirlo ahora y no después de la migración:** el generador nuevo deriva lo que
+falta comparando el cronograma contra las ocurrencias existentes. Sin una regla explícita, los
+períodos de una pausa se leerían exactamente como huecos —igual que un cambio de frecuencia
+(decisión 10)— y al reanudar aparecería de golpe todo el período pausado como atraso. Es el mismo
+defecto con otra causa.
+
+**Alternativa descartada:** recuperar los vencimientos de la pausa. Convierte "pausar" en "diferir", y
+nadie pausa un gimnasio en enero esperando que en marzo le aparezcan las cuotas de enero y febrero.
 
 ## Risks / Trade-offs
 
@@ -264,7 +321,7 @@ reemplazar, para reescribirlo enseguida.
   no a montos ni saldos.
 - **Colisión con #104.** Los dos tocan la misma restricción. Hay que ordenarlos explícitamente.
 - **Superficie amplia.** Toca money-logic, el paquete de recurrencias, dos apps y una migración. Se
-  mitiga con las etapas de `tasks.md`, no partiendo el change: los diez comportamientos son un solo
+  mitiga con las etapas de `tasks.md`, no partiendo el change: los once comportamientos son un solo
   entregable y separarlos dejaría la etapa de cimientos sin nada que un usuario pueda validar.
 
 ## Migration Plan
@@ -282,13 +339,12 @@ en una transacción.
 
 Decisiones de **producto** que siguen abiertas. Ninguna bloquea empezar por los cimientos.
 
-1. **¿Qué pasa durante una pausa?** Hoy reanudar retoma desde la última fecha resuelta y puede
-   recuperar los períodos de la pausa. ¿Es lo que se espera, o una pausa debe descartarlos? Es la
-   única pregunta que el spec deja genuinamente sin contestar.
+No queda ninguna. La última —qué pasa durante una pausa— se cerró en la revisión funcional y está
+en la decisión 16, porque afecta al modelo que se está diseñando y no podía esperar a la migración.
 
-### Cerradas mientras se escribía esto
+### Cerradas durante la revisión funcional
 
-Tres preguntas que una versión anterior listaba como abiertas ya estaban decididas en el spec o en
+Cuatro preguntas que una versión anterior listaba como abiertas ya estaban decididas en el spec o en
 las tareas, lo que dejaba al implementador sin saber qué regía. Quedan cerradas acá:
 
 - **Horizonte hacia atrás** → 12 meses (decisión 5). Antes de eso, período señalado como incompleto.
@@ -297,3 +353,4 @@ las tareas, lo que dejaba al implementador sin saber qué regía. Quedan cerrada
   ambigüedad.
 - **¿Se muestra el vencimiento de una regla pausada?** → **Sí, con sello "Pausada".** Esconderlo
   sacaría de la vista algo que el usuario todavía puede querer resolver.
+- **¿Qué pasa durante una pausa?** → decisión 16.

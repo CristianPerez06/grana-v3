@@ -5,9 +5,12 @@
 Una recurrencia que quedó sin revisar **corta la cadena para siempre**. No se atrasa: deja de existir.
 
 Caso real reportado en #96: una regla de $2.500 cada 3 días, con el cursor clavado en `2026-06-10` y
-**cero** instancias en julio, agosto y septiembre. Las ocurrencias
-posteriores no se materializan, así que no aparecen en movimientos, ni en el gasto del mes, ni en el
-balance — y sin ningún aviso.
+**cero** instancias en julio, agosto y septiembre.
+
+La cadena de consecuencias es indirecta y conviene decirla con precisión: al no existir la ocurrencia,
+el usuario **no tiene cómo registrarla desde la recurrencia**. Si tampoco carga el movimiento a mano,
+sus gastos y saldos quedan incompletos. Una ocurrencia por revisar, por sí sola, **nunca modifica un
+saldo** — lo que falta no es el saldo, es la vía para registrarlo. Y todo esto sin ningún aviso.
 
 Del uso real salieron otros tres síntomas que **no son #96**, y que este change también resuelve:
 
@@ -49,10 +52,17 @@ pagos, ni omitidos. Julio lee $0 en gastos fijos. Y mientras nadie toque junio, 
 **Se comprueba:** con junio sin revisar, registrar el pago de agosto. Junio queda pendiente, agosto
 queda registrado, y septiembre se genera cuando llega su fecha.
 
-**Hasta dónde mira hacia atrás:** los últimos **12 meses**. Lo anterior no se materializa —serían
-cientos de filas de reglas abandonadas— y queda señalado como **período con información incompleta**,
-que podés completar a mano registrando los pagos que falten. Los vencimientos reconstruidos son
-elementos por revisar: **no son movimientos ni tocan ningún saldo** hasta que los resuelvas.
+**Hasta dónde mira hacia atrás:** los últimos **12 meses**. Lo anterior no se reconstruye —serían
+cientos de filas de reglas abandonadas—, y el aviso lo dice **de la recurrencia, no del mes**:
+
+> *Esta recurrencia tiene historial anterior a septiembre de 2025 que Grana no reconstruyó.*
+
+La diferencia importa: decir que el mes tiene información incompleta sería falso si esos pagos los
+cargaste a mano en su momento. El límite es de lo que la app reconstruye sola; vos siempre podés
+registrar un pago más viejo.
+
+Los vencimientos reconstruidos son elementos por revisar: **no son movimientos ni tocan ningún
+saldo** hasta que los resuelvas.
 
 > ⚠️ **Esto hace que la app se vea más cargada, no menos.** Hoy se ve prolija porque está escondiendo
 > trabajo sin hacer. Es el dato real apareciendo, no una regresión.
@@ -141,9 +151,12 @@ lo que le debe el otro: solo se acepta si el movimiento ya tiene un reparto comp
 tiene la app te explica que va a convertirlo en compartido y te pide confirmación. La conversión y la
 vinculación pasan juntas o no pasa ninguna.
 
+**Cómo se rotula:** el movimiento queda marcado como **"vinculado a esta recurrencia"**, no como
+"originado en" — existía antes, la recurrencia no lo creó.
+
 **Se comprueba:** cargar un gasto suelto, vincularlo, y verificar que el total del mes no cambió y
-que el movimiento quedó marcado como originado en la recurrencia. En una regla compartida, que la
-deuda del hogar quede igual que si el gasto se hubiera registrado desde la recurrencia.
+que el rótulo dice "vinculado". En una regla compartida, que la deuda del hogar quede igual que si el
+gasto se hubiera registrado desde la recurrencia.
 
 ### 7. Podés revisar varios juntos, corrigiendo cada uno
 
@@ -182,7 +195,7 @@ falla siempre con "Algo salió mal".
 | Lo que quisiste decir | Qué queda |
 |---|---|
 | **"Me equivoqué al cargar este pago"** (lo creó la recurrencia) | El movimiento se borra y el vencimiento **vuelve a estar por revisar**. |
-| **"Me equivoqué al vincular"** (el movimiento era tuyo) | El movimiento **se conserva** —vuelve a ser un gasto suelto— y el vencimiento vuelve a estar por revisar. |
+| **"Me equivoqué al vincular"** (el movimiento era tuyo) | El movimiento **se conserva** —vuelve a ser un gasto suelto— y el vencimiento vuelve a estar por revisar. Si al vincularlo la app lo había convertido en compartido, deshacer **también revierte eso**: vuelve a ser personal y la deuda del hogar se deshace. |
 | **"Este período no corresponde"** | El vencimiento queda **omitido**. No se espera ningún pago. |
 
 **Por qué la primera fila y la segunda no son la misma:** si vinculaste un gasto que habías cargado
@@ -218,9 +231,24 @@ reintentar. Nunca un vacío que parezca "no tenés nada".
 
 **Se comprueba:** forzar el fallo; la pantalla lo dice y el reintento funciona.
 
+### 11. Pausar no te acumula una deuda para después
+
+**Vas a ver:** al pausar el gimnasio en enero y reanudarlo el 5 de septiembre, la app vuelve con el
+**próximo vencimiento futuro** —el 23 de septiembre— y no con los ocho meses de la pausa.
+
+**Vas a poder:** los vencimientos que ya existían **antes** de pausar siguen ahí, con sello
+"Pausada", por si querés registrarlos u omitirlos. Los que caían durante la pausa no existen.
+
+**Por qué:** pausar significa "esto no está corriendo", no "esto se sigue devengando y te lo cobro
+todo junto después". Nadie pausa el gimnasio esperando que al volver le aparezcan las cuotas de los
+meses que no fue.
+
+**Se comprueba:** pausar una regla mensual del día 23 en junio, reanudarla el 5 de septiembre; el
+próximo vencimiento es el 23 de septiembre y no aparece ninguno de junio, julio ni agosto.
+
 ### Y en las dos plataformas
 
-Los diez comportamientos SHALL estar disponibles en **web y en la app nativa**. Hoy no lo están: el
+Los once comportamientos SHALL estar disponibles en **web y en la app nativa**. Hoy no lo están: el
 bloque de pendientes nativo no deja editar importe ni fecha, no muestra la advertencia de saldo
 negativo que sí tiene web, y el feed nativo ni siquiera dispara la generación. La lógica vive en
 `@grana/recurrences` y `@grana/money-logic`; lo que cambia por plataforma es la UI.

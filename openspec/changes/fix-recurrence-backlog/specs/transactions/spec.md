@@ -109,6 +109,9 @@ moneda, mismo tipo de movimiento— y NO SHALL permitir vincular un movimiento y
 ocurrencia. La ocurrencia SHALL quedar marcada como resuelta **por vinculación**, distinta de
 resuelta por un movimiento creado por la recurrencia.
 
+Un movimiento vinculado SHALL rotularse como **"vinculado a esta recurrencia"** y NO como "originado
+en" ella: existía antes y la recurrencia no lo creó.
+
 Cuando la regla es **compartida con un hogar**, vincular NO SHALL alterar la deuda entre miembros sin
 que el usuario lo sepa. El sistema SHALL aceptar la vinculación directamente solo si el movimiento ya
 tiene un reparto compatible con el de la regla; en caso contrario SHALL explicar que el movimiento se
@@ -122,7 +125,7 @@ convertido a compartido sin vincular, ni una ocurrencia vinculada sin el reparto
   correspondiente
 - **THEN** no se crea ningún movimiento nuevo
 - **AND** el total de gastos del mes no cambia
-- **AND** la ocurrencia queda resuelta y el movimiento aparece como originado en la regla
+- **AND** la ocurrencia queda resuelta y el movimiento aparece como vinculado a la regla, no como originado en ella
 
 #### Scenario: Vincular a una regla compartida pide confirmación
 
@@ -226,6 +229,30 @@ la afirmación opuesta a la verdadera.
 - **WHEN** el usuario abre el feed de movimientos de la app nativa y tiene una ocurrencia vencida
 - **THEN** la ocurrencia queda materializada, con el mismo resultado que en web
 
+### Requirement: Una regla pausada no acumula vencimientos durante la pausa
+
+El sistema NO SHALL materializar las ocurrencias cuyo vencimiento cae mientras la regla está pausada,
+y NO SHALL recuperarlas al reanudarla: pausar significa que la regla no está corriendo, no que se
+sigue devengando para cobrarse junta después.
+
+Las ocurrencias que ya existían **antes** de la pausa SHALL seguir visibles y resolubles, señaladas
+como pertenecientes a una regla pausada, de modo que el usuario pueda registrarlas u omitirlas.
+
+Al reanudar, el sistema SHALL tomar el **próximo vencimiento futuro respetando el calendario
+original** de la regla, sin desplazarlo por la duración de la pausa.
+
+#### Scenario: Reanudar no trae los períodos de la pausa
+
+- **WHEN** una regla mensual del día 23 se pausa en junio y se reanuda el `2026-09-05`
+- **THEN** el próximo vencimiento es el `2026-09-23`
+- **AND** no se materializan vencimientos de junio, julio ni agosto
+
+#### Scenario: Lo anterior a la pausa sigue disponible
+
+- **WHEN** una regla tenía un vencimiento sin resolver antes de pausarse
+- **THEN** ese vencimiento sigue visible y resoluble
+- **AND** se muestra señalado como perteneciente a una regla pausada
+
 ## MODIFIED Requirements
 
 ### Requirement: El sistema genera todas las ocurrencias vencidas de una regla
@@ -241,9 +268,18 @@ reproduciría el defecto que este requirement elimina. Ninguna ocurrencia SHALL 
 alcance del sistema por efecto de una tanda o de un tope de presentación.
 
 El sistema SHALL materializar las ocurrencias vencidas dentro de un **horizonte de 12 meses hacia
-atrás** desde la fecha actual. Las anteriores NO SHALL materializarse —serían cientos de filas de
-reglas abandonadas— y su período SHALL señalarse como de **información incompleta**, que el usuario
-puede completar registrando a mano los pagos que falten.
+atrás, inclusive**, calculado con la **fecha financiera argentina**. El horizonte SHALL aplicar
+únicamente a la **reconstrucción automática**: el usuario SHALL poder registrar a mano un pago más
+viejo en cualquier momento.
+
+Las ocurrencias anteriores al horizonte NO SHALL materializarse. El sistema SHALL señalarlo **en la
+recurrencia**, nombrando desde cuándo reconstruyó, y NO SHALL afirmar que el período tiene
+información incompleta: esos pagos pueden haberse registrado a mano en su momento.
+
+El horizonte NO acota por sí solo el volumen —doce meses de una regla diaria son unas 365
+ocurrencias—, así que la materialización SHALL hacerse por **tandas acotadas**: abrir una pantalla NO
+SHALL disparar cientos de escrituras, y la tanda SHALL completarse a lo largo de sucesivas aperturas,
+con la ocurrencia vigente siempre en la primera.
 
 Una ocurrencia materializada por este mecanismo SHALL ser un **elemento por revisar**, no un
 movimiento: NO SHALL impactar saldos, ni el gasto del mes, ni resúmenes de tarjeta hasta que el
@@ -275,12 +311,20 @@ La fecha de cada ocurrencia SHALL ser la que corresponde por cronograma, nunca l
 - **THEN** la ocurrencia vigente queda materializada
 - **AND** las anteriores dentro del horizonte siguen siendo accesibles y resolubles
 
-#### Scenario: Más allá del horizonte el período se señala en vez de materializarse
+#### Scenario: Más allá del horizonte se avisa en la recurrencia
 
 - **WHEN** una regla mensual arrancó hace tres años y nunca se resolvió ninguna ocurrencia
 - **THEN** se materializan las ocurrencias de los últimos 12 meses
-- **AND** los períodos anteriores se señalan como de información incompleta
+- **AND** la recurrencia avisa que tiene historial anterior que no fue reconstruido
+- **AND** no se afirma que esos meses tengan información incompleta
 - **AND** ningún saldo cambia por esa materialización
+
+#### Scenario: Un atraso voluminoso no se materializa de una sola vez
+
+- **WHEN** una regla diaria acumula un año de ocurrencias sin resolver y el usuario abre la app
+- **THEN** la ocurrencia vigente queda materializada
+- **AND** la pantalla no queda bloqueada esperando cientos de escrituras
+- **AND** las restantes se completan en sucesivas aperturas
 
 #### Scenario: Cambiar la frecuencia no fabrica vencimientos anteriores
 
@@ -402,6 +446,12 @@ período no correspondía cuando el usuario solo se equivocó— y SHALL actuar 
 Borrar un movimiento que la recurrencia no creó destruiría un dato del usuario que el sistema nunca
 tuvo derecho a producir.
 
+Cuando la vinculación hubiera **convertido** un movimiento personal en compartido, deshacer SHALL
+revertir también esa conversión —devolverlo a personal y deshacer la deuda que generó— además de
+romper el vínculo. Si el movimiento ya era compartido antes de vincularse, deshacer SHALL únicamente
+desvincular. Ambas SHALL ser atómicas: un movimiento desvinculado que quedara compartido dejaría la
+deuda del hogar movida por una operación que el usuario deshizo.
+
 Omitir una ocurrencia NO SHALL impedir que se materialicen ni se resuelvan las siguientes.
 
 #### Scenario: Omitir no crea movimiento
@@ -416,6 +466,14 @@ Omitir una ocurrencia NO SHALL impedir que se materialicen ni se resuelvan las s
 - **THEN** el movimiento se elimina
 - **AND** la ocurrencia vuelve a estar sin resolver, no omitida
 - **AND** el usuario puede volver a registrarla
+
+#### Scenario: Deshacer una vinculación que convirtió el movimiento revierte la conversión
+
+- **WHEN** el usuario deshace una ocurrencia compartida que había resuelto vinculando un movimiento
+  personal, que el sistema convirtió a compartido al vincularlo
+- **THEN** el movimiento se conserva y vuelve a ser personal
+- **AND** la deuda del hogar vuelve a su estado anterior
+- **AND** la ocurrencia vuelve a estar sin resolver
 
 #### Scenario: Deshacer una vinculación conserva el movimiento
 

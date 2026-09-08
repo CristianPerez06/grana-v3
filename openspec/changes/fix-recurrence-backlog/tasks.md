@@ -1,7 +1,7 @@
 # Tasks: fix-recurrence-backlog
 
 Cinco etapas. La 1 son cimientos y no tiene nada visible: existe porque sin ella la 2 fabrica
-duplicados. Las etapas 2-4 entregan los diez comportamientos de `proposal.md`. El **#104** se
+duplicados. Las etapas 2-4 entregan los once comportamientos de `proposal.md`. El **#104** se
 implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independiente y no entra.
 
 ## 1. Cimientos: identidad de ocurrencia y fechas separadas
@@ -38,9 +38,17 @@ implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independie
 ## 2. El backlog existe y se puede resolver
 
 - [ ] 2.1 `generateDueRecurrenceInstances` materializa las ocurrencias vencidas dentro del horizonte
-      de **12 meses**, en orden de calendario, con tanda si el atraso es grande — **garantizando que
-      la ocurrencia vigente entra en la primera tanda**. Más allá del horizonte no materializa y el
-      período queda señalado como incompleto.
+      de **12 meses inclusive**, calculado con `getTodayAR()` (nunca `current_date`: Supabase corre en
+      UTC), en orden de calendario y **por tandas acotadas** — abrir una pantalla no dispara cientos
+      de escrituras; la tanda se completa en sucesivas aperturas y **la ocurrencia vigente entra
+      siempre en la primera**. El horizonte limita solo la reconstrucción automática: registrar a
+      mano un pago más viejo sigue siendo posible.
+- [ ] 2.1c Aviso de historial no reconstruido **en la recurrencia** ("tiene historial anterior a
+      <mes> que no se reconstruyó"), no como "este mes tiene información incompleta": esos pagos
+      pueden haberse cargado a mano.
+- [ ] 2.1d Pausa: no materializar los vencimientos que caen durante la pausa ni recuperarlos al
+      reanudar; al reanudar tomar el próximo vencimiento futuro con el calendario original. Test:
+      regla del 23 pausada en junio y reanudada el 5/9 vuelve con el 23/9, sin junio, julio ni agosto.
 - [ ] 2.1b Vigencia de los cambios de cronograma: editar frecuencia/intervalo/día no reinterpreta
       ocurrencias anteriores a la fecha de vigencia. Test: una regla mensual con historial editada a
       quincenal no fabrica vencimientos viejos.
@@ -71,15 +79,16 @@ implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independie
 - [ ] 3.2 Verificar que el pago anticipado no desplaza el cronograma — test de tres meses seguidos
       pagados unos días antes, con el vencimiento sin moverse.
 - [ ] 3.3 "Ya lo cargué": vincular un movimiento existente. No crea transacción; marca el movimiento
-      como originado en la regla; filtra por moneda y tipo compatibles; excluye los ya vinculados;
-      registra la resolución como `linked`.
+      como **"vinculado a esta recurrencia"** —no "originado en", que existía antes—; filtra por
+      moneda y tipo compatibles; excluye los ya vinculados; registra la resolución como `linked`.
 - [ ] 3.3b Vinculación en reglas **compartidas**: aceptar directo solo con reparto compatible; si no,
       explicar la conversión a gasto compartido y pedir confirmación. Conversión + vinculación en una
       sola operación atómica. Test: la deuda del hogar queda igual que registrando desde la
       recurrencia, y un fallo no deja el movimiento convertido a medias.
 - [ ] 3.4 Deshacer, **cerrando #104 en esta misma entrega**: devuelve la ocurrencia a *sin resolver*
-      (nunca a omitida) y actúa según cómo se resolvió — `created` elimina el movimiento, `linked` lo
-      conserva y solo desvincula. Con `one_pending_per_rule` eliminado desaparece la restricción que
+      (nunca a omitida) y actúa según cómo se resolvió — `created` elimina el movimiento; `linked` lo
+      conserva y desvincula; `linked` que además había **convertido** el movimiento a compartido
+      revierte también la conversión y la deuda, de forma atómica. Con `one_pending_per_rule` eliminado desaparece la restricción que
       obligaba a marcarlo `skipped`.
 - [ ] 3.5 Historial de la regla: mostrar vencimiento, fecha de pago y fecha de carga por separado.
 - [ ] 3.6 Tests: vincular no cambia el total del mes; deshacer un `created` elimina el movimiento;
@@ -101,8 +110,8 @@ implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independie
       para completarlos a mano.
 - [ ] 4.6 Paridad nativa del formulario de resolución: importe, fecha y cuenta editables, más la
       advertencia de saldo negativo que hoy solo existe en web.
-- [ ] 4.7 Sellar las ocurrencias de reglas pausadas, en vez de mostrarlas sin distinción.
-- [ ] 4.8 Recorrer los diez comportamientos de `proposal.md` en web y en nativo antes de cerrar.
+- [ ] 4.7 Sellar como "Pausada" las ocurrencias anteriores a una pausa, que siguen resolubles.
+- [ ] 4.8 Recorrer los once comportamientos de `proposal.md` en web y en nativo antes de cerrar.
 
 ## 5. Cierre
 
