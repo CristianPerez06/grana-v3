@@ -469,6 +469,17 @@ export const CategorySpendingOverview = ({
   )
 
   // ── Center label ───────────────────────────────────────────────────────────
+  // What the month cost once the credits come off. The centre sums the DRAWN
+  // slices — a donut cannot draw a negative arc — so with a category in credit
+  // it is neither gross nor net. Null when there is nothing to reconcile: the
+  // centre already is that figure and repeating it would be noise. It rides the
+  // footer row rather than a row of its own; on a phone this card is long
+  // enough already.
+  const netTotal =
+    mode === 'egresos' && credits && credits.length > 0
+      ? netAfterCredits(breakdown.total, credits)
+      : null
+
   const centerLabel = drilledSlice && drilledSub ? (
     <>
       <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-soft leading-none">
@@ -785,18 +796,6 @@ export const CategorySpendingOverview = ({
               </li>
             ))}
           </ul>
-          {/* Closing line: the centre is the sum of the DRAWN slices, so with a
-              category in credit it is neither gross nor net. This states what the
-              month cost once the credits come off — the figure the dashboard's
-              "Gastaste" tile shows. */}
-          <div className="mt-2.5 flex items-center gap-3 border-t border-border-soft pt-2.5">
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
-              {labels.netTotalLabel}
-            </span>
-            <span className="shrink-0 text-sm font-extrabold tabular-nums text-text">
-              {fmt(netAfterCredits(breakdown.total, credits))}
-            </span>
-          </div>
         </div>
       )}
 
@@ -805,12 +804,17 @@ export const CategorySpendingOverview = ({
           in the Ingresos mode. */}
       {(mode === 'egresos' || detailHref) && (
         <div
-          className={`flex items-center gap-2 border-t border-border-soft pt-4 ${
-            detailHref ? 'justify-between' : ''
+          className={`flex items-center gap-3 border-t border-border-soft pt-4 ${
+            detailHref || netTotal !== null ? 'justify-between' : ''
           }`}
         >
           {mode === 'egresos' && (
-            <span className="text-xs text-muted-foreground">{labels.offLedgerNote}</span>
+            <span className="min-w-0 text-xs text-muted-foreground">{labels.offLedgerNote}</span>
+          )}
+          {netTotal !== null && (
+            <span className="shrink-0 text-xs font-bold tabular-nums text-text">
+              {labels.netTotalLabel} {fmt(netTotal)}
+            </span>
           )}
           {controller && controller.onSeeDetail ? (
             <button

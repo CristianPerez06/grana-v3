@@ -354,24 +354,25 @@ export const CategorySpendingOverview = ({
               </Text>
             </View>
           ))}
-          {/* Closing line: the centre sums the DRAWN slices, so with a category
-              in credit it is neither gross nor net. Mirror of web. */}
-          <View className="mt-0.5 flex-row items-center gap-2 border-t border-border-soft pt-2">
-            <Text numberOfLines={1} className="min-w-0 flex-1 text-[12px] font-bold text-text">
-              {t('transactions.spending.net_total_label')}
-            </Text>
-            <Text className="text-[12px] font-extrabold text-text">
-              {fmt(netAfterCredits(breakdown.total, credits))}
-            </Text>
-          </View>
         </View>
       ) : null}
 
-      {/* Why the donut can exceed what left the user's accounts this month. */}
+      {/* Footer: why the donut can exceed what left the user's accounts this
+          month, and — when a category ended in credit — what the month actually
+          cost. The net rides this row rather than one of its own: the card is
+          long enough on a phone. */}
       {mode === 'egresos' ? (
-        <Text className="text-[10.5px] text-text-soft">
-          {t('transactions.spending.off_ledger_note')}
-        </Text>
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="min-w-0 flex-1 text-[10.5px] text-text-soft">
+            {t('transactions.spending.off_ledger_note')}
+          </Text>
+          {credits.length > 0 ? (
+            <Text className="shrink-0 text-[11px] font-bold text-text">
+              {t('transactions.spending.net_total_label')}{' '}
+              {fmt(netAfterCredits(breakdown.total, credits))}
+            </Text>
+          ) : null}
+        </View>
       ) : null}
     </Card>
   )
