@@ -14,8 +14,15 @@ import { deriveBalanceCardView, type MonthSummary } from '@grana/dashboard'
  * this table is a bug on both platforms.
  */
 
-const summary = (entro: number, seFue: number): MonthSummary => ({ entro, seFue })
-const zero: MonthSummary = { entro: 0, seFue: 0 }
+// The breakdown is irrelevant here (this file is about the card's states), so
+// the fixtures state the totals and give the parts the shape they need.
+const summary = (entro: number, seFue: number): MonthSummary => ({
+  entro,
+  seFue,
+  entroParts: { ingresos: entro, devoluciones: 0, otros: 0 },
+  seFueParts: { gastos: seFue, pagosDeTarjeta: 0, otros: 0 },
+})
+const zero: MonthSummary = summary(0, 0)
 const both = (ars: number, usd = 0) => ({ ARS: ars, USD: usd })
 
 /** Accounts of 1.800.000 at the cut, with `reserved` set aside. */

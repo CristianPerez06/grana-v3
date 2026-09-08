@@ -12,9 +12,7 @@ Define la pantalla `/dashboard` como landing universal post-login y post-onboard
 El selector de mes del header gobierna las tres primeras (el saldo hace corte mensual); Compromisos no lo sigue, porque su ventana es el próximo mes respecto de hoy.
 
 Es read-only: toda interacción navega al módulo correspondiente. El desglose de gastos **por categoría** ya no vive acá — es superficie única de Movimientos (`spending-by-category`)— aunque el dashboard sigue consumiendo su lectura del devengado. El eye toggle de privacidad enmascara los importes en ambas plataformas.
-
 ## Requirements
-
 ### Requirement: La pantalla dashboard es la landing universal post-login y post-onboarding
 
 El sistema SHALL renderizar la pantalla principal de la app en la ruta `/dashboard` bajo el grupo `(app)`, tanto en web como en mobile. La pantalla SHALL ser la única landing tras tres flujos: login exitoso, signup confirmado con onboarding ya completado, y completar el onboarding.
@@ -43,7 +41,6 @@ La sección Tarjetas NO forma parte del dashboard en ninguna plataforma; el resu
 - **THEN** el dashboard no ofrece esa lectura
 - **AND** la encuentra en la portada del módulo Movimientos
 
-
 ---
 
 ### Requirement: El dashboard usa un layout multi-columna en desktop (web)
@@ -69,7 +66,6 @@ Por debajo del ancho máximo de contenido, el layout SHALL colapsar a **una sola
 - **WHEN** el ancho de la ventana baja del ancho máximo de contenido
 - **THEN** las cards se apilan en una sola columna
 - **AND** el sidebar deja de renderizarse
-
 
 ---
 
@@ -333,7 +329,6 @@ Mientras el header esté en su estado de carga (ver requirement del saludo) **o 
 - **THEN** el header NO contiene el botón "Nuevo movimiento" en ningún estado (loading o habilitado)
 - **AND** el acceso primario para registrar un movimiento en ese viewport es el FAB definido en la spec de `transactions`
 
-
 ---
 
 ### Requirement: La pantalla dashboard es read-only
@@ -368,7 +363,6 @@ El dashboard SHALL NOT exponer formularios, botones de creación, edición, elim
 - **WHEN** el usuario toca una fila de la leyenda de "En qué se fue" en la app nativa
 - **THEN** la app navega con `useRouter().push('/transactions')` a Movimientos
 - **AND** NO dispara ninguna mutación
-
 
 ---
 
@@ -430,6 +424,7 @@ La fila USD SHALL regirse por la regla bimoneda: se renderiza solo si el monto e
 - **AND** el monto en ARS queda como única lectura del saldo
 
 ---
+
 ### Requirement: La card "Dónde está" desglosa las cuentas del usuario
 
 El desglose "Dónde está" SHALL vivir **dentro de la zona oscura** de la card de saldo, no como card separada, en dos columnas separadas por un divisor: **ARS a la izquierda y USD a la derecha**, con su encabezado propio y un link a Cuentas.
@@ -451,7 +446,6 @@ Una columna cuya moneda no tiene saldo NO SHALL renderizar filas vacías. Un usu
 - **WHEN** el usuario no tiene saldo en USD
 - **THEN** la columna USD no lista cuentas
 - **AND** la columna ARS conserva su lectura completa
-
 
 ---
 
@@ -560,7 +554,6 @@ Ambas apps (web y mobile) SHALL consumir esas queries y tipos desde `@grana/dash
 - **THEN** obtiene los datos vía `getMonthCategoryBreakdown(supabase, month)` desde `@grana/dashboard`
 - **AND** ambas plataformas obtienen el mismo neto por categoría ante los mismos datos
 
-
 ---
 
 ### Requirement: Los componentes del dashboard mobile siguen la convención de naming espejo del web
@@ -620,7 +613,6 @@ En la app nativa, el header del dashboard (que contiene el saludo y el `eye togg
 - **WHEN** un desarrollador inspecciona el componente del header nativo
 - **THEN** el color proviene del mirror de tokens, no de un literal hex
 
-
 ---
 
 ### Requirement: La pantalla `(app)/dashboard` mobile renderiza las secciones del dashboard con tolerancia a fallas parciales
@@ -640,7 +632,6 @@ Los componentes nativos SHALL mantener la convención de naming espejo respecto 
 - **WHEN** el usuario toca la cabecera de un grupo de compromisos en la app nativa
 - **THEN** el área activa es de al menos 44px
 - **AND** el grupo alterna su estado sin afectar al otro
-
 
 ---
 
@@ -763,7 +754,6 @@ Los rótulos de los tres tiles de "Cuánto gastaste" SHALL ser verbos en pasado 
 - **AND** la bajada declara el corte ("Al cierre de agosto"), sin afirmar qué sabía el usuario ese día
 - **WHEN** el usuario navega a un mes cuya ventana ya terminó
 - **THEN** el título nombra lo que hubo que pagar en esa ventana
-
 
 ---
 
@@ -919,7 +909,6 @@ Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el
 - **THEN** la card muestra un único estado vacío
 - **AND** no renderiza la barra apilada con proporciones inventadas
 
-
 ---
 
 ### Requirement: Los montos del dashboard se muestran por moneda y la línea USD aparece solo si el valor es distinto de cero
@@ -955,7 +944,6 @@ Los porcentajes derivados —el reparto de cuentas de "Dónde está", la barra a
 - **WHEN** el bloque "Dónde está" calcula el porcentaje de una cuenta en USD
 - **THEN** el denominador es el total en USD del usuario
 - **AND** el total en ARS no participa del cálculo
-
 
 ---
 
@@ -1095,6 +1083,7 @@ Los montos SHALL responder al selector de mes. La zona NO SHALL renderizar la ba
 - **WHEN** el usuario navega a un mes sin ningún movimiento
 - **THEN** ambos bloques muestran cero en ARS
 - **AND** la zona sigue renderizando, sin desmontarse
+
 ### Requirement: La card "Cuánto gastaste" descompone el gasto propio del mes en Gastaste, Ya se pagó y Por pagar
 
 El dashboard SHALL renderizar una card "Cuánto gastaste" con **tres tiles** de igual ancho, cada uno con ícono tintado, rótulo, monto en el color del bloque, línea USD según la regla bimoneda y un filete de color al pie:
@@ -1196,7 +1185,6 @@ Lo que el usuario **adelantó por el otro miembro** NO SHALL aparecer en esta ca
 - **THEN** la card muestra su estado vacío
 - **AND** no se desmonta ni deja un hueco en la grilla
 
-
 ---
 
 ### Requirement: La tira de ritmo compara el gasto del mes contra los ingresos del mes
@@ -1265,7 +1253,6 @@ El umbral SHALL ser **30×**. Estuvo en 100×, que quedaba muy por encima del pu
 - **AND** acompaña los dos montos que lo produjeron
 - **AND** NO dice que no hubo ingresos, porque sí los hubo
 
-
 ---
 
 ### Requirement: El detalle de "Compromisos del próximo mes" reemplaza en una zona de alto fijo
@@ -1315,7 +1302,6 @@ El grupo **Tarjetas** SHALL listar una fila **por tarjeta** con su total comprom
 - **THEN** el aviso ocupa una sola línea debajo de la barra del total
 - **AND** el alto de la card no se despega del de "Cuánto gastaste"
 
-
 ---
 
 ### Requirement: La tira "Compartido" muestra el neto del Hogar en web y en mobile cuando hay actividad
@@ -1347,3 +1333,55 @@ La tira SHALL renderizarse **únicamente cuando hay actividad compartida**. Sin 
 - **WHEN** el usuario no tiene ningún hogar con actividad
 - **THEN** la tira no se renderiza en ninguna plataforma
 - **AND** el dashboard no deja un hueco al pie
+
+### Requirement: "Entró" y "Se fué" se pueden abrir por concepto
+
+Los dos flujos del "Resumen del mes" SHALL poder abrirse para mostrar **de qué están hechos**, por concepto y no por medio de pago. "Tenías" NO SHALL abrirse: no es un flujo, es el saldo con el que se entró al mes.
+
+La apertura de **"Entró"** SHALL listar:
+
+- **Ingresos** — lo que se ganó (`type='income'` acreditado en una cuenta propia).
+- **Devoluciones** — reintegros "a cuenta" recibidos: plata que VOLVIÓ, no plata ganada.
+- **Otros** — el lado positivo de los baldes con signo: una liquidación a favor, la pata destino de un cambio de moneda, un ajuste positivo.
+
+La apertura de **"Se fué"** SHALL listar:
+
+- **Gastos** — gasto real pagado desde una cuenta.
+- **Pago de tarjetas** — pagos de resumen, que cancelan deuda ya devengada y no son gasto nuevo. Que tengan fila propia es el punto: es la salida de caja más grande de muchos meses y confundirla con gasto es lo que hace que "Se fué" no se entienda.
+- **Otros** — el lado negativo de los mismos baldes con signo.
+
+Cada apertura SHALL sumar exactamente su total, al centavo. Los montos NO SHALL calcularse por una vía paralela a la del total: SHALL ser los mismos términos que el total ya suma, expuestos en vez de descartados, de modo que una card no pueda contradecir las filas que acaba de abrir.
+
+Una fila en cero NO SHALL mostrarse. "Otros" es cero en el mes corriente ordinario, y una fila que no dice nada igual ocupa un renglón e invita a preguntar qué significa.
+
+SHALL haber **una sola apertura abierta por vez**: dos paneles apilados bajo una tira de tres columnas dejan de leerse como "esto pertenece a aquella columna". La apertura SHALL renderizarse **debajo** de la tira (web) o inmediatamente debajo de su propia fila (nativo), nunca adentro de la columna: un tercio de una card de ancho de teléfono son ~105px y "Pago de tarjetas $968.558,83" no entra sin partirse o achicarse hasta dejar de leerse.
+
+La apertura SHALL existir en **ambas plataformas** y SHALL respetar la regla bimoneda de la tira: el monto USD de cada concepto acompaña al ARS bajo las mismas condiciones que los totales.
+
+#### Scenario: Abrir "Se fué" separa el gasto del pago de tarjetas
+
+- **WHEN** el usuario toca "Se fué" en un mes donde gastó $1.592.094,40 y pagó $968.558,83 de resúmenes
+- **THEN** ve dos filas, "Gastos $1.592.094,40" y "Pago de tarjetas $968.558,83"
+- **AND** las dos suman los $2.560.653,23 que muestra "Se fué"
+
+#### Scenario: Abrir "Entró" separa lo ganado de lo devuelto
+
+- **WHEN** el usuario toca "Entró" en un mes con $2.929.111,22 de ingresos y $446.002,12 de reintegros recibidos
+- **THEN** ve "Ingresos $2.929.111,22" y "Devoluciones $446.002,12"
+- **AND** las dos suman los $3.375.113,34 que muestra "Entró"
+
+#### Scenario: Un concepto en cero no ocupa un renglón
+
+- **WHEN** el mes no tuvo liquidaciones, cambios de moneda ni ajustes
+- **THEN** la apertura no muestra la fila "Otros"
+
+#### Scenario: Solo una apertura abierta por vez
+
+- **WHEN** el usuario tiene abierta la apertura de "Entró" y toca "Se fué"
+- **THEN** se cierra la de "Entró" y se abre la de "Se fué"
+
+#### Scenario: "Tenías" no se abre
+
+- **WHEN** el usuario mira el "Resumen del mes"
+- **THEN** "Tenías" no ofrece apertura
+

@@ -19,7 +19,15 @@ import {
  *      reserve in either bucket breaks the liquidity invariant the strip is for.
  */
 
-const summary = (entro: number, seFue: number): MonthSummary => ({ entro, seFue })
+// The parts are irrelevant to what this file asserts (the row, and that the card
+// closes), so the fixture states only the totals and hands the breakdown the
+// shape it needs to typecheck.
+const summary = (entro: number, seFue: number): MonthSummary => ({
+  entro,
+  seFue,
+  entroParts: { ingresos: entro, devoluciones: 0, otros: 0 },
+  seFueParts: { gastos: seFue, pagosDeTarjeta: 0, otros: 0 },
+})
 
 const closes = (opening: number, s: MonthSummary, saved: number, closing: number) =>
   Math.abs(opening + s.entro - s.seFue - saved - closing) < 0.005
@@ -120,10 +128,13 @@ describe('the reserve is not a flow — the two universes stay apart', () => {
   })
 
   it('is blind to reserves by construction: the summary has no reserve input', () => {
-    // `MonthSummary` carries only `entro` and `seFue`. There is no field a
-    // reserve could be threaded through, so the strip cannot drift into counting
-    // one — the guarantee is structural, not a matter of care.
+    // `MonthSummary` carries the two flows and the concepts each one is made of.
+    // None of those concepts is a reserve, and there is no field one could be
+    // threaded through, so the strip cannot drift into counting one — the
+    // guarantee is structural, not a matter of care.
     const s = summary(2_000_000, 1_200_000)
-    expect(Object.keys(s).sort()).toEqual(['entro', 'seFue'])
+    expect(Object.keys(s).sort()).toEqual(['entro', 'entroParts', 'seFue', 'seFueParts'])
+    expect(Object.keys(s.entroParts).sort()).toEqual(['devoluciones', 'ingresos', 'otros'])
+    expect(Object.keys(s.seFueParts).sort()).toEqual(['gastos', 'otros', 'pagosDeTarjeta'])
   })
 })

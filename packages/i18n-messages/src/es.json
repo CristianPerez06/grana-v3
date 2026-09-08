@@ -134,6 +134,13 @@
       "summary_title": "Resumen del mes",
       "came_in": "Entró",
       "went_out": "Se fué",
+      "open_breakdown": "Ver apertura",
+      "close_breakdown": "Ocultar",
+      "came_in_ingresos": "Ingresos",
+      "came_in_devoluciones": "Devoluciones",
+      "went_out_gastos": "Gastos",
+      "went_out_card_payments": "Pago de tarjetas",
+      "other": "Otros",
       "carried_in": "Tenías"
     },
     "hero_loading": "Cargando tu disponible…",

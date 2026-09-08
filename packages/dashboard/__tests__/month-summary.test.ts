@@ -39,6 +39,13 @@ const bimoneda = (ars: Partial<MonthBalanceSeries>, usd: Partial<MonthBalanceSer
   USD: series(usd),
 })
 
+const EMPTY_SUMMARY = {
+  entro: 0,
+  seFue: 0,
+  entroParts: { ingresos: 0, devoluciones: 0, otros: 0 },
+  seFueParts: { gastos: 0, pagosDeTarjeta: 0, otros: 0 },
+}
+
 describe('deriveMonthSummary', () => {
   it('adds received reimbursements to what came in', () => {
     const summary = deriveMonthSummary(bimoneda({ totalIncome: 20_000, totalReimbursement: 5_000 }))
@@ -57,8 +64,13 @@ describe('deriveMonthSummary', () => {
   it('keeps the two currencies apart', () => {
     const summary = deriveMonthSummary(bimoneda({ totalIncome: 20_000, totalExpense: 81_303 }))
 
-    expect(summary.ARS).toEqual({ entro: 20_000, seFue: 81_303 })
-    expect(summary.USD).toEqual({ entro: 0, seFue: 0 })
+    expect(summary.ARS).toEqual({
+      entro: 20_000,
+      seFue: 81_303,
+      entroParts: { ingresos: 20_000, devoluciones: 0, otros: 0 },
+      seFueParts: { gastos: 81_303, pagosDeTarjeta: 0, otros: 0 },
+    })
+    expect(summary.USD).toEqual(EMPTY_SUMMARY)
   })
 
   it('puts each signed bucket on the side its sign puts it', () => {
@@ -79,8 +91,8 @@ describe('deriveMonthSummary', () => {
 
   it('returns zeros for a month with no movements', () => {
     expect(deriveMonthSummary(bimoneda({}))).toEqual({
-      ARS: { entro: 0, seFue: 0 },
-      USD: { entro: 0, seFue: 0 },
+      ARS: EMPTY_SUMMARY,
+      USD: EMPTY_SUMMARY,
     })
   })
 
@@ -92,8 +104,90 @@ describe('deriveMonthSummary', () => {
       ),
     )
 
-    expect(summary.ARS).toEqual({ entro: 500_000, seFue: 120_000 })
-    expect(summary.USD).toEqual({ entro: 300, seFue: 65 })
+    expect(summary.ARS).toEqual({
+      entro: 500_000,
+      seFue: 120_000,
+      entroParts: { ingresos: 500_000, devoluciones: 0, otros: 0 },
+      seFueParts: { gastos: 120_000, pagosDeTarjeta: 0, otros: 0 },
+    })
+    expect(summary.USD).toEqual({
+      entro: 300,
+      seFue: 65,
+      entroParts: { ingresos: 300, devoluciones: 0, otros: 0 },
+      seFueParts: { gastos: 45, pagosDeTarjeta: 20, otros: 0 },
+    })
+  })
+
+  // The card can OPEN each total by concept, and promises the rows it lists add
+  // up to the total above them. That promise is the contract here.
+  describe('the concepts behind each total', () => {
+    it('splits what came in into earned, returned and the rest', () => {
+      const { ARS } = deriveMonthSummary(
+        bimoneda({
+          totalIncome: 2_929_111.22,
+          totalReimbursement: 446_002.12,
+          totalSettlement: 5_000,
+        }),
+      )
+
+      expect(ARS.entroParts).toEqual({
+        ingresos: 2_929_111.22,
+        devoluciones: 446_002.12,
+        otros: 5_000,
+      })
+      expect(ARS.entro).toBe(3_380_113.34)
+    })
+
+    it('splits what went out into spending, statement payments and the rest', () => {
+      const { ARS } = deriveMonthSummary(
+        bimoneda({
+          totalExpense: 1_592_094.4,
+          totalCardPayment: 968_558.83,
+          totalExchange: -1_000,
+        }),
+      )
+
+      expect(ARS.seFueParts).toEqual({
+        gastos: 1_592_094.4,
+        pagosDeTarjeta: 968_558.83,
+        otros: 1_000,
+      })
+      expect(ARS.seFue).toBe(2_561_653.23)
+    })
+
+    it('sends each signed bucket to the side its sign puts it on, in the parts too', () => {
+      const { ARS } = deriveMonthSummary(
+        bimoneda({ totalSettlement: 30_000, totalAdjustment: -12_500 }),
+      )
+
+      expect(ARS.entroParts.otros).toBe(30_000)
+      expect(ARS.seFueParts.otros).toBe(12_500)
+    })
+
+    it('leaves "otros" at zero in the ordinary month, so the row can be dropped', () => {
+      const { ARS } = deriveMonthSummary(bimoneda({ totalIncome: 100, totalExpense: 40 }))
+
+      expect(ARS.entroParts.otros).toBe(0)
+      expect(ARS.seFueParts.otros).toBe(0)
+    })
+
+    it('keeps each total the exact sum of its parts, cents included', () => {
+      // Thirds of a peso: added as floats these drift, and a card whose rows do
+      // not add up to the total above them is a wrong read.
+      const { ARS } = deriveMonthSummary(
+        bimoneda({
+          totalIncome: 0.1,
+          totalReimbursement: 0.1,
+          totalSettlement: 0.1,
+          totalExpense: 0.7,
+          totalCardPayment: 0.1,
+          totalExchange: -0.1,
+        }),
+      )
+
+      expect(ARS.entro).toBe(0.3)
+      expect(ARS.seFue).toBe(0.9)
+    })
   })
 
   // THE invariant of this card: it reads as liquidity, so the two amounts have
