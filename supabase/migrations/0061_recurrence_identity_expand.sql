@@ -65,17 +65,75 @@ create temporary table _migration_today on commit drop as
 -- 1 · due_date — la identidad de la ocurrencia
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Se deriva de `scheduled_date`. Para las instancias PENDIENTES es exacto: nada
--- las pisó todavía. Para las CONFIRMADAS cuyo `scheduled_date` fue sobrescrito
--- con la fecha de pago, el vencimiento original NO es recuperable — no quedó
--- registrado en ningún lado. Se acepta la aproximación: afecta al historial, no
--- a montos ni a saldos.
+-- El punto de partida es `scheduled_date`, pero NO es igual de confiable según
+-- el estado, y decir "se deriva del cronograma" a secas sería falso:
+--
+--   pending   EXACTO. Nada lo pisó: el generador lo escribió y nadie más.
+--   skipped   EXACTO. `skipRecurrenceInstance` solo toca `status` y
+--             `resolved_at` — el vencimiento sobrevive intacto.
+--   confirmed SOSPECHOSO. `confirmRecurrenceInstance` escribe
+--             `scheduled_date = payload.date ?? instance.scheduled_date`, así
+--             que si el usuario cambió la fecha al confirmar, lo que hoy hay
+--             guardado es la FECHA DE PAGO, no el vencimiento.
+--
+-- Para las confirmadas no hay un campo que delate la sobrescritura: confirmar
+-- pone la misma fecha en la instancia y en la transacción, así que compararlas
+-- no dice nada. Lo que SÍ se puede comprobar es si la fecha cae sobre el
+-- cronograma de la regla: si no cae, fue pisada, y el vencimiento original es
+-- irrecuperable — no quedó registrado en ningún lado.
+--
+-- Política: se conserva la fecha como aproximación histórica y se MARCA como
+-- tal (`due_date_is_approximate`). No se aborta —esos datos son legítimamente
+-- irrecuperables y abortar dejaría la migración bloqueada para siempre— y no se
+-- presenta como un vencimiento exacto en ninguna pantalla.
 
 alter table public.recurrence_instances
-  add column due_date DATE;
+  add column due_date              DATE,
+  add column due_date_is_approximate BOOLEAN NOT NULL DEFAULT false;
 
-update public.recurrence_instances
-   set due_date = scheduled_date;
+-- ¿Cae `d` sobre el cronograma que arranca en `start_date` cada
+-- `interval_count` `interval_unit`? Reproduce el clamping de fin de mes del
+-- caminante (31-ene + 1 mes ⇒ 28/29-feb, y el día original vuelve después).
+create or replace function public.recurrence_date_on_schedule(
+  p_start          DATE,
+  p_interval_count INT,
+  p_interval_unit  TEXT,
+  p_date           DATE
+) returns BOOLEAN
+language sql immutable
+as $$
+  select case p_interval_unit
+    when 'day'  then (p_date - p_start) % p_interval_count = 0
+    when 'week' then (p_date - p_start) % (p_interval_count * 7) = 0
+    when 'month' then
+      ( ((extract(year from p_date) - extract(year from p_start)) * 12
+         + (extract(month from p_date) - extract(month from p_start)))::int
+        % p_interval_count = 0 )
+      and extract(day from p_date) = least(
+            extract(day from p_start),
+            extract(day from (date_trunc('month', p_date) + interval '1 month - 1 day'))
+          )
+    when 'year' then
+      ( (extract(year from p_date) - extract(year from p_start))::int
+        % p_interval_count = 0 )
+      and extract(month from p_date) = extract(month from p_start)
+      and extract(day from p_date) = least(
+            extract(day from p_start),
+            extract(day from (date_trunc('month', p_date) + interval '1 month - 1 day'))
+          )
+    else false
+  end
+$$;
+
+update public.recurrence_instances i
+   set due_date = i.scheduled_date,
+       due_date_is_approximate = (
+         i.status = 'confirmed'
+         and not public.recurrence_date_on_schedule(
+               r.start_date, r.interval_count, r.interval_unit, i.scheduled_date)
+       )
+  from public.recurrences r
+ where r.id = i.recurrence_id;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2 · Política de colisiones: abortar con informe, nunca adivinar
@@ -123,12 +181,15 @@ create unique index recurrence_instances_one_per_rule_due_date
 -- 3 · Cómo se resolvió la ocurrencia
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- SIN constraint todavía, a propósito: un cliente nativo viejo que confirme una
--- instancia no escribe `resolution_kind`, y la violaría. Las constraints entran
--- en la migración de activación, cuando el trigger del paso 7 ya no hace falta.
---
 -- `skipped` lleva `resolution_kind = NULL`: omitir resuelve sin movimiento, así
--- que no hay nada que deshacer.
+-- que no hay nada que deshacer ni forma de deshacerlo.
+--
+-- Las constraints van EN ESTA MIGRACIÓN, después del trigger del paso 7. Una
+-- versión anterior las postergaba a la activación por miedo a que un cliente
+-- viejo las violara al confirmar — pero el trigger completa `resolution_kind`
+-- antes de que la constraint se evalúe (BEFORE trigger → CHECK), así que la
+-- incompatibilidad no existe. Postergarlas solo dejaría la base sin proteger
+-- durante toda la transición.
 
 alter table public.recurrence_instances
   add column resolution_kind   TEXT    NULL,
@@ -152,8 +213,20 @@ update public.recurrence_instances
 --             y cualquier fecha anterior haría aparecer como atraso los períodos
 --             de la pausa al reanudarlas — lo que la decisión 16 prohíbe.
 --
--- Consecuencia buscada: ninguna regla existente estrena backlog retroactivo. El
--- atraso se acumula desde acá hacia adelante.
+-- Contrato, y conviene ser exacto porque una versión anterior de este comentario
+-- lo decía al revés: `reconstruct_from` es el ÚLTIMO PUNTO CONOCIDO, y las
+-- ocurrencias POSTERIORES a él, dentro del horizonte, SÍ se reconstruyen —
+-- descontando las instancias que ya existan.
+--
+-- Eso ES el arreglo del #96, y tiene que serlo. En el caso del ticket el cursor
+-- quedó clavado en junio con una pendiente sin resolver que no lo avanzó; al
+-- reconstruir desde ahí, la de junio ya existe y se deduplica, pero julio,
+-- agosto y septiembre aparecen. Si esto no reconstruyera hacia atrás, el bug
+-- seguiría vivo.
+--
+-- Lo que NO se reconstruye es lo anterior al cursor: eso la regla ya lo dio por
+-- cubierto. Y en las pausadas no se reconstruye nada previo a la migración,
+-- porque no sabemos desde cuándo están pausadas.
 
 alter table public.recurrences
   add column reconstruct_from DATE;
@@ -171,24 +244,47 @@ alter table public.recurrences
 -- 5 · recurrence_schedule_versions — el cronograma a lo largo del tiempo
 -- ═══════════════════════════════════════════════════════════════════════════
 
+-- La FK compuesta de abajo necesita esta clave candidata. `id` ya es PK; esto
+-- solo declara que (id, user_id) también identifica una fila, para que las
+-- tablas hijas puedan exigir que la regla y el dueño coincidan.
+alter table public.recurrences
+  add constraint recurrences_id_user_unique UNIQUE (id, user_id);
+
 create table public.recurrence_schedule_versions (
   id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  recurrence_id  UUID        NOT NULL REFERENCES public.recurrences(id) ON DELETE CASCADE,
+  recurrence_id  UUID        NOT NULL,
   user_id        UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- Desde cuándo rige ESTA versión. Para la que crea la migración es
+  -- `reconstruct_from`, NO `start_date`: no sabemos qué cronograma corrió antes
+  -- del último punto conocido, y afirmar que el actual rigió desde el principio
+  -- haría que el caminante produzca fechas que la regla nunca produjo.
   effective_from DATE        NOT NULL,
   interval_count INT         NOT NULL,
   interval_unit  TEXT        NOT NULL,
+  -- Ancla del CLAMPING de fin de mes, no una afirmación sobre cuándo empezó el
+  -- cronograma: es lo que hace que una regla del 31 vuelva al 31 después de
+  -- febrero. Se conserva en `start_date` porque es exactamente lo que hace hoy
+  -- el generador (`addInterval(cursor, unit, count, { anchorDate: start_date })`),
+  -- así que la versión asumida reproduce el comportamiento actual sin inventar.
   anchor_date    DATE        NOT NULL,
-  -- true ⇒ la creó esta migración asumiendo que el cronograma actual rigió
-  -- siempre. NO sabemos qué rigió antes de `reconstruct_from`. Las versiones
-  -- que cree el usuario al editar no llevan la marca.
+  -- true ⇒ la creó esta migración. Significa: no sabemos qué cronograma rigió
+  -- antes de `effective_from`. Las versiones que cree el usuario al editar no
+  -- llevan la marca.
   is_assumed     BOOLEAN     NOT NULL DEFAULT false,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
 
   CONSTRAINT chk_schedule_versions_interval_unit
     CHECK (interval_unit IN ('day', 'week', 'month', 'year')),
   CONSTRAINT chk_schedule_versions_interval_count_positive
-    CHECK (interval_count > 0)
+    CHECK (interval_count > 0),
+
+  -- Con dos FK independientes (regla por un lado, usuario por otro) y un RLS que
+  -- solo mira `user_id = auth.uid()`, la base aceptaría una fila con MI usuario y
+  -- la recurrencia de OTRO. La FK compuesta lo hace imposible, y no depende de
+  -- que la política RLS se acuerde de comprobarlo.
+  CONSTRAINT recurrence_schedule_versions_recurrence_fk
+    FOREIGN KEY (recurrence_id, user_id)
+    REFERENCES public.recurrences(id, user_id) ON DELETE CASCADE
 );
 
 create unique index recurrence_schedule_versions_one_per_date
@@ -197,9 +293,13 @@ create unique index recurrence_schedule_versions_one_per_date
 create index idx_recurrence_schedule_versions_lookup
   on public.recurrence_schedule_versions (recurrence_id, effective_from desc);
 
+-- `effective_from = reconstruct_from` (el último punto conocido), no
+-- `start_date`. Si la regla fue editada alguna vez —y no hay historial de
+-- ediciones para saberlo— esta versión NO hace ninguna afirmación sobre lo
+-- anterior. El caminante nunca mira antes de acá.
 insert into public.recurrence_schedule_versions
   (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)
-select r.id, r.user_id, r.start_date, r.interval_count, r.interval_unit, r.start_date, true
+select r.id, r.user_id, r.reconstruct_from, r.interval_count, r.interval_unit, r.start_date, true
   from public.recurrences r;
 
 alter table public.recurrence_schedule_versions enable row level security;
@@ -231,14 +331,20 @@ create policy "users delete own recurrence_schedule_versions"
 
 create table public.recurrence_pauses (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  recurrence_id UUID        NOT NULL REFERENCES public.recurrences(id) ON DELETE CASCADE,
+  recurrence_id UUID        NOT NULL,
   user_id       UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   paused_from   DATE        NOT NULL,
   resumed_at    DATE        NULL,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
 
   CONSTRAINT chk_recurrence_pauses_order
-    CHECK (resumed_at IS NULL OR resumed_at >= paused_from)
+    CHECK (resumed_at IS NULL OR resumed_at >= paused_from),
+
+  -- Misma razón que en schedule_versions: la regla y el dueño tienen que ser
+  -- la misma persona, enforced por la base y no por la política RLS.
+  CONSTRAINT recurrence_pauses_recurrence_fk
+    FOREIGN KEY (recurrence_id, user_id)
+    REFERENCES public.recurrences(id, user_id) ON DELETE CASCADE
 );
 
 -- A lo sumo una pausa abierta por regla: no se puede pausar algo ya pausado.
@@ -310,6 +416,25 @@ create trigger trg_recurrence_instance_compat
   for each row
   execute function public.recurrence_instance_compat();
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 8 · Constraints de resolución
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- Van DESPUÉS del trigger a propósito. Un cliente viejo que confirme no escribe
+-- `resolution_kind`, pero el trigger lo completa antes de que la constraint se
+-- evalúe (BEFORE trigger → CHECK), así que no hay incompatibilidad que
+-- justifique postergarlas a la activación: hacerlo solo dejaría la base sin
+-- proteger durante toda la transición.
+
+alter table public.recurrence_instances
+  add constraint chk_recurrence_instances_resolution_kind check (
+    (status = 'confirmed' and resolution_kind in ('created', 'linked'))
+    or (status in ('pending', 'skipped') and resolution_kind is null)
+  ),
+  add constraint chk_recurrence_instances_linked_conversion check (
+    linked_conversion = false or resolution_kind = 'linked'
+  );
+
 commit;
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -317,7 +442,9 @@ commit;
 -- ═══════════════════════════════════════════════════════════════════════════
 --
 --   · NO elimina `recurrence_instances_one_pending_per_rule`  → activación
---   · NO agrega las constraints de `resolution_kind`          → activación
 --   · NO toca `scheduled_date` ni `last_generated_date`       → migración C
+--
+-- Las constraints de `resolution_kind` SÍ entran acá (paso 8): el trigger de
+-- compatibilidad las satisface para los clientes viejos.
 --
 -- Después de aplicar: regenerar los tipos de Supabase.

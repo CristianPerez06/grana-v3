@@ -355,6 +355,7 @@ en el frontend**: el generador las necesita para decidir qué materializar, y co
 | Columna | Para qué | Nota |
 |---|---|---|
 | `due_date` DATE NOT NULL | Identidad de la ocurrencia (decisión 1) | `UNIQUE (recurrence_id, due_date)`, sin `WHERE` |
+| `due_date_is_approximate` BOOLEAN NOT NULL DEFAULT false | El vencimiento histórico no es exacto | Ver decisión 23 |
 | `resolution_kind` TEXT NULL | `created` \| `linked` — qué hace deshacer (decisión 14) | Ver la tabla de estados |
 | `linked_conversion` BOOLEAN NOT NULL DEFAULT false | Si al vincular se convirtió el movimiento a compartido | Sin esto, deshacer no sabe si debe revertir la conversión (decisión 14) |
 
@@ -377,9 +378,11 @@ constraint chk_recurrence_instances_linked_conversion check (
 )
 ```
 
-**Ojo con el orden**: estas constraints NO pueden entrar en la migración de expansión (decisión 17).
-Un cliente nativo viejo que confirme una instancia no escribe `resolution_kind` y las violaría. Entran
-en la **activación**, cuando el trigger de compatibilidad ya no hace falta.
+**Orden dentro de la expansión**: las constraints van **después** del trigger de compatibilidad. Una
+versión anterior las postergaba a la activación por miedo a que un cliente viejo las violara al
+confirmar — pero el trigger completa `resolution_kind` **antes** de que la constraint se evalúe (un
+`BEFORE` trigger corre antes que el `CHECK`), así que esa incompatibilidad no existe. Postergarlas
+solo dejaría la base sin proteger durante toda la transición.
 
 `linked_conversion` es un booleano y no un snapshot del estado anterior a propósito: la decisión 13
 (revisada abajo) restringe la conversión al caso **personal → compartido con el reparto de la regla**,
@@ -393,17 +396,40 @@ que la regla deje de tener **un** cronograma y pase a tener una **historia** de 
 
 ```
 recurrence_schedule_versions
-  recurrence_id    → recurrences(id) ON DELETE CASCADE
-  effective_from   DATE NOT NULL      -- desde cuándo rige esta versión
+  recurrence_id    ┐
+  user_id          ┴→ recurrences(id, user_id)  FK COMPUESTA
+  effective_from   DATE NOT NULL      -- desde cuándo rige (= reconstruct_from en la asumida)
   interval_count   INT  NOT NULL
   interval_unit    TEXT NOT NULL
-  anchor_date      DATE NOT NULL      -- el ancla del clamping de fin de mes
+  anchor_date      DATE NOT NULL      -- ancla del clamping de fin de mes
+  is_assumed       BOOLEAN NOT NULL   -- la creó la migración; nada se afirma sobre antes
   UNIQUE (recurrence_id, effective_from)
 ```
 
-El caminante resuelve, para cada fecha, la versión vigente en ese momento. La migración crea **una
-versión por regla existente**, con `effective_from = start_date` y los valores actuales: el
-comportamiento no cambia para ninguna regla de hoy.
+**La FK es compuesta a propósito, y esto es una corrección de seguridad.** Con dos referencias
+independientes —la regla por un lado, el usuario por otro— y un RLS que solo comprueba
+`user_id = auth.uid()`, la base aceptaría una fila con **mi** usuario y la recurrencia de **otro**:
+la política valida el dueño de la fila, no que la regla le pertenezca. `FOREIGN KEY (recurrence_id,
+user_id) REFERENCES recurrences(id, user_id)` lo hace imposible en la base, sin depender de que cada
+política se acuerde de comprobarlo. Requiere declarar `UNIQUE (id, user_id)` en `recurrences` como
+clave candidata. Lo mismo aplica a `recurrence_pauses`.
+
+El caminante resuelve, para cada fecha, la versión vigente en ese momento.
+
+La migración crea **una versión por regla existente**, y su `effective_from` es **`reconstruct_from`,
+no `start_date`**. Una versión anterior usaba `start_date`, y marcarla `is_assumed` no arreglaba nada:
+la marca no cambia el cálculo. Si una regla mensual fue editada a semanal en algún momento —y no hay
+historial de ediciones para saberlo—, proyectar el cronograma actual desde `start_date` haría que el
+caminante produzca, después del cursor, fechas que la regla nunca produjo.
+
+Anclada en `reconstruct_from`, la versión **no hace ninguna afirmación sobre el pasado**: solo dice
+"de acá en adelante, este cronograma".
+
+`anchor_date` sí se conserva en `start_date`, y no es una contradicción: es el ancla del **clamping de
+fin de mes** —lo que hace que una regla del 31 vuelva al 31 después de febrero—, no una afirmación
+sobre cuándo empezó el cronograma. Es exactamente lo que hace hoy el generador
+(`addInterval(cursor, unit, count, { anchorDate: start_date })`), así que la versión asumida reproduce
+el comportamiento actual sin inventar nada.
 
 Las columnas `interval_count` / `interval_unit` / `frequency` se conservan en `recurrences` como la
 versión **vigente** —las lee la UI, y el `CHECK` de coherencia preset↔intervalo (migración 0053)
@@ -416,7 +442,8 @@ la pausa tiene que ser un **intervalo persistido**, no un `status` que solo dice
 
 ```
 recurrence_pauses
-  recurrence_id  → recurrences(id) ON DELETE CASCADE
+  recurrence_id  ┐
+  user_id        ┴→ recurrences(id, user_id)  FK COMPUESTA, misma razón
   paused_from    DATE NOT NULL
   resumed_at     DATE NULL           -- NULL = pausa abierta
 ```
@@ -439,7 +466,7 @@ Son dos migraciones, con un despliegue en el medio:
 |---|---|---|---|
 | **A · Expansión** | `00XX_recurrence_identity_expand.sql` | Columnas, tablas nuevas, backfill, trigger de compatibilidad | **Sin cambios.** El índice de pendiente única sigue vivo. |
 | — | *(despliegue de web y nativo con el modelo nuevo)* | | |
-| **B · Activación** | `00XY_recurrence_backlog_activate.sql` | Elimina el índice, agrega las constraints de `resolution_kind`, habilita el backlog | El backlog empieza a existir. |
+| **B · Activación** | `00XY_recurrence_backlog_activate.sql` | Elimina el índice de pendiente única | El backlog empieza a existir. |
 | **C · Retiro** | entrega posterior | Retira `scheduled_date` y el trigger | — |
 
 **"Nativo desplegado" no significa "todos actualizaron".** Una app instalada no se actualiza porque
@@ -450,10 +477,16 @@ singular. Dos mecanismos, complementarios:
   `recurrence_instances` que, cuando el cliente no los provee, deriva `due_date` de `scheduled_date`
   y pone `resolution_kind = 'created'` al pasar a `confirmed`. Una escritura de un cliente viejo
   produce así una fila válida en el modelo nuevo sin que el cliente sepa nada. Se retira en C.
-- **Versión mínima (recomendado).** Un gate de versión mínima al arrancar la app nativa. No hace
-  falta para la integridad —de eso se ocupa el trigger— pero sí para la **experiencia**: un cliente
-  viejo sigue mostrando una sola ocurrencia por regla, así que con el backlog activo el usuario vería
-  una parte de su atraso sin saber que hay más.
+- **Versión mínima (requisito para activar, no una mejora).** Una versión anterior la llamaba
+  "recomendada, para la experiencia". Es más que eso: **un usuario que solo conserve el cliente viejo
+  nunca ejecuta el generador nuevo**, así que su atraso no se materializa nunca y sigue sin backlog —
+  el #96 sigue vivo para él. El trigger protege la integridad de lo que ese cliente escribe; no hace
+  que ejecute lógica que no tiene.
+
+  Por eso, antes de activar hace falta **una de dos**: un gate de versión mínima al arrancar la app
+  nativa, o **generación del lado del servidor**, que materializa el atraso sin depender de qué
+  cliente abrió la app. La segunda es la que además resuelve el caso de quien no abre la app en
+  absoluto, y es la etapa 2 de la decisión 8.
 
 ### Decisión 17b · Retirar `scheduled_date` es gradual, no parte de esta entrega
 
@@ -492,15 +525,52 @@ Dos suposiciones que una versión anterior hacía calladas, y las dos fabrican a
 | Activa | `COALESCE(last_generated_date, start_date)` — el cursor es, por definición, "hasta acá ya está cubierto" |
 | Pausada | la **fecha de la migración** — nada anterior se reconstruye |
 
-El generador NUNCA materializa antes de `GREATEST(reconstruct_from, borde del horizonte)`. Y la
-versión de calendario que crea la migración se marca **asumida**
-(`recurrence_schedule_versions.is_assumed = true`), que se lee como: *no sabemos qué cronograma rigió
-antes de `reconstruct_from`*. Las versiones que cree el usuario al editar no llevan esa marca.
+**El contrato, con precisión, porque una versión anterior de este documento lo decía al revés y así
+dejaba el #96 sin arreglar:**
 
-Esto significa que **ninguna regla existente estrena backlog retroactivo con esta migración**: el
-backlog se acumula desde la migración hacia adelante. Es una pérdida deliberada y menor —el atraso
-que ya existía sigue sin reconstruirse— a cambio de no inventar vencimientos que quizá nunca
-existieron. Reconstruir hacia atrás con certeza es imposible: el dato no está.
+> `reconstruct_from` es el **último punto conocido**. Las ocurrencias **posteriores** a él, dentro del
+> horizonte, **SÍ se reconstruyen**, descontando las instancias que ya existan por `due_date`.
+
+Eso **es** el arreglo del #96 y tiene que serlo. En el caso del ticket el cursor quedó clavado en
+junio porque la pendiente sin resolver no lo avanzó: al reconstruir desde ahí, la de junio ya existe y
+se deduplica, pero **julio, agosto y septiembre aparecen**. Medido sobre la migración real, con la
+regla de cada 3 días del ticket: **29 ocurrencias a reconstruir** (julio 11, agosto 10, septiembre 3),
+que son exactamente los meses que hoy leen $0. Si esto no reconstruyera hacia atrás, el bug seguiría
+vivo.
+
+Lo que **no** se reconstruye es lo anterior al cursor —la regla ya lo dio por cubierto— y, en las
+pausadas, nada previo a la migración, porque no sabemos desde cuándo están pausadas.
+
+### Decisión 23 · El `due_date` histórico se marca cuando no es exacto
+
+Una versión anterior de este documento decía que el backfill "deriva `due_date` del cronograma". El
+SQL hacía `due_date = scheduled_date`, que **no es lo mismo** y en un caso concreto es directamente
+falso: si el alquiler vencía el 23/06 y se confirmó el 03/09, `scheduled_date` quedó en 03/09 —
+`confirmRecurrenceInstance` lo pisa con la fecha elegida— y ese 03/09 pasaría a ser el "vencimiento".
+La detección de colisiones no lo agarra: solo ve dos fechas iguales, no una fecha equivocada.
+
+La confiabilidad depende del estado, y conviene decirlo por estado:
+
+| Estado | `scheduled_date` es… | Por qué |
+|---|---|---|
+| `pending` | **exacto** | Lo escribió el generador y nadie más lo tocó. |
+| `skipped` | **exacto** | `skipRecurrenceInstance` solo toca `status` y `resolved_at`. |
+| `confirmed` | **sospechoso** | Confirmar escribe `payload.date ?? instance.scheduled_date`. |
+
+**Para las confirmadas hay una comprobación real**, y no hace falta adivinar: si la fecha **cae sobre
+el cronograma** de la regla, es plausiblemente el vencimiento; si no cae, fue pisada. Comparar la
+instancia contra la transacción no sirve —confirmar pone la misma fecha en las dos—, pero el
+cronograma sí es un testigo independiente.
+
+**Política: conservar y marcar, no abortar.** Las confirmadas fuera de cronograma quedan con
+`due_date_is_approximate = true`, y ese dato **no se presenta como vencimiento exacto** en ninguna
+pantalla. Abortar sería la política equivocada acá: esos vencimientos son *legítimamente*
+irrecuperables —no quedaron registrados en ningún lado— y abortar dejaría la migración bloqueada para
+siempre sobre datos que nadie puede reconstruir. Se distingue del caso de la decisión 18, donde la
+ambigüedad **sí** es resoluble a mano y por eso conviene frenar.
+
+La migración incluye `recurrence_date_on_schedule(start, count, unit, fecha)`, que reproduce el
+clamping de fin de mes del caminante, para hacer esa comprobación en SQL.
 
 ### Decisión 18 · El backfill aborta ante ambigüedad, no adivina
 
@@ -597,8 +667,9 @@ Web y nativo con el modelo nuevo: reads que aceptan colecciones, escrituras que 
 
 Recién cuando el despliegue está hecho. Es la migración que **cambia el comportamiento**.
 
-1. Agregar las constraints de `resolution_kind` y `linked_conversion`.
-2. Eliminar `recurrence_instances_one_pending_per_rule`. Desde acá existe el backlog.
+1. Eliminar `recurrence_instances_one_pending_per_rule`. Desde acá existe el backlog.
+
+Las constraints de `resolution_kind` ya entraron en la expansión, después del trigger.
 
 ### C · Retiro — entrega posterior
 

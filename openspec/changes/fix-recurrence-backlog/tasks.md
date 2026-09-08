@@ -19,15 +19,22 @@ que habilita el backlog.
       regla, las instancias en conflicto y el `due_date` derivado. Nunca adivinar. Recién en una
       corrida limpia, agregar `UNIQUE (recurrence_id, due_date)` **sin** cláusula `WHERE`.
 - [x] 1.2b Crear `recurrence_schedule_versions` con una versión por regla, marcada
-      **`is_assumed = true`**: no sabemos qué cronograma rigió antes (decisión 21).
+      **`is_assumed = true`** y con **`effective_from = reconstruct_from`, no `start_date`**: la marca
+      sola no cambia el cálculo, y anclar en `start_date` proyectaría la frecuencia actual sobre un
+      pasado que pudo tener otra (decisión 21). `anchor_date` sí queda en `start_date`: es el ancla
+      del clamping de fin de mes, no una afirmación sobre cuándo empezó.
       `recurrences.interval_*` queda como la versión vigente para la UI y el `CHECK` de 0053.
 - [x] 1.2c Crear `recurrence_pauses` (`paused_from`, `resumed_at` nullable) con una fila abierta por
       cada regla hoy pausada. El `status = 'paused'` se conserva; el intervalo es lo que impide que
       el período pausado se lea como huecos al reanudar.
-- [x] 1.2d Agregar `recurrences.reconstruct_from` con la política conservadora (decisión 21):
+- [x] 1.2d Agregar `recurrences.reconstruct_from` (decisión 21):
       `COALESCE(last_generated_date, start_date)` en activas, **fecha de la migración** en pausadas.
-      El generador nunca materializa antes de `GREATEST(reconstruct_from, borde del horizonte)`.
-      Consecuencia buscada: ninguna regla existente estrena backlog retroactivo.
+      **Contrato:** el generador reconstruye las ocurrencias POSTERIORES a `reconstruct_from` dentro
+      del horizonte, descontando las que ya existan — eso ES el arreglo del #96. Solo lo anterior al
+      cursor queda fuera.
+- [x] 1.2f Constraints `(recurrence_id, user_id)` compuestas en las dos tablas nuevas, contra
+      `recurrences(id, user_id)`. Con FK independientes y un RLS que solo mira `user_id = auth.uid()`,
+      la base aceptaría una fila con mi usuario y la recurrencia de otro.
 - [x] 1.2e Instalar el **trigger de compatibilidad** para clientes nativos viejos (decisión 17):
       `BEFORE INSERT OR UPDATE` que deriva `due_date` de `scheduled_date` y pone
       `resolution_kind = 'created'` al confirmar, cuando no vienen provistos.
@@ -38,10 +45,14 @@ que habilita el backlog.
       fecha de pago vive en `transactions.date`, la de carga en `transactions.created_at` y la de
       resolución en `resolved_at`. `scheduled_date` queda como alias de lectura de `due_date` durante
       la transición y **nunca** pasa a ser fecha de pago (una ocurrencia sin resolver no tiene pago).
-- [x] 1.4b Agregar `resolution_kind` (`created` | `linked`, **nullable y sin constraint todavía**) y
-      `linked_conversion` (boolean). Poblar `resolution_kind = 'created'` en las confirmadas
-      existentes. Las constraints van en la activación (2.8): un cliente viejo que confirme no
-      escribe `resolution_kind` y las violaría. `skipped` lleva `resolution_kind = NULL`.
+- [x] 1.4b Agregar `resolution_kind` (`created` | `linked`) y `linked_conversion`, poblar
+      `resolution_kind = 'created'` en las confirmadas, y **agregar sus constraints en esta misma
+      migración, después del trigger**: el trigger completa el campo antes de que el `CHECK` corra,
+      así que no hay incompatibilidad con clientes viejos. `skipped` lleva `NULL`.
+- [x] 1.4d `due_date_is_approximate` (decisión 23): `pending` y `skipped` conservan un vencimiento
+      exacto; una `confirmed` cuya fecha no cae sobre el cronograma fue pisada al confirmar y se
+      marca. Incluye `recurrence_date_on_schedule()`. Esas fechas no se presentan como vencimiento
+      exacto en ninguna pantalla.
 - [ ] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
       (`mutations.ts:446`): con resolución en bloque el resultado dependería del orden.
 - [ ] 1.5 Quitar de `confirmRecurrenceInstance` y `skipRecurrenceInstance` la escritura de
@@ -58,6 +69,11 @@ que habilita el backlog.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo y queda como alias de lectura de `due_date`. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.
+- [ ] 1.12 Tests de migración con el **caso exacto del #96** (regla cada 3 días, cursor 2026-06-10,
+      pendiente del 13/06, hoy 2026-09-08): `reconstruct_from` queda en el cursor y las ocurrencias a
+      reconstruir son 29 — julio 11, agosto 10, septiembre 3 — con la del 13/06 deduplicada. Y un
+      test con una regla cuya frecuencia fue editada, que no debe producir fechas anteriores a
+      `effective_from`.
 - [ ] 1.10 Reescribir el caminante para **posicionarse en el borde del horizonte por aritmética de
       fechas**, sin recorrer desde `start_date` (decisión 19). Medido: una regla diaria de hace tres
       años agota los 750 pasos el `2024-09-26`, **347 días antes** del horizonte, sin llegar nunca a
@@ -107,9 +123,10 @@ que habilita el backlog.
       (`00XY_recurrence_backlog_activate.sql`), y solo con los reads del paso 2.2 ya desplegados en
       web y nativo: agregar las constraints de `resolution_kind` y `linked_conversion`, y eliminar
       `recurrence_instances_one_pending_per_rule`. Desde acá existe el backlog.
-- [ ] 2.8b Gate de **versión mínima** en el arranque nativo. No hace falta para la integridad —de eso
-      se ocupa el trigger de 1.2e— pero sí para la experiencia: un cliente viejo muestra una sola
-      ocurrencia por regla y el usuario vería parte de su atraso sin saber que hay más.
+- [ ] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo
+      nunca ejecuta el generador nuevo, así que su atraso no se materializa y el #96 sigue vivo para
+      él. Hace falta **una de dos**: gate de versión mínima al arrancar la app nativa, o generación
+      del lado del servidor (etapa 2 de la decisión 8), que además cubre a quien no abre la app.
 - [ ] 2.7 Tests: tres meses resueltos en una pasada con importes distintos y una cuenta distinta, sin
       que cambie el importe de la regla; un fallo en el tercero no deja los dos primeros guardados;
       dejar uno sin resolver no bloquea los demás.
