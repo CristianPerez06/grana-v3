@@ -76,64 +76,37 @@ create temporary table _migration_today on commit drop as
 --             que si el usuario cambió la fecha al confirmar, lo que hoy hay
 --             guardado es la FECHA DE PAGO, no el vencimiento.
 --
--- Para las confirmadas no hay un campo que delate la sobrescritura: confirmar
--- pone la misma fecha en la instancia y en la transacción, así que compararlas
--- no dice nada. Lo que SÍ se puede comprobar es si la fecha cae sobre el
--- cronograma de la regla: si no cae, fue pisada, y el vencimiento original es
--- irrecuperable — no quedó registrado en ningún lado.
+-- Para las confirmadas NO hay forma de demostrar cuál era el vencimiento.
+-- Una versión anterior de esta migración intentaba deducirlo comprobando si la
+-- fecha "cae sobre el cronograma", y ese razonamiento es INVÁLIDO: caer en el
+-- cronograma es necesario, no suficiente. Una cuota que vencía el 10 de agosto
+-- y se confirmó tarde, el 10 de septiembre, cae perfecto en un cronograma
+-- mensual del día 10 — y pertenece a otra ocurrencia. La comprobación sirve
+-- para sospechar de algunas fechas, nunca para probar que las demás son
+-- exactas. Y si la frecuencia fue editada, comparar contra el cronograma ACTUAL
+-- tampoco dice qué calendario regía cuando se creó la instancia.
 --
--- Política: se conserva la fecha como aproximación histórica y se MARCA como
--- tal (`due_date_is_approximate`). No se aborta —esos datos son legítimamente
--- irrecuperables y abortar dejaría la migración bloqueada para siempre— y no se
--- presenta como un vencimiento exacto en ninguna pantalla.
+-- Política, sin inferencias:
+--
+--   pending / skipped         EXACTAS.
+--   confirmed pre-migración   APROXIMADAS, todas. El vencimiento original es
+--                             irrecuperable y no hay dato que lo desempate.
+--   confirmed post-migración  exactas por construcción: desde el despliegue
+--                             `due_date` ya no se pisa (DEFAULT false).
+--
+-- Se conservan como aproximación histórica MARCADA, y no se presentan como
+-- vencimiento exacto en ninguna pantalla. No se aborta: son datos legítimamente
+-- irrecuperables, y abortar dejaría la migración bloqueada para siempre sobre
+-- algo que nadie puede reconstruir. Se distingue del paso 2, donde la
+-- ambigüedad SÍ es resoluble a mano.
 
 alter table public.recurrence_instances
-  add column due_date              DATE,
+  add column due_date                DATE,
   add column due_date_is_approximate BOOLEAN NOT NULL DEFAULT false;
 
--- ¿Cae `d` sobre el cronograma que arranca en `start_date` cada
--- `interval_count` `interval_unit`? Reproduce el clamping de fin de mes del
--- caminante (31-ene + 1 mes ⇒ 28/29-feb, y el día original vuelve después).
-create or replace function public.recurrence_date_on_schedule(
-  p_start          DATE,
-  p_interval_count INT,
-  p_interval_unit  TEXT,
-  p_date           DATE
-) returns BOOLEAN
-language sql immutable
-as $$
-  select case p_interval_unit
-    when 'day'  then (p_date - p_start) % p_interval_count = 0
-    when 'week' then (p_date - p_start) % (p_interval_count * 7) = 0
-    when 'month' then
-      ( ((extract(year from p_date) - extract(year from p_start)) * 12
-         + (extract(month from p_date) - extract(month from p_start)))::int
-        % p_interval_count = 0 )
-      and extract(day from p_date) = least(
-            extract(day from p_start),
-            extract(day from (date_trunc('month', p_date) + interval '1 month - 1 day'))
-          )
-    when 'year' then
-      ( (extract(year from p_date) - extract(year from p_start))::int
-        % p_interval_count = 0 )
-      and extract(month from p_date) = extract(month from p_start)
-      and extract(day from p_date) = least(
-            extract(day from p_start),
-            extract(day from (date_trunc('month', p_date) + interval '1 month - 1 day'))
-          )
-    else false
-  end
-$$;
-
-update public.recurrence_instances i
-   set due_date = i.scheduled_date,
-       due_date_is_approximate = (
-         i.status = 'confirmed'
-         and not public.recurrence_date_on_schedule(
-               r.start_date, r.interval_count, r.interval_unit, i.scheduled_date)
-       )
-  from public.recurrences r
- where r.id = i.recurrence_id;
+update public.recurrence_instances
+   set due_date = scheduled_date,
+       due_date_is_approximate = (status = 'confirmed');
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2 · Política de colisiones: abortar con informe, nunca adivinar
@@ -231,10 +204,17 @@ update public.recurrence_instances
 alter table public.recurrences
   add column reconstruct_from DATE;
 
+-- `start_date - 1` cuando no hay cursor, y NO `start_date`: el contrato genera
+-- ocurrencias ESTRICTAMENTE POSTERIORES a `reconstruct_from`, y el motor actual
+-- dice que sin cursor la primera ocurrencia cae EN `start_date`
+-- (`decideRecurrenceInstance`, packages/money-logic/src/recurrences.ts). Con
+-- `start_date` a secas, una regla creada directamente y todavía nunca
+-- materializada perdería su primera ocurrencia.
 update public.recurrences r
    set reconstruct_from = case
-         when r.status = 'paused' then (select d from _migration_today)
-         else coalesce(r.last_generated_date, r.start_date)
+         when r.status = 'paused'               then (select d from _migration_today)
+         when r.last_generated_date is not null then r.last_generated_date
+         else r.start_date - 1
        end;
 
 alter table public.recurrences
@@ -297,9 +277,15 @@ create index idx_recurrence_schedule_versions_lookup
 -- `start_date`. Si la regla fue editada alguna vez —y no hay historial de
 -- ediciones para saberlo— esta versión NO hace ninguna afirmación sobre lo
 -- anterior. El caminante nunca mira antes de acá.
+-- `effective_from` es `reconstruct_from`, salvo en la regla sin cursor, donde es
+-- `start_date`: ahí `reconstruct_from` vale `start_date - 1`, que es un piso de
+-- generación y no una fecha en la que el cronograma haya regido.
 insert into public.recurrence_schedule_versions
   (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)
-select r.id, r.user_id, r.reconstruct_from, r.interval_count, r.interval_unit, r.start_date, true
+select r.id, r.user_id,
+       case when r.status <> 'paused' and r.last_generated_date is null
+            then r.start_date else r.reconstruct_from end,
+       r.interval_count, r.interval_unit, r.start_date, true
   from public.recurrences r;
 
 alter table public.recurrence_schedule_versions enable row level security;

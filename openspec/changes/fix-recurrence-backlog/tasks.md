@@ -28,7 +28,9 @@ que habilita el backlog.
       cada regla hoy pausada. El `status = 'paused'` se conserva; el intervalo es lo que impide que
       el período pausado se lea como huecos al reanudar.
 - [x] 1.2d Agregar `recurrences.reconstruct_from` (decisión 21):
-      `COALESCE(last_generated_date, start_date)` en activas, **fecha de la migración** en pausadas.
+      `last_generated_date` en activas con cursor, **`start_date - 1`** en activas sin cursor —el
+      contrato genera estrictamente después, y sin cursor la primera ocurrencia cae EN `start_date`—,
+      y **fecha de la migración** en pausadas.
       **Contrato:** el generador reconstruye las ocurrencias POSTERIORES a `reconstruct_from` dentro
       del horizonte, descontando las que ya existan — eso ES el arreglo del #96. Solo lo anterior al
       cursor queda fuera.
@@ -49,9 +51,10 @@ que habilita el backlog.
       `resolution_kind = 'created'` en las confirmadas, y **agregar sus constraints en esta misma
       migración, después del trigger**: el trigger completa el campo antes de que el `CHECK` corra,
       así que no hay incompatibilidad con clientes viejos. `skipped` lleva `NULL`.
-- [x] 1.4d `due_date_is_approximate` (decisión 23): `pending` y `skipped` conservan un vencimiento
-      exacto; una `confirmed` cuya fecha no cae sobre el cronograma fue pisada al confirmar y se
-      marca. Incluye `recurrence_date_on_schedule()`. Esas fechas no se presentan como vencimiento
+- [x] 1.4d `due_date_is_approximate` (decisión 23): `pending` y `skipped` exactas; **todas** las
+      `confirmed` anteriores a la migración aproximadas. Sin inferencias — caer en el cronograma no
+      prueba exactitud: una cuota del 10/08 confirmada el 10/09 cae perfecto y es otra ocurrencia.
+      Las posteriores a la migración son exactas por construcción. No se presentan como vencimiento
       exacto en ninguna pantalla.
 - [ ] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
       (`mutations.ts:446`): con resolución en bloque el resultado dependería del orden.
@@ -73,7 +76,9 @@ que habilita el backlog.
       pendiente del 13/06, hoy 2026-09-08): `reconstruct_from` queda en el cursor y las ocurrencias a
       reconstruir son 29 — julio 11, agosto 10, septiembre 3 — con la del 13/06 deduplicada. Y un
       test con una regla cuya frecuencia fue editada, que no debe producir fechas anteriores a
-      `effective_from`.
+      `effective_from`. Y los tres casos de regla directa: sin cursor con inicio hoy (genera hoy),
+      sin cursor con inicio vencido (incluye `start_date`), y nacida de un movimiento (no repite la
+      semilla).
 - [ ] 1.10 Reescribir el caminante para **posicionarse en el borde del horizonte por aritmética de
       fechas**, sin recorrer desde `start_date` (decisión 19). Medido: una regla diaria de hace tres
       años agota los 750 pasos el `2024-09-26`, **347 días antes** del horizonte, sin llegar nunca a

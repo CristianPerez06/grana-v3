@@ -522,8 +522,18 @@ Dos suposiciones que una versión anterior hacía calladas, y las dos fabrican a
 
 | Estado de la regla | `reconstruct_from` |
 |---|---|
-| Activa | `COALESCE(last_generated_date, start_date)` — el cursor es, por definición, "hasta acá ya está cubierto" |
+| Activa **con** cursor | `last_generated_date` — el cursor es, por definición, "hasta acá ya está cubierto" |
+| Activa **sin** cursor | `start_date - 1` |
 | Pausada | la **fecha de la migración** — nada anterior se reconstruye |
+
+**El `- 1` no es un truco: corrige una pérdida real.** El contrato genera ocurrencias
+*estrictamente posteriores* a `reconstruct_from`, y el motor actual dice que **sin cursor la primera
+ocurrencia cae EN `start_date`**, sin sumar intervalo (`decideRecurrenceInstance`). Con
+`COALESCE(last_generated_date, start_date)` —lo que decía una versión anterior— una regla creada
+directamente y todavía nunca materializada **perdería su primera ocurrencia**.
+
+Para esa regla, la versión de calendario lleva `effective_from = start_date`, no `start_date - 1`:
+el `- 1` es un piso de generación, no una fecha en la que el cronograma haya regido.
 
 **El contrato, con precisión, porque una versión anterior de este documento lo decía al revés y así
 dejaba el #96 sin arreglar:**
@@ -557,20 +567,26 @@ La confiabilidad depende del estado, y conviene decirlo por estado:
 | `skipped` | **exacto** | `skipRecurrenceInstance` solo toca `status` y `resolved_at`. |
 | `confirmed` | **sospechoso** | Confirmar escribe `payload.date ?? instance.scheduled_date`. |
 
-**Para las confirmadas hay una comprobación real**, y no hace falta adivinar: si la fecha **cae sobre
-el cronograma** de la regla, es plausiblemente el vencimiento; si no cae, fue pisada. Comparar la
-instancia contra la transacción no sirve —confirmar pone la misma fecha en las dos—, pero el
-cronograma sí es un testigo independiente.
+**Para las confirmadas no hay forma de demostrar cuál era el vencimiento.** Una versión anterior de
+esta decisión proponía deducirlo comprobando si la fecha "cae sobre el cronograma", y ese
+razonamiento es **inválido**: caer en el cronograma es necesario, no suficiente. Una cuota que vencía
+el **10 de agosto** y se confirmó tarde, el **10 de septiembre**, cae perfecto en un cronograma
+mensual del día 10 — y pertenece a otra ocurrencia. La comprobación sirve para sospechar de algunas
+fechas, nunca para probar que las demás son exactas. Y si la frecuencia fue editada, comparar contra
+el cronograma **actual** tampoco dice qué calendario regía cuando se creó la instancia.
 
-**Política: conservar y marcar, no abortar.** Las confirmadas fuera de cronograma quedan con
-`due_date_is_approximate = true`, y ese dato **no se presenta como vencimiento exacto** en ninguna
-pantalla. Abortar sería la política equivocada acá: esos vencimientos son *legítimamente*
-irrecuperables —no quedaron registrados en ningún lado— y abortar dejaría la migración bloqueada para
-siempre sobre datos que nadie puede reconstruir. Se distingue del caso de la decisión 18, donde la
-ambigüedad **sí** es resoluble a mano y por eso conviene frenar.
+**Política, sin inferencias:**
 
-La migración incluye `recurrence_date_on_schedule(start, count, unit, fecha)`, que reproduce el
-clamping de fin de mes del caminante, para hacer esa comprobación en SQL.
+| | `due_date` |
+|---|---|
+| `pending` y `skipped` existentes | **exacto** |
+| `confirmed` **anterior** a la migración | **aproximado**, todas sin excepción |
+| `confirmed` **posterior** a la migración | exacto por construcción: `due_date` ya no se pisa |
+
+Esas fechas se conservan como aproximación histórica **marcada** y no se presentan como vencimiento
+exacto en ninguna pantalla. No se aborta: son datos legítimamente irrecuperables, y abortar dejaría
+la migración bloqueada para siempre sobre algo que nadie puede reconstruir — a diferencia de la
+decisión 18, donde la ambigüedad **sí** se resuelve a mano.
 
 ### Decisión 18 · El backfill aborta ante ambigüedad, no adivina
 
