@@ -29,14 +29,15 @@ Del uso real salieron otros tres síntomas que **no son #96**, y que este change
 El relevamiento completo, con los quince defectos y su evidencia, está en
 `docs/qa/relevamiento-recurrencias-2026-09-03.md`.
 
-**El modelo no es el problema.** Propuesta + confirmación con base caja es más conservador que el
-auto-posteo de otras apps y es lo que hace coherente el módulo Compartido. Lo que falta son las
-válvulas de escape: poder resolver fuera de orden, poder pagar antes, y poder decir "esto ya lo
+**Se conserva el enfoque propuesta + confirmación; se reemplaza el invariante de una sola pendiente.**
+La base caja es más conservadora que el auto-posteo de otras apps y es lo que hace coherente el módulo
+Compartido: eso no se toca. Lo que se va es "una sola ocurrencia sin resolver por regla", y con él
+llegan las válvulas de escape que faltaban: resolver fuera de orden, pagar antes, y decir "esto ya lo
 cargué".
 
 ## What Changes
 
-Ocho comportamientos. Cada uno dice **qué vas a ver**, **qué vas a poder hacer** y **cómo lo
+Once comportamientos. Cada uno dice **qué vas a ver**, **qué vas a poder hacer** y **cómo lo
 comprobamos**. El ejemplo que los atraviesa: el alquiler de $450.000 que vence todos los 23, con la
 ocurrencia de junio sin revisar, mirado un 8 de septiembre.
 
@@ -286,7 +287,7 @@ negativo que sí tiene web, y el feed nativo ni siquiera dispara la generación.
 
 - **Migración**: se elimina el índice `recurrence_instances_one_pending_per_rule`; se agrega la
   identidad de ocurrencia (`due_date`) protegida en todos los estados; `scheduled_date` deja de ser
-  pisado al confirmar y se separa de la fecha de pago del movimiento.
+  pisado al confirmar y **se retira** (alias de lectura durante la transición, nunca fecha de pago).
 - `packages/money-logic/src/recurrences.ts` — `decideRecurrenceInstance` devuelve una **lista** de
   ocurrencias en vez de una decisión única; una sola definición de `max_occurrences`.
 - `packages/recurrences/src/queries.ts` — el generador camina el calendario; los reads dejan de

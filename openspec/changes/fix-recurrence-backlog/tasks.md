@@ -4,22 +4,35 @@ Cinco etapas. La 1 son cimientos y no tiene nada visible: existe porque sin ella
 duplicados. Las etapas 2-4 entregan los once comportamientos de `proposal.md`. El **#104** se
 implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independiente y no entra.
 
-## 1. Cimientos: identidad de ocurrencia y fechas separadas
+## 1. Cimientos: modelo persistente
+
+Ver "Modelo persistente" en `design.md` para el esquema completo. Todo en una transacción, en el
+orden del Migration Plan.
 
 - [ ] 1.1 Migración: agregar `recurrence_instances.due_date` (DATE NOT NULL) y poblarla derivando el
       vencimiento del cronograma de cada regla. Para instancias ya confirmadas cuyo `scheduled_date`
       fue pisado al confirmar, el vencimiento original no es recuperable: se deriva del cronograma y
       se acepta la aproximación (afecta historial, no montos).
-- [ ] 1.2 Verificar que el paso 1.1 no produce colisiones antes de agregar
-      `UNIQUE (recurrence_id, due_date)` **sin** cláusula `WHERE` — la identidad vale en todos los
-      estados, no solo en `pending`.
-- [ ] 1.3 Eliminar el índice `recurrence_instances_one_pending_per_rule`.
+- [ ] 1.2 **Política de colisiones** (decisión 18): derivar, detectar duplicados de
+      `(recurrence_id, due_date)` y, si hay alguno, **abortar la transacción** con un informe de la
+      regla, las instancias en conflicto y el `due_date` derivado. Nunca adivinar. Recién en una
+      corrida limpia, agregar `UNIQUE (recurrence_id, due_date)` **sin** cláusula `WHERE`.
+- [ ] 1.2b Crear `recurrence_schedule_versions` con una versión por regla existente
+      (`effective_from = start_date`, valores actuales): ninguna regla cambia de comportamiento.
+      `recurrences.interval_*` queda como la versión vigente para la UI y el `CHECK` de 0053.
+- [ ] 1.2c Crear `recurrence_pauses` (`paused_from`, `resumed_at` nullable) con una fila abierta por
+      cada regla hoy pausada. El `status = 'paused'` se conserva; el intervalo es lo que impide que
+      el período pausado se lea como huecos al reanudar.
+- [ ] 1.3 **NO** eliminar todavía `recurrence_instances_one_pending_per_rule`: va al final (tarea
+      2.8), con todos los reads ya aceptando colecciones. Sacarlo antes dejaría a la base acumulando
+      backlog mientras la app sigue mostrando una sola ocurrencia — invisible, y peor que hoy.
 - [ ] 1.4 `confirmRecurrenceInstance` deja de escribir `scheduled_date`. `due_date` es inmutable; la
       fecha de pago vive en `transactions.date`, la de carga en `transactions.created_at` y la de
       resolución en `resolved_at`. `scheduled_date` queda como alias de lectura de `due_date` durante
       la transición y **nunca** pasa a ser fecha de pago (una ocurrencia sin resolver no tiene pago).
-- [ ] 1.4b Agregar a `recurrence_instances` **cómo se resolvió** (`created` | `linked`), sin lo cual
-      deshacer no puede distinguir eliminar de desvincular.
+- [ ] 1.4b Agregar `resolution_kind` (`created` | `linked`) y `linked_conversion` (boolean) a
+      `recurrence_instances`. Poblar `resolution_kind = 'created'` en las confirmadas existentes:
+      hasta hoy la única forma de resolver con movimiento era creándolo.
 - [ ] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
       (`mutations.ts:446`): con resolución en bloque el resultado dependería del orden.
 - [ ] 1.5 Quitar de `confirmRecurrenceInstance` y `skipRecurrenceInstance` la escritura de
@@ -33,7 +46,15 @@ implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independie
       límite 3 ⇒ 3 ocurrencias totales, 2 materializadas, 2 proyectadas).
 - [ ] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
       saltea junio, y no mueve el cronograma.
-- [ ] 1.9 Regenerar los tipos de Supabase y actualizar `supabase/validate_schema.sql`.
+- [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
+      paralelo y queda como alias de lectura de `due_date`. Su retiro es una entrega posterior, cuando
+      no queden clientes nativos instalados que lo usen.
+- [ ] 1.10 Reescribir el caminante para **posicionarse en el borde del horizonte por aritmética de
+      fechas**, sin recorrer desde `start_date` (decisión 19). Medido: una regla diaria de hace tres
+      años agota los 750 pasos el `2024-09-26`, **347 días antes** del horizonte, sin llegar nunca a
+      hoy. Test de regresión con ese caso exacto. El cap queda como red de seguridad.
+- [ ] 1.11 Regenerar los tipos de Supabase y actualizar `supabase/validate_schema.sql` (una tabla
+      modificada, dos nuevas).
 
 ## 2. El backlog existe y se puede resolver
 
@@ -43,6 +64,9 @@ implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independie
       de escrituras; la tanda se completa en sucesivas aperturas y **la ocurrencia vigente entra
       siempre en la primera**. El horizonte limita solo la reconstrucción automática: registrar a
       mano un pago más viejo sigue siendo posible.
+- [ ] 2.1e Tanda operativa (decisión 20): **50 ocurrencias por corrida**, **un solo `insert` en
+      lote** —hoy el generador inserta de a una dentro de un `for`— y la ocurrencia vigente siempre en
+      la primera corrida. Indicar en pantalla que la reconstrucción sigue en curso mientras queden.
 - [ ] 2.1c Aviso de historial no reconstruido **en la recurrencia** ("tiene historial anterior a
       <mes> que no se reconstruyó"), no como "este mes tiene información incompleta": esos pagos
       pueden haberse cargado a mano.
@@ -67,6 +91,8 @@ implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independie
       cuenta involucrada.
 - [ ] 2.6 Copy: **"vencimientos por revisar"** — ni "pagos" (afirmaría que hubo pago) ni lenguaje de
       deuda. Actualizar `es.json` y `en.json`.
+- [ ] 2.8 **Recién acá**: eliminar `recurrence_instances_one_pending_per_rule`, con los reads del
+      paso 2.2 ya aceptando colecciones y desplegados en web y nativo.
 - [ ] 2.7 Tests: tres meses resueltos en una pasada con importes distintos y una cuenta distinta, sin
       que cambie el importe de la regla; un fallo en el tercero no deja los dos primeros guardados;
       dejar uno sin resolver no bloquea los demás.
@@ -81,9 +107,10 @@ implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independie
 - [ ] 3.3 "Ya lo cargué": vincular un movimiento existente. No crea transacción; marca el movimiento
       como **"vinculado a esta recurrencia"** —no "originado en", que existía antes—; filtra por
       moneda y tipo compatibles; excluye los ya vinculados; registra la resolución como `linked`.
-- [ ] 3.3b Vinculación en reglas **compartidas**: aceptar directo solo con reparto compatible; si no,
-      explicar la conversión a gasto compartido y pedir confirmación. Conversión + vinculación en una
-      sola operación atómica. Test: la deuda del hogar queda igual que registrando desde la
+- [ ] 3.3b Vinculación en reglas **compartidas**, tres casos: reparto compatible → directo; movimiento
+      personal → explicar la conversión, pedir confirmación y marcar `linked_conversion`; movimiento
+      con **otro hogar u otro reparto** → **excluir de los candidatos**, para no reemplazar una deuda
+      que el otro miembro ya ve. Conversión + vinculación en una sola operación atómica. Test: la deuda del hogar queda igual que registrando desde la
       recurrencia, y un fallo no deja el movimiento convertido a medias.
 - [ ] 3.4 Deshacer, **cerrando #104 en esta misma entrega**: devuelve la ocurrencia a *sin resolver*
       (nunca a omitida) y actúa según cómo se resolvió — `created` elimina el movimiento; `linked` lo

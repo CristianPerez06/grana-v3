@@ -113,10 +113,15 @@ Un movimiento vinculado SHALL rotularse como **"vinculado a esta recurrencia"** 
 en" ella: existía antes y la recurrencia no lo creó.
 
 Cuando la regla es **compartida con un hogar**, vincular NO SHALL alterar la deuda entre miembros sin
-que el usuario lo sepa. El sistema SHALL aceptar la vinculación directamente solo si el movimiento ya
-tiene un reparto compatible con el de la regla; en caso contrario SHALL explicar que el movimiento se
-va a convertir en gasto compartido con ese reparto y SHALL pedir confirmación explícita. La
-conversión y la vinculación SHALL aplicarse de forma atómica: NO SHALL quedar un movimiento
+que el usuario lo sepa:
+
+- si el movimiento ya tiene un **reparto compatible** con el de la regla, SHALL vincularse directo;
+- si el movimiento es **personal**, el sistema SHALL explicar que va a convertirse en gasto compartido
+  con el reparto de la regla y SHALL pedir confirmación explícita;
+- si el movimiento ya es compartido con **otro hogar o con otro reparto**, NO SHALL ofrecerse como
+  candidato. Reemplazar un reparto existente destruiría una deuda que el otro miembro ya ve.
+
+La conversión y la vinculación SHALL aplicarse de forma atómica: NO SHALL quedar un movimiento
 convertido a compartido sin vincular, ni una ocurrencia vinculada sin el reparto aplicado.
 
 #### Scenario: Vincular no duplica el gasto
@@ -133,6 +138,13 @@ convertido a compartido sin vincular, ni una ocurrencia vinculada sin el reparto
 - **THEN** el sistema explica que el movimiento se va a registrar como gasto compartido con ese
   reparto y pide confirmación
 - **AND** sin confirmación no se modifica ni el movimiento ni la ocurrencia
+
+#### Scenario: Un movimiento con otro reparto no se ofrece para vincular
+
+- **WHEN** el usuario busca un movimiento para vincular a una ocurrencia de una regla compartida y
+  existe uno compartido con otro hogar o con un reparto distinto
+- **THEN** ese movimiento no aparece entre los candidatos
+- **AND** ninguna deuda existente se modifica
 
 #### Scenario: La conversión a compartido y la vinculación son atómicas
 
@@ -281,6 +293,10 @@ ocurrencias—, así que la materialización SHALL hacerse por **tandas acotadas
 SHALL disparar cientos de escrituras, y la tanda SHALL completarse a lo largo de sucesivas aperturas,
 con la ocurrencia vigente siempre en la primera.
 
+Mientras queden ocurrencias por reconstruir, el sistema SHALL indicarlo. Sin ese aviso, una lista que
+crece sola entre visitas es indistinguible de un error, y el usuario no sabe si ya puede confiar en lo
+que ve.
+
 Una ocurrencia materializada por este mecanismo SHALL ser un **elemento por revisar**, no un
 movimiento: NO SHALL impactar saldos, ni el gasto del mes, ni resúmenes de tarjeta hasta que el
 usuario la resuelva.
@@ -325,6 +341,7 @@ La fecha de cada ocurrencia SHALL ser la que corresponde por cronograma, nunca l
 - **THEN** la ocurrencia vigente queda materializada
 - **AND** la pantalla no queda bloqueada esperando cientos de escrituras
 - **AND** las restantes se completan en sucesivas aperturas
+- **AND** mientras queden pendientes de reconstruir, la app lo indica en vez de aparentar que terminó
 
 #### Scenario: Cambiar la frecuencia no fabrica vencimientos anteriores
 

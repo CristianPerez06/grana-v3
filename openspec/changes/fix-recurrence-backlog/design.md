@@ -44,6 +44,8 @@ sin ella, el arreglo al #96 fabrica duplicados.
 - Ajuste de importes por índice, importes estimados, calendarios avanzados, pausa con fecha.
 - Crear movimientos históricos automáticamente, o reconstruir vencimientos anteriores al horizonte.
   Ver decisión 7.
+- **Retirar `scheduled_date`.** Se conserva escribiéndose en paralelo; su eliminación es una entrega
+  posterior, cuando ya no queden clientes nativos instalados que lo usen. Ver decisión 17.
 - El doble conteo de Compromisos (#118): independiente, ticket propio.
 
 ## Decisions
@@ -80,7 +82,7 @@ orden es naturalmente seguro en vez de serlo por convención.
 `last_generated_date` se conserva por compatibilidad de lectura durante la migración y deja de ser
 la fuente de verdad del generador.
 
-### 3. Tres fechas, tres campos
+### 3. Cuatro instantes, cuatro campos
 
 **Recomendación.** Separar explícitamente:
 
@@ -155,8 +157,10 @@ es la solución al bloqueo del #96 y queda fuera de esta entrega.
 **Recomendación.** No reconstruir automáticamente los meses cerrados: usaría los montos de hoy,
 perdería las reglas retiradas e inventaría las creadas después.
 
-Lo que sí corresponde es decirlo — *"estos meses tienen información incompleta, podés registrar los
-pagos que falten"* — y dejar que el usuario los complete con datos reales.
+Lo que sí corresponde es decirlo **en la recurrencia** — *"esta recurrencia tiene historial anterior
+a septiembre de 2025 que Grana no reconstruyó"* — y dejar que el usuario complete lo que quiera con
+datos reales. El aviso NO habla del mes: afirmar que un mes tiene información incompleta sería falso
+si el usuario cargó esos pagos a mano en su momento.
 
 Dentro del horizonte de 12 meses (decisión 5) las ocurrencias sí se materializan, y conviene ser
 explícito sobre qué son: **elementos por revisar, no movimientos**. No tocan ningún saldo ni el gasto
@@ -226,10 +230,22 @@ cuando pasa lo segundo.
 
 ### 13. Vincular a una regla compartida no puede alterar la deuda en silencio
 
-**Recomendación.** Vincular un movimiento existente a una ocurrencia de una regla **compartida** solo
-se acepta si el movimiento ya tiene un reparto compatible con el de la regla. Si no lo tiene, el
-sistema explica que va a convertirlo en gasto compartido con ese reparto y pide confirmación
-explícita.
+**Recomendación.** Tres casos, y solo dos se aceptan:
+
+| El movimiento… | Qué pasa |
+|---|---|
+| ya tiene un **reparto compatible** con el de la regla | Se vincula directo. |
+| es **personal** (sin reparto) | Se explica que va a convertirse en gasto compartido con el reparto de la regla, y se pide confirmación explícita. |
+| ya es compartido con **otro hogar u otro reparto** | **No se ofrece como candidato.** |
+
+El tercer caso se excluye en vez de convertirse: reemplazar un reparto existente destruye una deuda
+que el otro miembro ya ve, y deshacerlo exigiría persistir y restaurar un estado compartido
+arbitrario. Excluirlo cuesta un candidato menos en una lista; convertirlo cuesta un modelo de
+reversión entero para un caso que casi no ocurre. Si el usuario realmente quiere ese movimiento ahí,
+puede arreglar su reparto primero y vincularlo después.
+
+Esa restricción es la que permite que `linked_conversion` sea un booleano y no un snapshot (ver
+"Modelo persistente").
 
 La conversión y la vinculación SHALL ser una sola operación atómica: un movimiento convertido a
 compartido pero no vinculado deja la deuda del hogar movida por algo que el usuario no aprobó.
@@ -237,13 +253,6 @@ compartido pero no vinculado deja la deuda del hogar movida por algo que el usua
 **Alternativa descartada:** vincular sin tocar el reparto. Dejaría una ocurrencia compartida resuelta
 por un gasto personal, con la deuda del hogar sin reflejarla — el módulo Compartido mostraría menos
 de lo que corresponde, en silencio.
-
-### 14b. Un movimiento vinculado se rotula como vinculado, no como originado
-
-**Recomendación.** Un movimiento que existía antes de la recurrencia NO SHALL mostrarse como
-"originado en esta recurrencia": no lo originó, el usuario lo cargó por su cuenta. El rótulo correcto
-es **"vinculado a esta recurrencia"**. La distinción es la misma que gobierna deshacer (decisión 14)
-y tiene que ser visible, no solo interna.
 
 ### 14. Deshacer distingue lo que la recurrencia creó de lo que el usuario vinculó
 
@@ -269,6 +278,13 @@ dejaría la deuda del hogar movida por una operación que el usuario deshizo.
 | `created` | Elimina el movimiento. |
 | `linked`, ya era compartido (o la regla no lo es) | Conserva el movimiento y desvincula. |
 | `linked`, convertido a compartido al vincular | Conserva el movimiento, **revierte la conversión y la deuda**, y desvincula. |
+
+### 14b. Un movimiento vinculado se rotula como vinculado, no como originado
+
+**Recomendación.** Un movimiento que existía antes de la recurrencia NO SHALL mostrarse como
+"originado en esta recurrencia": no lo originó, el usuario lo cargó por su cuenta. El rótulo correcto
+es **"vinculado a esta recurrencia"**. La distinción es la misma que gobierna deshacer (decisión 14)
+y tiene que ser visible, no solo interna.
 
 ### 15. Deshacer y omitir son dos operaciones, no una
 
@@ -310,6 +326,128 @@ defecto con otra causa.
 **Alternativa descartada:** recuperar los vencimientos de la pausa. Convierte "pausar" en "diferir", y
 nadie pausa un gimnasio en enero esperando que en marzo le aparezcan las cuotas de enero y febrero.
 
+## Modelo persistente
+
+El comportamiento estaba definido y la persistencia no. Cuatro de las once reglas nuevas no se pueden
+sostener con las tablas de hoy, y dos de ellas —vigencia del calendario y pausas— **no pueden vivir
+en el frontend**: el generador las necesita para decidir qué materializar, y corre del lado del dato.
+
+### `recurrence_instances` — tres columnas nuevas
+
+| Columna | Para qué | Nota |
+|---|---|---|
+| `due_date` DATE NOT NULL | Identidad de la ocurrencia (decisión 1) | `UNIQUE (recurrence_id, due_date)`, sin `WHERE` |
+| `resolution_kind` TEXT NULL | `created` \| `linked` — qué hace deshacer (decisión 14) | NULL mientras está sin resolver; NOT NULL cuando `status` es resuelto |
+| `linked_conversion` BOOLEAN NOT NULL DEFAULT false | Si al vincular se convirtió el movimiento a compartido | Sin esto, deshacer no sabe si debe revertir la conversión (decisión 14) |
+
+`linked_conversion` es un booleano y no un snapshot del estado anterior a propósito: la decisión 13
+(revisada abajo) restringe la conversión al caso **personal → compartido con el reparto de la regla**,
+así que revertir es "volver a personal", no "restaurar un reparto arbitrario". Esa restricción es
+justamente lo que evita tener que persistir un estado compartido complejo.
+
+### `recurrence_schedule_versions` — el calendario a lo largo del tiempo
+
+Un cambio de frecuencia rige desde una fecha y no reinterpreta el pasado (decisión 10). Eso obliga a
+que la regla deje de tener **un** cronograma y pase a tener una **historia** de cronogramas:
+
+```
+recurrence_schedule_versions
+  recurrence_id    → recurrences(id) ON DELETE CASCADE
+  effective_from   DATE NOT NULL      -- desde cuándo rige esta versión
+  interval_count   INT  NOT NULL
+  interval_unit    TEXT NOT NULL
+  anchor_date      DATE NOT NULL      -- el ancla del clamping de fin de mes
+  UNIQUE (recurrence_id, effective_from)
+```
+
+El caminante resuelve, para cada fecha, la versión vigente en ese momento. La migración crea **una
+versión por regla existente**, con `effective_from = start_date` y los valores actuales: el
+comportamiento no cambia para ninguna regla de hoy.
+
+Las columnas `interval_count` / `interval_unit` / `frequency` se conservan en `recurrences` como la
+versión **vigente** —las lee la UI, y el `CHECK` de coherencia preset↔intervalo (migración 0053)
+sigue aplicando— pero dejan de ser la fuente de verdad del generador.
+
+### `recurrence_pauses` — los intervalos de pausa
+
+Un vencimiento que cae durante una pausa no existe (decisión 16). Para que el generador lo sepa,
+la pausa tiene que ser un **intervalo persistido**, no un `status` que solo dice "ahora está pausada":
+
+```
+recurrence_pauses
+  recurrence_id  → recurrences(id) ON DELETE CASCADE
+  paused_from    DATE NOT NULL
+  resumed_at     DATE NULL           -- NULL = pausa abierta
+```
+
+`recurrences.status = 'paused'` se conserva para la UI y para el filtro del generador; el intervalo es
+lo que impide que el período pausado se lea como huecos al reanudar. La migración crea una fila
+abierta para cada regla hoy pausada, con `paused_from` desconocido — se usa la fecha de la migración,
+y se acepta: son pocas reglas y el efecto es que su período pausado previo no se descarta, que es el
+comportamiento actual.
+
+### Decisión 17 · Retirar `scheduled_date` es gradual, no parte de esta entrega
+
+`scheduled_date` no se puede borrar en esta migración: **hay clientes nativos instalados** que siguen
+leyéndolo y escribiéndolo, y una app móvil no se actualiza cuando se aplica una migración. La
+secuencia segura, y lo que entra en cada tramo:
+
+| Paso | Qué | ¿En esta entrega? |
+|---|---|---|
+| 1 | Agregar y poblar `due_date` | **Sí** |
+| 2 | Mantener `scheduled_date` escribiéndose en paralelo | **Sí** |
+| 3 | Desplegar web y nativo leyendo y escribiendo el modelo nuevo | **Sí** |
+| 4 | Quitar `recurrence_instances_one_pending_per_rule` una vez que **todos** los reads aceptan colecciones | **Sí**, al final |
+| 5 | Retirar `scheduled_date` | **No** — entrega posterior |
+
+El paso 4 va al final y no al principio: sacar el índice antes de que los reads acepten colecciones
+haría que la base permita el backlog mientras la app sigue mostrando una sola ocurrencia — el atraso
+existiría y sería invisible, que es peor que el bug actual.
+
+### Decisión 18 · El backfill aborta ante ambigüedad, no adivina
+
+"Verificar que no haya colisiones" no es una política. Al derivar `due_date` de instancias cuyo
+`scheduled_date` fue pisado al confirmar (D14), dos instancias de la misma regla **pueden** caer en el
+mismo vencimiento.
+
+La migración SHALL: derivar, **detectar** las colisiones, y si hay alguna **abortar la transacción
+entera** emitiendo un informe con `recurrence_id`, las instancias en conflicto y el `due_date`
+derivado. El `UNIQUE` se crea recién en una corrida sin colisiones.
+
+Resolverlas es una decisión caso por caso —cuál instancia corresponde a qué vencimiento— y no algo
+que una regla automática pueda acertar. Abortar es barato; un `due_date` mal asignado es un
+movimiento atribuido al mes equivocado, y se descubre meses después.
+
+### Decisión 19 · El caminante no puede seguir recorriendo desde el origen
+
+`MAX_WALK_STEPS = 750` acota el paseo desde `start_date`. Con el horizonte de 12 meses eso deja de
+alcanzar, y se puede medir: una regla **diaria** que arrancó hace tres años agota los 750 pasos el
+`2024-09-26` — **347 días antes** del horizonte, y sin haber llegado nunca a hoy. El generador no
+vería ni la ocurrencia vigente.
+
+El algoritmo nuevo SHALL **posicionarse en el borde del horizonte sin caminar la historia**:
+
+- para `day` y `week`, la posición se calcula por aritmética de fechas (cuántos intervalos entran
+  entre el ancla y el borde);
+- para `month` y `year`, por aritmética de meses, aplicando el clamping desde el ancla como hoy.
+
+Recién desde ahí camina, y entonces el cap acota **la ventana**, no la vida de la regla. El cap se
+conserva como red de seguridad.
+
+### Decisión 20 · La tanda tiene un tamaño, se inserta en lote, y se ve que no terminó
+
+Tres cosas concretas que "por tandas" no define:
+
+- **Tamaño**: 50 ocurrencias por corrida. Cubre de un saque cualquier atraso mensual o semanal
+  plausible, y parte el caso diario en ~8 corridas.
+- **Inserción en lote**: un solo `insert` con todas las filas de la tanda, no una por ocurrencia. Hoy
+  el generador inserta de a una dentro de un `for`; con 50 filas eso son 50 roundtrips.
+- **La ocurrencia vigente entra en la primera corrida**, siempre. Si la tanda se llenara con las más
+  viejas, la de este mes quedaría afuera — el #96 otra vez, con otro número.
+- **Progreso visible**: mientras queden ocurrencias por reconstruir, la app SHALL decirlo
+  ("reconstruyendo el historial de esta recurrencia"). Sin eso, un atraso grande se ve como una lista
+  que crece sola entre visitas, indistinguible de un error.
+
 ## Risks / Trade-offs
 
 - **La app se va a ver más cargada.** Reglas hoy trabadas van a mostrar varios vencimientos. Es el
@@ -326,26 +464,37 @@ nadie pausa un gimnasio en enero esperando que en marzo le aparezcan las cuotas 
 
 ## Migration Plan
 
+En una transacción, en este orden:
+
 1. Agregar `due_date` y poblarlo derivándolo del cronograma de cada regla.
-2. Agregar `UNIQUE (recurrence_id, due_date)` una vez poblado y verificado sin colisiones.
-3. Eliminar `recurrence_instances_one_pending_per_rule`.
-4. Dejar de escribir `last_generated_date` desde confirmar y omitir; conservar la columna durante la
+2. **Detectar colisiones** de `due_date` derivado (decisión 18). Si hay alguna, **abortar** emitiendo
+   el informe; el resto de la migración no corre.
+3. Agregar `UNIQUE (recurrence_id, due_date)`, sin cláusula `WHERE`.
+4. Agregar `resolution_kind` y `linked_conversion` a `recurrence_instances`. Poblar
+   `resolution_kind = 'created'` en las instancias ya confirmadas: hasta hoy la única forma de
+   resolver con movimiento era creándolo.
+5. Crear `recurrence_schedule_versions` con una versión por regla (`effective_from = start_date`, los
+   valores actuales). Ninguna regla cambia de comportamiento.
+6. Crear `recurrence_pauses` con una fila abierta por cada regla hoy pausada.
+7. Dejar de escribir `last_generated_date` desde confirmar y omitir; conservar la columna durante la
    transición.
+8. **Al final**, y solo una vez desplegados los reads que aceptan colecciones: eliminar
+   `recurrence_instances_one_pending_per_rule` (decisión 17, paso 4).
 
-Supabase es online-only: se aplica desde el SQL Editor y se regeneran los tipos. La migración corre
-en una transacción.
+`scheduled_date` **no** se toca en esta migración (decisión 17). Se sigue escribiendo en paralelo.
 
-## Open Questions
+Supabase es online-only: se aplica desde el SQL Editor y se regeneran los tipos. El "hoy" de
+cualquier cálculo va con `(now() at time zone 'America/Argentina/Buenos_Aires')::date` —
+`current_date` a secas está prohibido.
+
+
+## Decisiones de producto cerradas
 
 Decisiones de **producto** que siguen abiertas. Ninguna bloquea empezar por los cimientos.
 
-No queda ninguna. La última —qué pasa durante una pausa— se cerró en la revisión funcional y está
-en la decisión 16, porque afecta al modelo que se está diseñando y no podía esperar a la migración.
-
-### Cerradas durante la revisión funcional
-
-Cuatro preguntas que una versión anterior listaba como abiertas ya estaban decididas en el spec o en
-las tareas, lo que dejaba al implementador sin saber qué regía. Quedan cerradas acá:
+No queda ninguna abierta. Estas cuatro estuvieron listadas como preguntas mientras ya estaban
+decididas en el spec o en las tareas —lo que dejaba al implementador sin saber qué regía—, así que
+quedan cerradas acá con su respuesta:
 
 - **Horizonte hacia atrás** → 12 meses (decisión 5). Antes de eso, período señalado como incompleto.
 - **¿La primera carga cuenta como pago?** → **Sí.** "12 pagos en total" incluye el movimiento que
