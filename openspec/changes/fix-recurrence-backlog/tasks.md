@@ -86,10 +86,19 @@ que habilita el backlog.
       sin cursor con inicio vencido (incluye `start_date`), y nacida de un movimiento (no repite la
       semilla). Y el de identidad: regla mensual del día 10 con agosto confirmado el 10/09 — el
       vencimiento exacto del 10/09 se materializa igual.
-- [ ] 1.10 Reescribir el caminante para **posicionarse en el borde del horizonte por aritmética de
+- [x] 1.10 Reescribir el caminante para **posicionarse en el borde del horizonte por aritmética de
       fechas**, sin recorrer desde `start_date` (decisión 19). Medido: una regla diaria de hace tres
       años agota los 750 pasos el `2024-09-26`, **347 días antes** del horizonte, sin llegar nunca a
       hoy. Test de regresión con ese caso exacto. El cap queda como red de seguridad.
+      `occurrenceAt(schedule, n)` es forma cerrada y equivale a caminar porque el clamping se ancla
+      en `start_date` y no acumula deriva; `occurrenceIndexAt` estima la posición y corrige en un
+      paso acotado.
+- [ ] 1.10b **A decidir antes del generador:** el caminante ancla las ocurrencias en `start_date`,
+      mientras `decideRecurrenceInstance` hace hoy `addInterval(cursor, …)`. Coinciden mientras el
+      cursor caiga sobre el cronograma —el caso normal—, y divergen por unos días cuando no.
+      Anclar en el calendario es lo correcto (no depende de cuándo se resolvió la última ocurrencia),
+      pero hay que confirmar que ninguna regla de producción tenga hoy el cursor fuera de cronograma
+      antes de cambiar la semántica. Documentado en `walk-positioning.test.ts`.
 - [ ] 1.11 Regenerar los tipos de Supabase y actualizar `supabase/validate_schema.sql` (una tabla
       modificada, dos nuevas).
 
@@ -192,4 +201,8 @@ que habilita el backlog.
 - [ ] 5.2 Archivar el change y aplicar los deltas al spec maestro de `transactions`
       (`RENAMED` + `MODIFIED` + `ADDED`), sin dejar secciones delta en el maestro.
 - [ ] 5.3 `pnpm openspec:check` en verde.
-- [ ] 5.4 Cerrar **#96** y **#104** con esta entrega. **#118** queda abierto: es independiente.
+- [ ] 5.4 Dejar anotado para la **migración C** (fuera de esta entrega): al retirar `scheduled_date`,
+      **no** eliminar `trg_recurrence_instance_compat` entero. Contiene la inmutabilidad de
+      `due_date`, que es permanente; borrarlo reabre el agujero. Quitar solo las ramas de
+      compatibilidad, o reemplazarlo por un guard con nombre propio.
+- [ ] 5.5 Cerrar **#96** y **#104** con esta entrega. **#118** queda abierto: es independiente.

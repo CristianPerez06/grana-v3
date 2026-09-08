@@ -492,6 +492,21 @@ commit;
 --   · NO elimina `recurrence_instances_one_pending_per_rule`  → activación
 --   · NO toca `scheduled_date` ni `last_generated_date`       → migración C
 --
+-- ⚠️  AVISO PARA LA MIGRACIÓN C
+--
+-- El trigger `trg_recurrence_instance_compat` NO se puede eliminar entero al
+-- retirar `scheduled_date`. Su nombre engaña: además de la compatibilidad
+-- temporal con clientes viejos, contiene una regla PERMANENTE de negocio — la
+-- inmutabilidad de `due_date`. Borrarlo completo reabriría el agujero de poder
+-- mover o borrar una identidad exacta por UPDATE, que es justamente el bloqueo
+-- que este change elimina.
+--
+-- Al retirar `scheduled_date`, hacer UNA de estas dos:
+--   a) quitar solo las ramas de compatibilidad (la derivación de `due_date` en
+--      INSERT y el relleno de `resolution_kind`), conservando el guard; o
+--   b) reemplazarlo por un trigger de guard permanente, con un nombre que diga
+--      lo que hace.
+--
 -- Las constraints de `resolution_kind` SÍ entran acá (paso 8): el trigger de
 -- compatibilidad las satisface para los clientes viejos.
 --

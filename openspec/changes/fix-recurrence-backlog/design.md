@@ -467,7 +467,7 @@ Son dos migraciones, con un despliegue en el medio:
 | **A · Expansión** | `00XX_recurrence_identity_expand.sql` | Columnas, tablas nuevas, backfill, trigger de compatibilidad | **Sin cambios.** El índice de pendiente única sigue vivo. |
 | — | *(despliegue de web y nativo con el modelo nuevo)* | | |
 | **B · Activación** | `00XY_recurrence_backlog_activate.sql` | Elimina el índice de pendiente única | El backlog empieza a existir. |
-| **C · Retiro** | entrega posterior | Retira `scheduled_date` y el trigger | — |
+| **C · Retiro** | entrega posterior | Retira `scheduled_date` y las **ramas de compatibilidad** del trigger | — |
 
 **"Nativo desplegado" no significa "todos actualizaron".** Una app instalada no se actualiza porque
 apliquemos una migración, y los clientes viejos dependen de `last_generated_date` y de una pendiente
@@ -724,8 +724,20 @@ Las constraints de `resolution_kind` ya entraron en la expansión, después del 
 
 ### C · Retiro — entrega posterior
 
-Retirar `scheduled_date`, `last_generated_date` y el trigger de compatibilidad, cuando ya no queden
-clientes nativos instalados que los usen.
+Retirar `scheduled_date` y `last_generated_date` cuando ya no queden clientes nativos instalados que
+los usen.
+
+**El trigger NO se elimina entero, y conviene dejarlo escrito antes de que alguien lo intente.** Su
+nombre —`trg_recurrence_instance_compat`— engaña: además de la compatibilidad temporal, contiene una
+regla **permanente** de negocio, la inmutabilidad de `due_date` (decisión 23). Borrarlo completo
+reabriría exactamente el agujero que ese guard cierra: mover o borrar una identidad exacta por
+`UPDATE`, y con ello volver a permitir que una ocurrencia ya resuelta se materialice de nuevo.
+
+Al retirar `scheduled_date`, una de dos:
+
+- quitar **solo** las ramas de compatibilidad —la derivación de `due_date` en `INSERT` y el relleno
+  de `resolution_kind`—, conservando el guard; o
+- reemplazarlo por un trigger de guard permanente, con un nombre que diga lo que hace.
 
 Supabase es online-only: se aplica desde el SQL Editor y se regeneran los tipos. El "hoy" de
 cualquier cálculo va con `(now() at time zone 'America/Argentina/Buenos_Aires')::date` —

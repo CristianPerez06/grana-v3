@@ -195,7 +195,9 @@ export type ProjectedOccurrence = {
   scheduled_date: string
 }
 
-// Safety cap: at most ~750 steps (e.g. >2 years of daily) before bailing.
+// Safety net, no longer the thing that decides how far a rule can reach: the
+// walker positions itself at the window's edge by arithmetic, so this bounds the
+// steps taken INSIDE the window, not the life of the rule. See occurrenceIndexAt.
 const MAX_WALK_STEPS = 750
 
 export type OccurrenceWindow = {
@@ -218,38 +220,104 @@ export type OccurrenceWindow = {
   limit?: number
 }
 
+// The n-th occurrence of a schedule, counting start_date as n = 0.
+//
+// Closed form, NOT n steps: `addInterval` anchors month/year clamping to
+// start_date, so stepping k times by `count` months and jumping `k * count`
+// months in one go give the same date — the clamping never accumulates drift.
+// That equivalence is what lets the walker skip ahead instead of crawling.
+export function occurrenceAt(schedule: OccurrenceSchedule, n: number): string {
+  const { interval_unit: unit, interval_count: count, start_date: start } = schedule
+  if (n <= 0) return start
+  if (unit === 'day') return addDays(start, n * count)
+  if (unit === 'week') return addDays(start, n * count * 7)
+  if (unit === 'month') return addMonthsClamped(start, n * count, { anchorDate: start })
+  return addMonthsClamped(start, n * count * 12, { anchorDate: start })
+}
+
+// Smallest n such that occurrenceAt(n) satisfies `predicate` against `date` —
+// the position of the window's edge, found by arithmetic instead of by walking.
+//
+// This is the fix for the 750-step ceiling: a daily rule started three years ago
+// used to exhaust the cap ~347 days BEFORE a 12-month horizon, so the generator
+// never even reached today's occurrence. Now the walk starts at the edge.
+//
+// The estimate is exact for day/week and off by at most one step for
+// month/year (end-of-month clamping), so a bounded correction closes it.
+function occurrenceIndexAt(
+  schedule: OccurrenceSchedule,
+  date: string,
+  mode: 'on-or-after' | 'strictly-after',
+): number {
+  const { interval_unit: unit, interval_count: count, start_date: start } = schedule
+  const satisfies = (candidate: string) =>
+    mode === 'on-or-after' ? candidate >= date : candidate > date
+
+  let n: number
+  if (unit === 'day' || unit === 'week') {
+    const step = unit === 'day' ? count : count * 7
+    n = Math.floor(daysBetween(start, date) / step)
+  } else {
+    const monthsPerStep = unit === 'month' ? count : count * 12
+    const [sy, sm] = start.split('-').map(Number)
+    const [dy, dm] = date.split('-').map(Number)
+    n = Math.floor(((dy - sy) * 12 + (dm - sm)) / monthsPerStep)
+  }
+  if (n < 0) n = 0
+
+  // Walk back while the estimate overshot, then forward until it satisfies.
+  // Both loops are bounded: the estimate is never more than a couple of steps off.
+  while (n > 0 && satisfies(occurrenceAt(schedule, n - 1))) n -= 1
+  while (!satisfies(occurrenceAt(schedule, n))) {
+    n += 1
+    if (n > MAX_WALK_STEPS) break
+  }
+  return n
+}
+
 // THE calendar walker. Every question about when a rule fires — the next
 // expected occurrence, the ones inside a window, the generator's own decision —
 // resolves through this single function, so the answers cannot diverge.
 //
-// Walks from start_date forward, stepping by the rule's interval anchored to
-// start_date (so end-of-month clamping restores the original day: 31-jan →
-// 28-feb → 31-mar). Honors end_date and max_occurrences, where max_occurrences
-// counts occurrences from start_date, not emitted ones.
+// Steps by the rule's interval anchored to start_date (so end-of-month clamping
+// restores the original day: 31-jan → 28-feb → 31-mar). Honors end_date and
+// max_occurrences, where max_occurrences counts occurrences from start_date, not
+// emitted ones.
+//
+// It does NOT crawl from start_date: it jumps to the first occurrence that could
+// be emitted and walks from there, so a rule that started years ago costs the
+// same as one that started last month.
 export function walkOccurrences(
   schedule: OccurrenceSchedule,
   window: OccurrenceWindow,
 ): string[] {
   const { from, to = null, cursor = null, limit } = window
   const out: string[] = []
-  let current = schedule.start_date
 
-  // `produced` counts occurrences stepped past — the max_occurrences gate.
-  for (let produced = 0; produced < MAX_WALK_STEPS; produced++) {
+  // Position at the window's edge: the first occurrence that is both >= `from`
+  // and strictly after the cursor. `produced` keeps counting from start_date,
+  // because that is what max_occurrences means.
+  let produced = occurrenceIndexAt(schedule, from, 'on-or-after')
+  if (cursor != null) {
+    produced = Math.max(produced, occurrenceIndexAt(schedule, cursor, 'strictly-after'))
+  }
+
+  let current = occurrenceAt(schedule, produced)
+
+  for (let steps = 0; steps < MAX_WALK_STEPS; steps++) {
     if (schedule.max_occurrences != null && produced >= schedule.max_occurrences) break
     if (to != null && current > to) break
     if (schedule.end_date != null && current > schedule.end_date) break
 
-    const inWindow = current >= from
-    const afterCursor = cursor == null || current > cursor
-    if (inWindow && afterCursor) {
+    // Positioning already guaranteed both conditions; they stay as an assertion
+    // of the contract for callers that pass an edge case we did not foresee.
+    if (current >= from && (cursor == null || current > cursor)) {
       out.push(current)
       if (limit != null && out.length >= limit) break
     }
 
-    current = addInterval(current, schedule.interval_unit, schedule.interval_count, {
-      anchorDate: schedule.start_date,
-    })
+    produced += 1
+    current = occurrenceAt(schedule, produced)
   }
 
   return out
