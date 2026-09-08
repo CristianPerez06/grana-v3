@@ -1,7 +1,8 @@
 # Tasks: fix-recurrence-backlog
 
-Cuatro etapas. La 1 son cimientos y no tiene nada visible: existe porque sin ella la 2 fabrica
-duplicados. Las etapas 2-4 entregan los ocho comportamientos de `proposal.md`.
+Cinco etapas. La 1 son cimientos y no tiene nada visible: existe porque sin ella la 2 fabrica
+duplicados. Las etapas 2-4 entregan los diez comportamientos de `proposal.md`. El **#104** se
+implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independiente y no entra.
 
 ## 1. Cimientos: identidad de ocurrencia y fechas separadas
 
@@ -13,8 +14,14 @@ duplicados. Las etapas 2-4 entregan los ocho comportamientos de `proposal.md`.
       `UNIQUE (recurrence_id, due_date)` **sin** cláusula `WHERE` — la identidad vale en todos los
       estados, no solo en `pending`.
 - [ ] 1.3 Eliminar el índice `recurrence_instances_one_pending_per_rule`.
-- [ ] 1.4 `confirmRecurrenceInstance` deja de escribir `scheduled_date` con la fecha elegida:
-      `due_date` es inmutable y `scheduled_date` pasa a ser la fecha del movimiento.
+- [ ] 1.4 `confirmRecurrenceInstance` deja de escribir `scheduled_date`. `due_date` es inmutable; la
+      fecha de pago vive en `transactions.date`, la de carga en `transactions.created_at` y la de
+      resolución en `resolved_at`. `scheduled_date` queda como alias de lectura de `due_date` durante
+      la transición y **nunca** pasa a ser fecha de pago (una ocurrencia sin resolver no tiene pago).
+- [ ] 1.4b Agregar a `recurrence_instances` **cómo se resolvió** (`created` | `linked`), sin lo cual
+      deshacer no puede distinguir eliminar de desvincular.
+- [ ] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
+      (`mutations.ts:446`): con resolución en bloque el resultado dependería del orden.
 - [ ] 1.5 Quitar de `confirmRecurrenceInstance` y `skipRecurrenceInstance` la escritura de
       `last_generated_date` (`mutations.ts:443` y `:500`). Conservar la columna durante la
       transición; deja de ser fuente de verdad del generador.
@@ -30,9 +37,13 @@ duplicados. Las etapas 2-4 entregan los ocho comportamientos de `proposal.md`.
 
 ## 2. El backlog existe y se puede resolver
 
-- [ ] 2.1 `generateDueRecurrenceInstances` materializa todas las ocurrencias vencidas, en orden de
-      calendario, con tanda si el atraso es grande — **garantizando que la ocurrencia vigente entra
-      en la primera tanda**.
+- [ ] 2.1 `generateDueRecurrenceInstances` materializa las ocurrencias vencidas dentro del horizonte
+      de **12 meses**, en orden de calendario, con tanda si el atraso es grande — **garantizando que
+      la ocurrencia vigente entra en la primera tanda**. Más allá del horizonte no materializa y el
+      período queda señalado como incompleto.
+- [ ] 2.1b Vigencia de los cambios de cronograma: editar frecuencia/intervalo/día no reinterpreta
+      ocurrencias anteriores a la fecha de vigencia. Test: una regla mensual con historial editada a
+      quincenal no fabrica vencimientos viejos.
 - [ ] 2.2 Adaptar los reads que asumen una pendiente por regla:
       `getPendingInstancesByRecurrenceId` (hoy `Map<string, RecurrenceInstance>`) y
       `RecurrenceSummary.pending_instance` (hoy singular) pasan a colección.
@@ -40,11 +51,16 @@ duplicados. Las etapas 2-4 entregan los ocho comportamientos de `proposal.md`.
       grupo es largo, sin que ninguna ocurrencia deje de ser accesible.
 - [ ] 2.4 Acción "Ponerse al día": resolución en bloque con fila por ocurrencia, cada una con fecha,
       importe y cuenta editables, y las cuatro salidas (registrar · vincular · no corresponde ·
-      dejar sin resolver).
+      dejar sin resolver). **Atómica**: orquestador con rollback en `@grana/transactions-mutations`,
+      como el alta de cuotas.
+- [ ] 2.4b Acción separada "Usar este importe de acá en más", aplicada una sola vez y tomando el
+      importe de la ocurrencia más reciente del grupo.
 - [ ] 2.5 Resumen previo a aplicar: movimientos que se van a crear y efecto sobre el saldo de cada
       cuenta involucrada.
-- [ ] 2.6 Copy: "pagos por revisar", nunca lenguaje de deuda. Actualizar `es.json` y `en.json`.
-- [ ] 2.7 Tests: tres meses resueltos en una pasada con importes distintos y una cuenta distinta;
+- [ ] 2.6 Copy: **"vencimientos por revisar"** — ni "pagos" (afirmaría que hubo pago) ni lenguaje de
+      deuda. Actualizar `es.json` y `en.json`.
+- [ ] 2.7 Tests: tres meses resueltos en una pasada con importes distintos y una cuenta distinta, sin
+      que cambie el importe de la regla; un fallo en el tercero no deja los dos primeros guardados;
       dejar uno sin resolver no bloquea los demás.
 
 ## 3. Pago anticipado, vinculación y deshacer
@@ -55,12 +71,20 @@ duplicados. Las etapas 2-4 entregan los ocho comportamientos de `proposal.md`.
 - [ ] 3.2 Verificar que el pago anticipado no desplaza el cronograma — test de tres meses seguidos
       pagados unos días antes, con el vencimiento sin moverse.
 - [ ] 3.3 "Ya lo cargué": vincular un movimiento existente. No crea transacción; marca el movimiento
-      como originado en la regla; filtra por moneda y tipo compatibles; excluye los ya vinculados.
-- [ ] 3.4 Deshacer un pago: borra el movimiento y devuelve la ocurrencia a **sin resolver**, distinto
-      de omitir. Coordinar con **#104** — con `one_pending_per_rule` eliminado desaparece la
-      restricción que obligaba a marcarlo `skipped`.
+      como originado en la regla; filtra por moneda y tipo compatibles; excluye los ya vinculados;
+      registra la resolución como `linked`.
+- [ ] 3.3b Vinculación en reglas **compartidas**: aceptar directo solo con reparto compatible; si no,
+      explicar la conversión a gasto compartido y pedir confirmación. Conversión + vinculación en una
+      sola operación atómica. Test: la deuda del hogar queda igual que registrando desde la
+      recurrencia, y un fallo no deja el movimiento convertido a medias.
+- [ ] 3.4 Deshacer, **cerrando #104 en esta misma entrega**: devuelve la ocurrencia a *sin resolver*
+      (nunca a omitida) y actúa según cómo se resolvió — `created` elimina el movimiento, `linked` lo
+      conserva y solo desvincula. Con `one_pending_per_rule` eliminado desaparece la restricción que
+      obligaba a marcarlo `skipped`.
 - [ ] 3.5 Historial de la regla: mostrar vencimiento, fecha de pago y fecha de carga por separado.
-- [ ] 3.6 Tests: vincular no cambia el total del mes; deshacer deja la ocurrencia resoluble de nuevo.
+- [ ] 3.6 Tests: vincular no cambia el total del mes; deshacer un `created` elimina el movimiento;
+      deshacer un `linked` lo conserva y el total del mes no cambia; en ambos casos la ocurrencia
+      queda resoluble de nuevo.
 
 ## 4. Visibilidad y paridad
 
@@ -71,10 +95,14 @@ duplicados. Las etapas 2-4 entregan los ocho comportamientos de `proposal.md`.
       contrario: se pliega con 2 o más).
 - [ ] 4.5 Cada fila explicita qué va a pasar al resolverla: qué movimiento, con qué fecha, en qué
       cuenta.
+- [ ] 4.5b Un fallo de materialización se muestra con opción de reintentar, distinguible de "no hay
+      vencimientos por revisar". Reemplaza los `catch` vacíos de los disparadores actuales.
+- [ ] 4.5c Señalar los períodos anteriores al horizonte como de información incompleta, con la vía
+      para completarlos a mano.
 - [ ] 4.6 Paridad nativa del formulario de resolución: importe, fecha y cuenta editables, más la
       advertencia de saldo negativo que hoy solo existe en web.
 - [ ] 4.7 Sellar las ocurrencias de reglas pausadas, en vez de mostrarlas sin distinción.
-- [ ] 4.8 Recorrer los ocho comportamientos de `proposal.md` en web y en nativo antes de cerrar.
+- [ ] 4.8 Recorrer los diez comportamientos de `proposal.md` en web y en nativo antes de cerrar.
 
 ## 5. Cierre
 
@@ -82,3 +110,4 @@ duplicados. Las etapas 2-4 entregan los ocho comportamientos de `proposal.md`.
 - [ ] 5.2 Archivar el change y aplicar los deltas al spec maestro de `transactions`
       (`RENAMED` + `MODIFIED` + `ADDED`), sin dejar secciones delta en el maestro.
 - [ ] 5.3 `pnpm openspec:check` en verde.
+- [ ] 5.4 Cerrar **#96** y **#104** con esta entrega. **#118** queda abierto: es independiente.

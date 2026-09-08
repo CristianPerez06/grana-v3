@@ -58,8 +58,12 @@ la ocurrencia queda desprotegida. La restricción tiene que valer en **todos** l
 
 **Recomendación concreta:** una columna `due_date` que guarda el vencimiento **derivado del
 calendario** —nunca lo que el usuario elija al pagar— con `UNIQUE (recurrence_id, due_date)` sin
-cláusula `WHERE`. `scheduled_date` deja de ser identidad y pasa a ser lo que siempre debió ser: la
-fecha del movimiento.
+cláusula `WHERE`.
+
+`scheduled_date` **se retira**. Una versión anterior de este documento decía que "pasa a ser la fecha
+del movimiento", y eso no cierra: una ocurrencia sin resolver todavía no tiene pago, así que no puede
+tener fecha de pago. Durante la transición queda como alias de lectura de `due_date` y después se
+elimina; en ningún momento se convierte en fecha de pago.
 
 ### 2. El avance de la generación se separa de la resolución de un pago
 
@@ -78,14 +82,16 @@ la fuente de verdad del generador.
 
 **Recomendación.** Separar explícitamente:
 
-| Dato | Qué es | Quién lo fija |
+| Dato | Dónde vive | Quién lo fija |
 |---|---|---|
-| **Vencimiento** (`due_date`) | Cuándo tocaba | El calendario de la regla. Inmutable. |
-| **Fecha de pago** | Cuándo salió la plata | El usuario. Es la fecha del movimiento. |
-| **Fecha de carga** | Cuándo se registró en la app | El sistema (`resolved_at`). |
+| **Vencimiento** | `recurrence_instances.due_date` | El calendario de la regla. Inmutable. |
+| **Fecha de pago** | `transactions.date` | El usuario. |
+| **Fecha de carga** | `transactions.created_at` | El sistema. |
+| **Fecha de resolución** | `recurrence_instances.resolved_at` | El sistema, al registrar o vincular. |
 
-Sin esto no hay identidad estable (decisión 1) ni historial que pueda contestar "¿qué vencimiento
-pagué el 3 de septiembre?".
+Son **cuatro**, no tres, y ninguno se deriva de otro. Una ocurrencia sin resolver tiene únicamente
+vencimiento: los otros tres nacen al resolverla. Sin esta separación no hay identidad estable
+(decisión 1) ni historial que pueda contestar "¿qué vencimiento pagué el 3 de septiembre?".
 
 ### 4. Pagar antes no mueve el calendario
 
@@ -112,6 +118,14 @@ pero no como comportamiento por defecto y no en esta entrega.
 dejaría sin materializar la de este mes — que es exactamente el #96 otra vez, con otro número. Si hay
 tanda, se ordena de modo que lo vigente nunca quede afuera.
 
+**El horizonte, en cambio, sí es un límite del modelo y hay que fijarlo.** Una versión anterior de
+este documento dejaba el spec pidiendo "todas las ocurrencias vencidas" mientras la decisión 7 decía
+que el pasado no se reconstruye: las dos reglas no se pueden cumplir a la vez.
+
+**Recomendación: 12 meses hacia atrás desde hoy.** Cubre cualquier atraso plausible de una regla en
+uso y evita materializar cientos de ocurrencias de reglas abandonadas hace años. Lo anterior no se
+materializa y se señala como período con información incompleta (decisión 7).
+
 ### 6. Un débito programado no prueba que el débito ocurrió
 
 **Recomendación.** No auto-confirmar. Un débito automático se rechaza por falta de fondos, cambia de
@@ -130,6 +144,11 @@ perdería las reglas retiradas e inventaría las creadas después.
 Lo que sí corresponde es decirlo — *"estos meses tienen información incompleta, podés registrar los
 pagos que falten"* — y dejar que el usuario los complete con datos reales.
 
+Dentro del horizonte de 12 meses (decisión 5) las ocurrencias sí se materializan, y conviene ser
+explícito sobre qué son: **elementos por revisar, no movimientos**. No tocan ningún saldo ni el gasto
+del mes hasta que el usuario las resuelva. Más allá del horizonte no se materializa nada y el período
+queda señalado.
+
 **Precisión contable que conviene no perder:** crear una instancia pendiente **no mueve ningún
 saldo**. El saldo se mueve al crear un movimiento confirmado. Lo que una pendiente sí cambia es la
 vista de compromisos, y para meses cerrados el cambio es real, porque bajo el lente `snapshot` el
@@ -146,7 +165,78 @@ total cuenta las instancias materializadas `pending` **y** `confirmed`.
   se materialicen sin depender de qué miembro entró. `pg_cron` es *una* arquitectura posible, no un
   requisito; la elección es del change que lo traiga.
 
-### 9. Deshacer y omitir son dos operaciones, no una
+### 9. Corregir un importe afecta un vencimiento, no la regla
+
+**Recomendación.** El importe que el usuario ajusta al resolver vale **solo para ese vencimiento**.
+
+Hoy no es así: `confirmRecurrenceInstance` propaga el importe corregido a la regla
+(`mutations.ts:446`). Con una sola pendiente por vez eso pasaba por conveniente; con resolución en
+bloque es directamente incorrecto — resolver junio, julio y agosto con importes distintos dejaría la
+regla con el que se guardó último, un resultado que **depende del orden de ejecución**.
+
+Actualizar la regla pasa a ser una acción explícita y aparte —"Usar este importe de acá en más"—,
+aplicada **una sola vez** y tomando el importe del vencimiento más reciente del grupo, no el del
+último que se procesó.
+
+### 10. Un cambio de calendario rige desde una fecha y no reinterpreta el pasado
+
+**Recomendación.** Editar la frecuencia, el intervalo o el día de una regla SHALL tener una fecha de
+vigencia, y las ocurrencias anteriores a esa fecha se leen con el calendario que regía entonces.
+
+**Por qué importa ahora y antes no:** el generador nuevo deriva lo que falta comparando el cronograma
+de la regla contra los vencimientos ya existentes. Si la frecuencia cambió, el cronograma actual
+proyectado hacia atrás no coincide con el historial, y el generador leería esa diferencia como huecos
+— fabricando vencimientos que nunca correspondieron. Con el invariante viejo el problema no existía
+porque el generador nunca miraba hacia atrás.
+
+**Alternativa descartada:** recalcular todo el historial con el calendario nuevo. Reescribe el pasado
+y rompe la identidad de ocurrencias ya resueltas.
+
+### 11. La resolución en bloque es atómica
+
+**Recomendación.** Todo o nada. Un grupo a medio aplicar deja al usuario sin saber qué se guardó, con
+movimientos creados y vencimientos sin resolver mezclados, y sin forma de repetir la operación sin
+duplicar.
+
+Es además coherente con cómo el repo ya trata las operaciones compuestas (alta de cuotas, compra con
+tarjeta): orquestador con rollback en `@grana/transactions-mutations`.
+
+### 12. Un fallo de materialización se muestra, no se descarta
+
+**Recomendación.** Hoy el error se traga con un `catch` vacío y la pantalla queda idéntica a "no
+tenés nada por revisar". Un fallo de lectura o de generación SHALL distinguirse de la ausencia de
+vencimientos, con un aviso y la posibilidad de reintentar.
+
+No es cosmético: es la diferencia entre "estás al día" y "no sabemos", y hoy la app dice lo primero
+cuando pasa lo segundo.
+
+### 13. Vincular a una regla compartida no puede alterar la deuda en silencio
+
+**Recomendación.** Vincular un movimiento existente a una ocurrencia de una regla **compartida** solo
+se acepta si el movimiento ya tiene un reparto compatible con el de la regla. Si no lo tiene, el
+sistema explica que va a convertirlo en gasto compartido con ese reparto y pide confirmación
+explícita.
+
+La conversión y la vinculación SHALL ser una sola operación atómica: un movimiento convertido a
+compartido pero no vinculado deja la deuda del hogar movida por algo que el usuario no aprobó.
+
+**Alternativa descartada:** vincular sin tocar el reparto. Dejaría una ocurrencia compartida resuelta
+por un gasto personal, con la deuda del hogar sin reflejarla — el módulo Compartido mostraría menos
+de lo que corresponde, en silencio.
+
+### 14. Deshacer distingue lo que la recurrencia creó de lo que el usuario vinculó
+
+**Recomendación.** La ocurrencia SHALL registrar **cómo** se resolvió:
+
+| Cómo se resolvió | Qué hace deshacer |
+|---|---|
+| La recurrencia **creó** el movimiento | Lo elimina y devuelve la ocurrencia a sin resolver. |
+| El usuario **vinculó** uno suyo | **Conserva el movimiento** —vuelve a ser suelto— y desvincula. |
+
+Sin ese dato, deshacer una vinculación borraría un movimiento que la recurrencia nunca creó. Es la
+razón por la que "deshacer" no puede implementarse como una sola operación.
+
+### 15. Deshacer y omitir son dos operaciones, no una
 
 **Recomendación.** Definirlas acá aunque el #104 las implemente:
 
@@ -156,8 +246,12 @@ total cuenta las instancias materializadas `pending` **y** `confirmed`.
   no se espera ninguno.
 
 El plan actual del #104 convierte siempre el pago borrado en `skipped` para esquivar el índice
-`one_pending_per_rule`. Con ese índice eliminado la restricción desaparece, así que **este change
-tiene que ir primero** o el #104 tiene que escribirse ya contra el modelo nuevo.
+`one_pending_per_rule`. Con ese índice eliminado la restricción desaparece.
+
+**Por eso el #104 se implementa dentro de este change y cierra con él.** Una versión anterior lo
+dejaba "para después" en el design mientras el spec y las tareas ya lo incluían — una contradicción.
+Separarlo obligaría a escribir el arreglo del #104 contra un modelo que este change está por
+reemplazar, para reescribirlo enseguida.
 
 ## Risks / Trade-offs
 
@@ -170,7 +264,7 @@ tiene que ir primero** o el #104 tiene que escribirse ya contra el modelo nuevo.
   no a montos ni saldos.
 - **Colisión con #104.** Los dos tocan la misma restricción. Hay que ordenarlos explícitamente.
 - **Superficie amplia.** Toca money-logic, el paquete de recurrencias, dos apps y una migración. Se
-  mitiga con las etapas de `tasks.md`, no partiendo el change: los ocho comportamientos son un solo
+  mitiga con las etapas de `tasks.md`, no partiendo el change: los diez comportamientos son un solo
   entregable y separarlos dejaría la etapa de cimientos sin nada que un usuario pueda validar.
 
 ## Migration Plan
@@ -188,14 +282,18 @@ en una transacción.
 
 Decisiones de **producto** que siguen abiertas. Ninguna bloquea empezar por los cimientos.
 
-1. **¿Hasta dónde hacia atrás?** Si una regla arrancó en 2024 y nunca se usó, ¿se le muestra todo el
-   historial de ocurrencias o se corta en algún punto? Recomendación: cortar, pero el punto lo define
-   el uso real.
-2. **¿La primera carga cuenta como pago?** Al marcar un movimiento como recurrente con un límite de
-   pagos, ¿ese movimiento es el pago 1 o el 0? Hoy el código dice 0 (y genera uno de más), la
-   proyección dice otra cosa. **Más que elegir entre dos comportamientos, hay que rotularlo sin
-   ambigüedad en pantalla**: "12 pagos en total" o "12 repeticiones además de esta".
-3. **¿Qué pasa durante una pausa?** Hoy reanudar retoma desde la última fecha resuelta y puede
-   recuperar los períodos de la pausa. ¿Es lo que se espera, o una pausa debe descartarlos?
-4. **¿Un pendiente de una regla pausada se muestra?** Recomendación: sí, sellado como "Pausada" —
-   esconderlo sacaría de la vista algo que todavía se puede querer resolver.
+1. **¿Qué pasa durante una pausa?** Hoy reanudar retoma desde la última fecha resuelta y puede
+   recuperar los períodos de la pausa. ¿Es lo que se espera, o una pausa debe descartarlos? Es la
+   única pregunta que el spec deja genuinamente sin contestar.
+
+### Cerradas mientras se escribía esto
+
+Tres preguntas que una versión anterior listaba como abiertas ya estaban decididas en el spec o en
+las tareas, lo que dejaba al implementador sin saber qué regía. Quedan cerradas acá:
+
+- **Horizonte hacia atrás** → 12 meses (decisión 5). Antes de eso, período señalado como incompleto.
+- **¿La primera carga cuenta como pago?** → **Sí.** "12 pagos en total" incluye el movimiento que
+  creó la regla; el sistema materializa 11 más. Y el rótulo en pantalla dice "en total", sin
+  ambigüedad.
+- **¿Se muestra el vencimiento de una regla pausada?** → **Sí, con sello "Pausada".** Esconderlo
+  sacaría de la vista algo que el usuario todavía puede querer resolver.
