@@ -60,7 +60,7 @@ El **pago del resumen de tarjeta NO es gasto** (cancela deuda) y NO cuenta en "E
 
 Los reintegros **recibidos** (no cancelados) de esa categoría restan, por su **fecha**, sin importar su destino (`reimbursement_target`: "a cuenta" o "en resumen") — para la categorización solo importa que volvió plata a esa categoría. Les aplica el mismo corte de caja: un reintegro fechado adelante todavía no volvió.
 
-Cuando hay al menos un crédito, el total del centro deja de ser el gasto del mes: es la suma de lo dibujado, ni bruto ni neto. Por eso la card SHALL cerrar, sólo en ese caso, mostrando **el neto del mes** = total del centro − suma de los créditos. Ese número SHALL ir en el pie de la card, compartiendo fila con la nota de consumos de tarjeta, y NO en una fila propia: en un teléfono la card ya es larga y una fila más por un dato ocasional no se paga. Sin créditos esa línea NO SHALL mostrarse: el centro ya es el neto y repetirlo sería ruido. La línea SHALL existir en **ambas plataformas** y SHALL calcularse con aritmética de dinero, no con resta de floats.
+Cuando hay al menos un crédito, el total del centro deja de ser el gasto del mes: es la suma de lo dibujado, ni bruto ni neto. Por eso la card SHALL cerrar, sólo en ese caso, mostrando **el neto del mes** = total del centro − suma de los créditos. Ese número NO SHALL costar una fila propia donde haya ancho libre para evitarla: en web va en el pie de la card, compartiendo fila con la nota de consumos de tarjeta. En la app nativa el pie no tiene ancho para compartir (la nota se partiría en tres renglones), así que ahí SHALL ir como fila de cierre del bloque de créditos, la ubicación más barata disponible. La divergencia es de ubicación, no de capacidad: el dato existe en las dos plataformas. Sin créditos esa línea NO SHALL mostrarse: el centro ya es el neto y repetirlo sería ruido. La línea SHALL existir en **ambas plataformas** y SHALL calcularse con aritmética de dinero, no con resta de floats.
 
 Esa línea es el puente con la card "Cuánto gastaste" del Inicio, que muestra el mismo neto en el caso corriente. Las dos pantallas PUEDEN seguir difiriendo por dos causas que esta línea no explica y que NO SHALL ocultarse detrás de ella: un balde de "Cuánto gastaste" pisado en cero (reintegro mayor que el gasto de ese medio de pago) y las filas sin cuenta asignada, que el Inicio saltea.
 
@@ -69,13 +69,13 @@ El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando lo
 #### Scenario: Con una categoría en crédito, la card cierra con el neto
 
 - **WHEN** el mes cierra con la dona en $2.211.312,91 y una categoría en crédito por $146.985,07
-- **THEN** en el pie de la card, debajo del bloque "te devolvieron", aparece $2.064.327,84
+- **THEN** aparece $2.064.327,84 — en web en el pie de la card, en la app nativa al cierre del bloque "te devolvieron"
 - **AND** ese es el mismo número que la card "Cuánto gastaste" del Inicio muestra para ese mes
 
 #### Scenario: Sin créditos no aparece la línea de cierre
 
 - **WHEN** ninguna categoría del mes quedó en crédito
-- **THEN** el pie de la card no muestra ningún neto
+- **THEN** la card no muestra ningún neto en ninguna de las dos plataformas
 - **AND** el total del centro ya es el neto del mes
 
 #### Scenario: El neto descuenta los reintegros recibidos
