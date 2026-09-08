@@ -449,7 +449,29 @@ recurrence_pauses
 ```
 
 `recurrences.status = 'paused'` se conserva para la UI y para el filtro del generador; el intervalo es
-lo que impide que el período pausado se lea como huecos al reanudar. La migración crea una fila
+lo que impide que el período pausado se lea como huecos al reanudar.
+
+### Dual-write: la base es el dueño único de estas dos tablas
+
+El backfill cubre solo las filas que existían al aplicar la expansión. **Entre la expansión y la
+activación la app sigue escribiendo con el modelo viejo**, así que sin nada más: una recurrencia
+creada desde cualquier cliente quedaría sin versión, editar la frecuencia dejaría la versión vieja, y
+pausar o reanudar no abriría ni cerraría ningún intervalo. Cuando llegara el generador nuevo, las
+reglas **más recientes** serían las peor cubiertas.
+
+La expansión instala triggers en `recurrences` que mantienen las dos tablas:
+
+| Evento | Qué escribe la base |
+|---|---|
+| `INSERT` | Versión inicial (`effective_from = start_date`, `is_assumed = false`) |
+| Cambia `interval_*` o `start_date` | Versión nueva vigente desde hoy |
+| `active → paused` | Abre el intervalo de pausa |
+| `paused → active` | Cierra el intervalo abierto |
+
+**El dueño de estas escrituras es la base, no la app.** El código nuevo NO debe insertar en
+`recurrence_schedule_versions` ni en `recurrence_pauses`: duplicaría lo que hacen los triggers. Vivir
+en la base las hace además atómicas con la escritura de la regla, sin depender de que cada cliente se
+acuerde — que es exactamente el problema durante una transición con clientes viejos instalados. La migración crea una fila
 abierta para cada regla hoy pausada, con `paused_from` desconocido — se usa la fecha de la migración,
 y se acepta: son pocas reglas y el efecto es que su período pausado previo no se descarta, que es el
 comportamiento actual.

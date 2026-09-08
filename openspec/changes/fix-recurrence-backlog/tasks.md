@@ -37,6 +37,12 @@ que habilita el backlog.
 - [x] 1.2f Constraints `(recurrence_id, user_id)` compuestas en las dos tablas nuevas, contra
       `recurrences(id, user_id)`. Con FK independientes y un RLS que solo mira `user_id = auth.uid()`,
       la base aceptaría una fila con mi usuario y la recurrencia de otro.
+- [x] 1.2f2 **Dual-write en la base**: triggers en `recurrences` que crean la versión inicial al
+      insertar, agregan una versión vigente desde hoy al cambiar el cronograma, y abren/cierran el
+      intervalo al pausar/reanudar. Sin esto el backfill solo cubre lo preexistente y las reglas más
+      nuevas quedan sin versión. **La base es el dueño único**: el código nuevo no debe escribir esas
+      tablas. Y un `BEFORE INSERT` que deriva `reconstruct_from`, sin el cual la expansión rompía el
+      alta de recurrencias (`NOT NULL` sin default).
 - [x] 1.2e Instalar el **trigger de compatibilidad** para clientes nativos viejos (decisión 17):
       `BEFORE INSERT OR UPDATE` que deriva `due_date` de `scheduled_date` y pone
       `resolution_kind = 'created'` al confirmar, cuando no vienen provistos.

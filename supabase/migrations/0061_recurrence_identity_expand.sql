@@ -340,7 +340,8 @@ select r.id, r.user_id,
        case when r.status <> 'paused' and r.last_generated_date is null
             then r.start_date else r.reconstruct_from end,
        r.interval_count, r.interval_unit, r.start_date, true
-  from public.recurrences r;
+  from public.recurrences r
+on conflict (recurrence_id, effective_from) do nothing;
 
 alter table public.recurrence_schedule_versions enable row level security;
 
@@ -420,6 +421,91 @@ create policy "users update own recurrence_pauses"
 create policy "users delete own recurrence_pauses"
   on public.recurrence_pauses for DELETE
   using (user_id = auth.uid());
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 6b · Dual-write: la BASE mantiene el historial nuevo durante la transición
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- El backfill de los pasos 5 y 6 cubre SOLO las filas que existían al aplicar
+-- esta migración. Entre la expansión y la activación la app sigue escribiendo
+-- con el modelo viejo, así que sin esto:
+--
+--   · una recurrencia creada desde cualquier cliente queda SIN versión;
+--   · editar la frecuencia o `start_date` deja la versión existente VIEJA;
+--   · pausar o reanudar no abre ni cierra ningún intervalo.
+--
+-- Cuando llegue el generador nuevo, esas reglas tendrían información faltante o
+-- desactualizada — y son justamente las más recientes.
+--
+-- DUEÑO ÚNICO DE ESTAS ESCRITURAS: la base. El código de la app NO debe insertar
+-- en `recurrence_schedule_versions` ni en `recurrence_pauses`; si lo hiciera,
+-- duplicaría lo que hacen estos triggers. Mantenerlo acá además lo vuelve
+-- atómico con la escritura de la regla, sin depender de que cada cliente se
+-- acuerde.
+
+create or replace function public.recurrence_sync_schedule_and_pauses()
+returns trigger
+language plpgsql
+as $$
+declare
+  hoy date := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
+begin
+  if TG_OP = 'INSERT' then
+    -- Versión inicial. `is_assumed = false`: de una regla creada ahora SÍ
+    -- sabemos su cronograma desde el principio, a diferencia de las que la
+    -- migración tuvo que suponer.
+    insert into public.recurrence_schedule_versions
+      (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)
+    values
+      (NEW.id, NEW.user_id, NEW.start_date, NEW.interval_count, NEW.interval_unit, NEW.start_date, false)
+    on conflict (recurrence_id, effective_from) do nothing;
+
+    if NEW.status = 'paused' then
+      insert into public.recurrence_pauses (recurrence_id, user_id, paused_from)
+      values (NEW.id, NEW.user_id, hoy)
+      on conflict do nothing;
+    end if;
+
+    return NEW;
+  end if;
+
+  -- Cambio de cronograma ⇒ versión nueva vigente desde hoy. No reinterpreta el
+  -- pasado: las ocurrencias anteriores siguen leyéndose con la versión previa.
+  if NEW.interval_count is distinct from OLD.interval_count
+     or NEW.interval_unit is distinct from OLD.interval_unit
+     or NEW.start_date    is distinct from OLD.start_date then
+    insert into public.recurrence_schedule_versions
+      (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)
+    values
+      (NEW.id, NEW.user_id, hoy, NEW.interval_count, NEW.interval_unit, NEW.start_date, false)
+    on conflict (recurrence_id, effective_from) do update
+      set interval_count = excluded.interval_count,
+          interval_unit  = excluded.interval_unit,
+          anchor_date    = excluded.anchor_date,
+          is_assumed     = false;
+  end if;
+
+  -- Pausar abre el intervalo; reanudar lo cierra. Sin esto el período pausado se
+  -- leería como huecos al reanudar (decisión 16).
+  if OLD.status is distinct from NEW.status then
+    if NEW.status = 'paused' then
+      insert into public.recurrence_pauses (recurrence_id, user_id, paused_from)
+      values (NEW.id, NEW.user_id, hoy)
+      on conflict do nothing;
+    elsif OLD.status = 'paused' then
+      update public.recurrence_pauses
+         set resumed_at = greatest(hoy, paused_from)
+       where recurrence_id = NEW.id and resumed_at is null;
+    end if;
+  end if;
+
+  return NEW;
+end $$;
+
+create trigger trg_recurrence_sync_schedule_and_pauses
+  after insert or update on public.recurrences
+  for each row
+  execute function public.recurrence_sync_schedule_and_pauses();
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 7 · Trigger de compatibilidad con clientes nativos viejos

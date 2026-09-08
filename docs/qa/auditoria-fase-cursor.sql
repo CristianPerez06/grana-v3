@@ -70,7 +70,12 @@ candidatas as (
            )::date
          end as fecha
     from estimado e
-    cross join lateral (values (e.n0 - 1), (e.n0), (e.n0 + 1), (e.n0 + 2)) as v(n)
+    -- Alrededor de GREATEST(n0, 0): `updateRecurrence` permite mover
+    -- `start_date` sin ajustar el cursor, así que `last_generated_date` puede
+    -- quedar ANTES del inicio. Con `n0` negativo, anclar en `n0` dejaba todas
+    -- las candidatas fuera y la regla desaparecía hasta del total.
+    cross join lateral (values (greatest(e.n0, 0) - 1), (greatest(e.n0, 0)),
+                               (greatest(e.n0, 0) + 1), (greatest(e.n0, 0) + 2)) as v(n)
    where n >= 0
 ),
 analisis as (
@@ -146,7 +151,12 @@ candidatas as (
            )::date
          end as fecha
     from estimado e
-    cross join lateral (values (e.n0 - 1), (e.n0), (e.n0 + 1), (e.n0 + 2)) as v(n)
+    -- Alrededor de GREATEST(n0, 0): `updateRecurrence` permite mover
+    -- `start_date` sin ajustar el cursor, así que `last_generated_date` puede
+    -- quedar ANTES del inicio. Con `n0` negativo, anclar en `n0` dejaba todas
+    -- las candidatas fuera y la regla desaparecía hasta del total.
+    cross join lateral (values (greatest(e.n0, 0) - 1), (greatest(e.n0, 0)),
+                               (greatest(e.n0, 0) + 1), (greatest(e.n0, 0) + 2)) as v(n)
    where n >= 0
 ),
 analisis as (
