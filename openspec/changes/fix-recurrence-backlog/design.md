@@ -210,6 +210,24 @@ porque el generador nunca miraba hacia atrás.
 **Alternativa descartada:** recalcular todo el historial con el calendario nuevo. Reescribe el pasado
 y rompe la identidad de ocurrencias ya resueltas.
 
+### 22. "Todo o nada" significa una transacción de Postgres, no rollback compensatorio
+
+El repo resuelve hoy las operaciones compuestas con orquestadores que **compensan** —crean, y si algo
+falla borran lo creado—. Para tres operaciones de este change eso no alcanza:
+
+- **ponerse al día** (N movimientos + N resoluciones),
+- **convertir a compartido + vincular**,
+- **deshacer una vinculación que había convertido** (revertir el reparto + desvincular).
+
+El problema del rollback compensatorio es que **el rollback también puede fallar**: si la red se corta
+después de crear tres movimientos, la compensación no corre y el usuario queda con movimientos
+creados y ocurrencias sin resolver, sin forma de repetir la operación sin duplicar.
+
+Las tres SHALL implementarse como **RPC de Postgres** (`SECURITY INVOKER`, para que RLS siga
+aplicando), de modo que la atomicidad la dé la transacción y no el código de compensación. Es el
+camino que el repo ya usa para las lecturas compuestas (`get_movements_page`,
+`get_account_balance_sums`), aplicado ahora a escrituras.
+
 ### 11. La resolución en bloque es atómica
 
 **Recomendación.** Todo o nada. Un grupo a medio aplicar deja al usuario sin saber qué se guardó, con
@@ -337,8 +355,31 @@ en el frontend**: el generador las necesita para decidir qué materializar, y co
 | Columna | Para qué | Nota |
 |---|---|---|
 | `due_date` DATE NOT NULL | Identidad de la ocurrencia (decisión 1) | `UNIQUE (recurrence_id, due_date)`, sin `WHERE` |
-| `resolution_kind` TEXT NULL | `created` \| `linked` — qué hace deshacer (decisión 14) | NULL mientras está sin resolver; NOT NULL cuando `status` es resuelto |
+| `resolution_kind` TEXT NULL | `created` \| `linked` — qué hace deshacer (decisión 14) | Ver la tabla de estados |
 | `linked_conversion` BOOLEAN NOT NULL DEFAULT false | Si al vincular se convirtió el movimiento a compartido | Sin esto, deshacer no sabe si debe revertir la conversión (decisión 14) |
+
+`resolution_kind` **no aplica a `skipped`**: omitir resuelve la ocurrencia sin ningún movimiento, así
+que no hay nada que deshacer. La combinación válida es una sola por estado, y va enforced en la base:
+
+| `status` | `resolution_kind` | `linked_conversion` |
+|---|---|---|
+| `pending` | `NULL` | `false` |
+| `confirmed` | `created` \| `linked` | `true` solo si `linked` |
+| `skipped` | `NULL` | `false` |
+
+```sql
+constraint chk_recurrence_instances_resolution_kind check (
+  (status = 'confirmed' and resolution_kind in ('created','linked'))
+  or (status in ('pending','skipped') and resolution_kind is null)
+),
+constraint chk_recurrence_instances_linked_conversion check (
+  linked_conversion = false or resolution_kind = 'linked'
+)
+```
+
+**Ojo con el orden**: estas constraints NO pueden entrar en la migración de expansión (decisión 17).
+Un cliente nativo viejo que confirme una instancia no escribe `resolution_kind` y las violaría. Entran
+en la **activación**, cuando el trigger de compatibilidad ya no hace falta.
 
 `linked_conversion` es un booleano y no un snapshot del estado anterior a propósito: la decisión 13
 (revisada abajo) restringe la conversión al caso **personal → compartido con el reparto de la regla**,
@@ -386,7 +427,35 @@ abierta para cada regla hoy pausada, con `paused_from` desconocido — se usa la
 y se acepta: son pocas reglas y el efecto es que su período pausado previo no se descarta, que es el
 comportamiento actual.
 
-### Decisión 17 · Retirar `scheduled_date` es gradual, no parte de esta entrega
+### Decisión 17 · Expansión y activación son migraciones distintas
+
+Una versión anterior decía "todo en una transacción" y a la vez exigía desplegar web y nativo antes
+de eliminar el índice de pendiente única. **Las dos cosas no pueden ser ciertas**: entre la migración
+y el despliegue pasa tiempo, y durante ese tiempo la base tiene que sostener el modelo viejo.
+
+Son dos migraciones, con un despliegue en el medio:
+
+| | Migración | Qué hace | Comportamiento |
+|---|---|---|---|
+| **A · Expansión** | `00XX_recurrence_identity_expand.sql` | Columnas, tablas nuevas, backfill, trigger de compatibilidad | **Sin cambios.** El índice de pendiente única sigue vivo. |
+| — | *(despliegue de web y nativo con el modelo nuevo)* | | |
+| **B · Activación** | `00XY_recurrence_backlog_activate.sql` | Elimina el índice, agrega las constraints de `resolution_kind`, habilita el backlog | El backlog empieza a existir. |
+| **C · Retiro** | entrega posterior | Retira `scheduled_date` y el trigger | — |
+
+**"Nativo desplegado" no significa "todos actualizaron".** Una app instalada no se actualiza porque
+apliquemos una migración, y los clientes viejos dependen de `last_generated_date` y de una pendiente
+singular. Dos mecanismos, complementarios:
+
+- **Compatibilidad por trigger (obligatorio).** La expansión instala un `BEFORE INSERT OR UPDATE` en
+  `recurrence_instances` que, cuando el cliente no los provee, deriva `due_date` de `scheduled_date`
+  y pone `resolution_kind = 'created'` al pasar a `confirmed`. Una escritura de un cliente viejo
+  produce así una fila válida en el modelo nuevo sin que el cliente sepa nada. Se retira en C.
+- **Versión mínima (recomendado).** Un gate de versión mínima al arrancar la app nativa. No hace
+  falta para la integridad —de eso se ocupa el trigger— pero sí para la **experiencia**: un cliente
+  viejo sigue mostrando una sola ocurrencia por regla, así que con el backlog activo el usuario vería
+  una parte de su atraso sin saber que hay más.
+
+### Decisión 17b · Retirar `scheduled_date` es gradual, no parte de esta entrega
 
 `scheduled_date` no se puede borrar en esta migración: **hay clientes nativos instalados** que siguen
 leyéndolo y escribiéndolo, y una app móvil no se actualiza cuando se aplica una migración. La
@@ -403,6 +472,35 @@ secuencia segura, y lo que entra en cada tramo:
 El paso 4 va al final y no al principio: sacar el índice antes de que los reads acepten colecciones
 haría que la base permita el backlog mientras la app sigue mostrando una sola ocurrencia — el atraso
 existiría y sería invisible, que es peor que el bug actual.
+
+### Decisión 21 · La migración no sabe qué cronograma rigió antes, y no lo inventa
+
+Dos suposiciones que una versión anterior hacía calladas, y las dos fabrican atraso falso:
+
+- Crear la versión de calendario con `effective_from = start_date` y la frecuencia **actual** afirma
+  que esa frecuencia rigió desde el principio. Si la regla se editó alguna vez —y no hay historial de
+  ediciones para saberlo— el generador leería como huecos las ocurrencias del calendario viejo.
+- Usar la fecha de la migración como `paused_from` de una regla ya pausada deja **fuera** del
+  intervalo de pausa todo lo anterior, así que al reanudar aparecería como atraso — exactamente lo
+  que la decisión 16 prohíbe.
+
+**Política conservadora: no reconstruir nada anterior al último punto conocido.** `recurrences` gana
+`reconstruct_from DATE NOT NULL`, que la migración puebla así:
+
+| Estado de la regla | `reconstruct_from` |
+|---|---|
+| Activa | `COALESCE(last_generated_date, start_date)` — el cursor es, por definición, "hasta acá ya está cubierto" |
+| Pausada | la **fecha de la migración** — nada anterior se reconstruye |
+
+El generador NUNCA materializa antes de `GREATEST(reconstruct_from, borde del horizonte)`. Y la
+versión de calendario que crea la migración se marca **asumida**
+(`recurrence_schedule_versions.is_assumed = true`), que se lee como: *no sabemos qué cronograma rigió
+antes de `reconstruct_from`*. Las versiones que cree el usuario al editar no llevan esa marca.
+
+Esto significa que **ninguna regla existente estrena backlog retroactivo con esta migración**: el
+backlog se acumula desde la migración hacia adelante. Es una pérdida deliberada y menor —el atraso
+que ya existía sigue sin reconstruirse— a cambio de no inventar vencimientos que quizá nunca
+existieron. Reconstruir hacia atrás con certeza es imposible: el dato no está.
 
 ### Decisión 18 · El backfill aborta ante ambigüedad, no adivina
 
@@ -444,9 +542,11 @@ Tres cosas concretas que "por tandas" no define:
   el generador inserta de a una dentro de un `for`; con 50 filas eso son 50 roundtrips.
 - **La ocurrencia vigente entra en la primera corrida**, siempre. Si la tanda se llenara con las más
   viejas, la de este mes quedaría afuera — el #96 otra vez, con otro número.
-- **Progreso visible**: mientras queden ocurrencias por reconstruir, la app SHALL decirlo
-  ("reconstruyendo el historial de esta recurrencia"). Sin eso, un atraso grande se ve como una lista
-  que crece sola entre visitas, indistinguible de un error.
+- **Progreso visible y accionable**: mientras queden ocurrencias por reconstruir, la app SHALL
+  decirlo y SHALL ofrecer **"Continuar reconstrucción"**, que procesa otra tanda sin cerrar la app.
+  Una regla diaria son ~8 tandas: pedirle a alguien que abra y cierre la app ocho veces para ver su
+  propio historial no es una opción. La primera tanda sigue siendo automática; el botón existe para
+  no depender de sesiones sucesivas.
 
 ## Risks / Trade-offs
 
@@ -464,24 +564,46 @@ Tres cosas concretas que "por tandas" no define:
 
 ## Migration Plan
 
-En una transacción, en este orden:
+**Dos migraciones con un despliegue en el medio** (decisión 17). Cada una corre en su propia
+transacción; no hay una sola transacción que abarque las dos.
+
+### A · Expansión — `00XX_recurrence_identity_expand.sql`
+
+Aditiva. Al terminar, **el comportamiento de la app es idéntico**: el índice de pendiente única sigue
+vivo y nada genera backlog todavía.
 
 1. Agregar `due_date` y poblarlo derivándolo del cronograma de cada regla.
 2. **Detectar colisiones** de `due_date` derivado (decisión 18). Si hay alguna, **abortar** emitiendo
    el informe; el resto de la migración no corre.
 3. Agregar `UNIQUE (recurrence_id, due_date)`, sin cláusula `WHERE`.
-4. Agregar `resolution_kind` y `linked_conversion` a `recurrence_instances`. Poblar
-   `resolution_kind = 'created'` en las instancias ya confirmadas: hasta hoy la única forma de
-   resolver con movimiento era creándolo.
-5. Crear `recurrence_schedule_versions` con una versión por regla (`effective_from = start_date`, los
-   valores actuales). Ninguna regla cambia de comportamiento.
-6. Crear `recurrence_pauses` con una fila abierta por cada regla hoy pausada.
-7. Dejar de escribir `last_generated_date` desde confirmar y omitir; conservar la columna durante la
-   transición.
-8. **Al final**, y solo una vez desplegados los reads que aceptan colecciones: eliminar
-   `recurrence_instances_one_pending_per_rule` (decisión 17, paso 4).
+4. Agregar `resolution_kind` (nullable, **sin constraint todavía**) y `linked_conversion`. Poblar
+   `resolution_kind = 'created'` en las confirmadas: hasta hoy la única forma de resolver con
+   movimiento era creándolo.
+5. Agregar `recurrences.reconstruct_from` y poblarlo con la política conservadora de la decisión 21
+   (`COALESCE(last_generated_date, start_date)` en activas; la fecha de la migración en pausadas).
+6. Crear `recurrence_schedule_versions` con una versión por regla, marcada `is_assumed = true`.
+7. Crear `recurrence_pauses` con una fila abierta por cada regla hoy pausada.
+8. Instalar el **trigger de compatibilidad** para clientes viejos (decisión 17): deriva `due_date` de
+   `scheduled_date` y pone `resolution_kind = 'created'` al confirmar, cuando no vienen provistos.
 
-`scheduled_date` **no** se toca en esta migración (decisión 17). Se sigue escribiendo en paralelo.
+`scheduled_date` y `last_generated_date` se siguen escribiendo. Nada se elimina acá.
+
+### Despliegue
+
+Web y nativo con el modelo nuevo: reads que aceptan colecciones, escrituras que proveen `due_date` y
+`resolution_kind`. Confirmar y omitir dejan de escribir `last_generated_date`.
+
+### B · Activación — `00XY_recurrence_backlog_activate.sql`
+
+Recién cuando el despliegue está hecho. Es la migración que **cambia el comportamiento**.
+
+1. Agregar las constraints de `resolution_kind` y `linked_conversion`.
+2. Eliminar `recurrence_instances_one_pending_per_rule`. Desde acá existe el backlog.
+
+### C · Retiro — entrega posterior
+
+Retirar `scheduled_date`, `last_generated_date` y el trigger de compatibilidad, cuando ya no queden
+clientes nativos instalados que los usen.
 
 Supabase es online-only: se aplica desde el SQL Editor y se regeneran los tipos. El "hoy" de
 cualquier cálculo va con `(now() at time zone 'America/Argentina/Buenos_Aires')::date` —

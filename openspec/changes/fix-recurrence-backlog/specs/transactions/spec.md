@@ -121,8 +121,9 @@ que el usuario lo sepa:
 - si el movimiento ya es compartido con **otro hogar o con otro reparto**, NO SHALL ofrecerse como
   candidato. Reemplazar un reparto existente destruiría una deuda que el otro miembro ya ve.
 
-La conversión y la vinculación SHALL aplicarse de forma atómica: NO SHALL quedar un movimiento
-convertido a compartido sin vincular, ni una ocurrencia vinculada sin el reparto aplicado.
+La conversión y la vinculación SHALL aplicarse dentro de una **única transacción de base de datos**:
+NO SHALL quedar un movimiento convertido a compartido sin vincular, ni una ocurrencia vinculada sin
+el reparto aplicado. Lo mismo aplica a deshacer esa resolución, que revierte el reparto y desvincula.
 
 #### Scenario: Vincular no duplica el gasto
 
@@ -168,10 +169,12 @@ sin resolver.
 Antes de aplicar, el sistema SHALL mostrar un resumen de lo que va a ocurrir, incluidos los
 movimientos que se van a crear y su efecto sobre el saldo de las cuentas involucradas.
 
-La resolución en bloque SHALL ser **atómica**: o se aplican todos los cambios del grupo o no se
-aplica ninguno. Un grupo a medio aplicar dejaría movimientos creados junto a ocurrencias sin
-resolver, sin forma de repetir la operación sin duplicar. Ante un fallo, el sistema SHALL informarlo
-y dejar el grupo como estaba.
+La resolución en bloque SHALL ser **atómica dentro de una única transacción de base de datos**, y NO
+SHALL apoyarse en deshacer lo hecho ante un error: un rollback compensatorio también puede fallar
+—una interrupción después de crear los movimientos deja al usuario con movimientos creados y
+ocurrencias sin resolver, sin forma de repetir la operación sin duplicar—. O se aplican todos los
+cambios del grupo o no se aplica ninguno. Ante un fallo, el sistema SHALL informarlo y dejar el grupo
+exactamente como estaba.
 
 El importe que el usuario corrija SHALL afectar **únicamente esa ocurrencia** y NO SHALL modificar el
 importe de la regla — de lo contrario, resolver varias ocurrencias con importes distintos dejaría la
@@ -293,9 +296,10 @@ ocurrencias—, así que la materialización SHALL hacerse por **tandas acotadas
 SHALL disparar cientos de escrituras, y la tanda SHALL completarse a lo largo de sucesivas aperturas,
 con la ocurrencia vigente siempre en la primera.
 
-Mientras queden ocurrencias por reconstruir, el sistema SHALL indicarlo. Sin ese aviso, una lista que
-crece sola entre visitas es indistinguible de un error, y el usuario no sabe si ya puede confiar en lo
-que ve.
+Mientras queden ocurrencias por reconstruir, el sistema SHALL indicarlo **y SHALL ofrecer continuar
+la reconstrucción sin cerrar la aplicación**. Sin el aviso, una lista que crece sola entre visitas es
+indistinguible de un error; sin la acción, un atraso grande obligaría al usuario a abrir y cerrar la
+app tantas veces como tandas queden, que no es una tarea que se le pueda pedir.
 
 Una ocurrencia materializada por este mecanismo SHALL ser un **elemento por revisar**, no un
 movimiento: NO SHALL impactar saldos, ni el gasto del mes, ni resúmenes de tarjeta hasta que el
@@ -342,6 +346,12 @@ La fecha de cada ocurrencia SHALL ser la que corresponde por cronograma, nunca l
 - **AND** la pantalla no queda bloqueada esperando cientos de escrituras
 - **AND** las restantes se completan en sucesivas aperturas
 - **AND** mientras queden pendientes de reconstruir, la app lo indica en vez de aparentar que terminó
+
+#### Scenario: El usuario puede continuar la reconstrucción sin salir
+
+- **WHEN** quedan ocurrencias por reconstruir después de la primera tanda
+- **THEN** la app ofrece continuar la reconstrucción
+- **AND** al usarla se procesa otra tanda sin cerrar ni volver a abrir la aplicación
 
 #### Scenario: Cambiar la frecuencia no fabrica vencimientos anteriores
 

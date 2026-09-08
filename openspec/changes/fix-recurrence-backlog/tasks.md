@@ -6,8 +6,9 @@ implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independie
 
 ## 1. Cimientos: modelo persistente
 
-Ver "Modelo persistente" en `design.md` para el esquema completo. Todo en una transacción, en el
-orden del Migration Plan.
+Ver "Modelo persistente" en `design.md`. Son **dos migraciones con un despliegue en el medio**
+(decisión 17): la expansión es aditiva y no cambia el comportamiento; la activación —tarea 2.8— es la
+que habilita el backlog.
 
 - [ ] 1.1 Migración: agregar `recurrence_instances.due_date` (DATE NOT NULL) y poblarla derivando el
       vencimiento del cronograma de cada regla. Para instancias ya confirmadas cuyo `scheduled_date`
@@ -17,12 +18,19 @@ orden del Migration Plan.
       `(recurrence_id, due_date)` y, si hay alguno, **abortar la transacción** con un informe de la
       regla, las instancias en conflicto y el `due_date` derivado. Nunca adivinar. Recién en una
       corrida limpia, agregar `UNIQUE (recurrence_id, due_date)` **sin** cláusula `WHERE`.
-- [ ] 1.2b Crear `recurrence_schedule_versions` con una versión por regla existente
-      (`effective_from = start_date`, valores actuales): ninguna regla cambia de comportamiento.
+- [ ] 1.2b Crear `recurrence_schedule_versions` con una versión por regla, marcada
+      **`is_assumed = true`**: no sabemos qué cronograma rigió antes (decisión 21).
       `recurrences.interval_*` queda como la versión vigente para la UI y el `CHECK` de 0053.
 - [ ] 1.2c Crear `recurrence_pauses` (`paused_from`, `resumed_at` nullable) con una fila abierta por
       cada regla hoy pausada. El `status = 'paused'` se conserva; el intervalo es lo que impide que
       el período pausado se lea como huecos al reanudar.
+- [ ] 1.2d Agregar `recurrences.reconstruct_from` con la política conservadora (decisión 21):
+      `COALESCE(last_generated_date, start_date)` en activas, **fecha de la migración** en pausadas.
+      El generador nunca materializa antes de `GREATEST(reconstruct_from, borde del horizonte)`.
+      Consecuencia buscada: ninguna regla existente estrena backlog retroactivo.
+- [ ] 1.2e Instalar el **trigger de compatibilidad** para clientes nativos viejos (decisión 17):
+      `BEFORE INSERT OR UPDATE` que deriva `due_date` de `scheduled_date` y pone
+      `resolution_kind = 'created'` al confirmar, cuando no vienen provistos.
 - [ ] 1.3 **NO** eliminar todavía `recurrence_instances_one_pending_per_rule`: va al final (tarea
       2.8), con todos los reads ya aceptando colecciones. Sacarlo antes dejaría a la base acumulando
       backlog mientras la app sigue mostrando una sola ocurrencia — invisible, y peor que hoy.
@@ -30,9 +38,10 @@ orden del Migration Plan.
       fecha de pago vive en `transactions.date`, la de carga en `transactions.created_at` y la de
       resolución en `resolved_at`. `scheduled_date` queda como alias de lectura de `due_date` durante
       la transición y **nunca** pasa a ser fecha de pago (una ocurrencia sin resolver no tiene pago).
-- [ ] 1.4b Agregar `resolution_kind` (`created` | `linked`) y `linked_conversion` (boolean) a
-      `recurrence_instances`. Poblar `resolution_kind = 'created'` en las confirmadas existentes:
-      hasta hoy la única forma de resolver con movimiento era creándolo.
+- [ ] 1.4b Agregar `resolution_kind` (`created` | `linked`, **nullable y sin constraint todavía**) y
+      `linked_conversion` (boolean). Poblar `resolution_kind = 'created'` en las confirmadas
+      existentes. Las constraints van en la activación (2.8): un cliente viejo que confirme no
+      escribe `resolution_kind` y las violaría. `skipped` lleva `resolution_kind = NULL`.
 - [ ] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
       (`mutations.ts:446`): con resolución en bloque el resultado dependería del orden.
 - [ ] 1.5 Quitar de `confirmRecurrenceInstance` y `skipRecurrenceInstance` la escritura de
@@ -66,7 +75,9 @@ orden del Migration Plan.
       mano un pago más viejo sigue siendo posible.
 - [ ] 2.1e Tanda operativa (decisión 20): **50 ocurrencias por corrida**, **un solo `insert` en
       lote** —hoy el generador inserta de a una dentro de un `for`— y la ocurrencia vigente siempre en
-      la primera corrida. Indicar en pantalla que la reconstrucción sigue en curso mientras queden.
+      la primera corrida. Mientras queden, indicarlo en pantalla **y ofrecer "Continuar
+      reconstrucción"**, que procesa otra tanda sin cerrar la app: una regla diaria son ~8 tandas y
+      nadie va a abrir y cerrar la app ocho veces para ver su propio historial.
 - [ ] 2.1c Aviso de historial no reconstruido **en la recurrencia** ("tiene historial anterior a
       <mes> que no se reconstruyó"), no como "este mes tiene información incompleta": esos pagos
       pueden haberse cargado a mano.
@@ -83,16 +94,22 @@ orden del Migration Plan.
       grupo es largo, sin que ninguna ocurrencia deje de ser accesible.
 - [ ] 2.4 Acción "Ponerse al día": resolución en bloque con fila por ocurrencia, cada una con fecha,
       importe y cuenta editables, y las cuatro salidas (registrar · vincular · no corresponde ·
-      dejar sin resolver). **Atómica**: orquestador con rollback en `@grana/transactions-mutations`,
-      como el alta de cuotas.
+      dejar sin resolver). **Atómica de verdad** (decisión 22): RPC de Postgres `SECURITY INVOKER`,
+      no orquestador con rollback compensatorio — la compensación también puede fallar y deja
+      movimientos creados con ocurrencias sin resolver.
 - [ ] 2.4b Acción separada "Usar este importe de acá en más", aplicada una sola vez y tomando el
       importe de la ocurrencia más reciente del grupo.
 - [ ] 2.5 Resumen previo a aplicar: movimientos que se van a crear y efecto sobre el saldo de cada
       cuenta involucrada.
 - [ ] 2.6 Copy: **"vencimientos por revisar"** — ni "pagos" (afirmaría que hubo pago) ni lenguaje de
       deuda. Actualizar `es.json` y `en.json`.
-- [ ] 2.8 **Recién acá**: eliminar `recurrence_instances_one_pending_per_rule`, con los reads del
-      paso 2.2 ya aceptando colecciones y desplegados en web y nativo.
+- [ ] 2.8 **Migración B · activación**, en archivo aparte
+      (`00XY_recurrence_backlog_activate.sql`), y solo con los reads del paso 2.2 ya desplegados en
+      web y nativo: agregar las constraints de `resolution_kind` y `linked_conversion`, y eliminar
+      `recurrence_instances_one_pending_per_rule`. Desde acá existe el backlog.
+- [ ] 2.8b Gate de **versión mínima** en el arranque nativo. No hace falta para la integridad —de eso
+      se ocupa el trigger de 1.2e— pero sí para la experiencia: un cliente viejo muestra una sola
+      ocurrencia por regla y el usuario vería parte de su atraso sin saber que hay más.
 - [ ] 2.7 Tests: tres meses resueltos en una pasada con importes distintos y una cuenta distinta, sin
       que cambie el importe de la regla; un fallo en el tercero no deja los dos primeros guardados;
       dejar uno sin resolver no bloquea los demás.
@@ -110,12 +127,12 @@ orden del Migration Plan.
 - [ ] 3.3b Vinculación en reglas **compartidas**, tres casos: reparto compatible → directo; movimiento
       personal → explicar la conversión, pedir confirmación y marcar `linked_conversion`; movimiento
       con **otro hogar u otro reparto** → **excluir de los candidatos**, para no reemplazar una deuda
-      que el otro miembro ya ve. Conversión + vinculación en una sola operación atómica. Test: la deuda del hogar queda igual que registrando desde la
+      que el otro miembro ya ve. Conversión + vinculación en una **sola RPC transaccional**. Test: la deuda del hogar queda igual que registrando desde la
       recurrencia, y un fallo no deja el movimiento convertido a medias.
 - [ ] 3.4 Deshacer, **cerrando #104 en esta misma entrega**: devuelve la ocurrencia a *sin resolver*
       (nunca a omitida) y actúa según cómo se resolvió — `created` elimina el movimiento; `linked` lo
       conserva y desvincula; `linked` que además había **convertido** el movimiento a compartido
-      revierte también la conversión y la deuda, de forma atómica. Con `one_pending_per_rule` eliminado desaparece la restricción que
+      revierte también la conversión y la deuda, en una **sola RPC transaccional**. Con `one_pending_per_rule` eliminado desaparece la restricción que
       obligaba a marcarlo `skipped`.
 - [ ] 3.5 Historial de la regla: mostrar vencimiento, fecha de pago y fecha de carga por separado.
 - [ ] 3.6 Tests: vincular no cambia el total del mes; deshacer un `created` elimina el movimiento;
