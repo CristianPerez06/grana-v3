@@ -19,6 +19,42 @@
 import { Money } from '@grana/validation'
 import type { MonthBalanceSeries } from './types'
 
+/**
+ * What made up "Entró", by CONCEPT — not by where the money landed.
+ *
+ * The three add up to `entro` by construction: they are the same terms
+ * `summarize` already sums, handed out instead of thrown away. A card that
+ * opens this can promise its rows reconcile with the total above them.
+ */
+export type EntroParts = {
+  /** Income that is not a yield: salary, a sale, a gift — what the user earned. */
+  ingresos: number
+  /**
+   * Income filed under "Financiero": interest, yields, dividends — what the
+   * money earned on its own. Split out of `ingresos`, never added on top: the
+   * series carries it as a subset of `totalIncome`.
+   */
+  ingresosFinancieros: number
+  /** Received "a cuenta" reimbursements: money that came BACK, not money earned. */
+  devoluciones: number
+  /**
+   * Positive side of the signed buckets: a settlement in your favour, the
+   * destination leg of a currency exchange, a positive adjustment. Zero in the
+   * ordinary month, which is why the UI drops the row when it is.
+   */
+  otros: number
+}
+
+/** What made up "Se fue", by concept. The three add up to `seFue`. */
+export type SeFueParts = {
+  /** Real spending paid from an account (`type='expense'`, not a statement payment). */
+  gastos: number
+  /** Card statement payments: they cancel debt already accrued, they are not new spending. */
+  pagosDeTarjeta: number
+  /** Negative side of the signed buckets. Zero in the ordinary month. */
+  otros: number
+}
+
 export type MonthSummary = {
   /**
    * Everything that RAISED the account balances this month: income, received
@@ -37,6 +73,10 @@ export type MonthSummary = {
    * leaving the account.
    */
   seFue: number
+  /** The concepts behind `entro`. Sums to it. */
+  entroParts: EntroParts
+  /** The concepts behind `seFue`. Sums to it. */
+  seFueParts: SeFueParts
 }
 
 export type MonthSummaryByCurrency = {
@@ -66,16 +106,44 @@ const SIGNED_BUCKETS = [
 ] as const
 
 const summarize = (series: MonthBalanceSeries): MonthSummary => {
-  let entro = Money.add(Money.from(series.totalIncome), Money.from(series.totalReimbursement))
-  let seFue = Money.add(Money.from(series.totalExpense), Money.from(series.totalCardPayment))
-
+  // The signed buckets are the only term that can land on either side, so they
+  // are the only one accumulated in a loop. Everything else is a fixed concept.
+  let entroOtros = Money.from(0)
+  let seFueOtros = Money.from(0)
   for (const bucket of SIGNED_BUCKETS) {
     const value = series[bucket]
-    if (value >= 0) entro = Money.add(entro, Money.from(value))
-    else seFue = Money.add(seFue, Money.from(-value))
+    if (value >= 0) entroOtros = Money.add(entroOtros, Money.from(value))
+    else seFueOtros = Money.add(seFueOtros, Money.from(-value))
   }
 
-  return { entro: Money.toNumber(entro), seFue: Money.toNumber(seFue) }
+  const entroParts: EntroParts = {
+    ingresos: Money.toNumber(
+      Money.subtract(Money.from(series.totalIncome), Money.from(series.totalFinancialIncome)),
+    ),
+    ingresosFinancieros: series.totalFinancialIncome,
+    devoluciones: series.totalReimbursement,
+    otros: Money.toNumber(entroOtros),
+  }
+  const seFueParts: SeFueParts = {
+    gastos: series.totalExpense,
+    pagosDeTarjeta: series.totalCardPayment,
+    otros: Money.toNumber(seFueOtros),
+  }
+
+  // The totals are the sum of their own parts, not a parallel calculation: two
+  // ways of reaching the same number is how a card starts disagreeing with the
+  // rows it just opened.
+  const sum = (parts: Record<string, number>) =>
+    Money.toNumber(
+      Object.values(parts).reduce((acc, value) => Money.add(acc, Money.from(value)), Money.from(0)),
+    )
+
+  return {
+    entro: sum(entroParts),
+    seFue: sum(seFueParts),
+    entroParts,
+    seFueParts,
+  }
 }
 
 /**

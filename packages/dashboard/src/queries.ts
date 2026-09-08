@@ -23,6 +23,7 @@ import {
   aggregateHero,
   buildMonthBalanceSeries,
   derivePaidAtSnapshot,
+  isFinancialIncome,
   projectRecurrenceItems,
   sumByCurrency,
   topCommittedItems,
@@ -191,6 +192,7 @@ export async function getAvailableTotals(
  *  `max-rows`: the loop advances by what came back and stops on an empty page. */
 const MONTH_ROWS_PAGE_SIZE = 1000
 
+
 export async function getMonthBalanceSeries(
   supabase: SupabaseClient,
   year: number,
@@ -262,14 +264,17 @@ export async function getMonthBalanceSeries(
   // window, but "small" is not a guarantee: `finalBalance` is a money number and
   // it must not depend on the month staying under PostgREST's `max-rows`.
   const raw: Array<
-    Omit<MonthBalanceTxInput, 'is_card_payment'> & { period_payments: { id: string }[] | null }
+    Omit<MonthBalanceTxInput, 'is_card_payment' | 'is_financial_income'> & {
+      period_payments: { id: string }[] | null
+      category: { canonical_name: string } | null
+    }
   > = []
 
   for (let offset = 0; ; ) {
     const { data: txs, error: txsErr } = await supabase
       .from('transactions')
       .select(
-        'id, date, type, amount, currency_code, account_id, transfer_destination_account_id, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction, created_at, period_payments!period_payments_transaction_id_fkey(id)',
+        'id, date, type, amount, currency_code, account_id, transfer_destination_account_id, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction, created_at, category:categories(canonical_name), period_payments!period_payments_transaction_id_fkey(id)',
       )
       .gte('date', fromISO)
       .lte('date', toISO)
@@ -294,6 +299,11 @@ export async function getMonthBalanceSeries(
   const rows: MonthBalanceTxInput[] = raw.map((t) => ({
     ...t,
     is_card_payment: (t.period_payments?.length ?? 0) > 0,
+    // Keyed on the classification the user already sees, not on a list of
+    // account types: what makes an income a yield is that it was filed under
+    // "Financiero". An interest payment filed elsewhere counts as plain income,
+    // which is the honest reading of what the user said it was.
+    is_financial_income: isFinancialIncome(t.type, t.category?.canonical_name ?? null),
   }))
 
   return {

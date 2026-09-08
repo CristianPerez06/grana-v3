@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useFormatter, useTranslations } from 'next-intl'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
@@ -13,6 +14,7 @@ import {
   type PlacementRow,
   type SavingsRow,
 } from '@grana/dashboard'
+import { ChevronDown } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { useShowCents } from '@/lib/preferences-context'
 import { cn } from '@/lib/utils'
@@ -150,6 +152,8 @@ const Flow = ({
   align,
   density,
   loading,
+  expanded,
+  onToggle,
 }: {
   label: string
   dotClassName: string
@@ -170,6 +174,14 @@ const Flow = ({
   density: AmountDensity
   /** While the new month loads: the label stays, the amount goes to skeleton. */
   loading?: boolean
+  /** Set (with `onToggle`) when this flow can be opened by concept. */
+  expanded?: boolean
+  /**
+   * Opens the breakdown panel below the strip. The panel lives outside this
+   * component on purpose: a third of a phone-width card is ~105px, and a list of
+   * concepts and amounts does not fit there — see the panel's own note.
+   */
+  onToggle?: () => void
 }) => (
   // A ROW when narrow — label left, amount right — and a column once the three
   // fit side by side. Three thirds of a phone-width card is ~105px, and the
@@ -181,10 +193,28 @@ const Flow = ({
       ALIGN[align],
     )}
   >
-    <span className="flex shrink-0 items-center gap-[9px] text-[14px] font-bold text-text-muted">
-      <span aria-hidden className={cn('size-[9px] rounded-full', dotClassName)} />
-      {label}
-    </span>
+    {onToggle ? (
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="flex shrink-0 items-center gap-[9px] rounded-md text-[14px] font-bold text-text-muted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span aria-hidden className={cn('size-[9px] rounded-full', dotClassName)} />
+        {label}
+        <ChevronDown
+          size={13}
+          strokeWidth={2.6}
+          aria-hidden
+          className={cn('transition-transform', expanded && 'rotate-180')}
+        />
+      </button>
+    ) : (
+      <span className="flex shrink-0 items-center gap-[9px] text-[14px] font-bold text-text-muted">
+        <span aria-hidden className={cn('size-[9px] rounded-full', dotClassName)} />
+        {label}
+      </span>
+    )}
     <span className={cn('flex min-w-0 flex-col items-end sm:mt-2.5 sm:w-full', ALIGN[align])}>
       {loading ? (
         <SummaryAmountSkeleton />
@@ -210,6 +240,52 @@ const Flow = ({
     </span>
   </div>
 )
+
+/**
+ * The concepts behind one flow of the strip, listed below it.
+ *
+ * BELOW the three columns and not inside one: a third of a phone-width card is
+ * ~105px, and "Pago de tarjetas $968.558,83" does not fit there without either
+ * wrapping into a paragraph or shrinking past reading size. The strip keeps
+ * answering "how much", this answers "of what".
+ *
+ * Rows at zero are dropped rather than printed: "Otros" is zero in the ordinary
+ * month, and a row that says nothing still costs a line and invites the question
+ * of what it means.
+ */
+const BreakdownPanel = ({
+  rows,
+  showUsd,
+  className,
+}: {
+  rows: Array<{ label: string; ars: number; usd: number }>
+  showUsd: boolean
+  className?: string
+}) => {
+  const shown = rows.filter((row) => row.ars !== 0 || row.usd !== 0)
+  if (shown.length === 0) return null
+  return (
+    <ul className={cn('mt-3.5 flex flex-col gap-2 border-t border-border pt-3.5', className)}>
+      {shown.map((row) => (
+        <li key={row.label} className="flex items-baseline justify-between gap-3">
+          <span className="min-w-0 truncate text-[13px] font-semibold text-text-muted">
+            {row.label}
+          </span>
+          <span className="flex shrink-0 flex-col items-end">
+            <span className="text-[14px] font-extrabold tracking-[-0.02em] text-text">
+              <MaskedAmount amount={row.ars} currency="ARS" />
+            </span>
+            {showUsd && row.usd !== 0 && (
+              <span className="text-[11.5px] font-semibold text-text-soft">
+                <MaskedAmount amount={row.usd} currency="USD" showCentsOverride />
+              </span>
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
 
 /**
  * The savings row — BELOW A RULE, never a fourth column of the strip.
@@ -331,6 +407,58 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
       heroInitial,
       monthInitial,
     })
+
+  // Which flow of the strip is open, if any. One at a time: two panels stacked
+  // under a three-column strip stop reading as "this belongs to that column".
+  const [openFlow, setOpenFlow] = useState<'entro' | 'seFue' | null>(null)
+  const toggleFlow = (flow: 'entro' | 'seFue') =>
+    setOpenFlow((current) => (current === flow ? null : flow))
+
+  // Rows of whichever flow is open. Built once and rendered in two places, at
+  // two widths — see the two `BreakdownPanel`s below.
+  const breakdownRows =
+    !summary || !openFlow
+      ? []
+      : openFlow === 'entro'
+        ? [
+            {
+              label: t('month.came_in_ingresos'),
+              ars: summary.ARS.entroParts.ingresos,
+              usd: summary.USD.entroParts.ingresos,
+            },
+            {
+              label: t('month.came_in_ingresos_financieros'),
+              ars: summary.ARS.entroParts.ingresosFinancieros,
+              usd: summary.USD.entroParts.ingresosFinancieros,
+            },
+            {
+              label: t('month.came_in_devoluciones'),
+              ars: summary.ARS.entroParts.devoluciones,
+              usd: summary.USD.entroParts.devoluciones,
+            },
+            {
+              label: t('month.other'),
+              ars: summary.ARS.entroParts.otros,
+              usd: summary.USD.entroParts.otros,
+            },
+          ]
+        : [
+            {
+              label: t('month.went_out_gastos'),
+              ars: summary.ARS.seFueParts.gastos,
+              usd: summary.USD.seFueParts.gastos,
+            },
+            {
+              label: t('month.went_out_card_payments'),
+              ars: summary.ARS.seFueParts.pagosDeTarjeta,
+              usd: summary.USD.seFueParts.pagosDeTarjeta,
+            },
+            {
+              label: t('month.other'),
+              ars: summary.ARS.seFueParts.otros,
+              usd: summary.USD.seFueParts.otros,
+            },
+          ]
 
   const placement = derivePlacement(hero?.accounts ?? [])
   // One type step for the whole block, so the amounts never shrink at different
@@ -482,7 +610,12 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             align="center"
             density={summaryDensity}
             loading={isLoading}
+            expanded={openFlow === 'entro'}
+            onToggle={isLoading ? undefined : () => toggleFlow('entro')}
           />
+          {openFlow === 'entro' && (
+            <BreakdownPanel rows={breakdownRows} showUsd={summaryHasUsd} className="sm:hidden" />
+          )}
           <Flow
             label={t('month.went_out')}
             dotClassName="bg-slate"
@@ -494,8 +627,24 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             align="end"
             density={summaryDensity}
             loading={isLoading}
+            expanded={openFlow === 'seFue'}
+            onToggle={isLoading ? undefined : () => toggleFlow('seFue')}
           />
+          {openFlow === 'seFue' && (
+            <BreakdownPanel rows={breakdownRows} showUsd={summaryHasUsd} className="sm:hidden" />
+          )}
         </div>
+
+        {/* At `sm`+ the strip is three columns and the panel goes under all of
+            them, its own chevron the only cue of which one is open. Below `sm`
+            the three STACK, and a panel after the last row reads as belonging to
+            it: there it renders inline, right under the row that opened it (the
+            two above, `sm:hidden`). Same rows, built once. */}
+        <BreakdownPanel
+          rows={breakdownRows}
+          showUsd={summaryHasUsd}
+          className="hidden sm:block"
+        />
 
         {savings.ARS && (
           <SavingsLine
