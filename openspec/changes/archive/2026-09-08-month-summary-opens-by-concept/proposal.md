@@ -10,9 +10,7 @@ Ese desglose ya está calculado. `summarize()` en `@grana/dashboard` compone `en
 - En la card de saldo, "Entró" y "Se fué" se vuelven desplegables: abren un panel con sus conceptos. Uno por vez, filas en cero omitidas, web y nativo.
 - "Tenías" no se abre: no es un flujo.
 
-### Alcance dejado afuera
-
-**"Rendimientos" como fila propia de "Entró".** La idea original separaba lo ganado en sueldo contra rendimientos (los intereses de una cuenta remunerada). No se hizo porque no es un balde: es un subconjunto de `totalIncome` por categoría, así que necesita una lectura nueva y, antes que eso, una definición de qué categorías cuentan como rendimiento. Queda pendiente de decisión de producto; la apertura entregada es Ingresos / Devoluciones / Otros, que es lo que los datos sostienen hoy.
+- **Los rendimientos salen de "Ingresos" y tienen fila propia**, "Ingresos financieros". La definición no hubo que inventarla: es la porción de los ingresos del mes clasificada en la categoría **Financiero**, que el usuario ya ve en la app. La serie la lleva como subconjunto de `totalIncome`, así que la fila sale de la de al lado en vez de sumarse encima, y el total no se mueve.
 
 ## Capabilities
 
@@ -26,8 +24,8 @@ _Ninguna._
 
 ## Impact
 
-- `@grana/dashboard`: `month-summary.ts` (`EntroParts`, `SeFueParts`, `summarize`), con tests en `packages/dashboard/__tests__/month-summary.test.ts`.
-- `@grana/i18n-messages`: seis claves nuevas bajo `dashboard.month`, en `es` y `en`.
+- `@grana/dashboard`: `month-summary.ts` (`EntroParts`, `SeFueParts`, `summarize`), `aggregations.ts` y `types.ts` (`totalFinancialIncome`, subconjunto de `totalIncome`) y una columna más en la lectura del mes (la categoría del movimiento, sin viajes extra), con tests en `packages/dashboard/__tests__/month-summary.test.ts`.
+- `@grana/i18n-messages`: siete claves nuevas bajo `dashboard.month`, en `es` y `en`.
 - Web: `apps/web/app/(app)/dashboard/_components/balance-card.tsx`.
 - Nativo: `apps/mobile/components/dashboard/BalanceCard.tsx`.
 - Fixtures de dos tests de `savings` que construían un `MonthSummary` a mano.

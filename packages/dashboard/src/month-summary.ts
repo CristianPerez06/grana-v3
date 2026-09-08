@@ -27,8 +27,14 @@ import type { MonthBalanceSeries } from './types'
  * opens this can promise its rows reconcile with the total above them.
  */
 export type EntroParts = {
-  /** `type='income'` credited to an owned account — salary, interest, anything earned. */
+  /** Income that is not a yield: salary, a sale, a gift — what the user earned. */
   ingresos: number
+  /**
+   * Income filed under "Financiero": interest, yields, dividends — what the
+   * money earned on its own. Split out of `ingresos`, never added on top: the
+   * series carries it as a subset of `totalIncome`.
+   */
+  ingresosFinancieros: number
   /** Received "a cuenta" reimbursements: money that came BACK, not money earned. */
   devoluciones: number
   /**
@@ -111,7 +117,10 @@ const summarize = (series: MonthBalanceSeries): MonthSummary => {
   }
 
   const entroParts: EntroParts = {
-    ingresos: series.totalIncome,
+    ingresos: Money.toNumber(
+      Money.subtract(Money.from(series.totalIncome), Money.from(series.totalFinancialIncome)),
+    ),
+    ingresosFinancieros: series.totalFinancialIncome,
     devoluciones: series.totalReimbursement,
     otros: Money.toNumber(entroOtros),
   }

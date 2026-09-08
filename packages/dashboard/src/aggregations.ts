@@ -145,6 +145,13 @@ export type MonthBalanceTxInput = {
   settlement_direction?: 'out' | 'in' | null
   /** True when this `expense` is a card statement payment (linked to a period_payments). */
   is_card_payment?: boolean
+  /**
+   * True when this `income` is classified under "Financiero" — interest on a
+   * remunerated account, a yield, a dividend. It does NOT change how the row
+   * moves the balance (it is income either way); it only lets the month summary
+   * separate what was earned from what the money earned on its own.
+   */
+  is_financial_income?: boolean
 }
 
 /** Which display bucket a signed contribution belongs to (for the per-bucket totals). */
@@ -285,6 +292,11 @@ export function buildMonthBalanceSeries(
   const dailyExpense = Array.from({ length: lastDay + 1 }, () => Money.from(0))
   const dailyAdjustment = Array.from({ length: lastDay + 1 }, () => Money.from(0))
 
+  // A SUBSET of `income`, not a bucket of its own: financial income moves the
+  // balance exactly like any other income, so giving it a bucket would change
+  // the sign rules and the reconciliation. It is tracked alongside so the
+  // summary can name it without recounting anything.
+  let financialIncome = Money.from(0)
   const totals: Record<CashBucket, MoneyType> = {
     income: Money.from(0),
     expense: Money.from(0),
@@ -316,6 +328,9 @@ export function buildMonthBalanceSeries(
       totals[bucket] = Money.add(totals[bucket], signed)
     } else {
       totals[bucket] = Money.add(totals[bucket], moneyAbs(signed))
+      if (bucket === 'income' && row.is_financial_income) {
+        financialIncome = Money.add(financialIncome, moneyAbs(signed))
+      }
     }
 
     if (bucket === 'income') dailyIncome[day] = Money.add(dailyIncome[day], moneyAbs(signed))
@@ -341,6 +356,7 @@ export function buildMonthBalanceSeries(
     month,
     days,
     totalIncome: Money.toNumber(totals.income),
+    totalFinancialIncome: Money.toNumber(financialIncome),
     totalExpense: Money.toNumber(totals.expense),
     totalAdjustment: Money.toNumber(totals.adjustment),
     totalCardPayment: Money.toNumber(totals.cardPayment),
@@ -368,6 +384,7 @@ function emptyMonthSeries(
       dailyAdjustment: 0,
     })),
     totalIncome: 0,
+    totalFinancialIncome: 0,
     totalExpense: 0,
     totalAdjustment: 0,
     totalCardPayment: 0,

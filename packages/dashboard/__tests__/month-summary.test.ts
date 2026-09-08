@@ -8,6 +8,7 @@ const series = (overrides: Partial<MonthBalanceSeries> = {}): MonthBalanceSeries
     month: 8,
     days: [],
     totalIncome: 0,
+    totalFinancialIncome: 0,
     totalExpense: 0,
     totalAdjustment: 0,
     totalCardPayment: 0,
@@ -42,7 +43,7 @@ const bimoneda = (ars: Partial<MonthBalanceSeries>, usd: Partial<MonthBalanceSer
 const EMPTY_SUMMARY = {
   entro: 0,
   seFue: 0,
-  entroParts: { ingresos: 0, devoluciones: 0, otros: 0 },
+  entroParts: { ingresos: 0, ingresosFinancieros: 0, devoluciones: 0, otros: 0 },
   seFueParts: { gastos: 0, pagosDeTarjeta: 0, otros: 0 },
 }
 
@@ -67,7 +68,7 @@ describe('deriveMonthSummary', () => {
     expect(summary.ARS).toEqual({
       entro: 20_000,
       seFue: 81_303,
-      entroParts: { ingresos: 20_000, devoluciones: 0, otros: 0 },
+      entroParts: { ingresos: 20_000, ingresosFinancieros: 0, devoluciones: 0, otros: 0 },
       seFueParts: { gastos: 81_303, pagosDeTarjeta: 0, otros: 0 },
     })
     expect(summary.USD).toEqual(EMPTY_SUMMARY)
@@ -107,13 +108,13 @@ describe('deriveMonthSummary', () => {
     expect(summary.ARS).toEqual({
       entro: 500_000,
       seFue: 120_000,
-      entroParts: { ingresos: 500_000, devoluciones: 0, otros: 0 },
+      entroParts: { ingresos: 500_000, ingresosFinancieros: 0, devoluciones: 0, otros: 0 },
       seFueParts: { gastos: 120_000, pagosDeTarjeta: 0, otros: 0 },
     })
     expect(summary.USD).toEqual({
       entro: 300,
       seFue: 65,
-      entroParts: { ingresos: 300, devoluciones: 0, otros: 0 },
+      entroParts: { ingresos: 300, ingresosFinancieros: 0, devoluciones: 0, otros: 0 },
       seFueParts: { gastos: 45, pagosDeTarjeta: 20, otros: 0 },
     })
   })
@@ -132,10 +133,31 @@ describe('deriveMonthSummary', () => {
 
       expect(ARS.entroParts).toEqual({
         ingresos: 2_929_111.22,
+        ingresosFinancieros: 0,
         devoluciones: 446_002.12,
         otros: 5_000,
       })
       expect(ARS.entro).toBe(3_380_113.34)
+    })
+
+    it('splits the yields out of income without adding them on top', () => {
+      // August 2026: 2.929.111,22 of income, of which 131.431,22 was interest
+      // filed under "Financiero". The two rows are 2.797.680 and 131.431,22 —
+      // and the total is still what it always was.
+      const { ARS } = deriveMonthSummary(
+        bimoneda({ totalIncome: 2_929_111.22, totalFinancialIncome: 131_431.22 }),
+      )
+
+      expect(ARS.entroParts.ingresos).toBe(2_797_680)
+      expect(ARS.entroParts.ingresosFinancieros).toBe(131_431.22)
+      expect(ARS.entro).toBe(2_929_111.22)
+    })
+
+    it('leaves every income under "Ingresos" when none was filed as financial', () => {
+      const { ARS } = deriveMonthSummary(bimoneda({ totalIncome: 500_000 }))
+
+      expect(ARS.entroParts.ingresos).toBe(500_000)
+      expect(ARS.entroParts.ingresosFinancieros).toBe(0)
     })
 
     it('splits what went out into spending, statement payments and the rest', () => {

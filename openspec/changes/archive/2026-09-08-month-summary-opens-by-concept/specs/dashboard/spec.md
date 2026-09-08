@@ -6,7 +6,8 @@ Los dos flujos del "Resumen del mes" SHALL poder abrirse para mostrar **de qué 
 
 La apertura de **"Entró"** SHALL listar:
 
-- **Ingresos** — lo que se ganó (`type='income'` acreditado en una cuenta propia).
+- **Ingresos** — lo que el usuario ganó: sueldo, una venta, un regalo.
+- **Ingresos financieros** — lo que ganó la plata sola, clasificado en la categoría **Financiero**: sale de "Ingresos", nunca se suma encima.
 - **Devoluciones** — reintegros "a cuenta" recibidos: plata que VOLVIÓ, no plata ganada.
 - **Otros** — el lado positivo de los baldes con signo: una liquidación a favor, la pata destino de un cambio de moneda, un ajuste positivo.
 

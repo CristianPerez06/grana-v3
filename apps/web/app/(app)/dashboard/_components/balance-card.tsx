@@ -591,6 +591,11 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
                 usd: summary.USD.entroParts.ingresos,
               },
               {
+                label: t('month.came_in_ingresos_financieros'),
+                ars: summary.ARS.entroParts.ingresosFinancieros,
+                usd: summary.USD.entroParts.ingresosFinancieros,
+              },
+              {
                 label: t('month.came_in_devoluciones'),
                 ars: summary.ARS.entroParts.devoluciones,
                 usd: summary.USD.entroParts.devoluciones,

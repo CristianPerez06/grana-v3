@@ -25,7 +25,7 @@ import {
 const summary = (entro: number, seFue: number): MonthSummary => ({
   entro,
   seFue,
-  entroParts: { ingresos: entro, devoluciones: 0, otros: 0 },
+  entroParts: { ingresos: entro, ingresosFinancieros: 0, devoluciones: 0, otros: 0 },
   seFueParts: { gastos: seFue, pagosDeTarjeta: 0, otros: 0 },
 })
 
@@ -134,7 +134,12 @@ describe('the reserve is not a flow — the two universes stay apart', () => {
     // guarantee is structural, not a matter of care.
     const s = summary(2_000_000, 1_200_000)
     expect(Object.keys(s).sort()).toEqual(['entro', 'entroParts', 'seFue', 'seFueParts'])
-    expect(Object.keys(s.entroParts).sort()).toEqual(['devoluciones', 'ingresos', 'otros'])
+    expect(Object.keys(s.entroParts).sort()).toEqual([
+      'devoluciones',
+      'ingresos',
+      'ingresosFinancieros',
+      'otros',
+    ])
     expect(Object.keys(s.seFueParts).sort()).toEqual(['gastos', 'otros', 'pagosDeTarjeta'])
   })
 })

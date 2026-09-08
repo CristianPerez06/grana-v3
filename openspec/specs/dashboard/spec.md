@@ -1340,7 +1340,8 @@ Los dos flujos del "Resumen del mes" SHALL poder abrirse para mostrar **de qué 
 
 La apertura de **"Entró"** SHALL listar:
 
-- **Ingresos** — lo que se ganó (`type='income'` acreditado en una cuenta propia).
+- **Ingresos** — lo que el usuario ganó: sueldo, una venta, un regalo.
+- **Ingresos financieros** — lo que ganó la plata sola: intereses de una cuenta remunerada, rendimientos, dividendos. Es la porción de los ingresos del mes clasificada en la categoría **Financiero**, separada de la fila anterior y NUNCA sumada encima de ella. La regla se apoya en la clasificación que el usuario ya ve: un interés archivado en otra categoría cuenta como ingreso común, que es la lectura honesta de lo que el usuario dijo que era.
 - **Devoluciones** — reintegros "a cuenta" recibidos: plata que VOLVIÓ, no plata ganada.
 - **Otros** — el lado positivo de los baldes con signo: una liquidación a favor, la pata destino de un cambio de moneda, un ajuste positivo.
 
@@ -1367,8 +1368,14 @@ La apertura SHALL existir en **ambas plataformas** y SHALL respetar la regla bim
 #### Scenario: Abrir "Entró" separa lo ganado de lo devuelto
 
 - **WHEN** el usuario toca "Entró" en un mes con $2.929.111,22 de ingresos y $446.002,12 de reintegros recibidos
-- **THEN** ve "Ingresos $2.929.111,22" y "Devoluciones $446.002,12"
-- **AND** las dos suman los $3.375.113,34 que muestra "Entró"
+- **THEN** ve "Ingresos" y "Devoluciones $446.002,12"
+- **AND** las filas suman los $3.375.113,34 que muestra "Entró"
+
+#### Scenario: Los rendimientos salen de "Ingresos", no se suman aparte
+
+- **WHEN** de los $2.929.111,22 de ingresos del mes, $131.431,22 son intereses clasificados en "Financiero"
+- **THEN** la apertura muestra "Ingresos $2.797.680,00" y "Ingresos financieros $131.431,22"
+- **AND** "Entró" sigue mostrando el mismo total que antes de separarlos
 
 #### Scenario: Un concepto en cero no ocupa un renglón
 

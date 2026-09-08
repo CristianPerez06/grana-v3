@@ -19,7 +19,7 @@ import { deriveBalanceCardView, type MonthSummary } from '@grana/dashboard'
 const summary = (entro: number, seFue: number): MonthSummary => ({
   entro,
   seFue,
-  entroParts: { ingresos: entro, devoluciones: 0, otros: 0 },
+  entroParts: { ingresos: entro, ingresosFinancieros: 0, devoluciones: 0, otros: 0 },
   seFueParts: { gastos: seFue, pagosDeTarjeta: 0, otros: 0 },
 })
 const zero: MonthSummary = summary(0, 0)

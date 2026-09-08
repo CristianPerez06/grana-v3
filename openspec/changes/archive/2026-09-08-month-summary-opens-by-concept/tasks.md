@@ -7,7 +7,8 @@
 
 - [x] 2.1 Web: los rótulos de "Entró" y "Se fué" se vuelven botones con chevron; panel debajo de la tira, uno abierto por vez, filas en cero omitidas.
 - [x] 2.2 Nativo: lo mismo, con el panel debajo de su propia fila.
-- [x] 2.3 i18n `es` y `en` de los seis rótulos.
+- [x] 2.3 i18n `es` y `en` de los rótulos.
+- [x] 2.4 "Ingresos financieros": `totalFinancialIncome` en la serie, la categoría del movimiento en la lectura del mes, y la fila que sale de "Ingresos".
 
 ## 3. Verificación
 

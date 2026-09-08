@@ -40,6 +40,13 @@ export type MonthBalanceSeries = {
   month: number
   days: MonthBalanceDay[]
   totalIncome: number
+  /**
+   * The slice of `totalIncome` classified under "Financiero" — interest, yields,
+   * dividends. A SUBSET, not an extra term: it is already inside `totalIncome`
+   * and adding it again would double-count. It exists so the month summary can
+   * separate what the user earned from what their money earned on its own.
+   */
+  totalFinancialIncome: number
   /** Real expense only (`type='expense'` that is NOT a card statement payment). */
   totalExpense: number
   /**
