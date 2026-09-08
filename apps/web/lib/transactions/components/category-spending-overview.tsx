@@ -9,6 +9,7 @@ import {
   generateSubTints,
   INCOME_PALETTE,
   MODE_ACCENT,
+  netAfterCredits,
   RANKING_VISIBLE,
   type CategoryBreakdown,
   type CategorySlice,
@@ -113,6 +114,8 @@ type Props = {
     subtitle: string
     /** Label for the credits ("te devolvieron") group. */
     creditsLabel: string
+    /** Closing line under the credits: what the month cost once they are subtracted. */
+    netTotalLabel: string
   }
   detailHref?: string
   /**
@@ -466,6 +469,15 @@ export const CategorySpendingOverview = ({
   )
 
   // ── Center label ───────────────────────────────────────────────────────────
+  // What the month cost once the credits come off. The centre sums the DRAWN
+  // slices — a donut cannot draw a negative arc — so with a category in credit
+  // it is neither gross nor net. Null when there is nothing to reconcile: the
+  // centre already is that figure and repeating it would be noise.
+  const netTotal =
+    mode === 'egresos' && credits && credits.length > 0
+      ? netAfterCredits(breakdown.total, credits)
+      : null
+
   const centerLabel = drilledSlice && drilledSub ? (
     <>
       <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-soft leading-none">
@@ -782,6 +794,20 @@ export const CategorySpendingOverview = ({
               </li>
             ))}
           </ul>
+          {/* Closing row, right under the credits so the three numbers read as
+              one subtraction: gastado (the centre) − te devolvieron = te costó.
+              Parked in the card footer at first, which cost no height but put
+              the card-spending note between the credits and their result — two
+              big numbers with nothing visibly linking them. Height is the
+              cheaper price. */}
+          <div className="mt-3 flex items-center gap-3 border-t border-border-soft pt-3">
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
+              {labels.netTotalLabel}
+            </span>
+            <span className="shrink-0 text-sm font-extrabold tabular-nums text-text">
+              {fmt(netTotal ?? 0)}
+            </span>
+          </div>
         </div>
       )}
 

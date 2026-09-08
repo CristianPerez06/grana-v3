@@ -87,6 +87,27 @@ export function buildCategorySlices(
   return { total, slices }
 }
 
+// ── netAfterCredits ───────────────────────────────────────────────────────────
+
+/**
+ * What the month actually cost: the donut's total minus the categories that
+ * ended in credit.
+ *
+ * A donut cannot draw a negative arc, so a category whose received
+ * reimbursements outweigh its spend leaves the ring and is listed apart
+ * ("te devolvieron"). That makes the centre a number that is neither gross nor
+ * net — it is the sum of what got drawn. This subtraction closes the card with
+ * the net, which in the ordinary case is the same figure the dashboard's
+ * "Gastaste" tile shows.
+ *
+ * `Money` arithmetic rather than plain subtraction: two exact pesos can differ
+ * by a float tail, and a card that renders a cent nobody spent is a wrong read.
+ */
+export function netAfterCredits(total: number, credits: Array<{ value: number }>): number {
+  const creditsTotal = credits.reduce((acc, c) => Money.add(acc, Money.from(c.value)), Money.from(0))
+  return Money.toNumber(Money.subtract(Money.from(total), creditsTotal))
+}
+
 // ── buildSliceMetaLine ────────────────────────────────────────────────────────
 
 export type SliceMetaContext = {
