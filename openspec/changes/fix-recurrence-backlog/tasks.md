@@ -121,7 +121,7 @@ que habilita el backlog.
 - [x] 1.0 **Sincronizar con `main`** antes de seguir: la branch quedó 12 commits atrás y
       redescubrió un defecto que **#114** ya había arreglado (los tests de `packages/` no corrían;
       ahora `pnpm -r test`). Colisión de migraciones resuelta: `main` ocupó `0061`–`0063`, así que la
-      expansión pasa a **`0064_recurrence_identity_expand.sql`** y la activación a `0065`. Los tests
+      expansión pasa a **`0064_recurrence_identity_expand.sql`** y la activación tomará **el próximo número libre contra `main` al crearla**, no uno reservado ahora. Los tests
       nuevos viven en su paquete (`packages/recurrences/__tests__`), no en `apps/web`, y los alias
       que había agregado a `apps/web/vitest.config.ts` se revirtieron. Verificado: `pnpm test`
       (448 en `packages/` + los de web, sin fallas), esquema reconstruido en el orden real con las
@@ -170,7 +170,8 @@ que habilita el backlog.
 - [ ] 2.6 Copy: **"vencimientos por revisar"** — ni "pagos" (afirmaría que hubo pago) ni lenguaje de
       deuda. Actualizar `es.json` y `en.json`.
 - [ ] 2.8 **Migración B · activación**, en archivo aparte
-      (`0065_recurrence_backlog_activate.sql`), y solo con los reads del paso 2.2 ya desplegados en
+      (`<próximo libre>_recurrence_backlog_activate.sql`, número elegido contra `main` al crearla),
+      y solo con los reads del paso 2.2 ya desplegados en
       web y nativo: eliminar `recurrence_instances_one_pending_per_rule`. Desde acá existe el
       backlog. Las constraints de `resolution_kind` ya entraron en la expansión (tarea 1.4b).
 - [ ] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo

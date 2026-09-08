@@ -7,7 +7,14 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
   "dependencies": {
     "@grana/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
   }
 }

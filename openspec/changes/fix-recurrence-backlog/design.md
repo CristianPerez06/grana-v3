@@ -504,7 +504,7 @@ Son dos migraciones, con un despliegue en el medio:
 |---|---|---|---|
 | **A · Expansión** | `0064_recurrence_identity_expand.sql` | Columnas, tablas nuevas, backfill, trigger de compatibilidad | **Sin cambios.** El índice de pendiente única sigue vivo. |
 | — | *(despliegue de web y nativo con el modelo nuevo)* | | |
-| **B · Activación** | `0065_recurrence_backlog_activate.sql` | Elimina el índice de pendiente única | El backlog empieza a existir. |
+| **B · Activación** | `<próximo libre>_recurrence_backlog_activate.sql` | Elimina el índice de pendiente única | El backlog empieza a existir. |
 | **C · Retiro** | entrega posterior | Retira `scheduled_date` y las **ramas de compatibilidad** del trigger | — |
 
 **"Nativo desplegado" no significa "todos actualizaron".** Una app instalada no se actualiza porque
@@ -727,7 +727,7 @@ Tres cosas concretas que "por tandas" no define:
 **Dos migraciones con un despliegue en el medio** (decisión 17). Cada una corre en su propia
 transacción; no hay una sola transacción que abarque las dos.
 
-### A · Expansión — `0061_recurrence_identity_expand.sql`
+### A · Expansión — `0064_recurrence_identity_expand.sql`
 
 Aditiva. Al terminar, **el comportamiento de la app es idéntico**: el índice de pendiente única sigue
 vivo y nada genera backlog todavía.
@@ -761,9 +761,14 @@ vivo y nada genera backlog todavía.
 Web y nativo con el modelo nuevo: reads que aceptan colecciones, escrituras que proveen `due_date` y
 `resolution_kind`. Confirmar y omitir dejan de escribir `last_generated_date`.
 
-### B · Activación — `0065_recurrence_backlog_activate.sql`
+### B · Activación — `<próximo número libre>_recurrence_backlog_activate.sql`
 
 Recién cuando el despliegue está hecho. Es la migración que **cambia el comportamiento**.
+
+**El número se elige contra `main` en el momento de crearla**, no se reserva ahora: entre la
+expansión y la activación hay un despliegue de por medio y `main` puede haber avanzado — es lo que
+ya pasó con esta misma expansión, que nació `0061` y terminó `0064`. `AGENTS.md` lo pide
+explícitamente en su pre-flight, y hubo una colisión de `0057` por saltearlo.
 
 1. Eliminar `recurrence_instances_one_pending_per_rule`. Desde acá existe el backlog.
 

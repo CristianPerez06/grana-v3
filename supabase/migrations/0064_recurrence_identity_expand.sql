@@ -13,7 +13,7 @@
 -- per_rule`, así que la app sigue viendo exactamente una ocurrencia pendiente
 -- por regla, igual que hoy.
 --
--- El backlog se habilita en 0065_recurrence_backlog_activate.sql, DESPUÉS de
+-- El backlog se habilita en <próximo libre>_recurrence_backlog_activate.sql, DESPUÉS de
 -- desplegar web y nativo con el modelo nuevo. El orden importa: sacar el índice
 -- antes del despliegue dejaría a la base acumulando atraso mientras la app
 -- sigue mostrando una sola ocurrencia — invisible, y peor que el bug actual.
@@ -613,6 +613,10 @@ commit;
 -- ═══════════════════════════════════════════════════════════════════════════
 --
 --   · NO elimina `recurrence_instances_one_pending_per_rule`  → activación
+--
+-- El número de la activación NO se reserva acá: se elige contra `main` cuando se
+-- la escriba, después del despliegue. Esta misma migración nació 0061 y terminó
+-- 0064 por eso.
 --   · NO toca `scheduled_date` ni `last_generated_date`       → migración C
 --
 -- ⚠️  AVISO PARA LA MIGRACIÓN C

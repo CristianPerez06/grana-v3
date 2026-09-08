@@ -414,10 +414,10 @@ export async function confirmRecurrenceInstance(
       confirmed_transaction_id: transactionId,
       resolved_at: new Date().toISOString(),
       amount: effective.amount,
-      // `scheduled_date` NO se escribe. Antes se pisaba con la fecha que el
-      // usuario elegía al confirmar, y con eso la ocurrencia perdía su
-      // vencimiento: la fecha de pago vive en el movimiento (`transactions.date`)
-      // y el vencimiento en `due_date`, que es inmutable. Son datos distintos.
+      // `scheduled_date` is NOT written. It used to be overwritten with the date
+      // the user picked at confirm time, and that cost the occurrence its due
+      // date: the payment date lives on the movement (`transactions.date`), the
+      // due date in `due_date`, and they are different facts.
       // La cuenta con la que REALMENTE se confirmó, no la de la regla: el
       // historial de instancias tiene que coincidir con el movimiento creado.
       account_id: effective.account_id,
@@ -440,16 +440,16 @@ export async function confirmRecurrenceInstance(
     }
   }
 
-  // El importe que el usuario ajusta al resolver vale SOLO para esta ocurrencia
-  // y NO reescribe el de la regla. Antes lo propagaba (la vieja D6), y con una
-  // sola pendiente por vez pasaba por conveniente; con resolución en bloque es
-  // incorrecto: resolver junio, julio y agosto con importes distintos dejaría la
-  // regla con el que se haya guardado último — un resultado que depende del
-  // ORDEN DE EJECUCIÓN. Actualizar la regla es una acción explícita y aparte
-  // ("Usar este importe de acá en más"), aplicada una sola vez.
+  // The amount the user adjusts when resolving applies to THIS occurrence only
+  // and does NOT rewrite the rule's. It used to propagate (the old D6), which
+  // passed for convenient while a rule could only have one pending occurrence;
+  // with bulk resolution it is wrong: resolving June, July and August with
+  // different amounts would leave the rule holding whichever was written last —
+  // a result that depends on EXECUTION ORDER. Updating the rule is a separate,
+  // explicit action ("use this amount from now on"), applied once.
   //
-  // `last_generated_date` se sigue escribiendo por ahora (tarea 1.5): sacarlo
-  // depende de la auditoría de fase contra producción.
+  // `last_generated_date` is still written for now (task 1.5): dropping it
+  // depends on the cursor-phase audit against production.
   await supabase
     .from('recurrences')
     .update({ last_generated_date: instance.scheduled_date })
