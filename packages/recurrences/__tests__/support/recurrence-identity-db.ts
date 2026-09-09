@@ -23,6 +23,7 @@ const MIGRATIONS = resolve(__dirname, '../../../../supabase/migrations')
 const read = (file: string) => readFileSync(resolve(MIGRATIONS, file), 'utf-8')
 
 export const MIGRATION_0064 = read('0064_recurrence_identity_expand.sql')
+export const MIGRATION_0065 = read('0065_delete_seeded_movement_atomically.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -128,6 +129,24 @@ const SCHEMA = `
     canonical_name text not null default 'subcategoria'
   );
 
+  -- Reduced to what the seed link needs. The FK is RESTRICT since 0053: that is
+  -- what forces the unlink before the movement can go, and therefore what makes
+  -- the two writes inseparable.
+  create table public.transactions (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    date date not null default current_date,
+    amount numeric(18,2) not null default 1
+  );
+  alter table public.recurrences
+    add constraint recurrences_created_from_transaction_fk
+    foreign key (created_from_transaction_id)
+    references public.transactions(id) on delete restrict;
+
+  alter table public.transactions enable row level security;
+  create policy "own transactions" on public.transactions for all to authenticated
+    using (user_id = auth.uid()) with check (user_id = auth.uid());
+
   alter table public.recurrences enable row level security;
   create policy "users select own recurrences" on public.recurrences for select to authenticated
     using (user_id = auth.uid());
@@ -181,6 +200,9 @@ export async function applyMigration(db: PGlite): Promise<void> {
   }
   // 0064 creates two tables, so they need the grant the initial one could not give.
   await grantAll(db)
+  // 0065 rides along: it is the atomic delete the seeded-rule repair runs, and
+  // every test that applies the expansion wants it available.
+  await db.exec(MIGRATION_0065)
 }
 
 /** What Supabase grants `authenticated` on every table of `public`. */

@@ -258,13 +258,29 @@ que habilita el backlog.
       a `acceptRecurrenceSuggestion`, que produce la misma forma pero desde una fecha pasada donde el
       movimiento sí existe—, y la regla ya no está sembrada. Todo en **una sola sentencia**, así que
       la desvinculación y la liberación no pueden separarse.
-      Regresiones: en `delete-seeded-recurrence.test.ts`, que la desvinculación escribe el piso
-      liberado, que los dos casos que **no** deben repararse siguen sin tocarlo, que un fallo de la
-      escritura **no borra el movimiento**, y que un fallo del borrado se reporta en vez de dar éxito.
-      En `future-seed-repair.test.ts`, la secuencia completa contra la base: el piso rechaza una
-      edición común, rechaza moverse mientras la regla sigue sembrada, acepta la liberación, **no
-      materializa nada hasta que llega la fecha**, produce la ocurrencia una sola vez, y vuelve a ser
-      inmutable después. Más el caso de `start_date` pasada, que el guard rechaza.
+      **Corregido — la operación es atómica de verdad.** Desvincular, liberar el piso y borrar el
+      movimiento eran tres viajes sin transacción alrededor, y cada resultado parcial se lo cobraba el
+      usuario: si el borrado fallaba después de liberar, quedaban el movimiento **y** la ocurrencia
+      futura —el mismo gasto dos veces— y ni siquiera se podía reintentar, porque el reintento busca
+      la regla por la columna que la desvinculación acaba de borrar. Compensar desde el cliente
+      tampoco estaba disponible: el guard deja mover el piso en un solo sentido. Ahora las tres cosas
+      viven en `delete_movement_unlinking_seed` (**migración 0065**), `SECURITY INVOKER` para que RLS
+      siga decidiendo qué filas toca y no agregue alcance que nadie revisó.
+      **Corregido — el guard exige que haya habido semilla.** Faltaba `OLD.created_from_transaction_id
+      is not null`: sin eso, una regla que nunca tuvo semilla podía llevarse a la misma forma y
+      liberarse, y la excepción dejaba de describir la situación para la que existe.
+      **Corregido — la regresión ya no vence.** Las fechas se calculan contra el hoy de la base
+      (`+30 días`), no fijas: el guard pregunta si `start_date` sigue en el futuro, así que una fecha
+      hardcodeada dejaba de probar el caso futuro el día que pasaba, y después rompía.
+      Regresiones: en `delete-seeded-recurrence.test.ts`, que el cliente **entrega la reparación en un
+      solo llamado** y no escribe nada por su cuenta, y que un fallo se reporta en vez de dar éxito.
+      En `future-seed-repair.test.ts`, contra la base real y **como usuario autenticado**: el piso
+      rechaza una edición común, rechaza moverse mientras la regla sigue sembrada, el `RESTRICT`
+      impide borrar el movimiento sin desvincular, el RPC hace las tres cosas juntas, **no materializa
+      nada hasta que llega la fecha**, produce la ocurrencia una sola vez, y el piso vuelve a ser
+      inmutable. Más los dos casos que la excepción debe rechazar: `start_date` pasada y regla que
+      nunca tuvo semilla.
+      `validate_schema.sql` verifica que la función exista y sea `SECURITY INVOKER`.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.

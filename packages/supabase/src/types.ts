@@ -1347,6 +1347,10 @@ export type Database = {
         Args: { p_account_id: string; p_date: string; p_settlement_id: string }
         Returns: undefined
       }
+      delete_movement_unlinking_seed: {
+        Args: { p_transaction_id: string }
+        Returns: undefined
+      }
       get_account_balance_sums: {
         Args: { p_account_ids?: string[]; p_today?: string }
         Returns: {

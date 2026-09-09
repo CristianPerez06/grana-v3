@@ -323,13 +323,17 @@ begin
        --     `acceptRecurrenceSuggestion` out: it produces the same floor shape,
        --     but from the last date DETECTION SAW, always in the past — and there
        --     the movement really does exist, so releasing would duplicate it;
-       --   · the rule is no longer seeded, which is the fact that made the floor
-       --     wrong in the first place.
+       --   · the rule WAS seeded and is no longer, in this very write. Requiring
+       --     the seed to have existed is what makes this a repair rather than a
+       --     transition any rule can reach: without it, a rule that never had a
+       --     seed could be walked into the same shape and then released, and the
+       --     exception would stop describing the situation it exists for.
        and not (
             NEW.reconstruct_from = OLD.start_date - 1
         and OLD.reconstruct_from = OLD.start_date
         and NEW.start_date = OLD.start_date
         and OLD.start_date > (now() at time zone 'America/Argentina/Buenos_Aires')::date
+        and OLD.created_from_transaction_id is not null
         and NEW.created_from_transaction_id is null
        )
     then

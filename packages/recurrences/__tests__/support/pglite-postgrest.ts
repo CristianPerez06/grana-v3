@@ -400,6 +400,18 @@ export function pglitePostgrest(
   const maxRows = options.maxRows ?? 1000
   const unstableTies = options.unstableTies ?? false
   return {
+    /** `select public.<fn>(args)`, the shape PostgREST turns an RPC call into. */
+    async rpc(name: string, args: Record<string, unknown> = {}) {
+      const entries = Object.entries(args)
+      const params = entries.map(([, value]) => value)
+      const call = entries
+        .map(([key], index) => `${key} => $${index + 1}`)
+        .join(', ')
+      return db
+        .query(`select public.${name}(${call})`, params)
+        .then(() => ({ data: null, error: null }))
+        .catch((error: Error) => ({ data: null, error: toPostgrestError(error) }))
+    },
     from(table: string) {
       return {
         select: (select: string) => new Query(db, table, select, maxRows, unstableTies),

@@ -759,7 +759,23 @@ begin
     raise exception 'recurrences: % rules with no schedule version — the walker would not know which calendar applied', v_offend;
   end if;
 
-  raise notice '✓ 8.1J — occurrence identity (0064): columns, tables, indexes, composite FKs, triggers and sole ownership OK; the single-pending index is still alive';
+  -- (11) The atomic repair for a deleted seed (migration 0065). Its whole point
+  -- is that the unlink, the floor release and the DELETE happen together; if the
+  -- function is missing the client has no way to do that, and every partial
+  -- outcome either duplicates a gasto or loses an occurrence.
+  if not exists (
+    select 1 from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname = 'delete_movement_unlinking_seed'
+       -- SECURITY INVOKER: it must run as the user, so RLS decides what it may
+       -- touch. As DEFINER it would silently grant reach nobody reviewed.
+       and p.prosecdef = false
+  ) then
+    raise exception 'public.delete_movement_unlinking_seed is missing or is not SECURITY INVOKER (migration 0065)';
+  end if;
+
+  raise notice '✓ 8.1J — occurrence identity (0064): columns, tables, indexes, composite FKs, triggers and sole ownership OK; the single-pending index is still alive; the atomic seed repair (0065) is in place';
 end $$;
 
 

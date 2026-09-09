@@ -26,7 +26,6 @@ import {
   type CancelReimbursementInput,
 } from '@grana/validation'
 import {
-  addInterval,
   formatDateISO,
   getNextExpectedOccurrence,
   getTodayAR,
@@ -809,43 +808,35 @@ export async function deleteTransaction(
       }
     }
 
-    // Unlink so the RESTRICT lets the movement go. For a live rule being kept, a
-    // FUTURE `start_date` is an occurrence covered by the movement being deleted:
-    // leave nothing in its place and the rule skips that period entirely, which
-    // is the orphan defect 0053 repairs.
+    // Unlink so the RESTRICT lets the movement go, release the floor when the
+    // seed was dated in the future, and delete the movement — ALL IN ONE
+    // TRANSACTION, which is what `delete_movement_unlinking_seed` is for (0065).
     //
-    // HOW THE REPAIR WORKS NOW. It used to clear `last_generated_date` so the
-    // generator would produce `start_date` again; the generator no longer reads
-    // that column. What it reads is `reconstruct_from`, which 0064 derived from
-    // the seed's date and keeps immutable — except for exactly this transition,
-    // which its guard allows: back by ONE day, to the floor the rule would have
-    // had with no seed at all, only while `start_date` is still in the future and
-    // only once the rule is unlinked.
+    // Done as separate round trips, every partial outcome costs the user
+    // something. Unlink and release succeed but the DELETE fails and the movement
+    // still exists WHILE the rule will materialize its occurrence when the date
+    // arrives — the same gasto twice — and it cannot even be retried into shape,
+    // because the retry looks the rule up by the column the unlink just cleared.
+    // Unlink succeeds and the release fails and the occurrence is lost, which is
+    // the defect being repaired. Compensating in the client is not available
+    // either: 0064's guard lets the floor move one way only.
     //
-    // Releasing the floor rather than materializing the occurrence is what keeps
-    // the TIMING unchanged: the generator produces `start_date` when that date
-    // arrives, exactly as before, instead of a future occurrence showing up in
-    // "vencimientos por revisar" the moment the movement is deleted.
-    //
-    // One statement, so the unlink and the release cannot come apart. The cursor
-    // is nulled alongside them while the legacy column still exists.
-    const seedCoversFutureOccurrence = ruleIsLive && rule.start_date > today
+    // WHY THE FLOOR AND NOT AN OCCURRENCE. It used to clear `last_generated_date`
+    // so the generator would produce `start_date` again; the generator no longer
+    // reads that column. Materializing the occurrence here instead would work but
+    // would change WHEN it appears — a yearly seed deleted today would put a
+    // vencimiento eight months away into "por revisar" this afternoon. Releasing
+    // the floor keeps the timing: the generator produces it when the date comes.
+    const { error: seededDeleteError } = await supabase.rpc(
+      'delete_movement_unlinking_seed',
+      { p_transaction_id: id },
+    )
 
-    const { error: unlinkError } = await supabase
-      .from('recurrences')
-      .update(
-        (seedCoversFutureOccurrence
-          ? {
-              created_from_transaction_id: null,
-              last_generated_date: null,
-              reconstruct_from: addInterval(rule.start_date, 'day', -1),
-            }
-          : { created_from_transaction_id: null }) as never,
-      )
-      .eq('id', rule.id)
-      .eq('user_id', userId)
-
-    if (unlinkError) return { ok: false, errorCode: unlinkError.code }
+    // GRN01 = the temporal guard (0043 + 0049): a same-currency settlement dated
+    // at/after this shared expense would rewrite a settled balance. It is raised
+    // by a trigger, so it travels out of the RPC unchanged.
+    if (seededDeleteError) return { ok: false, errorCode: seededDeleteError.code }
+    return { ok: true }
   }
 
   const { error } = await supabase
