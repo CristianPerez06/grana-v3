@@ -83,41 +83,29 @@ que habilita el backlog.
 - [ ] 1.6 `decideRecurrenceInstance` pierde el parámetro `hasPending` y pasa a devolver la **lista**
       de ocurrencias faltantes, derivada de `walkOccurrences` y del conjunto de `due_date` ya
       existentes.
-- [x] 1.7 Unificar `max_occurrences`: el generador cuenta contra el cronograma, no filas de
-      `recurrence_instances`. **Hecho para las reglas alineadas; abierto hasta la auditoría de fase**
-      (ver 1.10b). Medida la divergencia antes de tocar nada: con una regla creada desde movimiento y
-      tope 3, el generador producía **4** ocurrencias (semilla + 3 filas) y la proyección **3**, y la
+- [x] 1.7 Unificar `max_occurrences`: el tope se cuenta contra el cronograma, no contra filas de
+      `recurrence_instances`.
+      **El defecto, medido antes de tocar nada:** con una regla creada desde un movimiento y tope 3,
+      el generador producía **4** ocurrencias (la semilla más 3 filas) y la proyección **3**, y la
       sobrante —`2026-08-01`— aparecía como pendiente en una fecha que la proyección nunca había
-      anunciado. La causa es que una ocurrencia puede existir sin fila: el movimiento semilla cubre
-      `start_date` y no materializa instancia. El tope pasa a ser el **ordinal de `nextDate` sobre el
-      calendario** (`occurrenceOrdinal`), que no depende de lo resuelto, de lo que escriba un cliente
-      ni de que se borren filas.
-      **Lo que queda abierto:** una fecha fuera del cronograma NO tiene ordinal. `occurrenceOrdinal`
-      devuelve `null` en ese caso —antes devolvía el de la próxima fecha válida, que es OTRA
-      ocurrencia, y con eso el tope descartaba un vencimiento que la regla sí tenía—. **Ninguna forma
-      de regla es inmune**, así que el criterio es la fecha concreta y nunca la unidad ni el
-      intervalo. Dos mecanismos independientes la sacan del cronograma: **(1) la fase** —`anchorDate`
-      restaura el día del mes, no la fase de meses ni de años: cada 2 meses desde el `2026-01-01` con
-      cursor `2026-02-10` da `2026-04-01` contra un cronograma `01/01, 01/03, 01/05…`, y una regla
-      anual cuyo cursor cayó en otro mes se desfasa igual—; y **(2) el inicio movido** —`updateRecurrence`
-      mueve `start_date` sin tocar el cursor, así que el cursor queda ANTES del inicio: con inicio
-      nuevo `2026-06-15` y cursor `2026-01-10` la próxima es `2026-02-15`, anterior a la regla misma.
-      Esto alcanza incluso a una regla mensual o diaria de intervalo 1, que por fase no se desfasarían
-      nunca. Mientras la fase sea desconocida, esas reglas **conservan el conteo de filas que usan
-      hoy**, así que el cambio no las toca. Regresiones fijadas: cada 3 días con cursor `2026-06-10`,
-      cada 2 meses, anual desfasada, y `cursor < start_date` en mes y en día. La auditoría
-      (`docs/qa/auditoria-fase-cursor.sql`) devuelve `con_tope_sin_ordinal` —reglas con tope cuya
-      próxima fecha de hoy no pertenece al cronograma, **sin filtrar por unidad**—: si da 0, el
-      ordinal queda como número único y el fallback se retira del generador; si da ≥1, primero hay que
-      persistir la fase de esas reglas o dejar escrita una compatibilidad explícita. El generador ya no
-      trae todas las instancias para el tope: pide solo las `pending`, que es lo único para lo que
-      las necesita.
-      **Cerrada junto con 1.10b, y por una razón más fuerte que "ya no hace falta".** Anclar la
-      decisión en el calendario vuelve el fallback **inalcanzable**: `nextDate` pasa a ser una
-      ocurrencia por construcción, así que siempre tiene ordinal y el caso que el conteo de filas
-      cubría deja de existir. `decideRecurrenceInstance` pierde el parámetro `materializedCount` y el
-      generador pierde la consulta que lo alimentaba. `con_tope_sin_ordinal = 0` en producción
-      confirma que hoy tampoco hay ninguna regla que dependiera de él.
+      anunciado. La causa es que una ocurrencia puede existir **sin fila**: el movimiento semilla
+      cubre `start_date` y no materializa instancia, así que el conteo de filas llegaba a 3 recién
+      después de tres ocurrencias *más*.
+      **El arreglo:** el tope es el **ordinal de `nextDate` sobre el calendario** (`occurrenceOrdinal`,
+      que cuenta `start_date` como la 1ª). No depende de lo que el usuario resolvió, de lo que escriba
+      un cliente, ni de que se borren filas. Fijado en `packages/money-logic/__tests__/max-occurrences.test.ts`,
+      incluido el caso de que borrar instancias ya no le regala ocurrencias a la regla.
+      **Por qué tuvo que esperar a 1.10b, y por qué ya no.** Una fecha fuera del cronograma no tiene
+      ordinal, y `occurrenceOrdinal` devuelve `null` —antes devolvía el de la próxima fecha válida,
+      que es OTRA ocurrencia, y con eso el tope descartaba un vencimiento que la regla sí tenía—.
+      Mientras `nextDate` salía de `addInterval(cursor, …)` ese caso era alcanzable, así que esas
+      reglas conservaban el conteo de filas como compatibilidad explícita. Al anclar la decisión en el
+      calendario (1.10b), **`nextDate` pasa a ser una ocurrencia por construcción**: siempre tiene
+      ordinal y el fallback quedó inalcanzable, no solo innecesario. Se eliminaron el parámetro
+      `materializedCount`, la consulta que lo alimentaba y todas sus llamadas. La auditoría lo
+      confirma por el otro lado: `con_tope_sin_ordinal = 0` en producción, así que tampoco había hoy
+      ninguna regla que dependiera de él.
+
 - [ ] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
       saltea junio, y no mueve el cronograma.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
@@ -125,8 +113,8 @@ que habilita el backlog.
       no queden clientes nativos instalados que lo usen.
       **No es una tarea de código sino una condición permanente de toda la etapa**, y por eso queda
       abierta hasta que la entrega cierre: se verifica al final, comprobando que nada la haya violado
-      en el camino. Cuenta igual en el inventario: las abiertas de la etapa 1 son **seis** —`1.5`,
-      `1.6`, `1.7`, `1.8`, `1.9` y `1.10b`—, no cinco.
+      en el camino. Cuenta igual en el inventario: tras cerrar `1.7` y `1.10b` con la auditoría, las
+      abiertas de la etapa 1 son **cuatro** —`1.5`, `1.6`, `1.8` y esta—.
 - [x] 1.12 Tests de migración con el **caso exacto del #96** (regla cada 3 días, cursor 2026-06-10,
       pendiente del 13/06, hoy 2026-09-08): `reconstruct_from` queda en el cursor y las ocurrencias a
       reconstruir son 29 — julio 11, agosto 10, septiembre 3 — con la del 13/06 deduplicada. Y un
