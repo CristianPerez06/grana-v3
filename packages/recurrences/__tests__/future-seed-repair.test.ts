@@ -168,6 +168,78 @@ describe('a future seed whose movement is deleted', () => {
     ).rejects.toThrow(/immutable/)
   }, 120_000)
 
+  it('rolls the whole repair back when the delete is refused', async () => {
+    // The reason this had to become one transaction. If the unlink and the floor
+    // release survived a refused DELETE, the movement would still exist AND the
+    // rule would materialize its occurrence when the date arrived — the same
+    // gasto twice — and it could not even be retried into shape, because the
+    // retry looks the rule up by the column the unlink just cleared.
+    //
+    // A trigger standing in for the real refusal (GRN01, the temporal guard on
+    // `transactions`): what matters is that the DELETE raises AFTER the two
+    // writes have already happened inside the function.
+    const rule = '00000000-0000-0000-0000-000000006005'
+    const tx = '00000000-0000-0000-0000-0000000060f5'
+    await db.exec(`
+      insert into public.transactions (id, user_id, date, amount)
+      values ('${tx}', '${U_A}', '${seedDate}', 450000);
+      insert into public.recurrences
+        (id, user_id, amount, description, interval_count, interval_unit,
+         start_date, last_generated_date, status, account_id, currency_code,
+         created_from_transaction_id)
+      values ('${rule}', '${U_A}', 450000, 'Alquiler', 1, 'month',
+              '${seedDate}', '${seedDate}', 'active', '${ACCOUNT}', 'ARS', '${tx}');
+
+      create function public.refuse_delete() returns trigger language plpgsql as $refuse$
+      begin
+        raise exception 'refused' using errcode = 'GRN01';
+      end $refuse$;
+      create trigger trg_refuse_delete before delete on public.transactions
+        for each row execute function public.refuse_delete();
+    `)
+
+    await actAs(db, U_A)
+    const refused = await pglitePostgrest(db).rpc('delete_movement_unlinking_seed', {
+      p_transaction_id: tx,
+    })
+    await actAsAdmin(db)
+
+    expect(refused.error).not.toBeNull()
+    expect(refused.error?.code).toBe('GRN01')
+
+    // NOTHING survived: the movement, the link and the floor are all as they were.
+    const after = await db.query<{ tx: string | null; floor: string }>(
+      `select r.created_from_transaction_id as tx,
+              to_char(r.reconstruct_from, 'YYYY-MM-DD') as floor
+         from public.recurrences r where r.id = $1`,
+      [rule],
+    )
+    expect(after.rows[0].tx).toBe(tx)
+    expect(after.rows[0].floor).toBe(seedDate)
+
+    const movement = await db.query(`select id from public.transactions where id = '${tx}'`)
+    expect(movement.rows).toHaveLength(1)
+
+    // With the refusal gone the same call goes through, which is what makes the
+    // rollback a retry rather than a dead end.
+    await db.exec('drop trigger trg_refuse_delete on public.transactions;')
+    await actAs(db, U_A)
+    const retried = await pglitePostgrest(db).rpc('delete_movement_unlinking_seed', {
+      p_transaction_id: tx,
+    })
+    await actAsAdmin(db)
+
+    expect(retried.error).toBeNull()
+    const repaired = await db.query<{ tx: string | null; floor: string }>(
+      `select r.created_from_transaction_id as tx,
+              to_char(r.reconstruct_from, 'YYYY-MM-DD') as floor
+         from public.recurrences r where r.id = $1`,
+      [rule],
+    )
+    expect(repaired.rows[0].tx).toBeNull()
+    expect(repaired.rows[0].floor).toBe(released)
+  }, 120_000)
+
   it('would have lost that occurrence with the floor left frozen', async () => {
     // The regression itself: same shape, unlinked but never released. The
     // generator reconstructs strictly after the floor, so `start_date` is never

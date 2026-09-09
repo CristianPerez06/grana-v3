@@ -18,6 +18,7 @@ contra el harness local no depende de él.
 | # | Paso | Tareas |
 |---|---|---|
 | 1 | Migración de **expansión** (`0064`): identidad, piso, versiones, pausas, guardas | 1.1–1.4e, 1.11 |
+| 1b | Migración `0065`: `delete_movement_unlinking_seed`, la reparación atómica de la semilla borrada. **Antes que cualquier código que la llame** — `deleteTransaction` la invoca desde el paso 5, y sin la función el borrado de un movimiento semilla falla para todos | 1.8b |
 | 2 | Generador que materializa la lista, en tandas continuables, leyendo versiones y pausas | 2.1, 2.1e, 2.1d, 2.1b, 1.6 |
 | 3 | Reads que dejan de asumir una pendiente por regla | 2.2 |
 | 4 | Dashboard, "próximo", proyección y deshacer leen los vencimientos existentes | 2.2b |
@@ -25,6 +26,11 @@ contra el harness local no depende de él.
 | 6 | Superficies: materialización y bloque "por revisar" en web y nativo, copy, error visible | 4.1–4.5b, 2.6 |
 | 7 | **Gate de versión mínima** en el cliente nativo | 2.8b |
 | 8 | Migración de **activación**: retira el índice de pendiente única | 2.8 |
+
+`0065` es aditiva y no cambia comportamiento por sí sola —crea una función que nadie llama todavía—,
+así que viaja con `0064` en la misma ventana. Lo que **no** puede es ir después del código: desde el
+paso 5 `deleteTransaction` la invoca, y sin la función borrar un movimiento que sembró una recurrencia
+falla para todos.
 
 Los pasos 1 y 2 comparten **una sola ventana de producción**: la verificación transaccional de `0064`
 (§4b) corre una única vez, y una edición hecha entre ambos despliegues podría desfasar el dato después
@@ -44,7 +50,7 @@ mecánica: `git checkout -b` desde `main` y cherry-pick por área.
 | PR | Qué lleva | Despliegue |
 |---|---|---|
 | **1 — Aditivo** *(~1.000 líneas)* | `owedOccurrences` y sus tests, los tests de resolución fuera de orden, y toda la documentación. La única función nueva **no tiene callers**, y por eso "no cambia comportamiento" es verificable | Ventana A |
-| **2 — Modelo persistente** *(~1.900 líneas)* | `0064`, los tipos, `8.1J`, el harness PGlite y las regresiones de migración, transición y guarda de fase. Deja vivo el índice de pendiente única | **Ventana B** |
+| **2 — Modelo persistente** *(~1.900 líneas)* | `0064` y `0065`, los tipos, `8.1J`, el harness PGlite y las regresiones de migración, transición y guarda de fase. Deja vivo el índice de pendiente única | **Ventana B** |
 | **3 — Núcleo** *(~700 líneas)* | Lo que sí cambia lo que el usuario ve: caminante sin el techo de 750 pasos, `max_occurrences` por ordinal, próxima fecha anclada en el calendario, y se retira `materializedCount` | **Ventana B** |
 | **4 — El arreglo visible** *(a escribir)* | Etapas 2, 4 y 4b, en el orden de la tabla. Termina en la prueba de aceptación | Ventana C |
 
@@ -280,7 +286,19 @@ que habilita el backlog.
       nada hasta que llega la fecha**, produce la ocurrencia una sola vez, y el piso vuelve a ser
       inmutable. Más los dos casos que la excepción debe rechazar: `start_date` pasada y regla que
       nunca tuvo semilla.
-      `validate_schema.sql` verifica que la función exista y sea `SECURITY INVOKER`.
+      **El rollback está demostrado, no supuesto:** una regresión hace que el `DELETE` sea rechazado
+      **después** de que las dos escrituras ya ocurrieron dentro de la función, y verifica que no
+      sobreviva ninguna —ni la desvinculación, ni el piso, ni la falta del movimiento— y que el mismo
+      llamado, con el rechazo levantado, pase sin dejar residuo. Probado en negativo: simulando que
+      las escrituras sobrevivan al borrado fallido, la regresión falla.
+      `validate_schema.sql` verifica la función **por firma**, no por nombre: argumentos exactos
+      (`p_transaction_id uuid`), retorno `void`, `SECURITY INVOKER`, `search_path` fijado y permiso de
+      ejecución para `authenticated`. Chequear solo el nombre aceptaba una función homónima con otro
+      parámetro, que PostgREST no resolvería: la reparación quedaría sin hacerse mientras la
+      validación informaba que todo está bien.
+      **Orden de despliegue:** `0065` es aditiva y viaja con `0064` en la misma ventana (paso 1b). Lo
+      que no puede es ir después del código: desde el paso 5 `deleteTransaction` la invoca, y sin la
+      función borrar un movimiento que sembró una recurrencia falla para todos.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.

@@ -763,16 +763,37 @@ begin
   -- is that the unlink, the floor release and the DELETE happen together; if the
   -- function is missing the client has no way to do that, and every partial
   -- outcome either duplicates a gasto or loses an occurrence.
+  --
+  -- Checked BY SIGNATURE, not by name. A function that merely answers to the name
+  -- is not the one the client calls: PostgREST resolves an RPC by its named
+  -- arguments, so a same-named function with a different parameter would leave the
+  -- repair silently unperformed while this check reported everything fine.
   if not exists (
     select 1 from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
        and p.proname = 'delete_movement_unlinking_seed'
+       -- The exact argument list PostgREST resolves the call against.
+       and pg_get_function_identity_arguments(p.oid) = 'p_transaction_id uuid'
+       and p.prorettype = 'void'::regtype
        -- SECURITY INVOKER: it must run as the user, so RLS decides what it may
        -- touch. As DEFINER it would silently grant reach nobody reviewed.
        and p.prosecdef = false
+       -- Locked search_path: the body names unqualified relations, so a mutable
+       -- path would let a caller's schema decide which tables it writes to.
+       and array_to_string(p.proconfig, ',') like '%search_path=%'
   ) then
-    raise exception 'public.delete_movement_unlinking_seed is missing or is not SECURITY INVOKER (migration 0065)';
+    raise exception 'public.delete_movement_unlinking_seed(p_transaction_id uuid) is missing, or is not a void SECURITY INVOKER function with a locked search_path (migration 0065)';
+  end if;
+
+  -- And `authenticated` has to be able to call it: without the grant the repair
+  -- fails for every real client while the function sits there looking correct.
+  if not has_function_privilege(
+       'authenticated',
+       'public.delete_movement_unlinking_seed(uuid)',
+       'EXECUTE'
+     ) then
+    raise exception 'authenticated cannot execute public.delete_movement_unlinking_seed (migration 0065)';
   end if;
 
   raise notice '✓ 8.1J — occurrence identity (0064): columns, tables, indexes, composite FKs, triggers and sole ownership OK; the single-pending index is still alive; the atomic seed repair (0065) is in place';
