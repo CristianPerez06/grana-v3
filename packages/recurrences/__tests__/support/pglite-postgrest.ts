@@ -39,7 +39,8 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
 
   private readonly columns: string
   private readonly embeds: Embed[]
-  private single = false
+  private singleRow = false
+  private requireRow = false
 
   private orderBy: string[] = []
   private limit: number | null = null
@@ -75,8 +76,16 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
 
   /** PostgREST returns the row itself, or null, instead of an array. */
   maybeSingle(): this {
-    this.single = true
+    this.singleRow = true
     this.limit = 1
+    return this
+  }
+
+  /** Like maybeSingle, but a missing row comes back as an error. */
+  single(): this {
+    this.singleRow = true
+    this.limit = 1
+    this.requireRow = true
     return this
   }
 
@@ -129,9 +138,16 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
         error: null,
       }))
       .catch((error: Error) => ({ data: null, error: toPostgrestError(error) }))
+    const row = this.singleRow ? (result.data?.[0] ?? null) : null
     const shaped =
-      this.single && result.error == null
-        ? { data: (result.data?.[0] ?? null) as never, error: null }
+      this.singleRow && result.error == null
+        ? {
+            data: row as never,
+            error:
+              row == null && this.requireRow
+                ? { message: 'JSON object requested, multiple (or no) rows returned' }
+                : null,
+          }
         : result
     return Promise.resolve(shaped as never).then(onfulfilled, onrejected)
   }
@@ -313,6 +329,59 @@ async function insert(
 }
 
 /**
+ * `update(...).eq(...)….select(cols)`, the shape the recurrence mutations use.
+ * Runs one UPDATE ... RETURNING, so a filter that matches nothing comes back as
+ * an empty array rather than as an error — which is exactly what those mutations
+ * check to detect a row somebody else resolved first.
+ */
+class UpdateQuery implements PromiseLike<{ data: unknown[] | null; error: QueryError | null }> {
+  private filters: Filter[] = []
+
+  constructor(
+    private readonly db: PGlite,
+    private readonly table: string,
+    private readonly payload: Record<string, unknown>,
+  ) {}
+
+  eq(column: string, value: unknown): this {
+    this.filters.push({ sql: `${column} = $`, params: [value] })
+    return this
+  }
+
+  select(columns = '*') {
+    return this.run(columns)
+  }
+
+  private run(columns: string) {
+    const assignments = Object.entries(this.payload)
+      .map(([column, value]) => `${column} = ${quote(value)}`)
+      .join(', ')
+    const params: unknown[] = []
+    const where = this.filters.map((filter) => {
+      for (const param of filter.params) params.push(param)
+      return filter.sql.replace('$', `$${params.length}`)
+    })
+    const clause = where.length === 0 ? '' : ` where ${where.join(' and ')}`
+    return this.db
+      .query(
+        `update public.${this.table} set ${assignments}${clause} returning ${columns}`,
+        params,
+      )
+      .then((result) => ({ data: toPostgrestJson(result), error: null }))
+      .catch((error: Error) => ({ data: null, error: toPostgrestError(error) }))
+  }
+
+  then<R1, R2 = never>(
+    onfulfilled?:
+      | ((value: { data: unknown[] | null; error: QueryError | null }) => R1 | PromiseLike<R1>)
+      | null,
+    onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | null,
+  ): Promise<R1 | R2> {
+    return this.run('*').then(onfulfilled, onrejected)
+  }
+}
+
+/**
  * A client shaped like the one the generator takes, backed by `db`.
  *
  * `maxRows` mirrors PostgREST's `db-max-rows`, which Supabase sets: it caps EVERY
@@ -335,6 +404,7 @@ export function pglitePostgrest(
       return {
         select: (select: string) => new Query(db, table, select, maxRows, unstableTies),
         insert: (payload: unknown) => insert(db, table, payload),
+        update: (payload: Record<string, unknown>) => new UpdateQuery(db, table, payload),
       }
     },
   } as unknown as GranaSupabaseClient

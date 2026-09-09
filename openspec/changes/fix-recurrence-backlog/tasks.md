@@ -131,50 +131,22 @@ que habilita el backlog.
       desconocida funciona y no se puede repetir · un cliente viejo confirma sin tocar `due_date`.
 - [x] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
       (`mutations.ts:446`): con resolución en bloque el resultado dependería del orden.
-- [ ] 1.5 Quitar de `confirmRecurrenceInstance` y `skipRecurrenceInstance` la escritura de
-      `last_generated_date` (`mutations.ts:455` y `:507`). Conservar la columna durante la
-      transición; deja de ser fuente de verdad del generador.
-      **BLOQUEADA, y no por la auditoría: el cursor no lo lee solo el generador.** Relevado, hay
-      cuatro superficies más que dependen de que confirmar y omitir lo avancen:
-      **(1) El dashboard.** `packages/dashboard/src/queries.ts:841` lo dice con todas las letras —
-      *"The two never overlap: the projection advances from `last_generated_date`, so it never
-      returns an occurrence already generated — including one already confirmed, which moved the
-      cursor past itself."* El invariante de no-doble-conteo del gasto comprometido **descansa en esa
-      escritura**. Sacarla sin más contaría la misma ocurrencia dos veces —una como instancia
-      materializada y otra como proyectada—, que es justamente la familia de #118.
-      **(2) El "próximo"** (`getNextExpectedOccurrence`), en la pantalla de recurrencias
-      (`queries.ts:573`) y en el detalle del movimiento (`thin-mutations.ts:803`): seguiría mostrando
-      como próxima una fecha ya resuelta.
-      **(3) La proyección** (`projectRuleOccurrences`, `money-logic:397`), que pasa el cursor como
-      `cursor` del caminante: volvería a anunciar ocurrencias ya resueltas.
-      **(4) El deshacer** de `thin-mutations.ts:814-822`, que compara `last_generated_date` contra
-      `start_date` para decidir si limpiar la semilla.
-      **Qué hace falta antes:** que esas cuatro dejen de preguntarle al cursor y pasen a preguntarle
-      al conjunto de **vencimientos que ya existen, en cualquier estado** —pendiente, omitido y
-      confirmado; el mismo criterio que usa `owedOccurrences`, donde lo que decide es que la
-      ocurrencia exista y no cómo terminó—. Es un cambio coordinado de lectura, no la eliminación de
-      dos escrituras.
-      **DÓNDE VA EN EL ORDEN: paso 5 de 8**, según la tabla del encabezado — que es la única fuente
-      de verdad del orden; acá no se repite para que no puedan divergir. Va después de que dashboard,
-      "próximo", proyección y deshacer lean los vencimientos existentes (tarea `2.2b`), y antes de la
-      activación.
-      **DECISIÓN ABIERTA, a resolver antes de cerrar `2.1`: cómo se comporta el generador múltiple
-      entre el despliegue del código y la activación (paso 8).** Con el índice de pendiente única todavía vivo, un insert
-      de 29 filas es UNA sentencia: la primera violación de unicidad **rechaza el lote entero**, así
-      que no materializa una y se come el resto — no materializa **ninguna**. (Una versión anterior de
-      esta nota decía «degradado, no roto»; era falso, y venía de suponer el insert fila por fila que
-      hace el generador de hoy, no las tandas acotadas que pide `2.1`.) Hay que elegir explícitamente
-      una de estas, y dejarla escrita: **(a)** que el generador nuevo emita como máximo una ocurrencia
-      por regla hasta la activación, con el tope como parámetro y no como bandera oculta; **(b)** que
-      el insert tolere el conflicto a nivel fila —`upsert` con `ignoreDuplicates` sobre una clave que
-      la base pueda usar como destino—, de modo que el lote entre igual y la base descarte lo que el
-      índice todavía no permite; o **(c)** acortar la ventana a cero desplegando código y activación
-      juntos, lo que contradice la cabecera de `0064` y por eso hoy no es la preferida. Ninguna se
-      elige por descarte: la que quede tiene que estar probada contra el harness **con el índice
-      todavía puesto**, que es el estado real durante la ventana.
-      Mientras tanto la columna se sigue escribiendo y **no hay daño**: el generador ya no la usa para
-      elegir la FECHA —eso lo decide el calendario—, aunque sí para saber desde dónde arrancar, así
-      que las cuatro superficies siguen leyendo un cursor que se mantiene correcto.
+- [x] 1.5 Quitar de `confirmRecurrenceInstance` y `skipRecurrenceInstance` la escritura de
+      `last_generated_date`. Conservar la columna durante la transición; deja de ser fuente de verdad.
+      **Hecho.** Las dos resoluciones ya no escriben la regla. El bloqueo que tenía esta tarea —cinco
+      lectores dependían del cursor— se levantó en los pasos 2 a 4: el generador deriva lo adeudado del
+      calendario menos lo que existe, y el dashboard, el «próximo», la proyección y el deshacer leen
+      esas mismas ocurrencias.
+      **Las dos escrituras que QUEDAN son de creación y no son cursores.** `createRecurrence` escribe
+      null y `acceptRecurrenceSuggestion` escribe `start_date`; al insertar, el trigger de `0064`
+      deriva de ahí el piso `reconstruct_from` —null ⇒ `start_date - 1`—, así que son lo que declara
+      desde dónde la regla empieza a deber. Retirarlas haría que una sugerencia aceptada materializara
+      una ocurrencia para el movimiento que le dio origen. Quedó escrito en el código, porque el
+      próximo que lea «sacamos las escrituras del cursor» va a querer sacar estas también.
+      Corregidos además tres comentarios que habían quedado enfrentados al código: el de
+      `createRecurrence` citaba `decideRecurrenceInstance`, el de `pauseRecurrence` decía que la
+      próxima generación «se computa desde `last_generated_date` como siempre», y el de
+      `acceptRecurrenceSuggestion` no decía por qué esa fecha importa.
 - [ ] 1.6 El generador deriva la **lista** de ocurrencias faltantes del calendario y del conjunto de
       `due_date` ya existentes, en lugar de pedir una fecha por vez.
       **Cableado y probado contra la base real.** `generateDueRecurrenceInstances` ya no llama a
@@ -235,27 +207,28 @@ que habilita el backlog.
       confirma por el otro lado: `con_tope_sin_ordinal = 0` en producción, así que tampoco había hoy
       ninguna regla que dependiera de él.
 
-- [ ] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
+- [x] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
       saltea junio, y no mueve el cronograma.
-      **Hecho el núcleo puro; falta la secuencia real.**
-      `packages/money-logic/__tests__/out-of-order-resolution.test.ts` (8 casos) fija la propiedad
-      sobre `owedOccurrences`, como secuencia con aserciones en cada paso: agosto desaparece de la
-      lista, junio y julio siguen ahí, el hueco del medio no vence ni se corre, el piso no lo arrastra
-      la resolución, y omitir una o confirmar otra da lo mismo porque lo que cuenta es que la
-      ocurrencia exista. El caso central recorre **cuatro órdenes distintos** y verifica que todo lo
-      adeudado sea una fecha que el calendario produjo. Probado en negativo: devolviendo
-      `owedOccurrences` a la semántica de cursor fallan **7** casos.
-      **Lo que NO prueban, y por eso la tarea sigue abierta:** arman el conjunto de existentes a mano.
-      No pasan por `confirmRecurrenceInstance` ni por `skipRecurrenceInstance`, y **el flujo real
-      todavía se comporta distinto**, porque esas dos siguen escribiendo el cursor. Un test verde
-      sobre el núcleo no dice nada sobre lo que le pasa hoy al usuario.
-      **La cobertura que falta**, sobre el harness de PGlite: **(1)** confirmar agosto; **(2)**
-      confirmar u omitir julio; **(3)** verificar que **ninguna** de las dos operaciones escribió
-      `last_generated_date`; **(4)** recalcular lo adeudado; **(5)** comprobar que agosto no
-      reaparece, que junio sigue accesible y que el calendario no se movió.
-      **Depende de 1.5**, y no por comodidad: el paso (3) exige que la escritura del cursor ya no
-      exista, y 1.5 es el paso (6) del orden de despliegue. Antes de eso el test no podría pasar sin
-      afirmar lo contrario de lo que el código hace.
+      **Núcleo puro:** `out-of-order-resolution.test.ts` (8 casos) fija la propiedad sobre
+      `owedOccurrences` como secuencia con aserciones en cada paso, recorriendo **cuatro órdenes
+      distintos**. Probado en negativo: con semántica de cursor fallan **7**.
+      **Secuencia real, que era lo que faltaba:** `out-of-order-flow.test.ts`, sobre PGlite con `0064`
+      aplicado y el índice de pendiente única retirado. Las ocurrencias las **materializa el
+      generador**, se resuelven por las **mutaciones reales** y las recalcula el generador otra vez:
+      **(1)** se materializan junio, julio y agosto; **(2)** se resuelve **agosto** primero; **(3)** se
+      resuelve **julio** por `skipRecurrenceInstance`; **(4)** ninguna de las dos escribió el cursor;
+      **(5)** al recorrer el generador agosto no reaparece, julio sigue omitido, junio sigue
+      disponible, y en septiembre aparece el 23 — el calendario no se movió; **(6)** junio se resuelve
+      al final, después de todo lo anterior.
+      **Lo que falta por qué falta:** confirmar crea un movimiento real a través de
+      `@grana/transactions-mutations`, que este harness no modela. El efecto de una confirmación sobre
+      el modelo de recurrencias se aplica en la base, y que `confirmRecurrenceInstance` escriba
+      exactamente eso **y nada en la regla** lo fija `confirm-writes.test.ts`, con una aserción nueva
+      (`1.5`) enunciada como «ninguna escritura sobre la regla», no como «ningún campo cursor»: una
+      escritura a nivel regla es la forma en que una resolución por ocurrencia se filtra a todas las
+      demás, y el importe (`1.4c`) fue ese mismo defecto con otro nombre de columna.
+      Contra el commit anterior fallan **3**: omitir julio dejaba el cursor en `2026-07-23` y omitir
+      junio lo movía **hacia atrás** a `2026-06-23`, que es el mecanismo del #96 a la vista.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.

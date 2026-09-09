@@ -18,7 +18,7 @@ const { confirmRecurrenceInstance } = await import('../src/mutations')
 /**
  * What `confirmRecurrenceInstance` writes, and above all what it does not.
  *
- * Two rules of the fix-recurrence-backlog change that the code used to break:
+ * Three rules of the fix-recurrence-backlog change that the code used to break:
  *
  *   1.4  Confirming does NOT overwrite `scheduled_date`. It used to, with the
  *        date the user picked, and the occurrence lost its due date. The
@@ -29,6 +29,11 @@ const { confirmRecurrenceInstance } = await import('../src/mutations')
  *        occurrence, propagating it passed for convenient; with bulk
  *        resolution, three different amounts would leave the rule holding
  *        whichever was written last — a result that depends on ORDER.
+ *
+ *   1.5  Confirming does NOT write `last_generated_date`. The cursor said
+ *        "everything up to here is done", which resolving August made false for
+ *        July — and July, still owed, stopped existing for every reader. That is
+ *        #96.
  */
 
 const USER = '00000000-0000-4000-8000-000000000000'
@@ -37,7 +42,10 @@ const RULE = '22222222-2222-4222-8222-222222222222'
 const ACCOUNT = '33333333-3333-4333-8333-333333333333'
 const RULE_AMOUNT = 450000
 
-type Recorder = { instanceWrites: Record<string, unknown>[] }
+type Recorder = {
+  instanceWrites: Record<string, unknown>[]
+  ruleWrites: Record<string, unknown>[]
+}
 
 /**
  * A stateful fake: the rule row PERSISTS across calls, so `amount` really would
@@ -90,6 +98,7 @@ function stubClient(rec: Recorder) {
           // Applies the write to the persisted row, so a propagated amount would
           // actually stick and the assertions below could see it.
           update: (payload: Record<string, unknown>) => {
+            rec.ruleWrites.push(payload)
             Object.assign(rule, payload)
             return { eq: async () => ({ error: null }) }
           },
@@ -115,7 +124,7 @@ function stubClient(rec: Recorder) {
 
 describe('confirmRecurrenceInstance — what it writes and what it must not', () => {
   it('1.4 · leaves scheduled_date alone even when the user pays on another date', async () => {
-    const rec: Recorder = { instanceWrites: [] }
+    const rec: Recorder = { instanceWrites: [], ruleWrites: [] }
     const { client } = stubClient(rec)
 
     const result = await confirmRecurrenceInstance(client, USER, INSTANCE, {
@@ -132,7 +141,7 @@ describe('confirmRecurrenceInstance — what it writes and what it must not', ()
   })
 
   it("1.4c · a corrected amount does not rewrite the rule's", async () => {
-    const rec: Recorder = { instanceWrites: [] }
+    const rec: Recorder = { instanceWrites: [], ruleWrites: [] }
     const { client, rule } = stubClient(rec)
 
     const result = await confirmRecurrenceInstance(client, USER, INSTANCE, {
@@ -153,7 +162,7 @@ describe('confirmRecurrenceInstance — what it writes and what it must not', ()
       [520000, 480000, 610000],
       [610000, 480000, 520000],
     ].map((amounts) => {
-      const rec: Recorder = { instanceWrites: [] }
+      const rec: Recorder = { instanceWrites: [], ruleWrites: [] }
       const { client, rule } = stubClient(rec)
       return amounts
         .reduce(
@@ -168,5 +177,17 @@ describe('confirmRecurrenceInstance — what it writes and what it must not', ()
     expect(first).toBe(RULE_AMOUNT)
     expect(second).toBe(RULE_AMOUNT)
     expect(first).toBe(second)
+  })
+
+  it('1.5 · writes NOTHING on the rule — not the cursor, not anything else', async () => {
+    // Stated as "no write at all", not as "no cursor field": a rule-level write
+    // is how a per-occurrence resolution leaks into every other occurrence, and
+    // the amount (1.4c) was the same defect wearing another column's name.
+    const rec: Recorder = { instanceWrites: [], ruleWrites: [] }
+    const { client } = stubClient(rec)
+
+    await confirmRecurrenceInstance(client, USER, INSTANCE, { date: '2026-09-03' })
+
+    expect(rec.ruleWrites).toEqual([])
   })
 })

@@ -87,9 +87,16 @@ async function assertAccountUsable(
 // ── createRecurrence ──────────────────────────────────────────────────────────
 // Crea una regla recurrente desde cero, sin movimiento de origen. A diferencia
 // de createRecurrenceFromMovement no hay transacción semilla, así que
-// last_generated_date queda en null: el generador produce la PRIMERA instancia
-// para start_date (ver decideRecurrenceInstance). created_from_transaction_id es
-// siempre null. No crea ninguna transacción real ni instancia en este momento.
+// `last_generated_date` queda en null y el generador produce la PRIMERA
+// instancia para `start_date`.
+//
+// ESA ESCRITURA NO ES UN CURSOR: al insertar, el trigger de `0064` deriva
+// `reconstruct_from` de ella —null ⇒ `start_date - 1`, y el generador emite
+// estrictamente después del piso—, así que es lo que declara desde dónde la
+// regla empieza a deber. Confirmar y omitir dejaron de escribir la columna
+// (tarea 1.5); esta se conserva a propósito.
+// created_from_transaction_id es siempre null. No crea ninguna transacción real
+// ni instancia en este momento.
 // El `household` (para reglas compartidas) lo inyecta el shell.
 
 export async function createRecurrence(
@@ -211,6 +218,7 @@ export async function createRecurrence(
       start_date: data.start_date,
       end_date: data.end_date ?? null,
       // No hay ocurrencia semilla: la primera instancia se genera para start_date.
+      // Null acá hace que el piso quede en `start_date - 1` (trigger de 0064).
       last_generated_date: null,
       status: 'active',
       created_from_transaction_id: null,
@@ -448,34 +456,27 @@ export async function confirmRecurrenceInstance(
   // a result that depends on EXECUTION ORDER. Updating the rule is a separate,
   // explicit action ("use this amount from now on"), applied once.
   //
-  // `last_generated_date` is still written for now (task 1.5). The cursor-phase
-  // audit that used to block this is DONE — 0 of 61 rules drifted.
+  // THE CURSOR IS NOT WRITTEN, and that is what makes resolving in any order
+  // safe. `last_generated_date` said "everything up to here is done", which is a
+  // claim a single write cannot make once a rule holds several unresolved
+  // occurrences: resolving August moved it past July, and July — still owed —
+  // stopped existing for every reader. That is #96.
   //
-  // THE GENERATOR ITSELF still depends on this write. It no longer picks the
-  // DATE from the cursor — that comes off the calendar now — but it still asks
-  // the calendar for the first occurrence STRICTLY AFTER the cursor, so if this
-  // line went today the rule would be handed the same occurrence forever. That
-  // dependency ends when the generator switches to `reconstruct_from` plus the
-  // due dates that already exist (task 1.6).
-  //
-  // And four surfaces beyond the generator depend on it too: the dashboard's
-  // no-double-count invariant (`packages/dashboard/src/queries.ts:841` spells it
-  // out), the "próximo", the upcoming projection, and the undo in
-  // `thin-mutations.ts`. All of them have to start reading the due dates that
-  // already exist first, which is why dropping this write is the LAST step of the
-  // deployment order in tasks.md.
-  await supabase
-    .from('recurrences')
-    .update({ last_generated_date: instance.scheduled_date })
-    .eq('id', rule.id)
+  // Nothing reads it any more. The generator derives what a rule owes from its
+  // calendar minus the occurrences that already exist; the dashboard, the
+  // "próximo", the projection and the undo all read those same occurrences. The
+  // column survives only so a client that predates this change keeps working
+  // during the transition; migration C retires it.
 
   return { ok: true, transactionId }
 }
 
 // ── skipRecurrenceInstance ────────────────────────────────────────────────────
-// Marca una instancia pendiente como omitida. No crea transacción. Avanza el
-// cursor de la regla (last_generated_date) para que la generación pase a la
-// siguiente fecha y no vuelva a generar la misma instancia.
+// Marca una instancia pendiente como omitida. No crea transacción, no toca
+// saldos y NO mueve ningún cursor: lo que impide que esa fecha se vuelva a
+// generar es que la ocurrencia EXISTE, cualquiera sea su estado. Una omitida no
+// reaparece, y —a diferencia del cursor— tampoco tapa a las anteriores que
+// siguen sin resolver.
 
 export async function skipRecurrenceInstance(
   supabase: GranaSupabaseClient,
@@ -515,12 +516,6 @@ export async function skipRecurrenceInstance(
         updateError?.message ?? 'La instancia fue resuelta por otro proceso.',
     }
   }
-
-  await supabase
-    .from('recurrences')
-    .update({ last_generated_date: instance.scheduled_date })
-    .eq('id', instance.recurrence_id)
-    .eq('user_id', userId)
 
   return { ok: true }
 }
@@ -658,9 +653,13 @@ export async function updateRecurrence(
 // ── pauseRecurrence / resumeRecurrence ─────────────────────────────────────────
 // Pausar detiene futuras generaciones (que solo procesan status='active'). No
 // toca instancias pendientes ya generadas — el usuario puede confirmarlas u
-// omitirlas. Reanudar simplemente vuelve a 'active'; la próxima generación se
-// computa desde last_generated_date como siempre (D8). Los errores de Postgres
-// viajan por `errorCode` para que el shell los localice.
+// omitirlas, y siguen siendo suyas después de reanudar.
+//
+// Reanudar vuelve a 'active'. Lo que NO ocurre al reanudar es recuperar el
+// período pausado: el trigger de `0064` cierra el intervalo en
+// `recurrence_pauses`, y el generador resta ese intervalo del calendario. Pausar
+// no devenga (decisión 16). Los errores de Postgres viajan por `errorCode` para
+// que el shell los localice.
 
 export async function pauseRecurrence(
   supabase: GranaSupabaseClient,
@@ -823,9 +822,14 @@ export async function deleteMovementResolvingRecurrence(args: {
 
 // ── acceptRecurrenceSuggestion ─────────────────────────────────────────────────
 // Acepta una sugerencia y crea la regla activa con los valores propuestos.
-// start_date = última fecha vista por la detección, last_generated_date = misma
-// fecha, para que la generación produzca la próxima instancia en la siguiente
-// fecha esperada (en el futuro).
+// start_date = última fecha vista por la detección, y `last_generated_date` en
+// esa misma fecha porque el movimiento que la detección vio YA EXISTE: al
+// insertar, el trigger de `0064` convierte ese valor en el piso
+// `reconstruct_from`, así que la regla empieza a deber recién en la fecha
+// siguiente y no propone otra vez el gasto que le dio origen.
+//
+// Es una escritura de creación, no un avance de cursor: retirarla haría que la
+// regla materializara una ocurrencia para un movimiento que el usuario ya tiene.
 
 export async function acceptRecurrenceSuggestion(
   supabase: GranaSupabaseClient,
