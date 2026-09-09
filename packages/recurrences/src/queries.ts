@@ -45,16 +45,16 @@ const INSTANCE_SELECT = `
   subcategory:subcategories(id, name, canonical_name, category_id, user_id)
 `
 
-type RecurrenceRow = Omit<RecurrenceSummary, 'pending_instance'>
+type RecurrenceRow = Omit<RecurrenceSummary, 'pending_instances'>
 
 function mapRecurrenceSummary(
   recurrence: RecurrenceRow,
-  pendingByRecurrenceId: Map<string, RecurrenceInstance>,
+  pendingByRecurrenceId: Map<string, RecurrenceInstance[]>,
   today: string,
 ): RecurrenceSummary {
   return {
     ...recurrence,
-    pending_instance: pendingByRecurrenceId.get(recurrence.id) ?? null,
+    pending_instances: pendingByRecurrenceId.get(recurrence.id) ?? [],
     // Calendar "próximo": next occurrence >= today AND after the rule's cursor
     // (last_generated_date — the last occurrence already confirmed/omitted or
     // seeded from a movement). Independent of the pending (due) instance, whose
@@ -73,23 +73,43 @@ function mapRecurrenceSummary(
   }
 }
 
+/**
+ * The unresolved occurrences of each rule, oldest first — ALL of them, not one.
+ *
+ * This used to return `Map<string, RecurrenceInstance>` and keep whichever row
+ * arrived last, which was harmless only because the database allowed a single
+ * pending per rule. With the backlog materialized that assumption silently drops
+ * occurrences: the rule would look like it owes one thing while owing five.
+ *
+ * Paged to exhaustion over a unique order, for the same reason the generator's
+ * reads are: PostgREST truncates at `db-max-rows` without saying so, and an
+ * OFFSET window over a non-unique order can repeat or skip rows between pages.
+ * `id` is the primary key, so `(due_date, id)` is total even for a legacy row
+ * whose `due_date` is still null.
+ */
 export async function getPendingInstancesByRecurrenceId(
   supabase: GranaSupabaseClient,
   recurrenceIds: string[],
-): Promise<Map<string, RecurrenceInstance>> {
-  const pendingByRecurrenceId = new Map<string, RecurrenceInstance>()
+): Promise<Map<string, RecurrenceInstance[]>> {
+  const pendingByRecurrenceId = new Map<string, RecurrenceInstance[]>()
   if (recurrenceIds.length === 0) return pendingByRecurrenceId
 
-  const { data, error } = await supabase
-    .from('recurrence_instances')
-    .select('*')
-    .in('recurrence_id', recurrenceIds)
-    .eq('status', 'pending')
+  const { data, error } = await selectAllPages<RecurrenceInstance>(() =>
+    supabase
+      .from('recurrence_instances')
+      .select('*')
+      .in('recurrence_id', recurrenceIds)
+      .eq('status', 'pending')
+      .order('due_date')
+      .order('id'),
+  )
 
   if (error) throw error
 
-  for (const instance of (data ?? []) as RecurrenceInstance[]) {
-    pendingByRecurrenceId.set(instance.recurrence_id, instance)
+  for (const instance of data) {
+    const list = pendingByRecurrenceId.get(instance.recurrence_id)
+    if (list == null) pendingByRecurrenceId.set(instance.recurrence_id, [instance])
+    else list.push(instance)
   }
 
   return pendingByRecurrenceId
@@ -126,19 +146,31 @@ export async function getRecurrences(
   )
 }
 
+/**
+ * Every unresolved occurrence the user has, oldest first — the feed behind the
+ * "vencimientos por revisar" block.
+ *
+ * With one pending per rule this returned at most one row per rule and neither
+ * paging nor a total order mattered. With the backlog materialized it is the
+ * list itself, so both do: `due_date` is the occurrence identity (`scheduled_date`
+ * survives only for old native clients) and `id` makes the order total, which is
+ * what keeps an OFFSET window from repeating or skipping rows between pages.
+ */
 export async function getPendingRecurrenceInstances(
   supabase: GranaSupabaseClient,
 ): Promise<PendingRecurrenceInstance[]> {
-  const { data, error } = await supabase
-    .from('recurrence_instances')
-    .select(INSTANCE_SELECT)
-    .eq('status', 'pending')
-    .order('scheduled_date', { ascending: true })
-    .order('created_at', { ascending: true })
+  const { data, error } = await selectAllPages<PendingRecurrenceInstance>(() =>
+    supabase
+      .from('recurrence_instances')
+      .select(INSTANCE_SELECT)
+      .eq('status', 'pending')
+      .order('due_date')
+      .order('id'),
+  )
 
   if (error) throw error
 
-  return (data ?? []) as unknown as PendingRecurrenceInstance[]
+  return data
 }
 
 export async function getRecurrenceDetail(
@@ -154,28 +186,37 @@ export async function getRecurrenceDetail(
   if (recurrenceError) throw recurrenceError
   if (!recurrence) return null
 
-  const { data: instances, error: instancesError } = await supabase
-    .from('recurrence_instances')
-    .select(INSTANCE_SELECT)
-    .eq('recurrence_id', id)
-    .order('scheduled_date', { ascending: false })
-    .order('created_at', { ascending: false })
+  // Newest first for the history list. `id` breaks ties so the OFFSET window the
+  // paging uses cannot repeat or skip a row — a rule with a year of daily
+  // occurrences is well past one page.
+  const { data: instances, error: instancesError } = await selectAllPages<PendingRecurrenceInstance>(
+    () =>
+      supabase
+        .from('recurrence_instances')
+        .select(INSTANCE_SELECT)
+        .eq('recurrence_id', id)
+        .order('due_date', { ascending: false })
+        .order('id', { ascending: false }),
+  )
 
   if (instancesError) throw instancesError
 
+  const pending = instances
+    .filter((instance) => instance.status === 'pending')
+    // The instance query above orders newest-first for the history list; the
+    // unresolved ones read oldest-first, which is the order they are reviewed in.
+    .slice()
+    .reverse()
+
   const recurrenceSummary = mapRecurrenceSummary(
     recurrence as unknown as RecurrenceRow,
-    new Map(
-      ((instances ?? []) as unknown as PendingRecurrenceInstance[])
-        .filter((instance) => instance.status === 'pending')
-        .map((instance) => [instance.recurrence_id, instance]),
-    ),
+    pending.length === 0 ? new Map() : new Map([[pending[0].recurrence_id, pending]]),
     formatDateISO(getTodayAR()),
   )
 
   return {
     ...recurrenceSummary,
-    instances: ((instances ?? []) as unknown as PendingRecurrenceInstance[]).map((instance) => ({
+    instances: instances.map((instance) => ({
       ...instance,
       recurrence: recurrence as unknown as Recurrence,
     })),
@@ -403,8 +444,11 @@ export type RuleBacklog = {
  *      most overdue first. Serving one moves it out of this tier for good;
  *   2. rules whose current is missing but that already hold an unresolved
  *      occurrence. Until the activation these cannot take another, so they go
- *      after the rules that can actually be written. They are still attempted:
- *      after the activation this tier stops existing on its own;
+ *      after the rules that can actually be written. They are still attempted.
+ *      The tier does NOT disappear once the index is dropped — `hasPending` goes
+ *      on being true for exactly the same rules — but it stops costing anything:
+ *      what disappears is the constraint that made their insert fail, so being
+ *      second in line no longer means being skipped;
  *   3. the rest of the backlog, oldest first, so history rebuilds in order.
  */
 export function selectReconstructionBatch(

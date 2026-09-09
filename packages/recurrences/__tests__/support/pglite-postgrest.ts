@@ -46,8 +46,8 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
   }
 
   /** Chainable, like PostgREST's: each call appends another sort key. */
-  order(column: string): this {
-    this.orderBy.push(column)
+  order(column: string, options: { ascending?: boolean } = {}): this {
+    this.orderBy.push(options.ascending === false ? `${column} desc` : column)
     return this
   }
 

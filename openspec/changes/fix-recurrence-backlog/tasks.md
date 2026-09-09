@@ -494,9 +494,26 @@ que habilita el backlog.
       **No** cuentan las que cayeron dentro de una pausa, porque nunca existieron. Siete casos en
       `owed-occurrences-for-rule.test.ts`, cinco de los cuales fallan contra la versión anterior; dos
       fijan que el caso de una sola versión —el de toda regla en producción hoy— no cambió.
-- [ ] 2.2 Adaptar los reads que asumen una pendiente por regla:
-      `getPendingInstancesByRecurrenceId` (hoy `Map<string, RecurrenceInstance>`) y
-      `RecurrenceSummary.pending_instance` (hoy singular) pasan a colección.
+- [x] 2.2 Adaptar los reads que asumen una pendiente por regla:
+      `getPendingInstancesByRecurrenceId` pasa de `Map<string, RecurrenceInstance>` a
+      `Map<string, RecurrenceInstance[]>`, ordenadas de la más vieja a la más nueva —el orden en que
+      se revisan—, y `RecurrenceSummary.pending_instance` pasa a `pending_instances: []`.
+      **Lo que estaba mal no era el tipo, era lo que hacía:** el `Map` se llenaba con
+      `set(recurrence_id, instance)` fila por fila, así que con varias pendientes **se quedaba con la
+      última que llegara** y descartaba el resto en silencio. Con una sola por regla eso era inocuo;
+      con el atraso materializado, la regla parece deber una cosa mientras debe cinco.
+      **Los tres reads de instancias se paginan y ordenan de forma total**, por lo mismo que los del
+      generador: `(due_date, id)` en las pendientes por regla y en el feed de «por revisar»,
+      `(due_date desc, id desc)` en el historial de una regla. `id` es la PK, así que el orden es
+      total incluso para una fila vieja cuyo `due_date` todavía sea nulo. Antes ninguno de los tres
+      podía superar una página porque la base admitía una pendiente por regla; ahora el feed **es** la
+      lista.
+      Siete regresiones en `pending-instances-read.test.ts`, cinco de las cuales fallan contra la
+      versión anterior. Corren con el índice de pendiente única **retirado**, porque el estado que
+      este read tiene que describir es el de después de la activación: con el índice puesto la propia
+      fixture no podría tener dos pendientes.
+      **Sin consumidores rotos:** `pending_instance` no lo leía nadie fuera del paquete, así que el
+      cambio de forma no arrastra UI. Mostrar varias en pantalla es la etapa 4.
 - [ ] 2.2b Migrar **dashboard, "próximo", proyección y deshacer** para que lean los vencimientos que
       ya existen —en **cualquier** estado: pendiente, omitido y confirmado— en vez del cursor. Es el
       paso (4) del orden, hoy descrito dentro de `1.5` sin identificador propio. **Es el arreglo de
@@ -634,6 +651,14 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       superficies de web y nativo, y el gate de versión—: eliminar
       `recurrence_instances_one_pending_per_rule`. Desde acá existe el
       backlog. Las constraints de `resolution_kind` ya entraron en la expansión (tarea 1.4b).
+- [ ] 2.8c **Regresión que solo se puede escribir con la activación**, y que hoy falta: la prueba de
+      las 61 reglas siembra reglas **sin** pendiente previa, así que ejercita la inanición entre
+      reglas pero no el caso exacto del #96. Con la migración escrita, agregar: sembrar 61 reglas
+      **cada una con una pendiente vieja sin resolver**, retirar el índice, correr dos tandas y
+      comprobar que las 61 terminen con su vencimiento vigente materializado. Es la única forma de
+      verificar que el nivel `blocked` de `selectReconstructionBatch` deja de costar cuando la
+      restricción desaparece — antes de la activación esas 61 reglas no pueden recibir nada, y el
+      test solo podría afirmar que no se rompe.
 
 ## 5. Cierre
 

@@ -65,12 +65,20 @@ export type RecurrenceSummary = Recurrence & {
   destination_account: RecurrenceAccount | null
   category: RecurrenceCategory | null
   subcategory: RecurrenceSubcategory | null
-  pending_instance: RecurrenceInstance | null
+  /**
+   * Every occurrence of this rule still awaiting a decision, oldest first.
+   *
+   * A COLLECTION, not one row. The single-pending invariant is what turned an
+   * unreviewed occurrence into a permanent stop (#96), so a rule can now hold
+   * several at once and a surface that renders `[0]` shows one of many rather
+   * than the only one. Empty when the rule is up to date.
+   */
+  pending_instances: RecurrenceInstance[]
   /**
    * Next scheduled occurrence on or after today (the calendar "próximo"), or null
    * if the rule has no further occurrence. Computed from start_date — NOT from
-   * `pending_instance`, whose date is the DUE occurrence awaiting confirmation and
-   * is always <= today.
+   * `pending_instances`, whose dates are the DUE occurrences awaiting a decision
+   * and are always <= today.
    */
   next_occurrence: string | null
 }
