@@ -71,12 +71,12 @@ describe(GUARD, () => {
     `)
     await applyMigration(db)
 
-    // …and one whose vencimiento IS known, for the control case. After 0064 the
-    // trigger derives it, which is exactly the point.
+    // …and an UNRESOLVED one, for the control case. Inserted after 0064 so the
+    // compatibility trigger derives its `due_date`, which is exactly the point.
     await db.exec(`
       insert into public.recurrence_instances
-        (id, recurrence_id, user_id, scheduled_date, status, resolved_at, confirmed_transaction_id)
-      values ('${KNOWN}', '${RULE}', '${U_A}', '2026-10-15', 'confirmed', now(), gen_random_uuid());
+        (id, recurrence_id, user_id, scheduled_date, status)
+      values ('${KNOWN}', '${RULE}', '${U_A}', '2026-10-15', 'pending');
     `)
 
     const { rows } = await db.query<{ id: string; due_date: string | null }>(
@@ -120,16 +120,27 @@ describe(GUARD, () => {
     expect(rejection).toBe(GUARD)
   })
 
-  it('still allows reopening one whose vencimiento IS known', async () => {
-    // The constraint is about the missing date, not about the transition.
+  it('lets a pending occurrence with a known vencimiento be resolved', async () => {
+    // The constraint has to be invisible to the writes the app actually makes.
+    // Skipping is one of them, and it is the same `status` the case above was
+    // rejected on — so this is what separates "no `due_date`" from "`skipped`".
     const rejection = await rejectedBy(
       `update public.recurrence_instances
-          set status = 'pending', resolved_at = null, confirmed_transaction_id = null,
-              resolution_kind = null
+          set status = 'skipped', resolved_at = now()
         where id = '${KNOWN}';`,
     )
 
     expect(rejection).toBeNull()
+
+    await actAsAdmin(db)
+    const { rows } = await db.query<{ status: string; due_date: string | null }>(
+      `select status, due_date::text from public.recurrence_instances where id = '${KNOWN}'`,
+    )
+    await actAs(db, U_A)
+
+    // Resolved, and it still holds its vencimiento: a skipped occurrence keeps
+    // occupying that identity so the generator does not propose it again.
+    expect(rows[0]).toEqual({ status: 'skipped', due_date: '2026-10-15' })
   })
 
   it('leaves the historical row exactly as it was', async () => {
