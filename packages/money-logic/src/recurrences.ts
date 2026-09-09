@@ -115,6 +115,15 @@ export type GenerationDecision =
     }
   | { generate: true; scheduled_date: string }
 
+/**
+ * NO LONGER ON THE GENERATOR'S PATH. `generateDueRecurrenceInstances` derives
+ * what a rule is owed from `owedOccurrencesForRule` — the whole list, over the
+ * rule's schedule versions and pauses — instead of asking for one date at a
+ * time. This function survives only as the single-occurrence decision its tests
+ * still describe, and it is the last caller of the `hasPending` short-circuit,
+ * which is the invariant this change removes. It goes away with its tests
+ * rewritten against the walker; see task 1.6.
+ */
 export function decideRecurrenceInstance(
   rule: RuleForDecision,
   today: string,
@@ -260,6 +269,140 @@ export function owedOccurrences({
     to: today,
     cursor: reconstructFrom,
   }).filter((date) => !already.has(date))
+}
+
+// ── What a rule is owed across its WHOLE history ─────────────────────────────
+//
+// `owedOccurrences` above answers the question for ONE calendar segment. A rule
+// does not necessarily have one: its schedule can have been edited, and it can
+// have been paused. Both are recorded by migration 0064 —
+// `recurrence_schedule_versions` and `recurrence_pauses` — and both change WHICH
+// dates the rule ever produced:
+//
+//   · a schedule version applies only FROM its `effective_from`. Reading today's
+//     schedule backwards would read the difference against the old history as
+//     gaps and materialize occurrences that never existed (decision 10);
+//   · a pause means the rule was not running. Occurrences inside it were never
+//     owed and do not come back on resume — pausing is not deferred billing
+//     (decision 16).
+//
+// So the rule's timeline is cut into segments — one per version, minus the pause
+// intervals — and each segment is walked with the schedule that actually applied
+// there. This is what the floor `reconstruct_from` deliberately does NOT do: it
+// stays put so that occurrences hidden by the bug before a pause remain
+// reachable, instead of being swallowed by a floor that jumped forward.
+
+export type ScheduleVersion = {
+  /** Since when this version applies. Nothing before it is described by it. */
+  effective_from: string
+  interval_count: number
+  interval_unit: IntervalUnit
+  /**
+   * Anchor for end-of-month clamping AND origin of the version's calendar: it
+   * is what makes a rule on the 31st come back to the 31st after February.
+   */
+  anchor_date: string
+}
+
+export type PauseInterval = {
+  paused_from: string
+  /** Null while the pause is still open. */
+  resumed_at: string | null
+}
+
+export type OwedOccurrencesForRuleInput = {
+  /** At least one; any order. Empty means the rule has no known schedule. */
+  versions: ScheduleVersion[]
+  pauses: PauseInterval[]
+  endDate: string | null
+  maxOccurrences: number | null
+  reconstructFrom: string
+  horizon: string
+  today: string
+  existing: Iterable<string>
+}
+
+// A pause covers [paused_from, resumed_at): the day it is resumed the rule is
+// running again, and an occurrence falling on it is owed. An occurrence on
+// `paused_from` itself is NOT — it belongs to the pause, and one that was owed
+// before pausing sits at an earlier date and survives untouched, which is what
+// keeps pre-pause occurrences resolvable.
+function subtractPauses(
+  segments: Array<{ from: string; to: string }>,
+  pauses: PauseInterval[],
+): Array<{ from: string; to: string }> {
+  let out = segments
+  for (const pause of pauses) {
+    const next: Array<{ from: string; to: string }> = []
+    for (const segment of out) {
+      const pauseEnd = pause.resumed_at == null ? null : addDays(pause.resumed_at, -1)
+      // No overlap: the segment ends before the pause starts, or starts after it ends.
+      if (segment.to < pause.paused_from || (pauseEnd != null && segment.from > pauseEnd)) {
+        next.push(segment)
+        continue
+      }
+      if (segment.from < pause.paused_from) {
+        next.push({ from: segment.from, to: addDays(pause.paused_from, -1) })
+      }
+      if (pauseEnd != null && segment.to > pauseEnd) {
+        next.push({ from: addDays(pauseEnd, 1), to: segment.to })
+      }
+    }
+    out = next
+  }
+  return out
+}
+
+export function owedOccurrencesForRule({
+  versions,
+  pauses,
+  endDate,
+  maxOccurrences,
+  reconstructFrom,
+  horizon,
+  today,
+  existing,
+}: OwedOccurrencesForRuleInput): string[] {
+  if (versions.length === 0) return []
+
+  const ordered = [...versions].sort((a, b) => a.effective_from.localeCompare(b.effective_from))
+  const already = new Set(existing)
+  const owed = new Set<string>()
+
+  for (const [index, version] of ordered.entries()) {
+    const nextVersion = ordered[index + 1]
+    // This version owns the timeline from its own start until the next one takes
+    // over — never past today, and never before the horizon.
+    const from = version.effective_from > horizon ? version.effective_from : horizon
+    const versionEnd = nextVersion == null ? today : addDays(nextVersion.effective_from, -1)
+    const to = versionEnd < today ? versionEnd : today
+    if (from > to) continue
+
+    const schedule: OccurrenceSchedule = {
+      // The version's calendar origin, NOT the rule's start_date: it is what
+      // fixes the phase and the clamping anchor of the dates this version
+      // produced.
+      start_date: version.anchor_date,
+      end_date: endDate,
+      interval_count: version.interval_count,
+      interval_unit: version.interval_unit,
+      max_occurrences: maxOccurrences,
+    }
+
+    for (const segment of subtractPauses([{ from, to }], pauses)) {
+      for (const date of walkOccurrences(schedule, {
+        from: segment.from,
+        to: segment.to,
+        // The floor applies to every segment, not just the first: nothing at or
+        // before it is ever owed.
+        cursor: reconstructFrom,
+      })) {
+        if (!already.has(date)) owed.add(date)
+      }
+    }
+  }
+
+  return [...owed].sort()
 }
 
 // ── Upcoming projection (pure) ───────────────────────────────────────────────

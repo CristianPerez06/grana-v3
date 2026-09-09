@@ -2,6 +2,7 @@ import type { DbClient } from '@/lib/supabase/db-client'
 import {
   generateDueRecurrenceInstances as generateDueRecurrenceInstancesImpl,
   getTopRecurrenceSuggestion as getTopRecurrenceSuggestionImpl,
+  type GenerationResult,
 } from '@grana/recurrences'
 
 // The recurrence reads live in @grana/recurrences so web and mobile share one
@@ -28,11 +29,13 @@ async function resolveUserId(supabase: DbClient): Promise<string | null> {
   return data?.claims.sub ?? null
 }
 
+export type { GenerationResult }
+
 export async function generateDueRecurrenceInstances(
   supabase: DbClient,
-): Promise<{ created: number }> {
+): Promise<GenerationResult> {
   const userId = await resolveUserId(supabase)
-  if (!userId) return { created: 0 }
+  if (!userId) return { created: 0, remaining: 0, error: null }
   return generateDueRecurrenceInstancesImpl(supabase, userId)
 }
 

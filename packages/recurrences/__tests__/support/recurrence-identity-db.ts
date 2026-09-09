@@ -48,7 +48,18 @@ const SCHEMA = `
     end_date            date,
     last_generated_date date,
     max_occurrences     int,
-    status              text not null default 'active'
+    status              text not null default 'active',
+    -- Snapshot columns the generator copies onto each occurrence. Nullable and
+    -- defaulted: these tests are about WHICH dates get materialized, not about
+    -- the row payload, which buildPendingInstanceInsert covers as a unit test.
+    frequency           text not null default 'monthly',
+    account_id          uuid,
+    transfer_destination_account_id uuid,
+    currency_code       text not null default 'ARS',
+    category_id         uuid,
+    subcategory_id      uuid,
+    household_id        uuid,
+    default_split       jsonb
   );
 
   create table public.recurrence_instances (
@@ -61,6 +72,14 @@ const SCHEMA = `
     confirmed_transaction_id uuid,
     created_at               timestamptz not null default now(),
     resolved_at              timestamptz,
+    account_id               uuid,
+    transfer_destination_account_id uuid,
+    currency_code            text not null default 'ARS',
+    category_id              uuid,
+    subcategory_id           uuid,
+    description              text,
+    household_id             uuid,
+    split                    jsonb,
 
     constraint chk_recurrence_instances_status
       check (status in ('pending', 'skipped', 'confirmed')),

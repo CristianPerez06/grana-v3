@@ -307,14 +307,14 @@ Lo que SHALL estar disponible por igual en web y en la app nativa es la **materi
 atraso y el **bloque de vencimientos por revisar**: que una ocurrencia exista, se vea y se pueda
 resolver NO SHALL depender de la plataforma.
 
-#### Scenario: Registrar un pago con otra fecha conserva el vencimiento
+#### Scenario: Registrar un pago con otra fecha conserva el vencimiento (web)
 
 - **WHEN** el usuario registra el pago de la ocurrencia que vencía el `2026-06-23`, con fecha
   `2026-09-03`
 - **THEN** se crea un movimiento fechado el `2026-09-03`
 - **AND** la ocurrencia conserva el `2026-06-23` como vencimiento
 
-#### Scenario: Registrar un importe distinto no reescribe la regla
+#### Scenario: Registrar un importe distinto no reescribe la regla (web)
 
 - **WHEN** el usuario registra el pago de una ocurrencia con un importe distinto al de la regla
 - **THEN** el movimiento se crea con el importe que el usuario indicó

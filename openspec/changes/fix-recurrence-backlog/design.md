@@ -205,8 +205,11 @@ si el usuario cargó esos pagos a mano en su momento.
 
 Dentro del horizonte de 12 meses (decisión 5) las ocurrencias sí se materializan, y conviene ser
 explícito sobre qué son: **elementos por revisar, no movimientos**. No tocan ningún saldo ni el gasto
-del mes hasta que el usuario las resuelva. Más allá del horizonte no se materializa nada y el período
-queda señalado.
+del mes hasta que el usuario las resuelva. Más allá del horizonte no se materializa nada; **señalarlo
+va en `recurrence-review-ux`**, no en esta entrega. Hasta que ese aviso exista, quien arrastre más de
+un año ve doce meses sin explicación del corte — el borde áspero conocido del mínimo. Lo que sí rige
+desde ahora es la mitad negativa de esta decisión: el sistema no afirma que esos meses tengan
+información incompleta.
 
 **Precisión contable que conviene no perder:** crear una instancia pendiente **no mueve ningún
 saldo**. El saldo se mueve al crear un movimiento confirmado. Lo que una pendiente sí cambia es la

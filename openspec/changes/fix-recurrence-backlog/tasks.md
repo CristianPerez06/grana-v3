@@ -175,32 +175,32 @@ que habilita el backlog.
       Mientras tanto la columna se sigue escribiendo y **no hay daño**: el generador ya no la usa para
       elegir la FECHA —eso lo decide el calendario—, aunque sí para saber desde dónde arrancar, así
       que las cuatro superficies siguen leyendo un cursor que se mantiene correcto.
-- [ ] 1.6 `decideRecurrenceInstance` pierde el parámetro `hasPending` y pasa a devolver la **lista**
-      de ocurrencias faltantes, derivada de `walkOccurrences` y del conjunto de `due_date` ya
-      existentes.
-      **Hecho el núcleo puro; el generador todavía NO lo usa.** `owedOccurrences`
-      (`packages/money-logic/src/recurrences.ts`, 9 casos en `owed-occurrences.test.ts`) resuelve
-      **un segmento de calendario**: dado un cronograma, un piso, un horizonte, un hoy y el conjunto
-      de vencimientos que ya existen, devuelve los que faltan. Emite estrictamente después del piso;
-      `end_date` y `max_occurrences` acotan la lista; y —el punto— **una pendiente sin resolver saca
-      SU PROPIA fecha y ninguna otra**, que es el #96 enunciado como propiedad. Incluye el caso exacto
-      del ticket (29 faltantes) y el de resolución fuera de orden, que con un cursor ni siquiera se
-      podía expresar.
+- [ ] 1.6 El generador deriva la **lista** de ocurrencias faltantes del calendario y del conjunto de
+      `due_date` ya existentes, en lugar de pedir una fecha por vez.
+      **Cableado y probado contra la base real.** `generateDueRecurrenceInstances` ya no llama a
+      `decideRecurrenceInstance` ni lee `last_generated_date`: compone
+      `owedOccurrencesForRule(versiones, pausas, piso, horizonte, hoy, existentes)` y materializa lo
+      que devuelve. `owedOccurrences` sigue siendo el núcleo de **un** segmento;
+      `owedOccurrencesForRule` compone los segmentos —uno por versión de cronograma, menos los
+      intervalos de pausa— y es lo que cierra `2.1b` y `2.1d` del lado del cálculo.
       **`existing` son los vencimientos en CUALQUIER estado** —pendiente, omitido y confirmado—, no
       solo los resueltos: lo que decide es que la ocurrencia YA EXISTE, no cómo terminó. Una pendiente
       sin resolver no se vuelve a crear, y una omitida tampoco reaparece.
-      **Alcance del núcleo, para que no se lo confunda con el generador completo:** trabaja sobre UN
-      cronograma, el vigente. Todavía no contempla por sí solo las versiones históricas de cronograma
-      ni los intervalos de pausa — eso es componer varios segmentos, y está pendiente en `2.1b` y
-      `2.1d`.
-      **Lo que falta y por qué:** reemplazar `decideRecurrenceInstance` exige que el generador pueda
-      materializar más de una pendiente por regla, y `recurrence_instances_one_pending_per_rule`
-      **sigue vivo a propósito** hasta la activación (decisión 17): cablearlo ahora haría que el
-      generador intente 29 inserts y la base rechace 28. Hasta entonces **el generador sigue
-      dependiendo del cursor**: `decideRecurrenceInstance` recibe `last_generated_date` y lo usa como
-      `cursor` del caminante. Lee del mismo calendario que `owedOccurrences` —no hay dos
-      cronogramas—, pero de dónde arranca sigue saliendo del cursor, no de `reconstruct_from`. Eso
-      cambia recién en el paso 2 del orden de abajo.
+      **DECISIÓN TOMADA — cómo convive el generador múltiple con el índice todavía vivo.** Era la
+      decisión abierta de `1.5`. Se eligió **(a) con degradación en runtime, no con bandera**:
+      `insertReconstructedInstances` intenta **un solo insert en lote**; si la base lo rechaza
+      —`recurrence_instances_one_pending_per_rule` todavía existe y una violación rechaza la sentencia
+      entera— reintenta por regla, y si eso también falla inserta **solo la ocurrencia vigente**, que
+      es la que no puede faltar. Ventajas sobre las otras dos opciones: no hay bandera que acordarse
+      de dar vuelta, no depende de que PostgREST pueda apuntar a un índice parcial como destino de
+      `on conflict` (no puede), y después de la activación los dos fallbacks dejan de dispararse solos
+      —la ruta sana vuelve a ser un insert por corrida— sin desplegar nada. Está probada **con el
+      índice puesto**, que es el estado real de la ventana: `generator-backlog.test.ts`, 8 casos sobre
+      PGlite con `0064` aplicado.
+      **Lo que queda de `1.6`:** borrar `decideRecurrenceInstance`, `RuleForDecision` y
+      `GenerationDecision`, hoy sin ningún caller de producción, reescribiendo contra el caminante los
+      casos de `max-occurrences.test.ts`, `custom-frequency.test.ts` y `generator.test.ts` que todavía
+      los usan. Quedó marcado en el propio código.
 - [x] 1.7 Unificar `max_occurrences`: el tope se cuenta contra el cronograma, no contra filas de
       `recurrence_instances`.
       **El defecto, medido antes de tocar nada:** con una regla creada desde un movimiento y tope 3,
@@ -402,23 +402,43 @@ que habilita el backlog.
 
 ## 2. El backlog existe y se puede resolver
 
-- [ ] 2.1 `generateDueRecurrenceInstances` materializa las ocurrencias vencidas dentro del horizonte
+- [x] 2.1 `generateDueRecurrenceInstances` materializa las ocurrencias vencidas dentro del horizonte
       de **12 meses inclusive**, calculado con `getTodayAR()` (nunca `current_date`: Supabase corre en
       UTC), en orden de calendario y **por tandas acotadas** — abrir una pantalla no dispara cientos
       de escrituras; la tanda se completa en sucesivas aperturas y **la ocurrencia vigente entra
       siempre en la primera**. El horizonte limita solo la reconstrucción automática: registrar a
       mano un pago más viejo sigue siendo posible.
-- [ ] 2.1e Tanda operativa (decisión 20): **50 ocurrencias por corrida**, **un solo `insert` en
+      **Hecho.** El horizonte se calcula con `getTodayAR()` —`options.today` existe solo para fijar el
+      día en una reconstrucción de varias corridas y en los tests— y la selección de la tanda vive en
+      `selectReconstructionBatch`, aparte y probada como función pura.
+- [x] 2.1e Tanda operativa (decisión 20): **50 ocurrencias por corrida**, **un solo `insert` en
       lote** —hoy el generador inserta de a una dentro de un `for`— y la ocurrencia vigente siempre en
       la primera corrida. Mientras queden, indicarlo en pantalla **y ofrecer "Continuar
       reconstrucción"**, que procesa otra tanda sin cerrar la app: una regla diaria son ~8 tandas y
       nadie va a abrir y cerrar la app ocho veces para ver su propio historial.
-- [ ] 2.1d Pausa: no materializar los vencimientos que caen durante la pausa ni recuperarlos al
+      **Hecho del lado del cálculo y de la escritura**, pendiente el botón: `GenerationResult` devuelve
+      `created`, `remaining` y `error`, y las tres cruzan enteras hasta la acción de web y el mutator
+      nativo. La ocurrencia vigente de **cada** regla entra siempre, aunque eso pase el tope de 50: una
+      regla que no materializa nada es el defecto, una reconstrucción lenta no. Falta la superficie que
+      muestra `remaining` y ofrece «Continuar reconstrucción» — es la etapa 4.
+- [x] 2.1d Pausa: no materializar los vencimientos que caen durante la pausa ni recuperarlos al
       reanudar; al reanudar tomar el próximo vencimiento futuro con el calendario original. Test:
       regla del 23 pausada en junio y reanudada el 5/9 vuelve con el 23/9, sin junio, julio ni agosto.
-- [ ] 2.1b Vigencia de los cambios de cronograma: editar frecuencia/intervalo/día no reinterpreta
+      **Hecho.** El generador lee `recurrence_pauses` y resta cada intervalo `[paused_from, resumed_at)`
+      de los segmentos. Lo anterior a la pausa **no** se toca, que es la razón por la que el piso no se
+      mueve al pausar ni al reanudar. Casos en `owed-occurrences-for-rule.test.ts` (pausa cerrada,
+      pausa abierta, varias pausas, y lo previo a la pausa que sobrevive) y en `generator-backlog.test.ts`.
+- [x] 2.1b Vigencia de los cambios de cronograma: editar frecuencia/intervalo/día no reinterpreta
       ocurrencias anteriores a la fecha de vigencia. Test: una regla mensual con historial editada a
       quincenal no fabrica vencimientos viejos.
+      **Hecho.** El generador lee `recurrence_schedule_versions` y camina cada tramo con el cronograma
+      que rigió ahí, anclado en `anchor_date`. Un límite de versión es un corte duro: la mensual del 23
+      deja de emitirse el día que entra la quincenal.
+      **Hueco conocido, a resolver cuando exista la UI de edición:** con **más de una** versión,
+      `max_occurrences` cuenta ordinales sobre el calendario de cada versión, y el tope de una regla
+      editada queda mal definido. En producción hoy toda regla tiene exactamente una versión asumida,
+      así que el comportamiento es idéntico al actual; el caso solo aparece cuando se pueda editar el
+      cronograma de verdad, y ahí hay que decidir qué cuenta el tope.
 - [ ] 2.2 Adaptar los reads que asumen una pendiente por regla:
       `getPendingInstancesByRecurrenceId` (hoy `Map<string, RecurrenceInstance>`) y
       `RecurrenceSummary.pending_instance` (hoy singular) pasan a colección.

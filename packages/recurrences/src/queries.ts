@@ -1,13 +1,15 @@
 import type { GranaSupabaseClient } from '@grana/supabase'
 import {
-  decideRecurrenceInstance,
   detectRecurrenceSuggestions,
   formatDateISO,
   getNextExpectedOccurrence,
   getTodayAR,
+  owedOccurrencesForRule,
   type IntervalUnit,
+  type PauseInterval,
   type RecurrenceFrequency,
   type RecurrenceSuggestion,
+  type ScheduleVersion,
   type SuggestionMovement,
 } from '@grana/money-logic'
 import {
@@ -250,12 +252,20 @@ export async function getRecurrenceLinkForTransaction(
 }
 
 // ── generateDueRecurrenceInstances ─────────────────────────────────────────────
-// Lazy generator. Called from the platform shell (web /transactions page load,
-// mobile hub focus). Idempotent: the unique partial index on (recurrence_id)
-// WHERE status='pending' guarantees no double-insert under race conditions; we
-// swallow that error. Generates AT MOST one pending instance per rule per call —
-// matches the design rule "one pending per rule at a time". Auth is resolved by
-// the shell and the resolved `userId` is injected.
+// Lazy generator. Called from the platform shell (web page load, mobile hub
+// focus). It materializes EVERY occurrence a rule is owed — not one — which is
+// the fix for #96: an unresolved occurrence used to stop the rule forever.
+//
+// What it is owed is derived by `owedOccurrencesForRule`, from the rule's
+// calendar over its schedule versions, minus its pause intervals, minus the
+// occurrences that already exist in ANY state. Nothing here consults
+// `last_generated_date`: a cursor that only advances when the user resolves
+// something is precisely what broke.
+//
+// Idempotent: re-running it returns the same list minus what it just created,
+// and the partial unique index on (recurrence_id, due_date) is the backstop
+// under concurrent calls. Auth is resolved by the shell and the resolved
+// `userId` is injected.
 
 export type RecurrenceRuleForGeneration = {
   id: string
@@ -266,6 +276,7 @@ export type RecurrenceRuleForGeneration = {
   start_date: string
   end_date: string | null
   last_generated_date: string | null
+  reconstruct_from: string
   amount: number
   account_id: string
   transfer_destination_account_id: string | null
@@ -285,12 +296,16 @@ export type RecurrenceRuleForGeneration = {
 export function buildPendingInstanceInsert(
   rule: RecurrenceRuleForGeneration,
   userId: string,
-  scheduledDate: string,
+  dueDate: string,
 ) {
   return {
     recurrence_id: rule.id,
     user_id: userId,
-    scheduled_date: scheduledDate,
+    // The occurrence identity, immutable from here on. `scheduled_date` carries
+    // the same value only so old native clients keep working during the
+    // transition (see 0064 §7); it is not read as the due date any more.
+    due_date: dueDate,
+    scheduled_date: dueDate,
     status: 'pending' as const,
     amount: rule.amount,
     account_id: rule.account_id,
@@ -304,71 +319,253 @@ export function buildPendingInstanceInsert(
   }
 }
 
+/**
+ * How many occurrences one run materializes. Twelve months of a daily rule are
+ * ~365 rows: opening a screen must not fire hundreds of writes.
+ */
+export const RECONSTRUCTION_BATCH_SIZE = 50
+
+/** How far back the automatic reconstruction reaches. Registering an older payment by hand is not affected. */
+const RECONSTRUCTION_HORIZON_MONTHS = 12
+
+export type GenerationResult = {
+  created: number
+  /**
+   * Occurrences still owed after this run. Greater than zero means the UI must
+   * say so AND offer to continue: a daily rule with a year of backlog is ~8
+   * runs, and nobody is going to reopen the app eight times to see their own
+   * history.
+   */
+  remaining: number
+  /**
+   * Set when the run could not materialize what it owed. The caller MUST tell
+   * the difference between this and "nothing to review": showing an empty state
+   * on a failure is the exact opposite claim (spec: a failed materialization is
+   * not shown as "you are up to date").
+   */
+  error: string | null
+}
+
+function horizonStart(today: string): string {
+  const date = new Date(
+    Number(today.slice(0, 4)) - RECONSTRUCTION_HORIZON_MONTHS / 12,
+    Number(today.slice(5, 7)) - 1,
+    Number(today.slice(8, 10)),
+  )
+  return formatDateISO(date)
+}
+
+/**
+ * Pick this run's rows out of everything the rules are owed.
+ *
+ * Every rule's CURRENT occurrence — the most recent one already due — goes in,
+ * always, even if that takes the run past the batch size. A cut that left out
+ * what falls due today would reproduce the very defect this generator removes,
+ * with another number. The rest of the budget is filled oldest-first, so the
+ * backlog rebuilds in calendar order.
+ */
+export function selectReconstructionBatch(
+  owedByRule: Map<string, string[]>,
+  batchSize: number = RECONSTRUCTION_BATCH_SIZE,
+): Map<string, string[]> {
+  const picked = new Map<string, string[]>()
+  const rest: Array<{ ruleId: string; date: string }> = []
+
+  for (const [ruleId, dates] of owedByRule) {
+    if (dates.length === 0) continue
+    const current = dates[dates.length - 1]
+    picked.set(ruleId, [current])
+    for (const date of dates.slice(0, -1)) rest.push({ ruleId, date })
+  }
+
+  let budget = batchSize - picked.size
+  if (budget > 0) {
+    rest.sort((a, b) => a.date.localeCompare(b.date))
+    for (const { ruleId, date } of rest) {
+      if (budget <= 0) break
+      picked.get(ruleId)?.push(date)
+      budget -= 1
+    }
+  }
+
+  for (const dates of picked.values()) dates.sort()
+  return picked
+}
+
 export async function generateDueRecurrenceInstances(
   supabase: GranaSupabaseClient,
   userId: string,
-): Promise<{ created: number }> {
-  const today = formatDateISO(getTodayAR())
+  options: {
+    /**
+     * The day the run treats as today. Defaults to the Argentine financial date;
+     * pass it to keep a multi-run reconstruction anchored to one day, and to let
+     * tests assert on fixed dates instead of on the clock.
+     */
+    today?: string
+  } = {},
+): Promise<GenerationResult> {
+  const today = options.today ?? formatDateISO(getTodayAR())
+  const horizon = horizonStart(today)
 
   const { data: rules, error: rulesError } = await supabase
     .from('recurrences')
     .select(
-      'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, last_generated_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
+      'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, last_generated_date, reconstruct_from, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
     )
     .eq('user_id', userId)
     .eq('status', 'active')
 
-  if (rulesError || !rules || rules.length === 0) return { created: 0 }
+  if (rulesError) return { created: 0, remaining: 0, error: rulesError.message }
+  if (!rules || rules.length === 0) return { created: 0, remaining: 0, error: null }
 
   const typedRules = rules as unknown as RecurrenceRuleForGeneration[]
   const ruleIds = typedRules.map((rule) => rule.id)
 
-  // Only the pending ones. `max_occurrences` used to be enforced by counting
-  // every instance row of a rule, which is why this fetched all statuses; the
-  // cap is now an ordinal on the calendar (see decideRecurrenceInstance), so the
-  // rows are needed for one thing only: knowing which rules already have a
-  // pending occurrence.
-  const { data: instances } = await supabase
-    .from('recurrence_instances')
-    .select('recurrence_id')
-    .eq('user_id', userId)
-    .eq('status', 'pending')
-    .in('recurrence_id', ruleIds)
+  // The three histories the calendar is composed from. A failure in any of them
+  // is NOT recoverable by carrying on: walking today's schedule over a stretch
+  // whose versions we failed to read would fabricate occurrences the rule never
+  // produced, and ignoring pauses would bill a paused rule. Better no run than a
+  // wrong one.
+  const [versionsResult, pausesResult, instancesResult] = await Promise.all([
+    supabase
+      .from('recurrence_schedule_versions')
+      .select('recurrence_id, effective_from, interval_count, interval_unit, anchor_date')
+      .eq('user_id', userId)
+      .in('recurrence_id', ruleIds),
+    supabase
+      .from('recurrence_pauses')
+      .select('recurrence_id, paused_from, resumed_at')
+      .eq('user_id', userId)
+      .in('recurrence_id', ruleIds),
+    // Every state, not just pending: what decides is that the occurrence EXISTS,
+    // not how it ended. A skipped one must not come back and a confirmed one must
+    // not be created twice.
+    supabase
+      .from('recurrence_instances')
+      .select('recurrence_id, due_date')
+      .eq('user_id', userId)
+      .in('recurrence_id', ruleIds)
+      .not('due_date', 'is', null),
+  ])
 
-  const rulesWithPending = new Set<string>()
-  for (const row of instances ?? []) {
-    rulesWithPending.add(row.recurrence_id as string)
+  const readError = versionsResult.error ?? pausesResult.error ?? instancesResult.error
+  if (readError) return { created: 0, remaining: 0, error: readError.message }
+
+  const versionsByRule = new Map<string, ScheduleVersion[]>()
+  for (const row of versionsResult.data ?? []) {
+    const list = versionsByRule.get(row.recurrence_id as string) ?? []
+    list.push({
+      effective_from: row.effective_from as string,
+      interval_count: row.interval_count as number,
+      interval_unit: row.interval_unit as IntervalUnit,
+      anchor_date: row.anchor_date as string,
+    })
+    versionsByRule.set(row.recurrence_id as string, list)
   }
+
+  const pausesByRule = new Map<string, PauseInterval[]>()
+  for (const row of pausesResult.data ?? []) {
+    const list = pausesByRule.get(row.recurrence_id as string) ?? []
+    list.push({
+      paused_from: row.paused_from as string,
+      resumed_at: row.resumed_at as string | null,
+    })
+    pausesByRule.set(row.recurrence_id as string, list)
+  }
+
+  const existingByRule = new Map<string, string[]>()
+  for (const row of instancesResult.data ?? []) {
+    const list = existingByRule.get(row.recurrence_id as string) ?? []
+    list.push(row.due_date as string)
+    existingByRule.set(row.recurrence_id as string, list)
+  }
+
+  const owedByRule = new Map<string, string[]>()
+  let totalOwed = 0
+  for (const rule of typedRules) {
+    const owed = owedOccurrencesForRule({
+      versions: versionsByRule.get(rule.id) ?? [],
+      pauses: pausesByRule.get(rule.id) ?? [],
+      endDate: rule.end_date,
+      maxOccurrences: rule.max_occurrences,
+      reconstructFrom: rule.reconstruct_from,
+      horizon,
+      today,
+      existing: existingByRule.get(rule.id) ?? [],
+    })
+    if (owed.length === 0) continue
+    owedByRule.set(rule.id, owed)
+    totalOwed += owed.length
+  }
+
+  if (totalOwed === 0) return { created: 0, remaining: 0, error: null }
+
+  const batch = selectReconstructionBatch(owedByRule)
+  const rulesById = new Map(typedRules.map((rule) => [rule.id, rule]))
+  const rows = [...batch.entries()].flatMap(([ruleId, dates]) => {
+    const rule = rulesById.get(ruleId)
+    return rule == null ? [] : dates.map((date) => buildPendingInstanceInsert(rule, userId, date))
+  })
+
+  const { created, error } = await insertReconstructedInstances(supabase, batch, rows, rulesById, userId)
+
+  return { created, remaining: totalOwed - created, error }
+}
+
+/**
+ * Write the batch, degrading only as far as the database forces.
+ *
+ * One statement is the healthy path. Until the activation migration drops
+ * `recurrence_instances_one_pending_per_rule`, though, a rule owed more than one
+ * occurrence violates that index — and a violation rejects the WHOLE statement,
+ * so a single batch would materialize nothing at all. Hence the two fallbacks:
+ * per rule, then the current occurrence alone. After activation neither fires,
+ * and this collapses back to one insert per run with no flag to flip and no
+ * deploy to coordinate.
+ */
+async function insertReconstructedInstances(
+  supabase: GranaSupabaseClient,
+  batch: Map<string, string[]>,
+  rows: ReturnType<typeof buildPendingInstanceInsert>[],
+  rulesById: Map<string, RecurrenceRuleForGeneration>,
+  userId: string,
+): Promise<{ created: number; error: string | null }> {
+  if (rows.length === 0) return { created: 0, error: null }
+
+  const { error: batchError } = await supabase
+    .from('recurrence_instances')
+    .insert(rows as never)
+  if (!batchError) return { created: rows.length, error: null }
 
   let created = 0
+  let lastError: string | null = null
 
-  for (const rule of typedRules) {
-    const decision = decideRecurrenceInstance(
-      {
-        start_date: rule.start_date,
-        end_date: rule.end_date,
-        last_generated_date: rule.last_generated_date,
-        interval_count: rule.interval_count,
-        interval_unit: rule.interval_unit,
-        max_occurrences: rule.max_occurrences,
-      },
-      today,
-      rulesWithPending.has(rule.id),
-    )
+  for (const [ruleId, dates] of batch) {
+    const rule = rulesById.get(ruleId)
+    if (rule == null) continue
 
-    if (!decision.generate) continue
-
-    const { error: insertError } = await supabase
+    const { error: ruleError } = await supabase
       .from('recurrence_instances')
-      .insert(
-        buildPendingInstanceInsert(rule, userId, decision.scheduled_date) as never,
-      )
+      .insert(dates.map((date) => buildPendingInstanceInsert(rule, userId, date)) as never)
+    if (!ruleError) {
+      created += dates.length
+      continue
+    }
 
-    if (!insertError) created += 1
-    // Unique-index violation under concurrent calls is expected; ignore silently.
+    // The current occurrence is the one that must exist: without it the user is
+    // looking at a screen that hides what falls due today.
+    const current = dates[dates.length - 1]
+    const { error: singleError } = await supabase
+      .from('recurrence_instances')
+      .insert(buildPendingInstanceInsert(rule, userId, current) as never)
+    if (singleError) lastError = singleError.message
+    else created += 1
   }
 
-  return { created }
+  // Only a run that created nothing at all is reported as a failure: a partial
+  // run is the expected shape during the transition window, and the caller shows
+  // what is left through `remaining`, not as an error.
+  return { created, error: created === 0 ? (lastError ?? batchError.message) : null }
 }
 
 // ── getTopRecurrenceSuggestion ─────────────────────────────────────────────────

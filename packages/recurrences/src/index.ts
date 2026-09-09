@@ -17,6 +17,9 @@ export {
   getTopRecurrenceSuggestion,
   getDuplicateRulesFor,
   buildPendingInstanceInsert,
+  selectReconstructionBatch,
+  RECONSTRUCTION_BATCH_SIZE,
+  type GenerationResult,
   type RecurrenceRuleForGeneration,
 } from './queries'
 
