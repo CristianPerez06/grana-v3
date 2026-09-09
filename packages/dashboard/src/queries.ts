@@ -849,25 +849,30 @@ export async function getCommittedOutlookForMonth(
   // the cursor — emitted it again. The same commitment, twice, exactly for the
   // rules the user had not caught up on.
   //
-  // The exclusion is keyed on `due_date`, not on `scheduled_date`: for a resolved
-  // occurrence `scheduled_date` holds the PAYMENT date, so an August cuota paid in
-  // September would fall outside August's window and be projected as still owed.
+  // The exclusion is keyed on `due_date`, not on `scheduled_date`. On a resolved
+  // occurrence `scheduled_date` is a LEGACY DATE OF UNCERTAIN MEANING — a client
+  // that predates this change overwrites it with the payment date on confirm — so
+  // an August cuota resolved in September lands outside August's window and gets
+  // projected as still owed.
   //
   // ONE read for both jobs, on purpose. Counting an occurrence and excluding it
   // from the projection have to agree on WHICH WINDOW it belongs to; two reads
   // with two filters can disagree, and the way they disagree is silent. Read
   // once, place each row once, use the same placement for both.
   //
-  // The placement is the VENCIMIENTO. An occurrence due 23-Aug and paid 15-Sep
-  // has `scheduled_date = 2026-09-15` — the payment date — so filtering by it
-  // dropped the occurrence out of August while its `due_date` still blocked
-  // August's projection: the rent simply vanished from the month it belonged to,
-  // and reappeared in September on top of September's own.
+  // The placement is the VENCIMIENTO. An occurrence due 23-Aug whose
+  // `scheduled_date` was overwritten to 2026-09-15 dropped out of August when
+  // filtered by that column, while its `due_date` still blocked August's
+  // projection: the rent simply vanished from the month it belonged to, and
+  // reappeared in September on top of September's own.
   //
   // FALLBACK, stated rather than implied: an occurrence resolved before 0064 has
-  // no recoverable vencimiento (`due_date IS NULL`), and for those
-  // `scheduled_date` is the only date there is. They are placed by it — the best
-  // available answer — and they are exactly the rows the `or` below keeps.
+  // no recoverable vencimiento (`due_date IS NULL`). For those, `scheduled_date`
+  // is the only date there is — and it is a LEGACY DATE OF UNCERTAIN MEANING:
+  // whether it holds the vencimiento or the day the occurrence was resolved is
+  // not knowable. Placing a historical row approximately is the ONLY use that
+  // date has; it is never a vencimiento, an identity, or a claim on a calendar
+  // day. Those rows are exactly the ones the `or` below keeps.
   type MovementTypeEmbed = { movement_type: string }
   type RecurrenceOccurrenceRow = {
     id: string
@@ -935,12 +940,12 @@ export async function getCommittedOutlookForMonth(
   // Only an EXACT `due_date` covers one.
   //
   // A row with no recoverable vencimiento is placed by `scheduled_date` above,
-  // but `scheduled_date` is a PAYMENT date, not an identity: an August cuota paid
-  // on 10-Sep would otherwise cover 10-Sep and hide the rule's real occurrence
-  // for that day — an uncertain date occupying a real one, which is precisely the
-  // shape of #96 and what 0064 refuses to do when it declares those vencimientos
-  // unknown instead of guessing them. Showing the historical payment is right;
-  // letting it reserve a date is not.
+  // but that date is legacy and of uncertain meaning, never an identity: a
+  // historical row sitting on 10-Sep would otherwise cover 10-Sep and hide the
+  // rule's real occurrence for that day — an uncertain date occupying a real one,
+  // which is precisely the shape of #96 and what 0064 refuses to do when it
+  // declares those vencimientos unknown instead of guessing them. Showing the
+  // historical row is right; letting it reserve a date is not.
   //
   // EVERY state covers, `skipped` included: an occurrence the user marked as not
   // applicable exists, and projecting it would re-commit money they said was not
@@ -965,8 +970,10 @@ export async function getCommittedOutlookForMonth(
     amount: i.amount,
     currency_code: i.currency_code,
     description: i.description || embedName(i.subcategory) || embedName(i.category),
-    // The vencimiento, not the payment date: the occurrence belongs to the month
-    // it fell due in, which is the same month whose projection it displaces.
+    // The vencimiento: the occurrence belongs to the month it fell due in, which
+    // is the same month whose projection it displaces. A historical row with no
+    // recoverable vencimiento falls back to its legacy date, which places it
+    // approximately and nothing more.
     date: occurrenceDate(i),
   })
 

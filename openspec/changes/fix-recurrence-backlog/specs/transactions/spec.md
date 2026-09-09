@@ -38,10 +38,19 @@ otro:
 - **fecha de resolución** (`resolved_at`) — cuándo se resolvió la ocurrencia.
 
 Una ocurrencia **sin resolver** SHALL tener únicamente vencimiento: los otros tres nacen al
-resolverla. `scheduled_date` NO SHALL usarse como fecha de pago; se retira, y durante la transición
-sobrevive únicamente como **columna legada de compatibilidad**: NO SHALL leerse como vencimiento ni
-como fecha de pago, porque un cliente anterior al despliegue puede sobrescribirla al resolver una
-ocurrencia, y en las ocurrencias históricas conserva un valor que no es un vencimiento confiable.
+resolverla. `scheduled_date` se retira, y durante la transición sobrevive únicamente como **columna
+legada de compatibilidad**.
+
+**Qué significa `scheduled_date` en una ocurrencia histórica: una fecha legada de significado
+incierto.** No se sabe si es el vencimiento que le dio origen o la fecha en que se resolvió, porque un
+cliente anterior al despliegue la sobrescribe al resolver. En consecuencia:
+
+- PUEDE usarse **únicamente** para ubicar aproximadamente la fila en una vista histórica, que es
+  mejor que no mostrarla en ninguna;
+- NO SHALL leerse como **vencimiento**, ni como **fecha de pago**, ni como **identidad** de la
+  ocurrencia;
+- NO SHALL **tapar una fecha del calendario**: una fecha incierta que reserva un día impediría
+  materializar la ocurrencia real de ese día, que es el bloqueo que este change existe para quitar.
 
 El sistema SHALL registrar además **cómo** se resolvió cada ocurrencia: con un movimiento **creado**
 por la recurrencia, o con un movimiento preexistente **vinculado** por el usuario. Ese dato SHALL
