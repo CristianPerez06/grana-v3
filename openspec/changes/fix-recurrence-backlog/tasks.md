@@ -422,6 +422,11 @@ que habilita el backlog.
       **Hecho.** El horizonte se calcula con `getTodayAR()` —`options.today` existe solo para fijar el
       día en una reconstrucción de varias corridas y en los tests— y la selección de la tanda vive en
       `selectReconstructionBatch`, aparte y probada como función pura.
+      **Corregido — el horizonte fallaba el 29 de febrero.** Construido a mano con `new Date`, «el
+      mismo día del año anterior» desde `2028-02-29` daba `2027-03-01`: JavaScript desborda en vez de
+      recortar, y el 28 de febrero quedaba fuera de una ventana que el contrato declara inclusiva.
+      Ahora usa `addInterval(hoy, 'month', -12)`, la misma aritmética del caminante, que recorta al
+      último día válido. Regresión de año bisiesto en `reconstruction-batch.test.ts`.
       **Corregido — las cuatro lecturas se paginan hasta agotarlas.** PostgREST corta toda respuesta
       en su `db-max-rows` **en silencio**. Una lectura truncada de los vencimientos que ya existen no
       es un generador lento: es un generador que cree que faltan y los vuelve a crear. La paginación
@@ -430,6 +435,18 @@ que habilita el backlog.
       pedida. Además la lectura de instancias se acota con `gte(due_date, piso más viejo)`, que es lo
       máximo que se puede filtrar sin perder nada. El harness ahora simula `db-max-rows`, así que la
       regresión reproduce el corte real con 366 filas en vez de necesitar mil.
+      **Corregido (2) — `OFFSET` sobre un orden no único también pierde filas.** Paginar hasta la
+      página vacía no alcanza si el `ORDER BY` no distingue las filas: Postgres no promete cómo
+      desempata, y entre dos pedidos puede devolver los empates en otro orden, repitiendo u omitiendo.
+      Perder una **pausa** es fabricar un vencimiento de un período en que la regla no corría. Las
+      cuatro lecturas ordenan ahora por columnas que identifican la fila: `id` en reglas,
+      `(recurrence_id, effective_from)` en versiones —único por índice—, `(due_date, recurrence_id)`
+      en instancias —único por índice— y `(recurrence_id, paused_from, id)` en pausas, donde el `id`
+      hace falta de verdad: solo hay una pausa **abierta** por regla, nada impide dos cerradas el
+      mismo día. El harness gana `unstableTies`, que agrega `random()` al orden: con un orden único no
+      cambia nada, con uno parcial revuelve los empates, que es exactamente el permiso que Postgres
+      se reserva. Regresión: 30 reglas con el mismo vencimiento y el corte de página cayendo dentro
+      del empate.
 - [x] 2.1e Tanda operativa (decisión 20): **50 ocurrencias por corrida**, **un solo `insert` en
       lote** —hoy el generador inserta de a una dentro de un `for`— y la ocurrencia vigente siempre en
       la primera corrida. Mientras queden, indicarlo en pantalla **y ofrecer "Continuar
@@ -441,10 +458,20 @@ que habilita el backlog.
       **Corregido — el tope de 50 ahora es un tope.** La primera versión dejaba pasar la ocurrencia
       vigente de cada regla «aunque eso pase el tope»; con las **61 reglas** que tiene producción, una
       tanda declarada de 50 habría escrito 61. El límite es duro, y lo que no entra queda en
-      `remaining` para la corrida siguiente —la próxima pantalla que se abra, o el botón—. Dentro del
-      límite el orden es: primero la ocurrencia vigente de cada regla, **la más atrasada primero**,
-      y después el resto del atraso, de la más vieja a la más nueva. Falta la superficie que muestra
-      `remaining` y ofrece «Continuar reconstrucción» — es la etapa 4.
+      `remaining` para la corrida siguiente —la próxima pantalla que se abra, o el botón—.
+      **Corregido (2) — ordenar solo por fecha dejaba reglas sin atender para siempre.** Con 61 reglas
+      y tanda de 50, las 50 atendidas en la primera corrida vuelven a la segunda debiendo fechas **más
+      viejas** que antes —su ocurrencia vigente era lo más nuevo que debían, y se acaba de escribir—,
+      así que ganaban otra vez, y las 11 restantes no entraban nunca. Es el bloqueo del #96 entre
+      reglas en vez de dentro de una. La selección ahora ordena en **tres niveles**: (1) reglas cuya
+      ocurrencia vigente **todavía no existe** y que pueden recibirla —la más atrasada primero—;
+      (2) las que tampoco la tienen pero ya cargan una pendiente sin resolver, que hasta la activación
+      **no pueden** recibir otra: van después de las que sí se pueden escribir, y este nivel deja de
+      existir solo cuando se retira el índice; (3) el resto del atraso, de la más vieja a la más
+      nueva. Sin el nivel (2), una regla bloqueada por el índice se llevaba presupuesto corrida tras
+      corrida con `created: 0` y `remaining > 0`. Regresiones: las 61 reglas quedan atendidas en dos
+      corridas —contra la base real—, más tres casos puros de prioridad.
+      Falta la superficie que muestra `remaining` y ofrece «Continuar reconstrucción» — es la etapa 4.
 - [x] 2.1d Pausa: no materializar los vencimientos que caen durante la pausa ni recuperarlos al
       reanudar; al reanudar tomar el próximo vencimiento futuro con el calendario original. Test:
       regla del 23 pausada en junio y reanudada el 5/9 vuelve con el 23/9, sin junio, julio ni agosto.

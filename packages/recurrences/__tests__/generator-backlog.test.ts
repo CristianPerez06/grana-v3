@@ -299,3 +299,81 @@ describe('generateDueRecurrenceInstances — the read of existing occurrences is
     }
   }, 120_000)
 })
+
+describe('generateDueRecurrenceInstances — every stuck rule gets served', () => {
+  it('materializes the current occurrence of all 61 rules in two runs', async () => {
+    // Production's shape: 61 rules with backlog and a batch of 50. Ordering by
+    // date alone starves the leftovers — the 50 served in run one come back
+    // owing OLDER dates than the 11 that were never touched, so they win again,
+    // and again. That is #96 between rules instead of within one.
+    const manyDb = await createRecurrenceIdentityDb()
+    try {
+      await manyDb.exec(`
+        insert into public.recurrences
+          (id, user_id, amount, interval_count, interval_unit, start_date, last_generated_date, status)
+        select ('00000000-0000-0000-0000-0000000' || lpad(i::text, 5, '0'))::uuid,
+               '${U_A}', 2500, 1, 'month', '2026-05-23', '2026-05-23', 'active'
+          from generate_series(1, 61) as i;
+      `)
+
+      const client = pglitePostgrest(manyDb)
+      await generateDueRecurrenceInstances(client, U_A, { today: TODAY })
+      await generateDueRecurrenceInstances(client, U_A, { today: TODAY })
+
+      // Every rule holds its current occurrence — the most recent already due.
+      const unserved = await manyDb.query<{ id: string }>(`
+        select r.id from public.recurrences r
+         where not exists (
+           select 1 from public.recurrence_instances i
+            where i.recurrence_id = r.id and i.due_date = '2026-08-23'
+         )
+      `)
+      expect(unserved.rows).toEqual([])
+    } finally {
+      await manyDb.close()
+    }
+  }, 180_000)
+})
+
+describe('generateDueRecurrenceInstances — paging survives ties', () => {
+  it('does not lose existing occurrences that share a due date across rules', async () => {
+    // Thirty rules due on the same day: every page boundary of the existing
+    // occurrences read falls inside a tie. Ordered by `due_date` alone, the rows
+    // Postgres returns for one page need not be the ones it withheld from the
+    // next, so occurrences go missing — and the generator tries to create them
+    // again.
+    const tiedDb = await createRecurrenceIdentityDb()
+    try {
+      await tiedDb.exec(`
+        insert into public.recurrences
+          (id, user_id, amount, interval_count, interval_unit, start_date, last_generated_date, status)
+        select ('00000000-0000-0000-0000-0000000' || lpad(i::text, 5, '0'))::uuid,
+               '${U_A}', 2500, 1, 'month', '2026-06-01', '2026-06-01', 'active'
+          from generate_series(1, 30) as i;
+        insert into public.recurrence_instances
+          (recurrence_id, user_id, scheduled_date, due_date, status, resolved_at)
+        select r.id, '${U_A}', d::date, d::date, 'skipped', now()
+          from public.recurrences r,
+               generate_series('2026-07-01'::date, '2026-09-01'::date, '1 month') as d;
+      `)
+
+      const before = await tiedDb.query<{ count: string }>(
+        'select count(*)::text as count from public.recurrence_instances',
+      )
+      const result = await generateDueRecurrenceInstances(
+        pglitePostgrest(tiedDb, { maxRows: 10, unstableTies: true }),
+        U_A,
+        { today: TODAY },
+      )
+      const after = await tiedDb.query<{ count: string }>(
+        'select count(*)::text as count from public.recurrence_instances',
+      )
+
+      // Everything the rules owe already exists. Nothing to create, nothing left.
+      expect(result).toEqual({ created: 0, remaining: 0, error: null })
+      expect(after.rows[0].count).toBe(before.rows[0].count)
+    } finally {
+      await tiedDb.close()
+    }
+  }, 180_000)
+})

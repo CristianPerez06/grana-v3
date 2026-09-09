@@ -18,7 +18,9 @@ export {
   getDuplicateRulesFor,
   buildPendingInstanceInsert,
   selectReconstructionBatch,
+  reconstructionHorizon,
   RECONSTRUCTION_BATCH_SIZE,
+  type RuleBacklog,
   type GenerationResult,
   type RecurrenceRuleForGeneration,
 } from './queries'

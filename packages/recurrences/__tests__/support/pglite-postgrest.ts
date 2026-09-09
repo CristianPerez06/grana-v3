@@ -28,9 +28,10 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
     private readonly table: string,
     private readonly columns: string,
     private readonly maxRows: number,
+    private readonly unstableTies: boolean,
   ) {}
 
-  private orderBy: string | null = null
+  private orderBy: string[] = []
   private limit: number | null = null
   private offset = 0
 
@@ -44,8 +45,9 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
     return this
   }
 
+  /** Chainable, like PostgREST's: each call appends another sort key. */
   order(column: string): this {
-    this.orderBy = column
+    this.orderBy.push(column)
     return this
   }
 
@@ -76,7 +78,15 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
       return filter.sql.replace('$', `$${params.length}`)
     })
     const clause = where.length === 0 ? '' : ` where ${where.join(' and ')}`
-    const order = this.orderBy == null ? '' : ` order by ${this.orderBy}`
+    // Postgres promises nothing about the order of rows a query does not fully
+    // order, and an OFFSET window re-plans on every request. `unstableTies`
+    // makes that permission explicit instead of hoping the planner exercises it:
+    // with a fully unique ORDER BY there are no ties and this changes nothing;
+    // with a partial one it scrambles them, which is exactly what loses or
+    // duplicates rows across pages.
+    const keys = [...this.orderBy]
+    if (this.unstableTies) keys.push('random()')
+    const order = keys.length === 0 ? '' : ` order by ${keys.join(', ')}`
     // PostgREST truncates every response at `db-max-rows`, whether or not the
     // caller asked for a window — that is the silent cut a single unpaged read
     // walks into.
@@ -191,16 +201,21 @@ async function insert(
  * response, including one that asked for a bigger window. Tests lower it so a
  * modest fixture reproduces the truncation a real project only hits at a
  * thousand rows.
+ *
+ * `unstableTies` exercises the other half of paging: rows an ORDER BY does not
+ * distinguish may come back in a different order on each request, so an OFFSET
+ * window over a non-unique order silently repeats or skips them.
  */
 export function pglitePostgrest(
   db: PGlite,
-  options: { maxRows?: number } = {},
+  options: { maxRows?: number; unstableTies?: boolean } = {},
 ): GranaSupabaseClient {
   const maxRows = options.maxRows ?? 1000
+  const unstableTies = options.unstableTies ?? false
   return {
     from(table: string) {
       return {
-        select: (columns: string) => new Query(db, table, columns, maxRows),
+        select: (columns: string) => new Query(db, table, columns, maxRows, unstableTies),
         insert: (payload: unknown) => insert(db, table, payload),
       }
     },

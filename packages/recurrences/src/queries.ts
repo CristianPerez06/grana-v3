@@ -1,5 +1,6 @@
 import type { GranaSupabaseClient } from '@grana/supabase'
 import {
+  addInterval,
   detectRecurrenceSuggestions,
   formatDateISO,
   getNextExpectedOccurrence,
@@ -346,13 +347,37 @@ export type GenerationResult = {
   error: string | null
 }
 
-function horizonStart(today: string): string {
-  const date = new Date(
-    Number(today.slice(0, 4)) - RECONSTRUCTION_HORIZON_MONTHS / 12,
-    Number(today.slice(5, 7)) - 1,
-    Number(today.slice(8, 10)),
-  )
-  return formatDateISO(date)
+/**
+ * Twelve months back, INCLUSIVE, with end-of-month clamping.
+ *
+ * Built by hand this used to hand `new Date` a day that does not exist in the
+ * target year: from `2028-02-29`, "same day, previous year" is `2027-02-29`,
+ * which JavaScript rolls forward to `2027-03-01` — silently moving the horizon a
+ * day late and dropping `2027-02-28` from a window the contract says includes it.
+ * `addInterval` is the same month arithmetic the calendar walker uses, and it
+ * clamps to the last valid day instead of rolling over.
+ */
+export function reconstructionHorizon(today: string): string {
+  return addInterval(today, 'month', -RECONSTRUCTION_HORIZON_MONTHS)
+}
+
+/** What a run needs to know about one rule in order to prioritize it. */
+export type RuleBacklog = {
+  /** Dates the rule is owed, ascending. Never empty for a rule that is passed in. */
+  owed: string[]
+  /**
+   * Newest occurrence the rule already has, in any state. Null when it has none.
+   * Compared against the newest owed date, it answers the question the batch
+   * turns on: is the rule's CURRENT occurrence materialized, or missing?
+   */
+  newestExisting: string | null
+  /**
+   * Whether the rule already has an unresolved occurrence. Until the activation
+   * migration drops `recurrence_instances_one_pending_per_rule`, such a rule
+   * CANNOT take another one, so spending budget on it starves rules that could
+   * have been served.
+   */
+  hasPending: boolean
 }
 
 /**
@@ -365,30 +390,55 @@ function horizonStart(today: string): string {
  * is covered by continuation: whatever does not fit stays in `remaining`, and the
  * next run — the next screen the user opens, or the "continue" action — takes it.
  *
- * Priority inside the limit:
- *   1. each rule's CURRENT occurrence (the most recent already due), **most
- *      overdue rule first** — a rule with nothing materialized is the defect;
- *      a slow rebuild is not;
- *   2. the rest of the backlog, oldest first, so it rebuilds in calendar order.
+ * WHAT IT PRIORITIZES, and why it is not just "oldest date first". Ordering by
+ * date alone starves rules across runs: with 61 rules and a batch of 50, the 50
+ * served in run one come back to run two owing dates that are now OLDER than
+ * before — their current occurrence was the newest thing they owed, and it just
+ * got written — so they win again, and the other 11 never get in. That is #96's
+ * shape between rules instead of within one, and it does not resolve itself.
+ *
+ * So the run is filled in three tiers:
+ *
+ *   1. rules whose CURRENT occurrence is missing AND that can take one —
+ *      most overdue first. Serving one moves it out of this tier for good;
+ *   2. rules whose current is missing but that already hold an unresolved
+ *      occurrence. Until the activation these cannot take another, so they go
+ *      after the rules that can actually be written. They are still attempted:
+ *      after the activation this tier stops existing on its own;
+ *   3. the rest of the backlog, oldest first, so history rebuilds in order.
  */
 export function selectReconstructionBatch(
-  owedByRule: Map<string, string[]>,
+  backlogByRule: Map<string, RuleBacklog>,
   batchSize: number = RECONSTRUCTION_BATCH_SIZE,
 ): Map<string, string[]> {
   const picked = new Map<string, string[]>()
   if (batchSize <= 0) return picked
 
-  const currents: Array<{ ruleId: string; date: string }> = []
+  const servable: Array<{ ruleId: string; date: string }> = []
+  const blocked: Array<{ ruleId: string; date: string }> = []
   const rest: Array<{ ruleId: string; date: string }> = []
 
-  for (const [ruleId, dates] of owedByRule) {
-    if (dates.length === 0) continue
-    currents.push({ ruleId, date: dates[dates.length - 1] })
-    for (const date of dates.slice(0, -1)) rest.push({ ruleId, date })
+  for (const [ruleId, backlog] of backlogByRule) {
+    const { owed, newestExisting, hasPending } = backlog
+    if (owed.length === 0) continue
+
+    const current = owed[owed.length - 1]
+    // The rule's current occurrence is materialized when something NEWER than
+    // everything it is owed already exists. Otherwise the newest owed date is the
+    // current one, and the rule has nothing standing in for today.
+    const currentIsMissing = newestExisting == null || newestExisting < current
+
+    if (currentIsMissing) {
+      ;(hasPending ? blocked : servable).push({ ruleId, date: current })
+      for (const date of owed.slice(0, -1)) rest.push({ ruleId, date })
+    } else {
+      for (const date of owed) rest.push({ ruleId, date })
+    }
   }
 
   let budget = batchSize
   const take = (entries: Array<{ ruleId: string; date: string }>) => {
+    entries.sort((a, b) => a.date.localeCompare(b.date) || a.ruleId.localeCompare(b.ruleId))
     for (const { ruleId, date } of entries) {
       if (budget <= 0) return
       const dates = picked.get(ruleId)
@@ -398,11 +448,8 @@ export function selectReconstructionBatch(
     }
   }
 
-  // Oldest current first: the rule that has been stuck longest gets served
-  // before one that fell due yesterday.
-  currents.sort((a, b) => a.date.localeCompare(b.date))
-  take(currents)
-  rest.sort((a, b) => a.date.localeCompare(b.date))
+  take(servable)
+  take(blocked)
   take(rest)
 
   for (const dates of picked.values()) dates.sort()
@@ -430,6 +477,12 @@ async function selectAllPages<T>(
 ): Promise<{ data: T[]; error: { message: string } | null }> {
   const out: T[] = []
 
+  // Every caller MUST order by a set of columns that is UNIQUE. `range` is an
+  // OFFSET window, and Postgres makes no promise about how it breaks ties between
+  // one request and the next: with a non-unique order, rows can repeat across
+  // pages or be skipped entirely. A skipped pause is not a slower run — it is a
+  // vencimiento fabricated for a period the rule was not running.
+  //
   // Advance by what came back and stop on an EMPTY page, never on a short one.
   // A short page does not mean the end: PostgREST also truncates at its own
   // `db-max-rows`, which can be smaller than the window asked for, and reading
@@ -490,7 +543,7 @@ export async function generateDueRecurrenceInstances(
   } = {},
 ): Promise<GenerationResult> {
   const today = options.today ?? formatDateISO(getTodayAR())
-  const horizon = horizonStart(today)
+  const horizon = reconstructionHorizon(today)
 
   const { data: rules, error: rulesError } = await selectAllPages<RecurrenceRuleForGeneration>(() =>
     supabase
@@ -538,7 +591,9 @@ export async function generateDueRecurrenceInstances(
         .select('recurrence_id, effective_from, interval_count, interval_unit, anchor_date')
         .eq('user_id', userId)
         .in('recurrence_id', ruleIds)
-        .order('recurrence_id'),
+        // Unique by `recurrence_schedule_versions_one_per_date`.
+        .order('recurrence_id')
+        .order('effective_from'),
     ),
     selectAllPages<{ recurrence_id: string; paused_from: string; resumed_at: string | null }>(() =>
       supabase
@@ -546,20 +601,26 @@ export async function generateDueRecurrenceInstances(
         .select('recurrence_id, paused_from, resumed_at')
         .eq('user_id', userId)
         .in('recurrence_id', ruleIds)
-        .order('recurrence_id'),
+        // (recurrence_id, paused_from) is NOT unique — only ONE OPEN pause per
+        // rule is enforced — so `id` is what makes the order total.
+        .order('recurrence_id')
+        .order('paused_from')
+        .order('id'),
     ),
     // Every state, not just pending: what decides is that the occurrence EXISTS,
     // not how it ended. A skipped one must not come back and a confirmed one must
     // not be created twice.
-    selectAllPages<{ recurrence_id: string; due_date: string }>(() =>
+    selectAllPages<{ recurrence_id: string; due_date: string; status: string }>(() =>
       supabase
         .from('recurrence_instances')
-        .select('recurrence_id, due_date')
+        .select('recurrence_id, due_date, status')
         .eq('user_id', userId)
         .in('recurrence_id', ruleIds)
         .not('due_date', 'is', null)
         .gte('due_date', oldestFloor)
-        .order('due_date'),
+        // Unique by `recurrence_instances_one_per_rule_due_date`.
+        .order('due_date')
+        .order('recurrence_id'),
     ),
   ])
 
@@ -588,16 +649,21 @@ export async function generateDueRecurrenceInstances(
     pausesByRule.set(row.recurrence_id as string, list)
   }
 
-  const existingByRule = new Map<string, string[]>()
+  const existingByRule = new Map<string, { dates: string[]; newest: string | null; hasPending: boolean }>()
   for (const row of instancesResult.data) {
-    const list = existingByRule.get(row.recurrence_id as string) ?? []
-    list.push(row.due_date as string)
-    existingByRule.set(row.recurrence_id as string, list)
+    const ruleId = row.recurrence_id as string
+    const dueDate = row.due_date as string
+    const entry = existingByRule.get(ruleId) ?? { dates: [], newest: null, hasPending: false }
+    entry.dates.push(dueDate)
+    if (entry.newest == null || dueDate > entry.newest) entry.newest = dueDate
+    if (row.status === 'pending') entry.hasPending = true
+    existingByRule.set(ruleId, entry)
   }
 
-  const owedByRule = new Map<string, string[]>()
+  const backlogByRule = new Map<string, RuleBacklog>()
   let totalOwed = 0
   for (const rule of typedRules) {
+    const existing = existingByRule.get(rule.id)
     const owed = owedOccurrencesForRule({
       versions: versionsByRule.get(rule.id) ?? [],
       pauses: pausesByRule.get(rule.id) ?? [],
@@ -606,16 +672,20 @@ export async function generateDueRecurrenceInstances(
       reconstructFrom: rule.reconstruct_from,
       horizon,
       today,
-      existing: existingByRule.get(rule.id) ?? [],
+      existing: existing?.dates ?? [],
     })
     if (owed.length === 0) continue
-    owedByRule.set(rule.id, owed)
+    backlogByRule.set(rule.id, {
+      owed,
+      newestExisting: existing?.newest ?? null,
+      hasPending: existing?.hasPending ?? false,
+    })
     totalOwed += owed.length
   }
 
   if (totalOwed === 0) return { created: 0, remaining: 0, error: null }
 
-  const batch = selectReconstructionBatch(owedByRule)
+  const batch = selectReconstructionBatch(backlogByRule)
   const rulesById = new Map(typedRules.map((rule) => [rule.id, rule]))
   const rows = [...batch.entries()].flatMap(([ruleId, dates]) => {
     const rule = rulesById.get(ruleId)
