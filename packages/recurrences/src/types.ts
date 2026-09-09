@@ -53,6 +53,20 @@ export type RecurrenceInstance = Omit<
 }
 
 export type PendingRecurrenceInstance = RecurrenceInstance & {
+  /**
+   * The vencimiento, and NOT nullable here.
+   *
+   * The column is nullable because an occurrence resolved before 0064 has no
+   * recoverable due date. An UNRESOLVED one always has an exact one: 0064's
+   * backfill set `pending` and `skipped` rows exactly, its compatibility trigger
+   * derives it on insert for any client that only writes `scheduled_date`, and it
+   * is immutable from then on. `validate_schema.sql` asserts it.
+   *
+   * Narrowing it here is what lets every surface read the vencimiento instead of
+   * `scheduled_date` — which on a resolved row is a legacy date of uncertain
+   * meaning and was never the occurrence's identity.
+   */
+  due_date: string
   recurrence: Recurrence
   account: RecurrenceAccount | null
   destination_account: RecurrenceAccount | null

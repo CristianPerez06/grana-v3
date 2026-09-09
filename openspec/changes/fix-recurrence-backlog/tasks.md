@@ -66,9 +66,9 @@ soporten varias pendientes.
 
 ## 1. Cimientos: modelo persistente
 
-Ver "Modelo persistente" en `design.md`. Son **dos migraciones con un despliegue en el medio**
-(decisión 17): la expansión es aditiva y no cambia el comportamiento; la activación —tarea 2.8— es la
-que habilita el backlog.
+Ver "Modelo persistente" en `design.md`. El orden es **`0064` + `0065` → código → activación**
+(decisión 17): las dos migraciones de expansión viajan en la misma ventana y son aditivas —no cambian
+el comportamiento—, y la activación —tarea 2.8— es la que habilita el backlog.
 
 - [x] 1.1 Migración: agregar `recurrence_instances.due_date` (**nullable**) y `due_date_is_unknown`.
       `pending` y `skipped` conservan un vencimiento exacto; las `confirmed` históricas quedan en
@@ -636,7 +636,7 @@ que habilita el backlog.
       Dos fixtures usaban estados que el sistema no puede producir —una pendiente y treinta omitidas
       con fecha futura, cuando el generador solo materializa lo ya vencido—: pasaron a `PREVIOUS_MONTH`
       con fechas vencidas, y la de paginación combina seis reglas para superar el límite simulado.
-- [ ] 2.6 Copy: **"vencimientos por revisar"** — ni "pagos" (afirmaría que hubo pago) ni lenguaje de
+- [x] 2.6 Copy: **"vencimientos por revisar"** — ni "pagos" (afirmaría que hubo pago) ni lenguaje de
       deuda. Actualizar `es.json` y `en.json`.
 ## 3. Diferido a changes posteriores
 
@@ -738,15 +738,20 @@ app. Cubre además a quien no la abre nunca. Es mejor que el gate de versión; e
 
 ## 4. Visibilidad y paridad
 
-- [ ] 4.1 Subir la materialización al layout de la app en web, para que corra en cualquier pantalla.
-- [ ] 4.2 Agregarla al feed nativo, que hoy muestra las ocurrencias pero no las materializa.
-- [ ] 4.3 Bloque de "por revisar" en el inicio, en web y en nativo.
-- [ ] 4.4 El bloque arranca expandido siempre que haya al menos una ocurrencia vencida (hoy hace lo
+- [x] 4.1 Subir la materialización al layout de la app en web, para que corra en cualquier pantalla.
+- [x] 4.2 Agregarla al feed nativo, que hoy muestra las ocurrencias pero no las materializa.
+- [x] 4.3 Bloque de "por revisar" en el inicio, en web y en nativo.
+- [x] 4.4 El bloque arranca expandido siempre que haya al menos una ocurrencia vencida (hoy hace lo
       contrario: se pliega con 2 o más).
-- [ ] 4.5 Cada fila explicita qué va a pasar al resolverla: qué movimiento, con qué fecha, en qué
+- [x] 4.5 Cada fila explicita qué va a pasar al resolverla: qué movimiento, con qué fecha, en qué
       cuenta.
-- [ ] 4.5b Un fallo de materialización se muestra con opción de reintentar, distinguible de "no hay
+- [x] 4.5b Un fallo de materialización se muestra con opción de reintentar, distinguible de "no hay
       vencimientos por revisar". Reemplaza los `catch` vacíos de los disparadores actuales.
+      **Y un fallo al LEER los vencimientos también**: `query.data ?? []` convertía el error en una
+      lista vacía y el bloque desaparecía, que es el mismo defecto una capa más arriba. El aviso vive
+      en el shell —no en una ruta—, porque la generación corre en cualquier pantalla y el error tiene
+      que verse donde ocurrió. Las tres decisiones (plegado, urgencia, qué va a escribir) viven en
+      `review-surface.ts`, compartido entre web y nativo para que no vuelvan a divergir.
 - [ ] 4.8 Recorrer los **seis** comportamientos de `proposal.md` en web y en nativo antes de cerrar,
       terminando en la prueba de aceptación: varios vencimientos visibles, ninguno trabando al
       siguiente, sin duplicados, resolubles por separado y en cualquier orden.

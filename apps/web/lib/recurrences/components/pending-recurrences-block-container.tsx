@@ -2,8 +2,10 @@
 
 import { useMemo } from 'react'
 import { useQueries } from '@tanstack/react-query'
-import { MaterializationNotice } from '@/lib/recurrences/components/materialization-notice'
-import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
+import { useTranslations } from 'next-intl'
+import { reviewFeedState } from '@grana/recurrences'
+import { RecurrenceFailureNotice } from './materialization-notice'
+import { PendingRecurrencesBlock } from './pending-recurrences-block'
 import { createClient } from '@/lib/supabase/client'
 import { getPendingRecurrenceInstances } from '@/lib/recurrences/queries'
 import { getAccounts } from '@/lib/accounts/queries'
@@ -11,7 +13,11 @@ import { toFormAccounts } from '@/lib/accounts/form-accounts'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 
 /**
- * Client wrapper for `<PendingRecurrencesBlock>`. Fetches the pending
+ * Client wrapper for `<PendingRecurrencesBlock>`. It lives beside the block
+ * rather than under Movimientos' `_components`: the dashboard mounts it too, and
+ * a route-private folder is the wrong home for something two routes import.
+ *
+ * Fetches the pending
  * instances; if there is at least one, also reads accounts (already cached by
  * `MovementDrawerLoader` / `TransactionsHeader`, so this is a free lookup) to
  * derive the per-account/per-currency available balance used by the
@@ -22,6 +28,7 @@ import { QUERY_KEYS } from '@/lib/transactions/query-keys'
  * in place.
  */
 export function PendingRecurrencesBlockContainer() {
+  const t = useTranslations('recurrences.materialization')
   const [pendingQ, accountsQ] = useQueries({
     queries: [
       {
@@ -52,21 +59,30 @@ export function PendingRecurrencesBlockContainer() {
     [accountsQ.data],
   )
 
-  // The notice renders even with no pending instances: a materialization that
-  // FAILED must not look like a user who has nothing to review, and a rebuild
-  // that still owes occurrences has to offer to continue.
-  if (pendingQ.isPending || pendingQ.error || !pendingQ.data) return <MaterializationNotice />
+  // A FAILED READ IS NOT AN EMPTY LIST. It used to be folded into "render
+  // nothing", which tells the user they have nothing to review when the truth is
+  // that nobody knows — the same defect as a swallowed materialization error, one
+  // layer up. `reviewFeedState` is what keeps the two apart, and it is shared with
+  // native so the two platforms cannot answer this differently.
+  const feed = reviewFeedState(pendingQ)
+
+  if (feed.kind === 'unreadable') {
+    return (
+      <RecurrenceFailureNotice
+        title={t('read_failed_title')}
+        body={t('read_failed_body')}
+        onRetry={() => void pendingQ.refetch()}
+        retrying={pendingQ.isFetching}
+      />
+    )
+  }
+  if (feed.kind !== 'list') return null
 
   return (
-    <div className="flex flex-col gap-3">
-      <MaterializationNotice />
-      {pendingQ.data.length > 0 ? (
-        <PendingRecurrencesBlock
-          pending={pendingQ.data}
-          accounts={accounts}
-          availableByAccount={availableByAccount}
-        />
-      ) : null}
-    </div>
+    <PendingRecurrencesBlock
+      pending={pendingQ.data ?? []}
+      accounts={accounts}
+      availableByAccount={availableByAccount}
+    />
   )
 }

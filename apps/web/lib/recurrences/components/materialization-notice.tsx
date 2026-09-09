@@ -2,6 +2,7 @@
 
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { materializationOutcome } from '@grana/recurrences'
 import { Button } from '@/components/ui/button'
 import { useRecurrenceMaterialization } from '@/lib/recurrences/materialization-context'
 
@@ -17,40 +18,69 @@ import { useRecurrenceMaterialization } from '@/lib/recurrences/materialization-
  * Renders nothing when there is nothing to say, and nothing at all outside the
  * provider.
  */
-export const MaterializationNotice = () => {
+/** A failure, with the one thing the user can do about it. */
+export const RecurrenceFailureNotice = ({
+  title,
+  body,
+  onRetry,
+  retrying,
+  className,
+}: {
+  title: string
+  body: string
+  onRetry: () => void
+  retrying: boolean
+  className?: string
+}) => {
+  const t = useTranslations('recurrences.materialization')
+  return (
+    <div
+      role="alert"
+      className={`flex items-start gap-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 ${className ?? ''}`}
+    >
+      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className="text-[13px] font-semibold text-text">{title}</p>
+        <p className="text-[12px] text-text-soft">{body}</p>
+      </div>
+      <Button size="sm" variant="ghost" onClick={onRetry} disabled={retrying}>
+        {retrying ? t('running') : t('retry')}
+      </Button>
+    </div>
+  )
+}
+
+export const MaterializationNotice = ({ className }: { className?: string }) => {
   const t = useTranslations('recurrences.materialization')
   const state = useRecurrenceMaterialization()
 
   if (!state) return null
-  const { running, remaining, error, run } = state
-  if (!error && remaining === 0) return null
+  const { running, run } = state
+  const outcome = materializationOutcome(state)
+  if (outcome.kind === 'quiet') return null
 
-  if (error) {
+  if (outcome.kind === 'failed') {
     return (
-      <div
-        role="alert"
-        className="flex items-start gap-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3"
-      >
-        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <p className="text-[13px] font-semibold text-text">{t('failed_title')}</p>
-          <p className="text-[12px] text-text-soft">{t('failed_body')}</p>
-        </div>
-        <Button size="sm" variant="ghost" onClick={run} disabled={running}>
-          {running ? t('running') : t('retry')}
-        </Button>
-      </div>
+      <RecurrenceFailureNotice
+        className={className}
+        title={t('failed_title')}
+        body={t('failed_body')}
+        onRetry={run}
+        retrying={running}
+      />
     )
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-soft px-4 py-3">
+    <div
+      className={`flex items-center gap-3 rounded-xl border border-border bg-surface-soft px-4 py-3 ${className ?? ''}`}
+    >
       <RefreshCw
         className={`size-4 shrink-0 text-text-soft ${running ? 'animate-spin' : ''}`}
         aria-hidden
       />
       <p className="min-w-0 flex-1 text-[12px] text-text-soft">
-        {t('remaining', { count: remaining })}
+        {t('remaining', { count: outcome.count })}
       </p>
       <Button size="sm" variant="ghost" onClick={run} disabled={running}>
         {running ? t('running') : t('continue')}

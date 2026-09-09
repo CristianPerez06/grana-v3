@@ -12,7 +12,6 @@ import { EyeMaskProvider } from '../../components/dashboard/EyeMaskContext'
 import { SharedStrip } from '../../components/dashboard/SharedStrip'
 import { SpentCard } from '../../components/dashboard/SpentCard'
 import { SaveSuggestionStrip } from '../../components/savings/SaveSuggestionStrip'
-import { MaterializationNotice } from '../../components/recurrences/MaterializationNotice'
 import { PendingRecurrencesBlock } from '../../components/recurrences/PendingRecurrencesBlock'
 import { QuickAddFab } from '../../components/transactions/QuickAddFab'
 
@@ -81,9 +80,8 @@ export default function DashboardScreen() {
               {/* Vencimientos por revisar. Va en el INICIO porque es donde
                   empieza la sesión: vivía solo en Movimientos y en el hub, así
                   que un usuario podía tener vencimientos sin revisar y no
-                  enterarse nunca. El aviso va aunque no haya ninguno: un fallo
-                  al materializar no puede parecerse a estar al día. */}
-              <MaterializationNotice />
+                  enterarse nunca. El aviso de materialización vive en el layout,
+                  porque la generación corre en cualquier pantalla. */}
               <PendingRecurrencesBlock />
               {/* La sugerencia de guardar, arriba de la card porque su momento es
                   "acabás de cobrar". Si no corresponde ofrecerla no renderiza

@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { hasRecoveryClaim } from '../../lib/recovery'
 import { PreferencesProvider } from '../../lib/preferences-context'
 import { RecurrenceMaterializationProvider } from '../../lib/recurrences/materialization-context'
+import { MaterializationNotice } from '../../components/recurrences/MaterializationNotice'
 import { AppMenu } from '../../components/layout/AppMenu'
 import { TabBar } from '../../components/layout/TabBar'
 
@@ -62,6 +63,16 @@ export default function AppLayout() {
           <AppMenu onClose={() => setMenuOpen(false)} />
         </View>
       </Modal>
+
+      {/* The notice belongs to the LAYOUT, not to a screen. Generation runs on
+          every screen now, so its failure — and a rebuild that still owes
+          occurrences — can happen while the user is in Cuentas, Tarjetas or
+          Ahorros. Rendering it only on Inicio and Movimientos meant the error was
+          invisible exactly where it had just occurred. Renders nothing when there
+          is nothing to say. */}
+      <View style={{ paddingHorizontal: 16 }}>
+        <MaterializationNotice />
+      </View>
 
       <Tabs
         screenOptions={{ headerShown: false }}

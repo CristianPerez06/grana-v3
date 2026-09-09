@@ -1810,7 +1810,9 @@
       "retry": "Retry",
       "remaining": "{count, plural, one {# occurrence left to rebuild} other {# occurrences left to rebuild}}",
       "continue": "Continue rebuilding",
-      "running": "Updating…"
+      "running": "Updating…",
+      "read_failed_title": "We could not read your occurrences",
+      "read_failed_body": "We do not know whether you have anything to review. Try again."
     }
   },
   "subcategories": {

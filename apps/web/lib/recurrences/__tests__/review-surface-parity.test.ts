@@ -1,0 +1,97 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { describe, expect, it } from 'vitest'
+
+/**
+ * Where the review surfaces live, and what they read.
+ *
+ * These assert on the CALL SITES, not on the helpers: the helpers were already
+ * right and the defects were all about who called them. The materialization
+ * notice rendered only on Inicio and Movimientos while generation ran on every
+ * screen; the native row never said what confirming would write; both platforms
+ * sorted and displayed occurrences by `scheduled_date`, a legacy column whose
+ * value on a resolved row is the day it was paid, not the day it fell due.
+ *
+ * `apps/mobile` has no test runner, so for native this static check stands in
+ * for a render test. It is deliberately narrow: it only looks at which helper a
+ * file calls and which column it reads.
+ */
+
+const repoRoot = path.resolve(__dirname, '../../../../..')
+const read = (relative: string) => readFileSync(path.join(repoRoot, relative), 'utf8')
+
+const WEB_SHELL = 'apps/web/app/(app)/_components/app-shell.tsx'
+const NATIVE_SHELL = 'apps/mobile/app/(app)/_layout.tsx'
+
+const WEB_BLOCK = 'apps/web/lib/recurrences/components/pending-recurrences-block.tsx'
+const NATIVE_BLOCK = 'apps/mobile/components/recurrences/PendingRecurrencesBlock.tsx'
+
+const WEB_FEED = 'apps/web/lib/recurrences/components/pending-recurrences-block-container.tsx'
+
+// Every surface that used to host the materialization notice, or a generation
+// trigger of its own. None of them may host one now: the notice is the shell's.
+const ROUTE_SURFACES = [
+  'apps/web/app/(app)/transactions/_components/transactions-shell.tsx',
+  'apps/web/app/(app)/dashboard/_components/dashboard-content.tsx',
+  'apps/mobile/app/(app)/dashboard.tsx',
+  'apps/mobile/app/(app)/transactions/index.tsx',
+  'apps/mobile/app/(app)/transactions/recurring/index.tsx',
+]
+
+describe('the materialization notice belongs to the shell', () => {
+  it.each([WEB_SHELL, NATIVE_SHELL])('%s renders it', (file) => {
+    expect(read(file)).toContain('<MaterializationNotice')
+  })
+
+  it.each(ROUTE_SURFACES)('%s does not', (file) => {
+    // Rendering it per route is what made a failure invisible in Cuentas,
+    // Tarjetas or Ahorros — exactly where it had just happened, because
+    // generation now runs on every screen.
+    expect(read(file)).not.toContain('MaterializationNotice')
+  })
+})
+
+describe('both review blocks read the vencimiento, not the legacy column', () => {
+  it.each([WEB_BLOCK, NATIVE_BLOCK])('%s never reads scheduled_date', (file) => {
+    expect(read(file)).not.toMatch(/\.scheduled_date\b/)
+  })
+
+  it.each([WEB_BLOCK, NATIVE_BLOCK])('%s reads due_date', (file) => {
+    expect(read(file)).toMatch(/\.due_date\b/)
+  })
+
+  it.each([WEB_BLOCK, NATIVE_BLOCK])('%s shares the urgency and collapse rules', (file) => {
+    const source = read(file)
+    expect(source).toContain('reviewUrgency')
+    expect(source).toContain('shouldOpenReviewBlock')
+  })
+})
+
+describe('the native row says what web says', () => {
+  it.each([WEB_BLOCK, NATIVE_BLOCK])('%s previews what resolving will write', (file) => {
+    // Native used to stop at title, date and amount, so confirming meant
+    // guessing which movement, on which date, in which account.
+    const source = read(file)
+    expect(source).toContain('resolutionPreview')
+    for (const kind of ['expense', 'income', 'transfer']) {
+      expect(source).toContain(`pending.will_create.${kind}`)
+    }
+    // Either spelling of the interpolation slot — `amount: x` or the shorthand
+    // `amount,` — counts; what matters is that all four reach the message.
+    for (const slot of ['amount', 'date', 'account', 'destination']) {
+      expect(source).toMatch(new RegExp(`\\b${slot}\\s*[:,]`))
+    }
+  })
+})
+
+describe('a failed read of the pending occurrences is visible on both platforms', () => {
+  it.each([WEB_FEED, NATIVE_BLOCK])('%s tells the two apart', (file) => {
+    const source = read(file)
+    expect(source).toContain('reviewFeedState')
+    expect(source).toContain('RecurrenceFailureNotice')
+    expect(source).toContain('read_failed_title')
+    // `data ?? []` is the shape of the defect: it turns the error into an empty
+    // list, and the block then renders nothing at all.
+    expect(source).not.toMatch(/data\s*\?\?\s*\[\]\s*$/m)
+  })
+})

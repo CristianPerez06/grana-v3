@@ -1810,7 +1810,9 @@
       "retry": "Reintentar",
       "remaining": "{count, plural, one {Falta reconstruir # vencimiento} other {Faltan reconstruir # vencimientos}}",
       "continue": "Continuar reconstrucción",
-      "running": "Actualizando…"
+      "running": "Actualizando…",
+      "read_failed_title": "No pudimos leer tus vencimientos",
+      "read_failed_body": "No sabemos si tenés algo por revisar. Volvé a intentar."
     }
   },
   "subcategories": {

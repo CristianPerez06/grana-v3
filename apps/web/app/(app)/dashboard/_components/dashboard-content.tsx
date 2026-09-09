@@ -9,7 +9,7 @@ import { SharedStripContainer } from './shared-strip-container'
 import { SpentCardContainer } from './spent-card-container'
 import { SpentCardSkeleton } from './spent-card-skeleton'
 import { SaveSuggestionStrip } from '@/lib/savings/components/save-suggestion-strip'
-import { PendingRecurrencesBlockContainer } from '@/app/(app)/transactions/_components/pending-recurrences-block-container'
+import { PendingRecurrencesBlockContainer } from '@/lib/recurrences/components/pending-recurrences-block-container'
 
 // Dashboard composition (design handoff `docs/design/dashboard-home/`), four
 // blocks in fixed order: "Saldo disponible total" (full width) → "Cuánto

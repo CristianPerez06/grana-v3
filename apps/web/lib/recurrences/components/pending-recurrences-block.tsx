@@ -12,6 +12,11 @@ import {
   skipRecurrenceInstance,
 } from '@/app/_actions/recurrences'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
+import {
+  resolutionPreview,
+  reviewUrgency,
+  shouldOpenReviewBlock,
+} from '@grana/recurrences'
 import { useShowCents } from '@/lib/preferences-context'
 import { parseMoneyInput } from '@grana/validation'
 import { Button } from '@/components/ui/button'
@@ -38,6 +43,14 @@ type Props = {
 }
 
 
+// Spelled out rather than interpolated, so a renamed message key still turns up
+// in a grep and in the i18n key suite.
+const WILL_CREATE_KEY = {
+  expense: 'pending.will_create.expense',
+  income: 'pending.will_create.income',
+  transfer: 'pending.will_create.transfer',
+} as const
+
 export const PendingRecurrencesBlock = ({
   pending,
   accounts,
@@ -53,19 +66,21 @@ export const PendingRecurrencesBlock = ({
 
   // Urgency relative to today (accounting date). Drives the colored "Vence hoy /
   // Vencido hace N días / Vence en N días" line on each pending row.
+  //
+  // It reads `due_date`, the occurrence's identity — NOT `scheduled_date`, which
+  // on a legacy or externally written row holds a date of uncertain meaning. The
+  // computation itself is shared with native (`reviewUrgency`); only the wording
+  // is per-platform.
   const todayISO = formatDateISO(getTodayAR())
-  const daysBetween = (fromISO: string, toISO: string) => {
-    const [ay, am, ad] = fromISO.split('-').map(Number)
-    const [by, bm, bd] = toISO.split('-').map(Number)
-    return Math.round(
-      (Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000,
-    )
-  }
-  const urgencyOf = (scheduledISO: string): { label: string; overdue: boolean } => {
-    const diff = daysBetween(todayISO, scheduledISO)
-    if (diff < 0) return { label: t('pending.overdue', { count: -diff }), overdue: true }
-    if (diff === 0) return { label: t('pending.due_today'), overdue: true }
-    return { label: t('pending.due_in', { count: diff }), overdue: false }
+  const urgencyOf = (dueISO: string): { label: string; overdue: boolean } => {
+    const urgency = reviewUrgency(dueISO, todayISO)
+    if (urgency.kind === 'overdue') {
+      return { label: t('pending.overdue', { count: urgency.days }), overdue: true }
+    }
+    if (urgency.kind === 'due_today') {
+      return { label: t('pending.due_today'), overdue: true }
+    }
+    return { label: t('pending.due_in', { count: urgency.days }), overdue: false }
   }
   const [activeId, setActiveId] = useState<string | null>(null)
   const [errorByInstance, setErrorByInstance] = useState<Record<string, string>>({})
@@ -77,9 +92,7 @@ export const PendingRecurrencesBlock = ({
   //
   // Only a block made entirely of occurrences that have NOT fallen due yet stays
   // collapsed, and it is not really this block's job to shout about those.
-  const [isOpen, setIsOpen] = useState(() =>
-    pending.some((instance) => urgencyOf(instance.scheduled_date).overdue),
-  )
+  const [isOpen, setIsOpen] = useState(() => shouldOpenReviewBlock(pending, todayISO))
 
   // Edit mode: at most one instance edited at a time, to keep UI focused.
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -124,7 +137,7 @@ export const PendingRecurrencesBlock = ({
   const startEditing = (instance: PendingRecurrenceInstance) => {
     setEditingId(instance.id)
     setEditAmount(String(instance.amount))
-    setEditDate(instance.scheduled_date)
+    setEditDate(instance.due_date)
     setEditDescription(instance.description ?? '')
     // An unavailable account starts empty so the user has to pick a valid one.
     setEditAccountId(isAccountUnavailable(instance) ? '' : instance.account_id ?? '')
@@ -159,7 +172,7 @@ export const PendingRecurrencesBlock = ({
       if (parsedAmount !== Number(instance.amount)) {
         overrides.amount = parsedAmount
       }
-      if (editDate && editDate !== instance.scheduled_date) {
+      if (editDate && editDate !== instance.due_date) {
         overrides.date = editDate
       }
       const trimmedDescription = editDescription.trim()
@@ -339,7 +352,8 @@ export const PendingRecurrencesBlock = ({
               : null
           const accountUnavailable = isAccountUnavailable(instance)
 
-          const urgency = urgencyOf(instance.scheduled_date)
+          const urgency = urgencyOf(instance.due_date)
+          const preview = resolutionPreview(instance)
           const amtClass =
             instance.recurrence.movement_type === 'income'
               ? 'text-emerald-deep'
@@ -409,19 +423,12 @@ export const PendingRecurrencesBlock = ({
                       it will use. */}
                   {!isEditing && (
                     <span className="text-[12px] text-text-soft">
-                      {t(
-                        instance.recurrence.movement_type === 'income'
-                          ? 'pending.will_create.income'
-                          : instance.recurrence.movement_type === 'transfer'
-                            ? 'pending.will_create.transfer'
-                            : 'pending.will_create.expense',
-                        {
-                          amount: formatted,
-                          date: instance.scheduled_date,
-                          account: accountName,
-                          destination: destinationName ?? '—',
-                        },
-                      )}
+                      {t(WILL_CREATE_KEY[preview.kind], {
+                        amount: formatted,
+                        date: preview.date,
+                        account: preview.account ?? accountName,
+                        destination: preview.destination ?? '—',
+                      })}
                     </span>
                   )}
                 </div>

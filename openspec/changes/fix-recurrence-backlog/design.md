@@ -543,11 +543,12 @@ Una versión anterior decía "todo en una transacción" y a la vez exigía despl
 de eliminar el índice de pendiente única. **Las dos cosas no pueden ser ciertas**: entre la migración
 y el despliegue pasa tiempo, y durante ese tiempo la base tiene que sostener el modelo viejo.
 
-Son dos migraciones, con un despliegue en el medio:
+La expansión son dos migraciones que viajan juntas, y recién después el despliegue:
 
 | | Migración | Qué hace | Comportamiento |
 |---|---|---|---|
 | **A · Expansión** | `0064_recurrence_identity_expand.sql` | Columnas, tablas nuevas, backfill, trigger de compatibilidad | **Sin cambios.** El índice de pendiente única sigue vivo. |
+| **A' · Expansión** | `0065_delete_seeded_movement_atomically.sql` | Crea `delete_movement_unlinking_seed` | **Sin cambios**: nadie la llama todavía. Tiene que estar aplicada antes del despliegue, porque el código nuevo la invoca al borrar un movimiento semilla. |
 | — | *(despliegue de web y nativo con el modelo nuevo)* | | |
 | **B · Activación** | `<próximo libre>_recurrence_backlog_activate.sql` | Elimina el índice de pendiente única | El backlog empieza a existir. |
 | **C · Retiro** | entrega posterior | Retira `scheduled_date` y las **ramas de compatibilidad** del trigger | — |
@@ -768,7 +769,8 @@ Tres cosas concretas que "por tandas" no define:
   verdadero.
 - **Colisión con #104.** Los dos tocan la misma restricción. Se ordenan explícitamente: este change
   retira el índice y deja escrito `resolution_kind`; `recurrence-undo` implementa deshacer encima.
-- **Superficie amplia.** Toca money-logic, el paquete de recurrencias, dos apps y dos migraciones.
+- **Superficie amplia.** Toca money-logic, el paquete de recurrencias, dos apps y tres migraciones
+  (`0064` y `0065` de expansión, más la de activación).
   **El recorte de alcance del 2026-09-09 la redujo**: la entrega quedó en los seis comportamientos
   que cierran el #96 y el #118, y pago anticipado, vinculación, resolución en bloque, deshacer,
   historial enriquecido y la UX avanzada pasaron a changes posteriores. Una versión anterior de este

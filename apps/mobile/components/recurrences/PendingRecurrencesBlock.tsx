@@ -3,6 +3,12 @@ import { Alert, Pressable, Text, View } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, Clock, X } from 'lucide-react-native'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
+import {
+  resolutionPreview,
+  reviewFeedState,
+  reviewUrgency,
+  shouldOpenReviewBlock,
+} from '@grana/recurrences'
 import type { PendingRecurrenceInstance } from '@grana/recurrences'
 import { getPendingRecurrences } from '../../lib/recurrences/queries'
 import {
@@ -16,17 +22,28 @@ import { colors } from '../../lib/colors'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
 import { amountSign, amountToneClass, categoryName, movementLabel } from './format'
 import { Card } from '../ui/Card'
+import { RecurrenceFailureNotice } from './MaterializationNotice'
 
 type DoneAction = 'confirmed' | 'skipped'
+
+// Spelled out rather than interpolated, so a renamed message key still turns up
+// in a grep and in the i18n key suite.
+const WILL_CREATE_KEY = {
+  expense: 'recurrences.pending.will_create.expense',
+  income: 'recurrences.pending.will_create.income',
+  transfer: 'recurrences.pending.will_create.transfer',
+} as const
 
 // The row reports WHICH action succeeded and nothing else: the success notice is
 // owned by the block, because a notice living in the row would unmount with the
 // row exactly when the list empties — which is the moment it exists to explain.
 function PendingRow({
   instance,
+  today,
   onDone,
 }: {
   instance: PendingRecurrenceInstance
+  today: string
   onDone: (action: DoneAction) => void
 }) {
   const t = useT()
@@ -37,6 +54,21 @@ function PendingRow({
   const type = instance.recurrence.movement_type
   const title =
     instance.description || categoryName(instance.category, t) || movementLabel(type, t)
+  const amount = fmtMoney(Number(instance.amount), instance.currency_code, showCents)
+  const urgency = reviewUrgency(instance.due_date, today)
+  const urgencyLabel =
+    urgency.kind === 'due_today'
+      ? t('recurrences.pending.due_today')
+      : t(
+          urgency.kind === 'overdue'
+            ? 'recurrences.pending.overdue'
+            : 'recurrences.pending.due_in',
+          { count: urgency.days },
+        )
+  // WHAT RESOLVING IT WILL DO, spelled out — the same sentence web shows. The
+  // native row used to stop at title, date and amount, so confirming meant
+  // guessing which movement, on which date, in which account.
+  const preview = resolutionPreview(instance)
 
   const run = async (action: 'confirm' | 'skip') => {
     setBusy(true)
@@ -67,12 +99,27 @@ function PendingRow({
             ) : null}
           </View>
           <Text className="text-[12px] text-text-muted">
-            {formatShortDate(instance.scheduled_date, locale)}
+            {formatShortDate(instance.due_date, locale)}
+          </Text>
+          <Text
+            className={`mt-0.5 text-[11px] font-extrabold uppercase ${
+              urgency.kind === 'due_in' ? 'text-warning' : 'text-negative'
+            }`}
+          >
+            {urgencyLabel}
+          </Text>
+          <Text className="mt-1 text-[12px] text-text-soft">
+            {t(WILL_CREATE_KEY[preview.kind], {
+              amount,
+              date: formatShortDate(preview.date, locale),
+              account: preview.account ?? '—',
+              destination: preview.destination ?? '—',
+            })}
           </Text>
         </View>
         <Text className={`text-[15px] font-extrabold ${amountToneClass(type)}`}>
           {amountSign(type)}
-          {fmtMoney(Number(instance.amount), instance.currency_code, showCents)}
+          {amount}
         </Text>
       </View>
 
@@ -129,14 +176,26 @@ export function PendingRecurrencesBlock() {
   // refetch-on-focus. Deriving does both: follow the data until the user picks.
   const [openOverride, setOpenOverride] = useState<boolean | null>(null)
 
-  const instances = query.data ?? []
-  // OPEN whenever anything is already due, however many there are. It used to do
-  // the opposite — collapse from two onwards — so the more the user had to
-  // review, the better it was hidden. Only a block made entirely of occurrences
-  // that have NOT fallen due yet stays collapsed.
+  // A FAILED READ IS NOT AN EMPTY LIST. `query.data ?? []` made the block
+  // disappear on error, which tells the user they have nothing to review when
+  // the truth is that nobody knows — the same defect as a swallowed
+  // materialization error, one layer up. `reviewFeedState` is shared with web so
+  // the two platforms cannot answer this differently.
+  const feed = reviewFeedState(query)
+  const instances = feed.kind === 'list' ? (query.data ?? []) : []
   const todayISO = formatDateISO(getTodayAR())
-  const hasOverdue = instances.some((instance) => instance.scheduled_date <= todayISO)
-  const isOpen = openOverride ?? hasOverdue
+  const isOpen = openOverride ?? shouldOpenReviewBlock(instances, todayISO)
+
+  if (feed.kind === 'unreadable') {
+    return (
+      <RecurrenceFailureNotice
+        title={t('recurrences.materialization.read_failed_title')}
+        body={t('recurrences.materialization.read_failed_body')}
+        onRetry={() => void query.refetch()}
+        retrying={query.isFetching}
+      />
+    )
+  }
 
   if (instances.length === 0 && !notice) return null
 
@@ -218,7 +277,7 @@ export function PendingRecurrencesBlock() {
           ) : (
             instances.map((instance) => (
               <View key={instance.id} className="border-t border-border-soft">
-                <PendingRow instance={instance} onDone={onDone} />
+                <PendingRow instance={instance} today={todayISO} onDone={onDone} />
               </View>
             ))
           )

@@ -205,8 +205,12 @@ No es un detalle de implementación, porque un orden mal elegido deja un interva
 actual —la base admitiendo varias pendientes mientras la app todavía muestra una sola o duplica
 importes—:
 
-1. **Migración de expansión** (`0064`): identidad, piso de reconstrucción, guardas. No cambia ningún
-   comportamiento; el índice de pendiente única sigue vivo.
+1. **Migraciones de expansión** (`0064` + `0065`), en la misma ventana: identidad, piso de
+   reconstrucción, guardas y la reparación atómica de la semilla borrada
+   (`delete_movement_unlinking_seed`). Ninguna de las dos cambia comportamiento por sí sola —`0065`
+   crea una función que todavía nadie llama— y el índice de pendiente única sigue vivo. `0065` tiene
+   que estar aplicada **antes** que el código, porque desde el paso 2 `deleteTransaction` la invoca:
+   sin la función, borrar un movimiento semilla falla para todos.
 2. **Código**: generador con tandas continuables, versiones de cronograma y pausas, reads adaptados,
    dashboard y proyección leyendo las ocurrencias existentes, dejar de escribir el cursor, superficies
    de web y nativo, copy, error de materialización visible, gate de versión.

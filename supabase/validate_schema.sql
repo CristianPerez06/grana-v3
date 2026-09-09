@@ -759,6 +759,18 @@ begin
     raise exception 'recurrences: % rules with no schedule version — the walker would not know which calendar applied', v_offend;
   end if;
 
+  -- (10b) An UNRESOLVED occurrence always has an exact vencimiento. The column is
+  -- nullable only for rows resolved before the distinction existed; a `pending`
+  -- one with no `due_date` would have no identity at all, and every surface that
+  -- reads the vencimiento (ordering, overdue, the confirm form's default date)
+  -- narrows the type on this invariant.
+  select count(*) into v_offend
+    from public.recurrence_instances
+   where status = 'pending' and due_date is null;
+  if v_offend > 0 then
+    raise exception 'recurrence_instances: % pending rows with no due_date — an unresolved occurrence has no identity without one', v_offend;
+  end if;
+
   -- (11) The atomic repair for a deleted seed (migration 0065). Its whole point
   -- is that the unlink, the floor release and the DELETE happen together; if the
   -- function is missing the client has no way to do that, and every partial

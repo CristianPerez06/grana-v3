@@ -1,8 +1,54 @@
-import { ActivityIndicator, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Text, View } from 'react-native'
 import { AlertTriangle } from 'lucide-react-native'
+import { materializationOutcome } from '@grana/recurrences'
 import { useT } from '../../lib/locale-context'
 import { useRecurrenceMaterialization } from '../../lib/recurrences/materialization-context'
 import { colors } from '../../lib/colors'
+import { Button } from '../ui/Button'
+
+/**
+ * A failure, with the one thing the user can do about it.
+ *
+ * Exported because the failure shape is not only the materialization's: failing
+ * to READ what is pending has to look the same, and used to look like an empty
+ * list instead. Web parity:
+ * `apps/web/lib/recurrences/components/materialization-notice.tsx`.
+ */
+export function RecurrenceFailureNotice({
+  title,
+  body,
+  onRetry,
+  retrying,
+}: {
+  title: string
+  body: string
+  onRetry: () => void
+  retrying: boolean
+}) {
+  const t = useT()
+  return (
+    <View accessibilityRole="alert" style={noticeStyle(true)}>
+      <AlertTriangle size={16} color={colors.error} />
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{title}</Text>
+        <Text style={{ fontSize: 12, color: colors.textSoft }}>{body}</Text>
+      </View>
+      <View style={{ width: 104 }}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onPress={onRetry}
+          disabled={retrying}
+          title={
+            retrying
+              ? t('recurrences.materialization.running')
+              : t('recurrences.materialization.retry')
+          }
+        />
+      </View>
+    </View>
+  )
+}
 
 /**
  * What the materialization did, when it is not "everything is up to date".
@@ -14,73 +60,61 @@ import { colors } from '../../lib/colors'
  * a year of daily backlog takes several runs and nobody is going to reopen the
  * app eight times to see their own history.
  *
- * Web parity: `apps/web/lib/recurrences/components/materialization-notice.tsx`.
+ * The three-way decision itself lives in `materializationOutcome`, shared with
+ * web, so the two platforms cannot answer it differently.
  */
 export function MaterializationNotice() {
   const t = useT()
   const state = useRecurrenceMaterialization()
 
   if (!state) return null
-  const { running, remaining, error, run } = state
-  if (!error && remaining === 0) return null
+  const { running, run } = state
+  const outcome = materializationOutcome(state)
+  if (outcome.kind === 'quiet') return null
 
-  const isFailure = error != null
+  if (outcome.kind === 'failed') {
+    return (
+      <RecurrenceFailureNotice
+        title={t('recurrences.materialization.failed_title')}
+        body={t('recurrences.materialization.failed_body')}
+        onRetry={run}
+        retrying={running}
+      />
+    )
+  }
 
   return (
-    <View
-      accessibilityRole={isFailure ? 'alert' : undefined}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: isFailure ? colors.error : colors.border,
-        backgroundColor: isFailure ? 'rgba(197, 75, 60, 0.06)' : colors.borderSoft,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-      }}
-    >
-      {isFailure ? (
-        <AlertTriangle size={16} color={colors.error} />
-      ) : running ? (
-        <ActivityIndicator size="small" color={colors.textSoft} />
-      ) : null}
-
-      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        {isFailure ? (
-          <>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
-              {t('recurrences.materialization.failed_title')}
-            </Text>
-            <Text style={{ fontSize: 12, color: colors.textSoft }}>
-              {t('recurrences.materialization.failed_body')}
-            </Text>
-          </>
-        ) : (
-          <Text style={{ fontSize: 12, color: colors.textSoft }}>
-            {t('recurrences.materialization.remaining', { count: remaining })}
-          </Text>
-        )}
+    <View style={noticeStyle(false)}>
+      {running ? <ActivityIndicator size="small" color={colors.textSoft} /> : null}
+      <Text style={{ flex: 1, minWidth: 0, fontSize: 12, color: colors.textSoft }}>
+        {t('recurrences.materialization.remaining', { count: outcome.count })}
+      </Text>
+      <View style={{ width: 152 }}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onPress={run}
+          disabled={running}
+          title={
+            running
+              ? t('recurrences.materialization.running')
+              : t('recurrences.materialization.continue')
+          }
+        />
       </View>
-
-      <Pressable onPress={run} disabled={running} accessibilityRole="button">
-        <Text
-          style={{
-            fontSize: 13,
-            fontWeight: '600',
-            color: running ? colors.textSoft : colors.emeraldDeep,
-          }}
-        >
-          {running
-            ? t('recurrences.materialization.running')
-            : t(
-                isFailure
-                  ? 'recurrences.materialization.retry'
-                  : 'recurrences.materialization.continue',
-              )}
-        </Text>
-      </Pressable>
     </View>
   )
 }
+
+const noticeStyle = (isFailure: boolean) =>
+  ({
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: isFailure ? colors.error : colors.border,
+    backgroundColor: isFailure ? 'rgba(197, 75, 60, 0.06)' : colors.borderSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  }) as const

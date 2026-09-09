@@ -4,7 +4,7 @@ import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
 import { CategorySpendingOverviewContainer } from './category-spending-overview-container'
 import { MovementFiltersContainer } from './movement-filters-container'
 import { MovementListContainer } from './movement-list-container'
-import { PendingRecurrencesBlockContainer } from './pending-recurrences-block-container'
+import { PendingRecurrencesBlockContainer } from '@/lib/recurrences/components/pending-recurrences-block-container'
 import { PendingReimbursementsBlockContainer } from './pending-reimbursements-block-container'
 import { RecurrenceSuggestionBannerContainer } from './recurrence-suggestion-banner-container'
 

@@ -20,7 +20,6 @@ import {
 } from '../../../components/movements/ActiveFilterChips'
 import { MovementFiltersSheet } from '../../../components/movements/MovementFiltersSheet'
 import { QuickAddFab } from '../../../components/transactions/QuickAddFab'
-import { MaterializationNotice } from '../../../components/recurrences/MaterializationNotice'
 import { PendingRecurrencesBlock } from '../../../components/recurrences/PendingRecurrencesBlock'
 import { PendingReimbursementsBlock } from '../../../components/transactions/PendingReimbursementsBlock'
 import { CategorySpendingOverviewContainer } from '../../../components/transactions/CategorySpendingOverviewContainer'
@@ -431,8 +430,6 @@ export default function MovimientosScreen() {
         )}
 
         <ActiveFilterChips chips={chips} />
-
-        <MaterializationNotice />
         <PendingRecurrencesBlock />
         <PendingReimbursementsBlock todayISO={todayISO} />
         <RecurrenceSuggestionBanner />

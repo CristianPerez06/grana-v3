@@ -74,3 +74,15 @@ export type {
   RecurrenceInstanceStatus,
   RecurrenceCurrencyCode,
 } from './types'
+
+export {
+  shouldOpenReviewBlock,
+  reviewUrgency,
+  resolutionPreview,
+  materializationOutcome,
+  reviewFeedState,
+  type ReviewUrgency,
+  type ResolutionPreview,
+  type MaterializationOutcome,
+  type ReviewFeedState,
+} from './review-surface'
