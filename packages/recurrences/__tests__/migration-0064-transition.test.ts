@@ -6,6 +6,7 @@ import {
   createRecurrenceIdentityDb,
   sqlstateOf,
   U_A,
+  U_B,
 } from './support/recurrence-identity-db'
 
 /**
@@ -28,49 +29,58 @@ describe('a rule that starts in the future, edited before it starts', () => {
   //   2026-09-08  frequency edited               ⇒ version effective 2026-09-08
   //   2026-10-01  arrives                        ⇒ the 10-01 one is newest again
   //                                                and restores the OLD schedule.
-  const RULE = '00000000-0000-4000-8000-0000000000f1'
   let db: PGlite
 
   beforeAll(async () => {
     db = await createRecurrenceIdentityDb()
     await actAs(db, U_A)
-    await db.exec(`
-      insert into public.recurrences (id, user_id, start_date, interval_count, interval_unit, status)
-      values ('${RULE}', '${U_A}', '2099-10-01', 1, 'month', 'active');
-    `)
   })
 
-  it('starts with one version, effective from its own start date', async () => {
+  /**
+   * A fresh future rule per case. These edit the rule, so a shared one would make
+   * each assertion depend on the edit the previous test happened to apply.
+   */
+  let seq = 0
+  const newFutureRule = async (): Promise<string> => {
+    const id = `00000000-0000-4000-8000-0000000000f${(seq++).toString(16)}`
+    await db.exec(`
+      insert into public.recurrences (id, user_id, start_date, interval_count, interval_unit, status)
+      values ('${id}', '${U_A}', '2099-10-01', 1, 'month', 'active');
+    `)
+    return id
+  }
+
+  const versionsOf = async (ruleId: string) => {
     await actAsAdmin(db)
     const { rows } = await db.query<{ effective_from: string; interval_count: number }>(
       `select effective_from::text, interval_count
-         from public.recurrence_schedule_versions where recurrence_id = '${RULE}'`,
+         from public.recurrence_schedule_versions
+        where recurrence_id = '${ruleId}' order by effective_from`,
     )
     await actAs(db, U_A)
-    expect(rows).toHaveLength(1)
-    expect(rows[0].effective_from).toBe('2099-10-01')
-    expect(rows[0].interval_count).toBe(1)
+    return rows
+  }
+
+  it('starts with one version, effective from its own start date', async () => {
+    const rule = await newFutureRule()
+    const versions = await versionsOf(rule)
+    expect(versions).toHaveLength(1)
+    expect(versions[0].effective_from).toBe('2099-10-01')
+    expect(versions[0].interval_count).toBe(1)
   })
 
   it('editing only the frequency updates that version in place', async () => {
     // The start date does not move, so `GREATEST(today, start_date)` lands on the
     // SAME effective_from and the upsert resolves it. This path never reaches the
     // delete — the next case is the one that does.
-    await db.exec(
-      `update public.recurrences set interval_count = 3 where id = '${RULE}'`,
-    )
-    await actAsAdmin(db)
-    const { rows } = await db.query<{ effective_from: string; interval_count: number }>(
-      `select effective_from::text, interval_count
-         from public.recurrence_schedule_versions
-        where recurrence_id = '${RULE}' order by effective_from`,
-    )
-    await actAs(db, U_A)
+    const rule = await newFutureRule()
+    await db.exec(`update public.recurrences set interval_count = 3 where id = '${rule}'`)
 
-    expect(rows).toHaveLength(1)
-    expect(rows[0].interval_count).toBe(3)
+    const versions = await versionsOf(rule)
+    expect(versions).toHaveLength(1)
+    expect(versions[0].interval_count).toBe(3)
     // A version cannot apply before the rule exists: GREATEST(today, start_date).
-    expect(rows[0].effective_from).toBe('2099-10-01')
+    expect(versions[0].effective_from).toBe('2099-10-01')
   })
 
   it('pulling the start date back does NOT leave the future version behind', async () => {
@@ -79,24 +89,19 @@ describe('a rule that starts in the future, edited before it starts', () => {
     // deleting the not-yet-effective version the rule would carry two — and on
     // 2099-10-01 the older one becomes the most recent again and restores the
     // schedule the user edited away.
-    await db.exec(
-      `update public.recurrences
-          set start_date = '2026-01-01', interval_count = 6
-        where id = '${RULE}'`,
-    )
-    await actAsAdmin(db)
-    const { rows } = await db.query<{ effective_from: string; interval_count: number }>(
-      `select effective_from::text, interval_count
-         from public.recurrence_schedule_versions
-        where recurrence_id = '${RULE}' order by effective_from`,
-    )
-    await actAs(db, U_A)
+    const rule = await newFutureRule()
+    await db.exec(`
+      update public.recurrences
+         set start_date = '2026-01-01', interval_count = 6
+       where id = '${rule}'
+    `)
 
-    expect(rows).toHaveLength(1)
-    expect(rows[0].interval_count).toBe(6)
+    const versions = await versionsOf(rule)
+    expect(versions).toHaveLength(1)
+    expect(versions[0].interval_count).toBe(6)
     // Asserted as an absence rather than against today's date, so the test does
     // not rot: what must not exist is the version dated in the future.
-    expect(rows.some((r) => r.effective_from === '2099-10-01')).toBe(false)
+    expect(versions.some((v) => v.effective_from === '2099-10-01')).toBe(false)
   })
 })
 
@@ -138,13 +143,46 @@ describe('the history is read-only for the user and maintained by the database',
     return { versions: versions.rows, pauses: pauses.rows }
   }
 
-  it('SELECT works: the user reads their own history', async () => {
+  it('SELECT works on BOTH tables: the user reads their own history', async () => {
+    // Read AS THE USER, not as the superuser: the point of the SELECT policies is
+    // that they let the owner through, and only running under `authenticated`
+    // shows that. The rule is paused first so there is a pause row to read —
+    // otherwise this half would pass against an empty table.
     const rule = await newRule()
-    const { rows } = await db.query<{ n: number }>(
+    await db.exec(`update public.recurrences set status = 'paused' where id = '${rule}'`)
+
+    const versions = await db.query<{ n: number }>(
       `select count(*)::int as n from public.recurrence_schedule_versions
         where recurrence_id = '${rule}'`,
     )
-    expect(rows[0].n).toBe(1)
+    expect(versions.rows[0].n).toBe(1)
+
+    const pauses = await db.query<{ n: number; paused_from: string }>(
+      `select count(*)::int as n, min(paused_from)::text as paused_from
+         from public.recurrence_pauses where recurrence_id = '${rule}'`,
+    )
+    expect(pauses.rows[0].n).toBe(1)
+    expect(pauses.rows[0].paused_from).not.toBeNull()
+  })
+
+  it('SELECT does not reach another user\'s history', async () => {
+    // The same policy from the other side: `user_id = auth.uid()` has to exclude,
+    // not just include.
+    const rule = await newRule()
+    await db.exec(`update public.recurrences set status = 'paused' where id = '${rule}'`)
+
+    await actAs(db, U_B)
+    const versions = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.recurrence_schedule_versions
+        where recurrence_id = '${rule}'`,
+    )
+    const pauses = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.recurrence_pauses where recurrence_id = '${rule}'`,
+    )
+    await actAs(db, U_A)
+
+    expect(versions.rows[0].n).toBe(0)
+    expect(pauses.rows[0].n).toBe(0)
   })
 
   it('INSERT into either history table is refused', async () => {

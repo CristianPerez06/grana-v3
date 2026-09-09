@@ -150,7 +150,11 @@ que habilita el backlog.
       ahí la edición aterriza en otro `effective_from` y, sin el `delete`, quedan dos versiones y la
       futura resucita el cronograma viejo el día de arranque. Ambos caminos quedaron cubiertos, y el
       segundo afirma la **ausencia** de la versión futura en vez de compararse contra `today`, para
-      que no se pudra. **(b)** `INSERT` sobre cualquiera de las dos tablas devuelve `42501`;
+      que no se pudra. Los tres casos de (a) crean **su propia regla futura**, por el mismo motivo que
+      los de (b). **(b)** el `SELECT` autenticado se afirma sobre **las dos** tablas y desde los dos
+      lados —el dueño lee su historial, y otro usuario no ve nada—, con la regla pausada antes para
+      que haya un intervalo que leer: contra una tabla vacía esa mitad pasaba sola. `INSERT` sobre
+      cualquiera de las dos tablas devuelve `42501`;
       `UPDATE`/`DELETE` **no levantan error** —RLS filtra las filas y no hay ninguna visible—, así que
       se afirma sobre los datos y no sobre una excepción; y crear, editar, pausar y reanudar siguen
       manteniendo ambas tablas por encima de RLS. `UPDATE`/`DELETE` se prueban sobre **las dos**
@@ -162,7 +166,10 @@ que habilita el backlog.
       de lo que hubiera dejado la anterior —un conteo que solo vale en orden de archivo no prueba
       nada—. Verificado corriendo los seis en aislamiento. **Probados en negativo**: quitar el
       `delete` hace fallar el caso del inicio movido; una policy de escritura sobre el historial hace
-      fallar tres; y una policy solo sobre `recurrence_pauses` hace fallar el de `UPDATE`/`DELETE`.
+      fallar tres; una policy solo sobre `recurrence_pauses` hace fallar el de `UPDATE`/`DELETE`;
+      quitar la policy de `SELECT` de `recurrence_pauses` hace fallar el de lectura; y dejarla en
+      `using (true)` hace fallar el de aislamiento entre usuarios. Los diez casos verificados también
+      en aislamiento, uno por uno.
 - [x] 1.10 Reescribir el caminante para **posicionarse en el borde del horizonte por aritmética de
       fechas**, sin recorrer desde `start_date` (decisión 19). Medido: una regla diaria de hace tres
       años agota los 750 pasos el `2024-09-26`, **347 días antes** del horizonte, sin llegar nunca a
