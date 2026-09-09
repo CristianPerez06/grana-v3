@@ -11,9 +11,11 @@ import type { GranaSupabaseClient } from '@grana/supabase'
  * imagined; the index reproduces the one that happens, including that a batch
  * insert is ONE statement and the first violation rejects every row in it.
  *
- * Deliberately partial: `select` with `eq` / `in` / `not(col,'is',null)`, and
- * `insert`. Anything else throws instead of silently returning nothing, so a
- * generator that grows a new call cannot pass by accident.
+ * Deliberately partial: `select` with `eq` / `in` / `gte` / `not(col,'is',null)` /
+ * `order` / `range` / `maybeSingle`, embedded resources of the
+ * `alias:table[!constraint](cols)` form, and `insert`. Anything else throws
+ * instead of silently returning nothing, so a read that grows a new call cannot
+ * pass by accident.
  */
 
 type Filter = { sql: string; params: unknown[] }
@@ -26,10 +28,18 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
   constructor(
     private readonly db: PGlite,
     private readonly table: string,
-    private readonly columns: string,
+    select: string,
     private readonly maxRows: number,
     private readonly unstableTies: boolean,
-  ) {}
+  ) {
+    const parsed = parseSelect(table, select)
+    this.columns = parsed.columns
+    this.embeds = parsed.embeds
+  }
+
+  private readonly columns: string
+  private readonly embeds: Embed[]
+  private single = false
 
   private orderBy: string[] = []
   private limit: number | null = null
@@ -60,6 +70,13 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
 
   in(column: string, values: unknown[]): this {
     this.filters.push({ sql: `${column} = any($)`, params: [values] })
+    return this
+  }
+
+  /** PostgREST returns the row itself, or null, instead of an array. */
+  maybeSingle(): this {
+    this.single = true
+    this.limit = 1
     return this
   }
 
@@ -107,9 +124,45 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
     const { text, params } = this.build()
     const result = await this.db
       .query(text, params)
-      .then((rows) => ({ data: toPostgrestJson(rows), error: null }))
+      .then(async (rows) => ({
+        data: await this.attachEmbeds(toPostgrestJson(rows)),
+        error: null,
+      }))
       .catch((error: Error) => ({ data: null, error: toPostgrestError(error) }))
-    return Promise.resolve(result).then(onfulfilled, onrejected)
+    const shaped =
+      this.single && result.error == null
+        ? { data: (result.data?.[0] ?? null) as never, error: null }
+        : result
+    return Promise.resolve(shaped as never).then(onfulfilled, onrejected)
+  }
+
+  /**
+   * Resolve each embedded resource with one query keyed by its foreign key, the
+   * way PostgREST's join looks from the client: the alias holds the related row,
+   * or null when the local column is null.
+   */
+  private async attachEmbeds(rows: unknown[]): Promise<unknown[]> {
+    if (this.embeds.length === 0 || rows.length === 0) return rows
+
+    const typed = rows as Array<Record<string, unknown>>
+    for (const embed of this.embeds) {
+      const keys = [...new Set(typed.map((row) => row[embed.fkColumn]).filter(Boolean))]
+      const related = new Map<unknown, unknown>()
+      if (keys.length > 0) {
+        const columns = embed.columns === '*' ? '*' : `id, ${embed.columns}`
+        const result = await this.db.query(
+          `select ${columns} from public.${embed.table} where id = any($1)`,
+          [keys],
+        )
+        for (const row of toPostgrestJson(result) as Array<Record<string, unknown>>) {
+          related.set(row.id, row)
+        }
+      }
+      for (const row of typed) {
+        row[embed.alias] = related.get(row[embed.fkColumn]) ?? null
+      }
+    }
+    return typed
   }
 }
 
@@ -166,6 +219,71 @@ function toPostgrestJson(result: {
   })
 }
 
+/**
+ * An embedded resource in a PostgREST select: `alias:table(cols)`, optionally
+ * with a `!constraint` hint when two foreign keys point at the same table.
+ */
+type Embed = { alias: string; table: string; columns: string; fkColumn: string }
+
+/** Split a select list on commas that are NOT inside an embed's parentheses. */
+function splitSelect(select: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let current = ''
+  for (const char of select) {
+    if (char === '(') depth += 1
+    if (char === ')') depth -= 1
+    if (char === ',' && depth === 0) {
+      parts.push(current)
+      current = ''
+      continue
+    }
+    current += char
+  }
+  parts.push(current)
+  return parts.map((part) => part.trim()).filter(Boolean)
+}
+
+/**
+ * Which local column an embed joins on. With a `!constraint` hint PostgREST
+ * names the foreign key, and this repo's constraints are `<table>_<column>_fkey`
+ * — the only way to tell `account` from `destination_account`, which both point
+ * at `accounts`. Without a hint the convention is `<alias>_id`.
+ */
+function foreignKeyColumn(baseTable: string, alias: string, hint: string | null): string {
+  if (hint == null) return `${alias}_id`
+  const withoutSuffix = hint.replace(/_fkey$/, '')
+  const withoutTable = withoutSuffix.startsWith(`${baseTable}_`)
+    ? withoutSuffix.slice(baseTable.length + 1)
+    : withoutSuffix
+  return withoutTable
+}
+
+function parseSelect(
+  baseTable: string,
+  select: string,
+): { columns: string; embeds: Embed[] } {
+  const columns: string[] = []
+  const embeds: Embed[] = []
+
+  for (const part of splitSelect(select)) {
+    const match = /^(\w+)\s*:\s*(\w+)(?:!(\w+))?\s*\(([\s\S]*)\)$/.exec(part)
+    if (match == null) {
+      columns.push(part)
+      continue
+    }
+    const [, alias, table, hint, embeddedColumns] = match
+    embeds.push({
+      alias,
+      table,
+      columns: embeddedColumns.trim(),
+      fkColumn: foreignKeyColumn(baseTable, alias, hint ?? null),
+    })
+  }
+
+  return { columns: columns.length === 0 ? '*' : columns.join(', '), embeds }
+}
+
 function quote(value: unknown): string {
   if (value === null || value === undefined) return 'null'
   if (typeof value === 'number') return String(value)
@@ -215,7 +333,7 @@ export function pglitePostgrest(
   return {
     from(table: string) {
       return {
-        select: (columns: string) => new Query(db, table, columns, maxRows, unstableTies),
+        select: (select: string) => new Query(db, table, select, maxRows, unstableTies),
         insert: (payload: unknown) => insert(db, table, payload),
       }
     },

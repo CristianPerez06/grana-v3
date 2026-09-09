@@ -98,6 +98,31 @@ const SCHEMA = `
     on public.recurrence_instances (recurrence_id)
     where status = 'pending';
 
+  -- Related tables the recurrence reads embed. Reduced to the columns those
+  -- selects name; the tests are about which rows come back and in what order,
+  -- not about the payload of an account or a category.
+  create table public.accounts (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references auth.users(id) on delete cascade,
+    name text not null default 'Cuenta',
+    type text not null default 'bank'
+  );
+  create table public.categories (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references auth.users(id) on delete cascade,
+    name text not null default 'Categoría',
+    canonical_name text not null default 'categoria',
+    color text,
+    icon text
+  );
+  create table public.subcategories (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references auth.users(id) on delete cascade,
+    category_id uuid references public.categories(id) on delete cascade,
+    name text not null default 'Subcategoría',
+    canonical_name text not null default 'subcategoria'
+  );
+
   alter table public.recurrences enable row level security;
   create policy "users select own recurrences" on public.recurrences for select to authenticated
     using (user_id = auth.uid());

@@ -503,15 +503,28 @@ que habilita el backlog.
       última que llegara** y descartaba el resto en silencio. Con una sola por regla eso era inocuo;
       con el atraso materializado, la regla parece deber una cosa mientras debe cinco.
       **Los tres reads de instancias se paginan y ordenan de forma total**, por lo mismo que los del
-      generador: `(due_date, id)` en las pendientes por regla y en el feed de «por revisar»,
-      `(due_date desc, id desc)` en el historial de una regla. `id` es la PK, así que el orden es
-      total incluso para una fila vieja cuyo `due_date` todavía sea nulo. Antes ninguno de los tres
-      podía superar una página porque la base admitía una pendiente por regla; ahora el feed **es** la
-      lista.
-      Siete regresiones en `pending-instances-read.test.ts`, cinco de las cuales fallan contra la
-      versión anterior. Corren con el índice de pendiente única **retirado**, porque el estado que
-      este read tiene que describir es el de después de la activación: con el índice puesto la propia
-      fixture no podría tener dos pendientes.
+      generador. Antes ninguno podía superar una página porque la base admitía una pendiente por
+      regla; ahora el feed **es** la lista.
+      **Ordenan por `scheduled_date`, que es la columna que las pantallas muestran**, con `id` —la
+      PK— haciendo total el orden. Una primera versión ordenaba el historial por `due_date desc`, que
+      suena más correcto y rompía la pantalla dos veces: `due_date` es **nulo** en toda ocurrencia
+      resuelta antes de `0064` y Postgres pone los nulos **primero** en `DESC`, así que el historial
+      abría con las filas más viejas ordenadas por poco más que su uuid; y en una resuelta las dos
+      fechas divergen, así que una cuota de agosto pagada el 15/09 quedaba **debajo** de una de
+      septiembre pagada el 10/09 — ordenado por una fecha, mostrado por otra. Mientras el historial
+      enriquecido siga diferido (`recurrence-history`), el orden acompaña a lo que se ve; cuando la
+      pantalla muestre el vencimiento, el orden se muda con ella.
+      **Trece regresiones sobre la base real**, en dos archivos: `pending-instances-read.test.ts` (7,
+      cinco fallan contra la versión anterior) e `instance-feeds-read.test.ts` (6), que cubren los
+      **tres** reads: el feed global con más de una página y varias pendientes de la misma regla, y el
+      detalle con confirmadas legacy de `due_date` nulo, confirmadas exactas y pendientes. Corren con
+      el índice de pendiente única **retirado**, porque el estado que estos reads describen es el de
+      después de la activación: con el índice puesto la fixture no podría tener dos pendientes.
+      La fila legacy se construye como existe de verdad —insertada **antes** de `0064` y dejada en
+      nulo por su backfill—: sembrarla después es imposible, porque el trigger de compatibilidad
+      deriva `due_date` de `scheduled_date` y la guarda de inmutabilidad se niega a borrarlo.
+      El harness aprendió a resolver `select` con recursos embebidos (`alias:tabla!fk(cols)`), que es
+      lo que permitió ejercitar estos dos reads y no solo el que usa `select('*')`.
       **Sin consumidores rotos:** `pending_instance` no lo leía nadie fuera del paquete, así que el
       cambio de forma no arrastra UI. Mostrar varias en pantalla es la etapa 4.
 - [ ] 2.2b Migrar **dashboard, "próximo", proyección y deshacer** para que lean los vencimientos que

@@ -84,8 +84,14 @@ function mapRecurrenceSummary(
  * Paged to exhaustion over a unique order, for the same reason the generator's
  * reads are: PostgREST truncates at `db-max-rows` without saying so, and an
  * OFFSET window over a non-unique order can repeat or skip rows between pages.
- * `id` is the primary key, so `(due_date, id)` is total even for a legacy row
- * whose `due_date` is still null.
+ *
+ * ORDERED BY `scheduled_date`, WHICH IS THE COLUMN THE SCREENS RENDER. Ordering
+ * by `due_date` — the identity, and the more correct-sounding choice — sorts the
+ * list by a date the user cannot see, and `due_date` is nullable for occurrences
+ * resolved before 0064. `scheduled_date` is NOT NULL, so `(scheduled_date, id)`
+ * is total with no null handling. When the enriched history ships and the screens
+ * start showing the vencimiento itself, the sort moves with the display, not
+ * before it.
  */
 export async function getPendingInstancesByRecurrenceId(
   supabase: GranaSupabaseClient,
@@ -100,7 +106,7 @@ export async function getPendingInstancesByRecurrenceId(
       .select('*')
       .in('recurrence_id', recurrenceIds)
       .eq('status', 'pending')
-      .order('due_date')
+      .order('scheduled_date')
       .order('id'),
   )
 
@@ -151,10 +157,10 @@ export async function getRecurrences(
  * "vencimientos por revisar" block.
  *
  * With one pending per rule this returned at most one row per rule and neither
- * paging nor a total order mattered. With the backlog materialized it is the
- * list itself, so both do: `due_date` is the occurrence identity (`scheduled_date`
- * survives only for old native clients) and `id` makes the order total, which is
- * what keeps an OFFSET window from repeating or skipping rows between pages.
+ * paging nor a total order mattered. With the backlog materialized it is the list
+ * itself, so both do. It sorts by `scheduled_date` — what the block renders — with
+ * `id` making the order total, which is what keeps an OFFSET window from repeating
+ * or skipping rows between pages.
  */
 export async function getPendingRecurrenceInstances(
   supabase: GranaSupabaseClient,
@@ -164,7 +170,7 @@ export async function getPendingRecurrenceInstances(
       .from('recurrence_instances')
       .select(INSTANCE_SELECT)
       .eq('status', 'pending')
-      .order('due_date')
+      .order('scheduled_date')
       .order('id'),
   )
 
@@ -186,16 +192,22 @@ export async function getRecurrenceDetail(
   if (recurrenceError) throw recurrenceError
   if (!recurrence) return null
 
-  // Newest first for the history list. `id` breaks ties so the OFFSET window the
-  // paging uses cannot repeat or skip a row — a rule with a year of daily
-  // occurrences is well past one page.
+  // Newest first for the history list, BY `scheduled_date` — the date the list
+  // actually shows (`recurrence-instances-list.tsx`, `RecurrenceInstancesList.tsx`).
+  // Sorting by `due_date` instead breaks the screen twice: it is null for every
+  // occurrence resolved before 0064, and Postgres puts nulls FIRST in DESC, so
+  // the history would open on the oldest rows ordered by little more than their
+  // uuid; and for a resolved occurrence the two dates diverge, so an August
+  // cuota paid on 15-Sep would sit below a September one paid on the 10th — sorted
+  // by one date, displayed by another. `id` breaks ties so the OFFSET window the
+  // paging uses cannot repeat or skip a row.
   const { data: instances, error: instancesError } = await selectAllPages<PendingRecurrenceInstance>(
     () =>
       supabase
         .from('recurrence_instances')
         .select(INSTANCE_SELECT)
         .eq('recurrence_id', id)
-        .order('due_date', { ascending: false })
+        .order('scheduled_date', { ascending: false })
         .order('id', { ascending: false }),
   )
 
@@ -203,8 +215,8 @@ export async function getRecurrenceDetail(
 
   const pending = instances
     .filter((instance) => instance.status === 'pending')
-    // The instance query above orders newest-first for the history list; the
-    // unresolved ones read oldest-first, which is the order they are reviewed in.
+    // The query above orders newest-first for the history list; the unresolved
+    // ones read oldest-first, which is the order they are reviewed in.
     .slice()
     .reverse()
 
