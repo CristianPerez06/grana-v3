@@ -96,15 +96,22 @@ que habilita el backlog.
       **(4) El deshacer** de `thin-mutations.ts:814-822`, que compara `last_generated_date` contra
       `start_date` para decidir si limpiar la semilla.
       **Qué hace falta antes:** que esas cuatro dejen de preguntarle al cursor y pasen a preguntarle
-      al conjunto de `due_date` ya resueltos —el mismo criterio que usa `owedOccurrences`—, lo que a
-      su vez necesita `0064` aplicada, porque `due_date` todavía no existe en producción. Es un cambio
-      coordinado de lectura, no la eliminación de dos escrituras.
-      **ORDEN SEGURO, acordado, y esta tarea es el ÚLTIMO paso:**
-      **(1)** aplicar `0064`; **(2)** cablear el generador nuevo con `reconstruct_from` y **todas** las
-      identidades existentes, en lugar del cursor; **(3)** incorporar versiones de cronograma, pausas
-      y tandas de 50 (`2.1b`, `2.1d`, `2.1`); **(4)** migrar dashboard, «próximo», proyecciones y
-      deshacer para que lean los vencimientos existentes y no el cursor; **(5)** recién ahí dejar de
-      escribir `last_generated_date`.
+      al conjunto de **vencimientos que ya existen, en cualquier estado** —pendiente, omitido y
+      confirmado; el mismo criterio que usa `owedOccurrences`, donde lo que decide es que la
+      ocurrencia exista y no cómo terminó—. Es un cambio coordinado de lectura, no la eliminación de
+      dos escrituras.
+      **ORDEN DE DESPLIEGUE, y esta tarea es el ÚLTIMO paso.** Es el orden en que las cosas se
+      APLICAN sobre datos reales; **no** es lo que habilita escribir el código, que se implementa y se
+      prueba contra el harness local sin tocar producción:
+      **(1)** aplicar `0064`;
+      **(2+3)** desplegar el generador nuevo **como una sola unidad**: `reconstruct_from` y todas las
+      identidades existentes en lugar del cursor, JUNTO con las versiones de cronograma, las pausas y
+      las tandas acotadas (`2.1b`, `2.1d`, `2.1`). **No son dos despliegues.** Un generador que ya
+      reconstruye desde el piso pero todavía ignora las versiones y las pausas le fabricaría atraso a
+      una regla pausada o con la frecuencia editada — justo las que la decisión 16 protege;
+      **(4)** migrar dashboard, «próximo», proyecciones y deshacer para que lean los vencimientos
+      existentes y no el cursor;
+      **(5)** recién ahí dejar de escribir `last_generated_date`.
       Mientras tanto la columna se sigue escribiendo y **no hay daño**: el generador ya no la usa para
       elegir la FECHA —eso lo decide el calendario—, aunque sí para saber desde dónde arrancar, así
       que las cuatro superficies siguen leyendo un cursor que se mantiene correcto.
@@ -157,8 +164,20 @@ que habilita el backlog.
       confirma por el otro lado: `con_tope_sin_ordinal = 0` en producción, así que tampoco había hoy
       ninguna regla que dependiera de él.
 
-- [ ] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
+- [x] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
       saltea junio, y no mueve el cronograma.
+      Hecho en `packages/money-logic/__tests__/out-of-order-resolution.test.ts` (8 casos) sobre
+      `owedOccurrences`, escrito como una **secuencia** con aserciones en cada paso y no como una
+      foto: regla mensual del 10, piso el `2026-05-10`, hoy el `2026-09-08`, con junio, julio y agosto
+      adeudados. Cubre los tres puntos en un mismo caso —agosto desaparece de la lista, junio y julio
+      siguen ahí—, más el hueco dejado en el medio que no vence ni se corre, que el piso no lo arrastra
+      la resolución, y que omitir una y confirmar otra da lo mismo porque lo que cuenta es que la
+      ocurrencia exista. El caso central recorre **cuatro órdenes de resolución distintos** y verifica
+      en cada paso que todo lo adeudado sea una fecha que el calendario produjo — nunca una corrida —
+      y que las tres se emitan exactamente una vez.
+      **Probado en negativo**, que es lo que le da valor: devolviendo `owedOccurrences` a la semántica
+      de CURSOR —tomar el máximo resuelto en vez del conjunto— fallan **7** casos. Con un cursor esto
+      no se puede ni expresar: resolver agosto arrastraría la regla más allá de julio y lo perdería.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.
