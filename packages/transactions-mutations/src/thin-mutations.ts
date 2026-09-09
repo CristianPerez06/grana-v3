@@ -26,6 +26,7 @@ import {
   type CancelReimbursementInput,
 } from '@grana/validation'
 import {
+  addInterval,
   formatDateISO,
   getNextExpectedOccurrence,
   getTodayAR,
@@ -772,7 +773,7 @@ export async function deleteTransaction(
   const { data: seededRule } = await supabase
     .from('recurrences')
     .select(
-      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, household_id, default_split',
+      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences',
     )
     .eq('created_from_transaction_id', id)
     .eq('user_id', userId)
@@ -788,14 +789,6 @@ export async function deleteTransaction(
       interval_count: number
       interval_unit: IntervalUnit
       max_occurrences: number | null
-      amount: number
-      account_id: string
-      transfer_destination_account_id: string | null
-      currency_code: string
-      category_id: string | null
-      subcategory_id: string | null
-      household_id: string | null
-      default_split: unknown
     }
     const today = options.today ?? formatDateISO(getTodayAR())
     const ruleIsLive = rule.status !== 'deleted'
@@ -821,58 +814,38 @@ export async function deleteTransaction(
     // leave nothing in its place and the rule skips that period entirely, which
     // is the orphan defect 0053 repairs.
     //
-    // HOW THE REPAIR WORKS NOW, and why it had to change. It used to clear
-    // `last_generated_date` so the generator would produce `start_date` again.
-    // The generator no longer reads that column: it reconstructs strictly after
-    // `reconstruct_from`, which 0064 derived from the seed's date and made
-    // IMMUTABLE. Clearing the cursor therefore repairs nothing — the occurrence
-    // is simply lost.
+    // HOW THE REPAIR WORKS NOW. It used to clear `last_generated_date` so the
+    // generator would produce `start_date` again; the generator no longer reads
+    // that column. What it reads is `reconstruct_from`, which 0064 derived from
+    // the seed's date and keeps immutable — except for exactly this transition,
+    // which its guard allows: back by ONE day, to the floor the rule would have
+    // had with no seed at all, only while `start_date` is still in the future and
+    // only once the rule is unlinked.
     //
-    // So the repair materializes the occurrence directly. It is the one date we
-    // know lost its cover, so we create it instead of asking the generator to
-    // rediscover it. The floor stays where it is, which is the point of it being
-    // immutable: an occurrence hidden by the bug before it must stay reachable.
+    // Releasing the floor rather than materializing the occurrence is what keeps
+    // the TIMING unchanged: the generator produces `start_date` when that date
+    // arrives, exactly as before, instead of a future occurrence showing up in
+    // "vencimientos por revisar" the moment the movement is deleted.
     //
-    // KNOWN CONSEQUENCE, stated rather than hidden: the occurrence appears NOW
-    // rather than on its due date, because the floor cannot be lowered to let the
-    // generator emit it later. Showing an occurrence early is a smaller cost than
-    // losing it, and it also keeps the generator and the projection agreeing —
-    // once the rule is unlinked, the projection stops treating `start_date` as
-    // covered and would otherwise announce a date the generator can never produce.
+    // One statement, so the unlink and the release cannot come apart. The cursor
+    // is nulled alongside them while the legacy column still exists.
     const seedCoversFutureOccurrence = ruleIsLive && rule.start_date > today
 
     const { error: unlinkError } = await supabase
       .from('recurrences')
       .update(
         (seedCoversFutureOccurrence
-          ? { created_from_transaction_id: null, last_generated_date: null }
+          ? {
+              created_from_transaction_id: null,
+              last_generated_date: null,
+              reconstruct_from: addInterval(rule.start_date, 'day', -1),
+            }
           : { created_from_transaction_id: null }) as never,
       )
       .eq('id', rule.id)
       .eq('user_id', userId)
 
     if (unlinkError) return { ok: false, errorCode: unlinkError.code }
-
-    if (seedCoversFutureOccurrence) {
-      // A unique violation here means the occurrence already exists — another
-      // process got there first — which is the outcome we wanted anyway.
-      await supabase.from('recurrence_instances').insert({
-        recurrence_id: rule.id,
-        user_id: userId,
-        due_date: rule.start_date,
-        scheduled_date: rule.start_date,
-        status: 'pending',
-        amount: rule.amount,
-        account_id: rule.account_id,
-        transfer_destination_account_id: rule.transfer_destination_account_id,
-        currency_code: rule.currency_code,
-        category_id: rule.category_id,
-        subcategory_id: rule.subcategory_id,
-        description: rule.description,
-        household_id: rule.household_id,
-        split: rule.household_id ? rule.default_split : null,
-      } as never)
-    }
   }
 
   const { error } = await supabase

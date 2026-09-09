@@ -24,14 +24,6 @@ type RuleRow = {
   interval_unit: string
   max_occurrences: number | null
   last_generated_date: string | null
-  amount: number
-  account_id: string
-  transfer_destination_account_id: string | null
-  currency_code: string
-  category_id: string | null
-  subcategory_id: string | null
-  household_id: string | null
-  default_split: unknown
 }
 
 const monthlyRule = (over: Partial<RuleRow> = {}): RuleRow => ({
@@ -44,26 +36,22 @@ const monthlyRule = (over: Partial<RuleRow> = {}): RuleRow => ({
   interval_unit: 'month',
   max_occurrences: null,
   last_generated_date: null,
-  amount: 450000,
-  account_id: '33333333-3333-4333-8333-333333333333',
-  transfer_destination_account_id: null,
-  currency_code: 'ARS',
-  category_id: '44444444-4444-4444-8444-444444444444',
-  subcategory_id: null,
-  household_id: null,
-  default_split: null,
   ...over,
 })
 
 // Records what the mutation wrote, so the tests can assert the repair.
-type Recorder = {
-  updates: Record<string, unknown>[]
-  /** Occurrences the repair materialized, if any. */
-  instanceInserts: Record<string, unknown>[]
-  deletedTx: boolean
+type Recorder = { updates: Record<string, unknown>[]; deletedTx: boolean }
+
+type Failures = {
+  failRuleUpdate?: { code: string }
+  failTxDelete?: { code: string }
 }
 
-function stubClient(rule: RuleRow | null, rec: Recorder): GranaSupabaseClient {
+function stubClient(
+  rule: RuleRow | null,
+  rec: Recorder,
+  fail: Failures = {},
+): GranaSupabaseClient {
   return {
     from(table: string) {
       if (table === 'transactions') {
@@ -78,6 +66,7 @@ function stubClient(rule: RuleRow | null, rec: Recorder): GranaSupabaseClient {
           delete: () => ({
             eq: () => ({
               eq: async () => {
+                if (fail.failTxDelete) return { error: fail.failTxDelete }
                 rec.deletedTx = true
                 return { error: null }
               },
@@ -105,15 +94,11 @@ function stubClient(rule: RuleRow | null, rec: Recorder): GranaSupabaseClient {
           }),
           update: (patch: Record<string, unknown>) => {
             rec.updates.push(patch)
-            return { eq: () => ({ eq: async () => ({ error: null }) }) }
-          },
-        }
-      }
-      if (table === 'recurrence_instances') {
-        return {
-          insert: async (payload: Record<string, unknown>) => {
-            rec.instanceInserts.push(payload)
-            return { error: null }
+            return {
+              eq: () => ({
+                eq: async () => ({ error: fail.failRuleUpdate ?? null }),
+              }),
+            }
           },
         }
       }
@@ -122,7 +107,7 @@ function stubClient(rule: RuleRow | null, rec: Recorder): GranaSupabaseClient {
   } as unknown as GranaSupabaseClient
 }
 
-const recorder = (): Recorder => ({ updates: [], instanceInserts: [], deletedTx: false })
+const recorder = (): Recorder => ({ updates: [], deletedTx: false })
 
 describe('deleteTransaction — seeded recurrence guard', () => {
   it('deletes normally when the movement seeded no rule', async () => {
@@ -157,15 +142,17 @@ describe('deleteTransaction — seeded recurrence guard', () => {
     expect(rec.updates).toEqual([])
   })
 
-  it('unlink materializes the future occurrence the deleted seed was covering', async () => {
+  it('unlink releases the floor the deleted future seed had set', async () => {
     // The exact production shape: rule created 31-jul from a movement dated
     // 7-ago. Deleting that movement without putting anything in its place makes
     // the rule skip August entirely.
     //
-    // Clearing the cursor no longer repairs it: the generator reconstructs
-    // strictly after `reconstruct_from`, which 0064 derived from the seed's date
-    // and made immutable. So the occurrence is created here instead — it is the
-    // one date we know lost its cover.
+    // Clearing the cursor no longer repairs it — the generator does not read that
+    // column. What it reads is `reconstruct_from`, so the repair moves the floor
+    // back by one day, to where it would have been with no seed at all, and the
+    // generator produces 7-ago WHEN THAT DATE ARRIVES. Same timing as before.
+    //
+    // One statement: the unlink and the release cannot come apart.
     const rec = recorder()
     const result = await deleteTransaction(
       stubClient(monthlyRule({ start_date: '2026-08-07', last_generated_date: '2026-08-07' }), rec),
@@ -176,17 +163,51 @@ describe('deleteTransaction — seeded recurrence guard', () => {
 
     expect(result.ok).toBe(true)
     expect(rec.updates).toEqual([
-      { created_from_transaction_id: null, last_generated_date: null },
+      {
+        created_from_transaction_id: null,
+        last_generated_date: null,
+        reconstruct_from: '2026-08-06',
+      },
     ])
-    expect(rec.instanceInserts).toHaveLength(1)
-    expect(rec.instanceInserts[0]).toMatchObject({
-      recurrence_id: RULE,
-      due_date: '2026-08-07',
-      scheduled_date: '2026-08-07',
-      status: 'pending',
-      amount: 450000,
-    })
     expect(rec.deletedTx).toBe(true)
+  })
+
+  it('does not delete the movement when the repair itself fails', async () => {
+    // If the unlink+release write fails, the movement MUST stay: deleting it
+    // would destroy the only thing still covering that occurrence.
+    const rec = recorder()
+    const client = stubClient(
+      monthlyRule({ start_date: '2026-08-07', last_generated_date: '2026-08-07' }),
+      rec,
+      { failRuleUpdate: { code: '42501' } },
+    )
+
+    const result = await deleteTransaction(client, USER, TX, {
+      today: '2026-08-04',
+      seedResolution: 'unlink',
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.ok === false && result.errorCode).toBe('42501')
+    expect(rec.deletedTx).toBe(false)
+  })
+
+  it('surfaces a failure to delete the movement instead of reporting success', async () => {
+    const rec = recorder()
+    const client = stubClient(
+      monthlyRule({ start_date: '2026-08-07', last_generated_date: '2026-08-07' }),
+      rec,
+      { failTxDelete: { code: 'GRN01' } },
+    )
+
+    const result = await deleteTransaction(client, USER, TX, {
+      today: '2026-08-04',
+      seedResolution: 'unlink',
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.ok === false && result.errorCode).toBe('GRN01')
+    expect(rec.deletedTx).toBe(false)
   })
 
   it('unlink leaves an already-advanced cursor alone', async () => {
@@ -203,7 +224,6 @@ describe('deleteTransaction — seeded recurrence guard', () => {
 
     expect(result.ok).toBe(true)
     expect(rec.updates).toEqual([{ created_from_transaction_id: null }])
-    expect(rec.instanceInserts).toEqual([])
     expect(rec.deletedTx).toBe(true)
   })
 
@@ -220,9 +240,6 @@ describe('deleteTransaction — seeded recurrence guard', () => {
 
     expect(result.ok).toBe(true)
     expect(rec.updates).toEqual([{ created_from_transaction_id: null }])
-    // The occurrence happened and the user deleted its movement on purpose;
-    // re-materializing it would propose a gasto they just removed.
-    expect(rec.instanceInserts).toEqual([])
   })
 
   it('auto-unlinks a soft-deleted rule without asking', async () => {

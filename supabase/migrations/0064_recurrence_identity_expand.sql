@@ -297,7 +297,42 @@ set search_path = public, pg_temp
 as $$
 begin
   if TG_OP = 'UPDATE' then
-    if NEW.reconstruct_from is distinct from OLD.reconstruct_from then
+    if NEW.reconstruct_from is distinct from OLD.reconstruct_from
+       -- ONE transition is allowed, and it is not an edit: RELEASING THE FLOOR A
+       -- DELETED FUTURE SEED LEFT BEHIND.
+       --
+       -- A rule created from a movement has its floor set to that movement's
+       -- date, because the movement IS the occurrence for `start_date`. Delete
+       -- the movement and keep the rule and the premise is gone — but with the
+       -- floor frozen the generator would never produce `start_date`, so the
+       -- period the movement was covering disappears (the orphan defect 0053
+       -- repairs, which used to be repaired by clearing the cursor the generator
+       -- no longer reads).
+       --
+       -- Every clause below is load-bearing, and together they describe that one
+       -- situation and nothing else:
+       --   · the floor moves back by EXACTLY ONE DAY, to `start_date - 1`, which
+       --     is the floor the rule would have had with no seed at all. It cannot
+       --     reach any further back, so an occurrence hidden before it stays
+       --     hidden and the reconstruction cannot be widened by a client;
+       --   · the floor being released is the one the SEED established
+       --     (`OLD.reconstruct_from = OLD.start_date`);
+       --   · `start_date` itself does not move in the same write, so the rule
+       --     cannot be walked backwards one day at a time;
+       --   · `start_date` is still in the FUTURE. This is what keeps
+       --     `acceptRecurrenceSuggestion` out: it produces the same floor shape,
+       --     but from the last date DETECTION SAW, always in the past — and there
+       --     the movement really does exist, so releasing would duplicate it;
+       --   · the rule is no longer seeded, which is the fact that made the floor
+       --     wrong in the first place.
+       and not (
+            NEW.reconstruct_from = OLD.start_date - 1
+        and OLD.reconstruct_from = OLD.start_date
+        and NEW.start_date = OLD.start_date
+        and OLD.start_date > (now() at time zone 'America/Argentina/Buenos_Aires')::date
+        and NEW.created_from_transaction_id is null
+       )
+    then
       raise exception
         'reconstruct_from is immutable: rule % has floor %, and the write tried to move it to %.',
         OLD.id, OLD.reconstruct_from, NEW.reconstruct_from

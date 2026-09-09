@@ -242,17 +242,29 @@ que habilita el backlog.
       `last_generated_date` para que el generador volviera a producir `start_date`; el generador ya no
       lee esa columna y `reconstruct_from` —derivado de la semilla— es **inmutable por diseño**, así
       que limpiar el cursor no reparaba nada.
-      **La reparación ahora materializa la ocurrencia directamente**, que es la única fecha que
-      sabemos que perdió su cobertura. El piso se queda donde está, que es para lo que es inmutable.
-      **Consecuencia conocida, dicha y no escondida:** la ocurrencia aparece **ahora** y no en su
-      fecha de vencimiento, porque el piso no se puede bajar para que el generador la emita más tarde.
-      Mostrarla antes cuesta menos que perderla, y además mantiene de acuerdo al generador con la
-      proyección: desvinculada la regla, la proyección deja de considerar `start_date` cubierta y si
-      no la anunciaría como próxima una fecha que el generador nunca podría producir.
-      Regresiones: `delete-seeded-recurrence.test.ts` verifica que la desvinculación materializa esa
-      ocurrencia —y que los dos casos que **no** deben repararse siguen sin materializar nada—, y
-      `future-seed-repair.test.ts` recorre la secuencia completa sobre la base real, incluida la
-      comprobación de que el piso rechaza moverse. Contra el commit anterior falla.
+      **La reparación libera el piso, con una excepción muy acotada en el guard de `0064`.** Una
+      primera versión materializaba la ocurrencia en el momento de desvincular; se descartó por dos
+      razones: el `insert` iba después de la desvinculación y antes del borrado sin revisar su error
+      —si fallaba, el movimiento se borraba igual y la ocurrencia se perdía otra vez—, y sobre todo
+      **cambiaba comportamiento visible**: una semilla anual borrada hoy hacía aparecer hoy, en
+      «vencimientos por revisar», una ocurrencia que vence dentro de ocho meses.
+      Lo que hace ahora es mover el piso **un día hacia atrás**, a `start_date - 1`, que es el piso que
+      la regla habría tenido sin semilla, y el generador produce `start_date` **cuando llega su
+      fecha** — el mismo momento que antes.
+      **Las cinco condiciones del guard son todas necesarias**, y juntas describen esa única
+      situación: el piso retrocede exactamente un día (no puede ampliarse la reconstrucción), el piso
+      que se libera es el que puso la semilla, `start_date` no se mueve en la misma escritura (no se
+      puede caminar hacia atrás de a un día), `start_date` sigue en el **futuro** —lo que deja afuera
+      a `acceptRecurrenceSuggestion`, que produce la misma forma pero desde una fecha pasada donde el
+      movimiento sí existe—, y la regla ya no está sembrada. Todo en **una sola sentencia**, así que
+      la desvinculación y la liberación no pueden separarse.
+      Regresiones: en `delete-seeded-recurrence.test.ts`, que la desvinculación escribe el piso
+      liberado, que los dos casos que **no** deben repararse siguen sin tocarlo, que un fallo de la
+      escritura **no borra el movimiento**, y que un fallo del borrado se reporta en vez de dar éxito.
+      En `future-seed-repair.test.ts`, la secuencia completa contra la base: el piso rechaza una
+      edición común, rechaza moverse mientras la regla sigue sembrada, acepta la liberación, **no
+      materializa nada hasta que llega la fecha**, produce la ocurrencia una sola vez, y vuelve a ser
+      inmutable después. Más el caso de `start_date` pasada, que el guard rechaza.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.

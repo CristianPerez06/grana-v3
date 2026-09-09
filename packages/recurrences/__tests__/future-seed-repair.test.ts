@@ -22,6 +22,7 @@ import { pglitePostgrest } from './support/pglite-postgrest'
 const RULE = '00000000-0000-0000-0000-000000006001'
 const SEED_DATE = '2026-10-07'
 const ACCOUNT = '00000000-0000-0000-0000-0000000060a1'
+const SEED_TX = '00000000-0000-0000-0000-0000000060f1'
 
 let db: PGlite
 
@@ -37,9 +38,11 @@ beforeAll(async () => {
     -- createRecurrenceFromMovement writes it.
     insert into public.recurrences
       (id, user_id, amount, description, interval_count, interval_unit,
-       start_date, last_generated_date, status, account_id, currency_code)
+       start_date, last_generated_date, status, account_id, currency_code,
+       created_from_transaction_id)
     values ('${RULE}', '${U_A}', 450000, 'Alquiler', 1, 'month',
-            '${SEED_DATE}', '${SEED_DATE}', 'active', '${ACCOUNT}', 'ARS');
+            '${SEED_DATE}', '${SEED_DATE}', 'active', '${ACCOUNT}', 'ARS',
+            '${SEED_TX}');
   `)
 }, 120_000)
 
@@ -57,59 +60,75 @@ async function dueDates(): Promise<string[]> {
 }
 
 describe('a future seed whose movement is deleted', () => {
-  it('keeps its first occurrence reachable, in one sequence', async () => {
-    // The floor 0064 derived from the seed, and its immutability.
-    const floor = await db.query<{ floor: string }>(
-      `select to_char(reconstruct_from, 'YYYY-MM-DD') as floor
-         from public.recurrences where id = $1`,
-      [RULE],
-    )
-    expect(floor.rows[0].floor).toBe(SEED_DATE)
+  it('keeps its first occurrence reachable, on its own date, in one sequence', async () => {
+    // The floor 0064 derived from the seed.
+    const floorNow = async () => {
+      const result = await db.query<{ floor: string }>(
+        `select to_char(reconstruct_from, 'YYYY-MM-DD') as floor
+           from public.recurrences where id = $1`,
+        [RULE],
+      )
+      return result.rows[0].floor
+    }
+    expect(await floorNow()).toBe(SEED_DATE)
 
-    // 1 · Before the date arrives, nothing is owed — the seed movement covers it.
+    // 1 · Before the date arrives nothing is owed — the seed movement covers it.
     await generateDueRecurrenceInstances(pglitePostgrest(db), U_A, { today: '2026-09-08' })
     expect(await dueDates()).toEqual([])
 
-    // 2 · The floor cannot be lowered to let the generator produce it later.
+    // 2 · The floor does not move for an ordinary edit. It never did, and the
+    //     exception below must not have opened a door for one.
+    await expect(
+      db.exec(`update public.recurrences
+                  set reconstruct_from = '2026-01-01' where id = '${RULE}';`),
+    ).rejects.toThrow(/immutable/)
+
+    // 3 · Nor while the rule is still seeded: the movement is still covering it.
     await expect(
       db.exec(`update public.recurrences
                   set reconstruct_from = '2026-10-06' where id = '${RULE}';`),
     ).rejects.toThrow(/immutable/)
 
-    // 3 · The seed movement is deleted and the rule kept: `deleteTransaction`
-    //     unlinks it and materializes the occurrence that lost its cover. That
-    //     mutation lives in @grana/transactions-mutations and needs the whole
-    //     movement stack, so its own suite drives it; what it writes is this row.
+    // 4 · The repair `deleteTransaction` performs: unlink and release the floor
+    //     by exactly one day, in ONE statement. The guard accepts it.
     await db.exec(`
       update public.recurrences
-         set created_from_transaction_id = null, last_generated_date = null
+         set created_from_transaction_id = null,
+             last_generated_date = null,
+             reconstruct_from = '2026-10-06'
        where id = '${RULE}';
-      insert into public.recurrence_instances
-        (recurrence_id, user_id, scheduled_date, due_date, status, amount, account_id, currency_code)
-      values ('${RULE}', '${U_A}', '${SEED_DATE}', '${SEED_DATE}', 'pending', 450000, '${ACCOUNT}', 'ARS');
     `)
+    expect(await floorNow()).toBe('2026-10-06')
 
-    // 4 · The occurrence exists and is resolvable — it did not disappear.
-    expect(await dueDates()).toEqual([SEED_DATE])
+    // 5 · Nothing appears yet. THE TIMING IS THE POINT: the occurrence is not
+    //     conjured into "por revisar" the moment the movement is deleted; it
+    //     waits for its own date, exactly as it did before this change.
+    await generateDueRecurrenceInstances(pglitePostgrest(db), U_A, { today: '2026-09-08' })
+    expect(await dueDates()).toEqual([])
 
-    // 5 · Reaching and passing the date changes nothing about it: the generator
-    //     does not duplicate it, and it does not skip the period either.
-    const result = await generateDueRecurrenceInstances(pglitePostgrest(db), U_A, {
+    // 6 · When the date arrives, the generator produces it. The period the
+    //     deleted movement was covering is not lost.
+    const arrived = await generateDueRecurrenceInstances(pglitePostgrest(db), U_A, {
       today: '2026-10-08',
     })
-
-    expect(result.error).toBeNull()
+    expect(arrived.error).toBeNull()
     expect(await dueDates()).toEqual([SEED_DATE])
 
-    // 6 · And the calendar keeps going from there.
+    // 7 · And it is produced ONCE, with the calendar going on from there.
     await generateDueRecurrenceInstances(pglitePostgrest(db), U_A, { today: '2026-11-08' })
     expect(await dueDates()).toEqual([SEED_DATE, '2026-11-07'])
+
+    // 8 · The released floor is itself immutable again: one day, once.
+    await expect(
+      db.exec(`update public.recurrences
+                  set reconstruct_from = '2026-10-05' where id = '${RULE}';`),
+    ).rejects.toThrow(/immutable/)
   }, 120_000)
 
-  it('would have lost that occurrence without the repair', async () => {
-    // The regression itself: same rule, same floor, no repair. The generator
-    // reconstructs strictly after the floor, so `start_date` is never produced —
-    // the period the deleted movement was covering simply vanishes.
+  it('would have lost that occurrence with the floor left frozen', async () => {
+    // The regression itself: same rule, same floor, unlinked but never released.
+    // The generator reconstructs strictly after the floor, so `start_date` is
+    // never produced and the period simply vanishes.
     const bare = '00000000-0000-0000-0000-000000006002'
     await db.exec(`
       insert into public.recurrences
@@ -129,5 +148,26 @@ describe('a future seed whose movement is deleted', () => {
     )
     expect(produced.rows.map((r) => r.due_date)).toEqual(['2026-11-07'])
     expect(produced.rows.map((r) => r.due_date)).not.toContain(SEED_DATE)
+  }, 120_000)
+
+  it('does not let the exception release a floor whose start_date is in the past', async () => {
+    // `acceptRecurrenceSuggestion` produces the same floor shape — floor equal to
+    // start_date, no seed link — but from the last date DETECTION SAW, always in
+    // the past, and there the movement really does exist. Releasing it would
+    // materialize an occurrence for a gasto the user already has.
+    const past = '00000000-0000-0000-0000-000000006003'
+    await db.exec(`
+      insert into public.recurrences
+        (id, user_id, amount, description, interval_count, interval_unit,
+         start_date, last_generated_date, status, account_id, currency_code)
+      values ('${past}', '${U_A}', 450000, 'Alquiler', 1, 'month',
+              '2026-07-07', '2026-07-07', 'active', '${ACCOUNT}', 'ARS');
+    `)
+
+    await expect(
+      db.exec(`update public.recurrences
+                  set created_from_transaction_id = null, reconstruct_from = '2026-07-06'
+                where id = '${past}';`),
+    ).rejects.toThrow(/immutable/)
   }, 120_000)
 })
