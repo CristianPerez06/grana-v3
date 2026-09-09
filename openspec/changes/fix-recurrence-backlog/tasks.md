@@ -117,7 +117,7 @@ que habilita el backlog.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.
-- [ ] 1.12 Tests de migración con el **caso exacto del #96** (regla cada 3 días, cursor 2026-06-10,
+- [x] 1.12 Tests de migración con el **caso exacto del #96** (regla cada 3 días, cursor 2026-06-10,
       pendiente del 13/06, hoy 2026-09-08): `reconstruct_from` queda en el cursor y las ocurrencias a
       reconstruir son 29 — julio 11, agosto 10, septiembre 3 — con la del 13/06 deduplicada. Y un
       test con una regla cuya frecuencia fue editada, que no debe producir fechas anteriores a
@@ -125,12 +125,36 @@ que habilita el backlog.
       sin cursor con inicio vencido (incluye `start_date`), y nacida de un movimiento (no repite la
       semilla). Y el de identidad: regla mensual del día 10 con agosto confirmado el 10/09 — el
       vencimiento exacto del 10/09 se materializa igual.
-- [ ] 1.12b Regresión de la transición, hoy verificada a mano y sin exigir por ninguna tarea:
+      Hecho en `packages/recurrences/__tests__/migration-0064-backfill.test.ts` (11 casos): cada uno
+      siembra el estado **pre-migración**, aplica `0064` y afirma primero lo que la migración deja
+      (`reconstruct_from`, `due_date`, la versión asumida) y después lo que el caminante debe producir
+      desde ahí. Los conteos del #96 verificados: **30 ocurrencias del caminante** —junio 6, julio 11,
+      agosto 10, septiembre 3— y **29 nuevas** tras deduplicar la pendiente del 13/06. Ojo con leer
+      "julio 11, agosto 10, septiembre 3" como fechas: son **conteos por mes**. Fechas fijas, nunca
+      `today`, salvo la rama de pausadas que sí lee el reloj. **Probados en negativo**: copiar
+      `scheduled_date` a `due_date` en las confirmadas (el diseño descartado) hace fallar los dos de
+      identidad —incluido el que reproduce el #96 por el otro camino—; `reconstruct_from = start_date`
+      en vez de `start_date - 1` hace fallar los dos de regla directa sin cursor; y anclar el piso en
+      `start_date` en vez del cursor hace fallar seis.
+- [x] 1.12b Regresión de la transición, hoy verificada a mano y sin exigir por ninguna tarea:
       **(a)** editar una regla que empieza en el futuro **antes** de que arranque deja una sola
       versión de cronograma — la anterior no resucita el día de inicio; **(b)** bajo el rol
       `authenticated`, `INSERT`/`UPDATE`/`DELETE` sobre `recurrence_schedule_versions` y
       `recurrence_pauses` no alteran nada, mientras `SELECT` sigue funcionando y crear, editar,
       pausar y reanudar una regla siguen manteniendo ambas tablas.
+      Hecho en `packages/recurrences/__tests__/migration-0064-transition.test.ts` (9 casos, todos bajo
+      `authenticated`). **(a)** tiene dos caminos distintos y el primer test que escribí solo cubría
+      uno: editar la frecuencia sin mover `start_date` cae en el MISMO `effective_from` y lo resuelve
+      el `on conflict do update`, así que el `delete` de versiones no vigentes nunca entraba en juego
+      —el test pasaba con y sin él—. El caso que sí lo ejercita es **traer el inicio hacia atrás**:
+      ahí la edición aterriza en otro `effective_from` y, sin el `delete`, quedan dos versiones y la
+      futura resucita el cronograma viejo el día de arranque. Ambos caminos quedaron cubiertos, y el
+      segundo afirma la **ausencia** de la versión futura en vez de compararse contra `today`, para
+      que no se pudra. **(b)** `INSERT` sobre cualquiera de las dos tablas devuelve `42501`;
+      `UPDATE`/`DELETE` **no levantan error** —RLS filtra las filas y no hay ninguna visible—, así que
+      se afirma sobre los datos y no sobre una excepción; y crear, editar, pausar y reanudar siguen
+      manteniendo ambas tablas por encima de RLS. **Probados en negativo**: quitar el `delete` hace
+      fallar el caso del inicio movido; agregar una policy de escritura al historial hace fallar tres.
 - [x] 1.10 Reescribir el caminante para **posicionarse en el borde del horizonte por aritmética de
       fechas**, sin recorrer desde `start_date` (decisión 19). Medido: una regla diaria de hace tres
       años agota los 750 pasos el `2024-09-26`, **347 días antes** del horizonte, sin llegar nunca a

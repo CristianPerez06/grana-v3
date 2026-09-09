@@ -145,10 +145,10 @@ describe('reconstruct_from — frozen on UPDATE, as the user', () => {
   })
 
   it('smuggling it inside a legitimate update is rejected too, and rolls the whole write back', async () => {
-    // The case sets up its own marker amount instead of leaning on one another
-    // test happened to write: what it asserts is that the LEGITIMATE half of the
-    // statement does not land either, and that only reads if the value it must
-    // stay at is distinctive and set here.
+    // This case asserts that the LEGITIMATE half of the statement does not land
+    // either. That only means something if the amount it must stay at is
+    // distinctive, so the case writes its own marker instead of relying on a
+    // value some earlier test happened to leave behind.
     await db.exec(`update public.recurrences set amount = 777 where id = '${RULE}'`)
     expect((await floor()).amount).toBe('777.00')
 

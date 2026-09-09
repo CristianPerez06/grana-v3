@@ -115,15 +115,49 @@ export async function createRecurrenceIdentityDb(
   await db.exec(SCHEMA)
   await db.exec(SEED)
   if (options.applyMigration !== false) await applyMigration(db)
-  // 0064 creates two tables AFTER the blanket grant above, so they need their own.
-  await db.exec(
-    'grant select, insert, update, delete on all tables in schema public to authenticated;',
-  )
   return db
 }
 
 export async function applyMigration(db: PGlite): Promise<void> {
   await db.exec(MIGRATION_0064)
+  // 0064 creates two tables, so they need the grant the initial one could not give.
+  await grantAll(db)
+}
+
+/** What Supabase grants `authenticated` on every table of `public`. */
+export async function grantAll(db: PGlite): Promise<void> {
+  await db.exec(
+    'grant select, insert, update, delete on all tables in schema public to authenticated;',
+  )
+}
+
+/**
+ * Insert an occurrence as the superuser, in its PRE-migration shape: only
+ * `scheduled_date`, with no `due_date`. `confirmed` and `skipped` need
+ * `resolved_at`, and `confirmed` a transaction too — 0011's CHECK, which 0064
+ * leaves standing.
+ */
+export async function seedInstance(
+  db: PGlite,
+  instance: {
+    id: string
+    recurrence_id: string
+    user_id?: string
+    scheduled_date: string
+    status?: 'pending' | 'skipped' | 'confirmed'
+  },
+): Promise<void> {
+  const status = instance.status ?? 'pending'
+  const resolved = status === 'pending' ? 'null' : 'now()'
+  const tx = status === 'confirmed' ? `'${instance.id.replace(/^.{8}/, 'ffffffff')}'` : 'null'
+  await db.exec(`
+    insert into public.recurrence_instances
+      (id, recurrence_id, user_id, scheduled_date, status, resolved_at, confirmed_transaction_id)
+    values (
+      '${instance.id}', '${instance.recurrence_id}', '${instance.user_id ?? U_A}',
+      '${instance.scheduled_date}', '${status}', ${resolved}, ${tx}
+    );
+  `)
 }
 
 /** Insert a rule as the superuser and return its id. */
