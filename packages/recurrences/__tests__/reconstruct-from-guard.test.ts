@@ -16,10 +16,16 @@ import {
  * Owning it on INSERT is not enough. `recurrences` has had a "users update own
  * recurrences" policy since 0011 and the generated types expose every column in
  * `Update`, so a guard that only fires on INSERT leaves the floor writable by any
- * authenticated client — which is why every case here runs AS the user, not as
- * the superuser. Moving the floor BACKWARDS fabricates months of backlog out of
- * nothing; moving it FORWARDS hides occurrences the user is owed. Neither shows
- * up in the UI.
+ * authenticated client. Moving the floor BACKWARDS fabricates months of backlog
+ * out of nothing; moving it FORWARDS hides occurrences the user is owed. Neither
+ * shows up in the UI.
+ *
+ * Who each case runs as is deliberate. Every case where the WRITER is part of
+ * what is being asserted — the six UPDATE ones, and the two INSERTs where a
+ * client tries to impose a value — runs under the `authenticated` role, because
+ * asserting those as the superuser would prove nothing. The two that only assert
+ * the DERIVATION itself seed as the superuser: `start_date - 1` and the cursor do
+ * not depend on who is writing.
  */
 
 const RULE = '00000000-0000-4000-8000-00000000e001'
@@ -139,15 +145,23 @@ describe('reconstruct_from — frozen on UPDATE, as the user', () => {
   })
 
   it('smuggling it inside a legitimate update is rejected too, and rolls the whole write back', async () => {
+    // The case sets up its own marker amount instead of leaning on one another
+    // test happened to write: what it asserts is that the LEGITIMATE half of the
+    // statement does not land either, and that only reads if the value it must
+    // stay at is distinctive and set here.
+    await db.exec(`update public.recurrences set amount = 777 where id = '${RULE}'`)
+    expect((await floor()).amount).toBe('777.00')
+
     expect(
       await sqlstateOf(
         db,
         `update public.recurrences set amount = 1, reconstruct_from = '2020-01-01' where id = '${RULE}'`,
       ),
     ).toBe(CHECK_VIOLATION)
-    const row = await floor()
-    expect(row.reconstruct_from).toBe('2026-06-01')
-    expect(row.amount).toBe('999.00')
+
+    const after = await floor()
+    expect(after.reconstruct_from).toBe('2026-06-01')
+    expect(after.amount).toBe('777.00')
   })
 
   it('rewriting it to the SAME value is a no-op, not an error', async () => {
