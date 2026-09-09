@@ -276,7 +276,7 @@ export async function confirmRecurrenceInstance(
   const { data: instance, error: instanceError } = await supabase
     .from('recurrence_instances')
     .select(
-      'id, recurrence_id, status, scheduled_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, split',
+      'id, recurrence_id, status, scheduled_date, due_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, split',
     )
     .eq('id', instanceId)
     .eq('user_id', userId)
@@ -365,7 +365,13 @@ export async function confirmRecurrenceInstance(
     transfer_destination_account_id: instance.transfer_destination_account_id,
     currency_code: instance.currency_code as RecurrenceCurrencyCode,
     amount: payload.amount ?? Number(instance.amount),
-    scheduled_date: payload.date ?? instance.scheduled_date,
+    // THE VENCIMIENTO IS THE DEFAULT DATE, not `scheduled_date`. The two are the
+    // same on a row this delivery wrote, and diverge on one an older client
+    // resolved — where `scheduled_date` is the day it was paid. The fallback is
+    // for a row that somehow reached `pending` without a `due_date`, which the
+    // backfill, the compatibility trigger and the guard all rule out: it keeps a
+    // confirmation from failing on data nobody should have.
+    date: payload.date ?? instance.due_date ?? instance.scheduled_date,
     category_id:
       payload.category_id !== undefined ? payload.category_id : instance.category_id,
     subcategory_id:

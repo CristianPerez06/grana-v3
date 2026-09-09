@@ -3,15 +3,28 @@ import type { GranaSupabaseClient } from '@grana/supabase'
 
 const TX = '55555555-5555-4555-8555-555555555555'
 
-// The real creators live in @grana/transactions-mutations; here they only need
-// to hand back an id so the confirmation can run to completion.
-vi.mock('@grana/transactions-mutations', () => ({
-  createExpense: async () => ({ ok: true, id: TX }),
-  createIncome: async () => ({ ok: true, id: TX }),
-  createTransfer: async () => ({ ok: true, id: TX }),
-  registerCardPurchase: async () => ({ ok: true, id: TX }),
-  deleteTransaction: async () => ({ ok: true }),
-}))
+// The real creators live in @grana/transactions-mutations; here they hand back
+// an id so the confirmation can run to completion, and record the input they
+// were given so a test can look at the movement that would have been written.
+const createdMovements = vi.hoisted(() => [] as Record<string, unknown>[])
+
+vi.mock('@grana/transactions-mutations', () => {
+  const record = (input: Record<string, unknown>) => {
+    createdMovements.push(input)
+    return { ok: true, id: '55555555-5555-4555-8555-555555555555' }
+  }
+  return {
+    createExpense: async (_c: unknown, _u: unknown, input: Record<string, unknown>) =>
+      record(input),
+    createIncome: async (_c: unknown, _u: unknown, input: Record<string, unknown>) =>
+      record(input),
+    createTransfer: async (_c: unknown, _u: unknown, input: Record<string, unknown>) =>
+      record(input),
+    registerCardPurchase: async ({ input }: { input: Record<string, unknown> }) =>
+      record(input),
+    deleteTransaction: async () => ({ ok: true }),
+  }
+})
 
 const { confirmRecurrenceInstance } = await import('../src/mutations')
 
@@ -59,7 +72,11 @@ function stubClient(rec: Recorder) {
     id: INSTANCE,
     recurrence_id: RULE,
     status: 'pending',
-    scheduled_date: '2026-06-23', // the DUE DATE
+    // The two DIVERGE on purpose. `scheduled_date` is what an older client left
+    // behind — here, the day this occurrence was last touched; `due_date` is the
+    // vencimiento and the occurrence's identity.
+    scheduled_date: '2026-09-15',
+    due_date: '2026-06-23',
     amount: RULE_AMOUNT,
     account_id: ACCOUNT,
     transfer_destination_account_id: null,
@@ -123,6 +140,38 @@ function stubClient(rec: Recorder) {
 }
 
 describe('confirmRecurrenceInstance — what it writes and what it must not', () => {
+  it('dates the movement by the VENCIMIENTO, not by the legacy column', async () => {
+    // `confirmRecurrenceInstance` did not even select `due_date`: it built the
+    // movement from `scheduled_date`, which on a row an older client resolved is
+    // the day it was PAID. A cuota due on 23-Jun would land in the ledger dated
+    // 15-Sep, and the user's own history would say they paid it three months
+    // late — or on time, depending on which column happened to be read.
+    createdMovements.length = 0
+    const rec: Recorder = { instanceWrites: [], ruleWrites: [] }
+    const { client } = stubClient(rec)
+
+    const result = await confirmRecurrenceInstance(client, USER, INSTANCE, {})
+
+    expect(result.ok).toBe(true)
+    expect(createdMovements).toHaveLength(1)
+    expect(createdMovements[0]).toMatchObject({ date: '2026-06-23' })
+  })
+
+  it('the date the user picks still wins over the vencimiento', async () => {
+    // Resolving with another date is a real answer ("lo pagué el 3"), and it has
+    // to keep overriding — the vencimiento is the DEFAULT, not a lock.
+    createdMovements.length = 0
+    const rec: Recorder = { instanceWrites: [], ruleWrites: [] }
+    const { client } = stubClient(rec)
+
+    const result = await confirmRecurrenceInstance(client, USER, INSTANCE, {
+      date: '2026-07-03',
+    })
+
+    expect(result.ok).toBe(true)
+    expect(createdMovements[0]).toMatchObject({ date: '2026-07-03' })
+  })
+
   it('1.4 · leaves scheduled_date alone even when the user pays on another date', async () => {
     const rec: Recorder = { instanceWrites: [], ruleWrites: [] }
     const { client } = stubClient(rec)

@@ -1812,7 +1812,9 @@
       "continue": "Continuar reconstrucción",
       "running": "Actualizando…",
       "read_failed_title": "No pudimos leer tus vencimientos",
-      "read_failed_body": "No sabemos si tenés algo por revisar. Volvé a intentar."
+      "read_failed_body": "No sabemos si tenés algo por revisar. Volvé a intentar.",
+      "refresh_failed_title": "Esta lista puede estar desactualizada",
+      "refresh_failed_body": "No pudimos actualizarla. Estás viendo lo último que leímos."
     }
   },
   "subcategories": {

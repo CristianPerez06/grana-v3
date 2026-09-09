@@ -1812,7 +1812,9 @@
       "continue": "Continue rebuilding",
       "running": "Updating…",
       "read_failed_title": "We could not read your occurrences",
-      "read_failed_body": "We do not know whether you have anything to review. Try again."
+      "read_failed_body": "We do not know whether you have anything to review. Try again.",
+      "refresh_failed_title": "This list may be out of date",
+      "refresh_failed_body": "We couldn't refresh it. You're seeing the last version we read."
     }
   },
   "subcategories": {

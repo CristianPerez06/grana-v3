@@ -199,6 +199,21 @@ export function PendingRecurrencesBlock() {
 
   if (instances.length === 0 && !notice) return null
 
+  // Rows are already on screen and a refresh failed. They stay: making
+  // vencimientos the user was looking at vanish over a transient failure is a
+  // worse answer than showing them slightly stale and saying so.
+  const staleNotice =
+    feed.kind === 'list' && feed.refreshFailed ? (
+      <View className="mb-3">
+        <RecurrenceFailureNotice
+          title={t('recurrences.materialization.refresh_failed_title')}
+          body={t('recurrences.materialization.refresh_failed_body')}
+          onRetry={() => void query.refetch()}
+          retrying={query.isFetching}
+        />
+      </View>
+    ) : null
+
   const onDone = (action: DoneAction) => {
     setNotice(
       t(
@@ -210,79 +225,82 @@ export function PendingRecurrencesBlock() {
     invalidateAfterRecurrenceConfirm(queryClient)
   }
 
+  // RN has no `spread` on shadows, so web's 4px gold halo becomes a real ring:
+  // an outer view painted `warning-bg` with the card inset by 1. The ring is
+  // also what carries the gold accent — overriding the `Card`'s own border
+  // color from `className` would be a coin flip, since two `border-*`
+  // utilities resolve by their order in Tailwind's output, not in the string.
   return (
-    // RN has no `spread` on shadows, so web's 4px gold halo becomes a real ring:
-    // an outer view painted `warning-bg` with the card inset by 1. The ring is
-    // also what carries the gold accent — overriding the `Card`'s own border
-    // color from `className` would be a coin flip, since two `border-*`
-    // utilities resolve by their order in Tailwind's output, not in the string.
-    <View className="rounded-2xl bg-warning-bg p-1">
-      <Card className="overflow-hidden">
-        <Pressable
-          onPress={() => setOpenOverride(!isOpen)}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: isOpen }}
-          className="flex-row items-center gap-3 px-4 py-4 active:bg-page"
-        >
-          <View className="h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-warning-bg">
-            <Clock size={20} color={colors.warning} />
-          </View>
-          <View className="min-w-0 flex-1">
-            <Text className="text-[15px] font-extrabold text-text">
-              {t('recurrences.pending.title')}
-            </Text>
-            <Text className="mt-0.5 text-[12px] font-medium text-text-muted">
-              {t('recurrences.pending.subtitle')}
-            </Text>
-          </View>
-          {instances.length > 0 ? (
-            <Text className="shrink-0 overflow-hidden rounded-full bg-warning-bg px-2.5 py-1 text-[12px] font-bold text-warning">
-              {t('recurrences.pending.count', { count: instances.length })}
-            </Text>
-          ) : null}
-          <ChevronDown
-            size={20}
-            color={colors.textMuted}
-            style={{ transform: [{ rotate: isOpen ? '0deg' : '-90deg' }] }}
-          />
-        </Pressable>
-
-        {isOpen && notice ? (
-          <View className="mx-4 mb-3 flex-row items-center justify-between gap-2 rounded-xl border border-emerald/30 bg-emerald-soft px-3 py-2">
-            <View className="min-w-0 flex-1 flex-row items-center gap-2">
-              <Check size={16} color={colors.emeraldDeep} />
-              <Text className="min-w-0 flex-1 text-[13px] font-medium text-emerald-deep">
-                {notice}
+    <>
+      {staleNotice}
+      <View className="rounded-2xl bg-warning-bg p-1">
+        <Card className="overflow-hidden">
+          <Pressable
+            onPress={() => setOpenOverride(!isOpen)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isOpen }}
+            className="flex-row items-center gap-3 px-4 py-4 active:bg-page"
+          >
+            <View className="h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-warning-bg">
+              <Clock size={20} color={colors.warning} />
+            </View>
+            <View className="min-w-0 flex-1">
+              <Text className="text-[15px] font-extrabold text-text">
+                {t('recurrences.pending.title')}
+              </Text>
+              <Text className="mt-0.5 text-[12px] font-medium text-text-muted">
+                {t('recurrences.pending.subtitle')}
               </Text>
             </View>
-            <Pressable
-              onPress={() => setNotice(null)}
-              accessibilityRole="button"
-              accessibilityLabel={t('recurrences.pending.close_notice')}
-              hitSlop={10}
-            >
-              <X size={14} color={colors.emeraldDeep} />
-            </Pressable>
-          </View>
-        ) : null}
-
-        {isOpen ? (
-          instances.length === 0 ? (
-            <View className="flex-row items-center gap-3 border-t border-border-soft px-4 py-5">
-              <Check size={20} color={colors.emeraldDeep} />
-              <Text className="min-w-0 flex-1 text-[14px] font-semibold text-emerald-deep">
-                {t('recurrences.pending.all_clear')}
+            {instances.length > 0 ? (
+              <Text className="shrink-0 overflow-hidden rounded-full bg-warning-bg px-2.5 py-1 text-[12px] font-bold text-warning">
+                {t('recurrences.pending.count', { count: instances.length })}
               </Text>
-            </View>
-          ) : (
-            instances.map((instance) => (
-              <View key={instance.id} className="border-t border-border-soft">
-                <PendingRow instance={instance} today={todayISO} onDone={onDone} />
+            ) : null}
+            <ChevronDown
+              size={20}
+              color={colors.textMuted}
+              style={{ transform: [{ rotate: isOpen ? '0deg' : '-90deg' }] }}
+            />
+          </Pressable>
+
+          {isOpen && notice ? (
+            <View className="mx-4 mb-3 flex-row items-center justify-between gap-2 rounded-xl border border-emerald/30 bg-emerald-soft px-3 py-2">
+              <View className="min-w-0 flex-1 flex-row items-center gap-2">
+                <Check size={16} color={colors.emeraldDeep} />
+                <Text className="min-w-0 flex-1 text-[13px] font-medium text-emerald-deep">
+                  {notice}
+                </Text>
               </View>
-            ))
-          )
-        ) : null}
-      </Card>
-    </View>
+              <Pressable
+                onPress={() => setNotice(null)}
+                accessibilityRole="button"
+                accessibilityLabel={t('recurrences.pending.close_notice')}
+                hitSlop={10}
+              >
+                <X size={14} color={colors.emeraldDeep} />
+              </Pressable>
+            </View>
+          ) : null}
+
+          {isOpen ? (
+            instances.length === 0 ? (
+              <View className="flex-row items-center gap-3 border-t border-border-soft px-4 py-5">
+                <Check size={20} color={colors.emeraldDeep} />
+                <Text className="min-w-0 flex-1 text-[14px] font-semibold text-emerald-deep">
+                  {t('recurrences.pending.all_clear')}
+                </Text>
+              </View>
+            ) : (
+              instances.map((instance) => (
+                <View key={instance.id} className="border-t border-border-soft">
+                  <PendingRow instance={instance} today={todayISO} onDone={onDone} />
+                </View>
+              ))
+            )
+          ) : null}
+        </Card>
+      </View>
+    </>
   )
 }

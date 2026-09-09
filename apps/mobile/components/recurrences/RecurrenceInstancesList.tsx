@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native'
 import type {
-  PendingRecurrenceInstance,
+  EnrichedRecurrenceInstance,
   RecurrenceInstanceStatus,
 } from '@grana/recurrences'
 import { useLocale, useT } from '../../lib/locale-context'
@@ -20,7 +20,12 @@ const STATUS_TONE: Record<RecurrenceInstanceStatus, string> = {
 export function RecurrenceInstancesList({
   instances,
 }: {
-  instances: PendingRecurrenceInstance[]
+  /**
+   * The whole history, so `due_date` may be NULL — an occurrence resolved before
+   * 0064 has no recoverable vencimiento. This list renders `scheduled_date`,
+   * which is what it has for those rows.
+   */
+  instances: EnrichedRecurrenceInstance[]
 }) {
   const t = useT()
   const locale = useLocale()

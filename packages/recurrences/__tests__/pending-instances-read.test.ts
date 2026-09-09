@@ -68,6 +68,30 @@ describe('getPendingInstancesByRecurrenceId', () => {
     expect(dates).toEqual([...(dates ?? [])].sort())
   })
 
+  it('orders by the VENCIMIENTO, even when the legacy column disagrees', async () => {
+    // Same shape as the global feed: `scheduled_date` ascending is the reverse
+    // of `due_date` ascending, which is what an older client leaves behind when
+    // it moves `scheduled_date`. The rule's own list has to agree with the feed.
+    ruleSeq += 1
+    const id = `00000000-0000-0000-0000-00000000${String(3000 + ruleSeq)}`
+    await db.exec(`
+      insert into public.recurrences
+        (id, user_id, amount, interval_count, interval_unit, start_date, last_generated_date, status)
+      values ('${id}', '${U_A}', 2500, 1, 'month', '2026-01-23', '2026-01-23', 'active');
+      insert into public.recurrence_instances
+        (recurrence_id, user_id, scheduled_date, due_date, status)
+      values ('${id}', '${U_A}', '2026-07-01', '2026-07-23', 'pending'),
+             ('${id}', '${U_A}', '2026-07-05', '2026-06-23', 'pending');
+    `)
+
+    const byRule = await getPendingInstancesByRecurrenceId(pglitePostgrest(db), [id])
+
+    expect(byRule.get(id)?.map((instance) => instance.due_date)).toEqual([
+      '2026-06-23',
+      '2026-07-23',
+    ])
+  })
+
   it('keeps each rule occurrences separate', async () => {
     const first = await ruleWithPendings(['2026-06-23'])
     const second = await ruleWithPendings(['2026-06-23', '2026-07-23'])

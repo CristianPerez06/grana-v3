@@ -21,6 +21,7 @@ import {
   type ExistingRuleForDuplicateCheck,
 } from './duplicates'
 import type {
+  EnrichedRecurrenceInstance,
   PendingRecurrenceInstance,
   Recurrence,
   RecurrenceDetail,
@@ -129,13 +130,13 @@ async function getUpcomingOccurrenceDates(
  * reads are: PostgREST truncates at `db-max-rows` without saying so, and an
  * OFFSET window over a non-unique order can repeat or skip rows between pages.
  *
- * ORDERED BY `scheduled_date`, WHICH IS THE COLUMN THE SCREENS RENDER. Ordering
- * by `due_date` — the identity, and the more correct-sounding choice — sorts the
- * list by a date the user cannot see, and `due_date` is nullable for occurrences
- * resolved before 0064. `scheduled_date` is NOT NULL, so `(scheduled_date, id)`
- * is total with no null handling. When the enriched history ships and the screens
- * start showing the vencimiento itself, the sort moves with the display, not
- * before it.
+ * ORDERED BY `due_date`, WHICH IS THE COLUMN THE SCREENS NOW RENDER. It is the
+ * vencimiento and the occurrence's identity, and on an UNRESOLVED row it is never
+ * null — 0064 backfilled it, the compatibility trigger derives it on insert and
+ * the guard makes it immutable — so `(due_date, id)` is total with no null
+ * handling, which is what an OFFSET window needs to neither repeat nor skip a row.
+ * The history keeps sorting by `scheduled_date`, because that is what IT shows;
+ * the sort follows the display on each screen rather than being one rule for both.
  */
 export async function getPendingInstancesByRecurrenceId(
   supabase: GranaSupabaseClient,
@@ -150,7 +151,7 @@ export async function getPendingInstancesByRecurrenceId(
       .select('*')
       .in('recurrence_id', recurrenceIds)
       .eq('status', 'pending')
-      .order('scheduled_date')
+      .order('due_date')
       .order('id'),
   )
 
@@ -204,9 +205,10 @@ export async function getRecurrences(
  *
  * With one pending per rule this returned at most one row per rule and neither
  * paging nor a total order mattered. With the backlog materialized it is the list
- * itself, so both do. It sorts by `scheduled_date` — what the block renders — with
- * `id` making the order total, which is what keeps an OFFSET window from repeating
- * or skipping rows between pages.
+ * itself, so both do. It sorts by `due_date` — the vencimiento, which is what the
+ * block renders and what "oldest first" has to mean here — with `id` making the
+ * order total, which is what keeps an OFFSET window from repeating or skipping
+ * rows between pages. Every row is `pending`, so `due_date` is never null.
  */
 export async function getPendingRecurrenceInstances(
   supabase: GranaSupabaseClient,
@@ -216,7 +218,7 @@ export async function getPendingRecurrenceInstances(
       .from('recurrence_instances')
       .select(INSTANCE_SELECT)
       .eq('status', 'pending')
-      .order('scheduled_date')
+      .order('due_date')
       .order('id'),
   )
 
@@ -247,7 +249,7 @@ export async function getRecurrenceDetail(
   // cuota paid on 15-Sep would sit below a September one paid on the 10th — sorted
   // by one date, displayed by another. `id` breaks ties so the OFFSET window the
   // paging uses cannot repeat or skip a row.
-  const { data: instances, error: instancesError } = await selectAllPages<PendingRecurrenceInstance>(
+  const { data: instances, error: instancesError } = await selectAllPages<EnrichedRecurrenceInstance>(
     () =>
       supabase
         .from('recurrence_instances')

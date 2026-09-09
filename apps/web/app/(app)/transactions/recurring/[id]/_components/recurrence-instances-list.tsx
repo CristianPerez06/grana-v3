@@ -1,9 +1,14 @@
 import { getTranslations } from 'next-intl/server'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import type { PendingRecurrenceInstance } from '@/lib/recurrences/types'
+import type { EnrichedRecurrenceInstance } from '@/lib/recurrences/types'
 
 type Props = {
-  instances: PendingRecurrenceInstance[]
+  /**
+   * The whole history, so `due_date` may be NULL — an occurrence resolved before
+   * 0064 has no recoverable vencimiento. This list renders `scheduled_date`,
+   * which is what it has for those rows.
+   */
+  instances: EnrichedRecurrenceInstance[]
   currencyCode: 'ARS' | 'USD'
 }
 

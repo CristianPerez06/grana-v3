@@ -3,17 +3,19 @@ import {
   mapInstanceToConfirmPlan,
   RecurrenceMapError,
   type ConfirmInstanceContext,
+  type InstanceSnapshot,
 } from '../mapper'
-import type { RecurrenceInstance } from '../types'
 
+// `date`, not `scheduled_date`: the snapshot carries the date the movement will
+// carry — the vencimiento, or whatever the user picked instead of it.
 function buildInstance(
-  overrides: Partial<RecurrenceInstance> = {},
-): RecurrenceInstance {
+  overrides: Partial<InstanceSnapshot> = {},
+): InstanceSnapshot {
   return {
     id: '11111111-1111-1111-1111-111111111111',
     recurrence_id: '22222222-2222-2222-2222-222222222222',
     user_id: '33333333-3333-3333-3333-333333333333',
-    scheduled_date: '2026-06-01',
+    date: '2026-06-01',
     status: 'pending',
     amount: 1234.56,
     account_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -28,7 +30,7 @@ function buildInstance(
     household_id: null,
     split: null,
     ...overrides,
-  } as RecurrenceInstance
+  } as InstanceSnapshot
 }
 
 const HOUSEHOLD_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd'

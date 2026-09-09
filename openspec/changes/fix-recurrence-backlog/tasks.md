@@ -120,6 +120,10 @@ el comportamiento—, y la activación —tarea 2.8— es la que habilita el bac
       no como alias: un cliente viejo la pisa con la fecha de pago al confirmar, y en las históricas
       `due_date` es `NULL` mientras ella guarda un valor que no es vencimiento. El código nuevo no la
       lee ni como vencimiento ni como fecha de pago; el trigger solo la refleja al insertar.
+      **Y el movimiento se fecha por `due_date`**: la confirmación ni siquiera seleccionaba la
+      columna y construía la transacción desde `scheduled_date`, así que en una fila que resolvió un
+      cliente viejo la cuota vencida en junio entraba al historial con la fecha en que se pagó. La
+      fecha que elige el usuario sigue ganando: el vencimiento es el valor por omisión, no un candado.
 - [x] 1.4b Agregar `resolution_kind` (`created` | `linked`) y `linked_conversion`, poblar
       `resolution_kind = 'created'` en las confirmadas, y **agregar sus constraints en esta misma
       migración, después del trigger**: el trigger completa el campo antes de que el `CHECK` corra,
@@ -539,8 +543,9 @@ el comportamiento—, y la activación —tarea 2.8— es la que habilita el bac
       fijan que el caso de una sola versión —el de toda regla en producción hoy— no cambió.
 - [x] 2.2 Adaptar los reads que asumen una pendiente por regla:
       `getPendingInstancesByRecurrenceId` pasa de `Map<string, RecurrenceInstance>` a
-      `Map<string, RecurrenceInstance[]>`, ordenadas de la más vieja a la más nueva —el orden en que
-      se revisan—, y `RecurrenceSummary.pending_instance` pasa a `pending_instances: []`.
+      `Map<string, RecurrenceInstance[]>`, ordenadas por `due_date` de la más vieja a la más nueva
+      —el orden en que se revisan, y por la fecha que la pantalla muestra; el historial sigue
+      ordenando por `scheduled_date`, que es lo que ÉL muestra—, y `RecurrenceSummary.pending_instance` pasa a `pending_instances: []`.
       **Lo que estaba mal no era el tipo, era lo que hacía:** el `Map` se llenaba con
       `set(recurrence_id, instance)` fila por fila, así que con varias pendientes **se quedaba con la
       última que llegara** y descartaba el resto en silencio. Con una sola por regla eso era inocuo;
@@ -752,6 +757,11 @@ app. Cubre además a quien no la abre nunca. Es mejor que el gate de versión; e
       en el shell —no en una ruta—, porque la generación corre en cualquier pantalla y el error tiene
       que verse donde ocurrió. Las tres decisiones (plegado, urgencia, qué va a escribir) viven en
       `review-surface.ts`, compartido entre web y nativo para que no vuelvan a divergir.
+      **Un refetch fallido no vacía la lista**: si ya había filas en pantalla se conservan con el
+      aviso arriba, porque hacer desaparecer vencimientos que el usuario estaba mirando por una falla
+      transitoria es peor respuesta que mostrarlos algo viejos y decirlo. Solo una falla sin nada que
+      mostrar —incluida una lista cacheada vacía, porque "no tenés nada por revisar" es una
+      afirmación que una lectura fallida no sostiene— se muestra como error.
 - [ ] 4.8 Recorrer los **seis** comportamientos de `proposal.md` en web y en nativo antes de cerrar,
       terminando en la prueba de aceptación: varios vencimientos visibles, ninguno trabando al
       siguiente, sin duplicados, resolubles por separado y en cualquier orden.

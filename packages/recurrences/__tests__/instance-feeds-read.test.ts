@@ -83,6 +83,27 @@ describe('getPendingRecurrenceInstances — the global review feed', () => {
     expect(mine).toEqual(['2026-02-23', '2026-03-23'])
   })
 
+  it('orders by the VENCIMIENTO, even when the legacy column disagrees', async () => {
+    // Two unresolved occurrences whose `scheduled_date` order is the REVERSE of
+    // their `due_date` order — what an older client leaves behind when it moves
+    // `scheduled_date`. Sorting by that column puts the later vencimiento first,
+    // so the block asks the user to review August before July.
+    const ruleId = await createRule()
+    await db.exec(`
+      insert into public.recurrence_instances
+        (recurrence_id, user_id, scheduled_date, due_date, status)
+      values ('${ruleId}', '${U_A}', '2026-07-01', '2026-07-23', 'pending'),
+             ('${ruleId}', '${U_A}', '2026-07-05', '2026-06-23', 'pending');
+    `)
+
+    const feed = await getPendingRecurrenceInstances(pglitePostgrest(db))
+    const mine = feed
+      .filter((instance) => instance.recurrence_id === ruleId)
+      .map((instance) => instance.due_date)
+
+    expect(mine).toEqual(['2026-06-23', '2026-07-23'])
+  })
+
   it('embeds the rule each occurrence belongs to', async () => {
     const ruleId = await createRule()
     await db.exec(`

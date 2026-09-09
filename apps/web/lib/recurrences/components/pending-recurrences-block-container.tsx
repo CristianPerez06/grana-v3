@@ -79,10 +79,24 @@ export function PendingRecurrencesBlockContainer() {
   if (feed.kind !== 'list') return null
 
   return (
-    <PendingRecurrencesBlock
-      pending={pendingQ.data ?? []}
-      accounts={accounts}
-      availableByAccount={availableByAccount}
-    />
+    <>
+      {/* Rows are already on screen and a refresh failed. They stay: making
+          vencimientos the user was looking at vanish over a transient failure is
+          a worse answer than showing them slightly stale and saying so. */}
+      {feed.refreshFailed && (
+        <RecurrenceFailureNotice
+          className="mb-3"
+          title={t('refresh_failed_title')}
+          body={t('refresh_failed_body')}
+          onRetry={() => void pendingQ.refetch()}
+          retrying={pendingQ.isFetching}
+        />
+      )}
+      <PendingRecurrencesBlock
+        pending={pendingQ.data ?? []}
+        accounts={accounts}
+        availableByAccount={availableByAccount}
+      />
+    </>
   )
 }

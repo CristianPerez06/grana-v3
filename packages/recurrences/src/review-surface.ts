@@ -98,8 +98,9 @@ export function materializationOutcome(state: {
 export type ReviewFeedState =
   | { kind: 'loading' }
   | { kind: 'unreadable' }
+  /** Render the rows. `refreshFailed` adds the "no pudimos actualizar" notice above them. */
+  | { kind: 'list'; refreshFailed: boolean }
   | { kind: 'empty' }
-  | { kind: 'list' }
 
 /**
  * What the feed of unresolved occurrences is in.
@@ -108,13 +109,25 @@ export type ReviewFeedState =
  * became `data ?? []` and the block disappeared, which tells the user they have
  * nothing to review when the truth is that nobody knows. It is the same defect
  * as a swallowed materialization error, one layer up.
+ *
+ * A FAILED REFETCH IS NOT A FAILED READ. When rows are already cached, a
+ * transient failure keeps them on screen with the notice above: making
+ * vencimientos the user was looking at vanish because a background refresh timed
+ * out is a worse answer than showing them slightly stale and saying so. Only a
+ * failure with nothing to fall back on is `unreadable`.
+ *
+ * An EMPTY cached list plus a failure is `unreadable` too, deliberately: "no
+ * tenés nada por revisar" is a claim, and a failed read cannot support it.
  */
 export function reviewFeedState(query: {
   isPending: boolean
   error: unknown
   data: unknown[] | undefined
 }): ReviewFeedState {
-  if (query.error != null) return { kind: 'unreadable' }
+  const cached = query.data != null && query.data.length > 0
+  if (query.error != null) {
+    return cached ? { kind: 'list', refreshFailed: true } : { kind: 'unreadable' }
+  }
   if (query.isPending || query.data == null) return { kind: 'loading' }
-  return query.data.length === 0 ? { kind: 'empty' } : { kind: 'list' }
+  return query.data.length === 0 ? { kind: 'empty' } : { kind: 'list', refreshFailed: false }
 }

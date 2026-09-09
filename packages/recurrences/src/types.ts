@@ -52,26 +52,38 @@ export type RecurrenceInstance = Omit<
   currency_code: RecurrenceCurrencyCode
 }
 
-export type PendingRecurrenceInstance = RecurrenceInstance & {
-  /**
-   * The vencimiento, and NOT nullable here.
-   *
-   * The column is nullable because an occurrence resolved before 0064 has no
-   * recoverable due date. An UNRESOLVED one always has an exact one: 0064's
-   * backfill set `pending` and `skipped` rows exactly, its compatibility trigger
-   * derives it on insert for any client that only writes `scheduled_date`, and it
-   * is immutable from then on. `validate_schema.sql` asserts it.
-   *
-   * Narrowing it here is what lets every surface read the vencimiento instead of
-   * `scheduled_date` — which on a resolved row is a legacy date of uncertain
-   * meaning and was never the occurrence's identity.
-   */
-  due_date: string
+/**
+ * An instance plus the embeds the screens need — ANY instance, whatever its
+ * status. `due_date` stays nullable here, because for an occurrence resolved
+ * before 0064 the vencimiento is unrecoverable and the row carries `NULL` +
+ * `due_date_is_unknown`. The history list renders exactly these.
+ */
+export type EnrichedRecurrenceInstance = RecurrenceInstance & {
   recurrence: Recurrence
   account: RecurrenceAccount | null
   destination_account: RecurrenceAccount | null
   category: RecurrenceCategory | null
   subcategory: RecurrenceSubcategory | null
+}
+
+/**
+ * An enriched instance still awaiting a decision — the feed rows.
+ *
+ * The one thing it adds is that `due_date` is NOT nullable. An UNRESOLVED
+ * occurrence always has an exact vencimiento: 0064's backfill set `pending` and
+ * `skipped` rows exactly, its compatibility trigger derives it on insert for any
+ * client that only writes `scheduled_date`, and it is immutable from then on.
+ * `validate_schema.sql` asserts it.
+ *
+ * Narrowing it here is what lets every surface read the vencimiento instead of
+ * `scheduled_date` — which on a resolved row is a legacy date of uncertain
+ * meaning and was never the occurrence's identity. It is a promise only about
+ * unresolved rows, so anything that also holds history takes
+ * `EnrichedRecurrenceInstance`: claiming a non-null `due_date` for a confirmed
+ * 2023 occurrence would be a lie the compiler helps spread.
+ */
+export type PendingRecurrenceInstance = EnrichedRecurrenceInstance & {
+  due_date: string
 }
 
 export type RecurrenceSummary = Recurrence & {
@@ -108,5 +120,10 @@ export type RecurrenceSummary = Recurrence & {
 }
 
 export type RecurrenceDetail = RecurrenceSummary & {
-  instances: PendingRecurrenceInstance[]
+  /**
+   * The rule's whole history, newest first — `confirmed` and `skipped` included,
+   * so `due_date` may be NULL. NOT `PendingRecurrenceInstance[]`: that type
+   * promises an exact vencimiento, which only an unresolved occurrence has.
+   */
+  instances: EnrichedRecurrenceInstance[]
 }

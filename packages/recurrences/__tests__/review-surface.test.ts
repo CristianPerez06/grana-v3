@@ -122,8 +122,20 @@ describe('reviewFeedState', () => {
     expect(reviewFeedState({ isPending: false, error: null, data: [] })).toEqual({ kind: 'empty' })
   })
 
-  it('reports a failure even when stale data is still cached', () => {
+  it('KEEPS the rows when a refetch fails over cached data', () => {
+    // A transient failure must not make vencimientos the user was already
+    // looking at disappear. They stay, with the "may be out of date" notice
+    // above them — stale and honest beats gone.
     expect(reviewFeedState({ isPending: false, error: new Error('x'), data: [{}] })).toEqual({
+      kind: 'list',
+      refreshFailed: true,
+    })
+  })
+
+  it('an EMPTY cached list plus a failure is still unreadable', () => {
+    // "No tenés nada por revisar" is a claim, and a failed read cannot support
+    // it — there is nothing on screen to preserve, so this stays an error.
+    expect(reviewFeedState({ isPending: false, error: new Error('x'), data: [] })).toEqual({
       kind: 'unreadable',
     })
   })
@@ -135,6 +147,9 @@ describe('reviewFeedState', () => {
   })
 
   it('has a list when there is something in it', () => {
-    expect(reviewFeedState({ isPending: false, error: null, data: [{}] })).toEqual({ kind: 'list' })
+    expect(reviewFeedState({ isPending: false, error: null, data: [{}] })).toEqual({
+      kind: 'list',
+      refreshFailed: false,
+    })
   })
 })
