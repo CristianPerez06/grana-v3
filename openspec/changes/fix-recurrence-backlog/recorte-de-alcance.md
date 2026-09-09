@@ -26,6 +26,7 @@ se ven en **web y en nativo**, y cada uno se resuelve **por separado y en cualqu
 | B1.7 | Dejar de escribir `last_generated_date` (`1.5`) + el test real de orden (`1.8`) | **Acá se completa «resolver fuera de orden»**, no antes |
 | B1.8 | Materialización y bloque «por revisar» en **web y nativo** (`4.1`, `4.2`, `4.3`) | El requisito de visibilidad en las dos plataformas |
 | B1.9 | Copy: **«vencimientos por revisar»** (`2.6`) | Behaviour 2: lo que falta revisar no puede afirmar que se debe esa plata. Es texto, cuesta poco y evita mentirle al usuario |
+| B1.10 | **Error de materialización visible, con reintento** (`4.5b`, versión básica) | No es UX avanzada: hoy `queries.ts:367` hace `if (!insertError) created += 1` y descarta **cualquier** fallo en silencio. Si uno ocurre, Julieta ve «ningún vencimiento» y concluye que el #96 sigue roto. El mínimo tiene que **distinguir «falló» de «no hay nada»** y ofrecer reintentar; el diseño elaborado puede esperar |
 
 ### Resolver fuera de orden todavía NO funciona de punta a punta
 
@@ -90,17 +91,24 @@ Nada de esto se descarta: es exactamente el cimiento del Bloque 1.
 | Resolución masiva «ponerse al día» | `2.4`, `2.5` | `recurrence-catch-up` |
 | «Usar este importe de acá en más» | `2.4b` | idem |
 | Agrupar por regla y colapsar el resto | `2.3` | `recurrence-review-ux` |
-| UX avanzada: aviso de historial incompleto, reintento de materialización, sellado de pausadas, paridad nativa del form de resolución | `2.1c`, `4.4`–`4.7`, `4.5b`, `4.5c` | idem |
+| UX avanzada: aviso de historial incompleto, sellado de pausadas, paridad nativa del form de resolución, y el **diseño elaborado** del error de materialización | `2.1c`, `4.4`–`4.7`, `4.5c` | idem |
 | Retiro de `scheduled_date` (migración C) | `5.4` | ya estaba fuera |
 
-`2.1b` y `2.1d` **no** están acá: quedaron en el mínimo.
+`2.1b` y `2.1d` **no** están acá: quedaron en el mínimo. `4.5b` tampoco, en su versión básica —
+mostrar que falló y poder reintentar—; lo que se difiere es la presentación cuidada.
 
 ---
 
 ## Cómo dividir la branch en entregas revisables
 
-51 commits y +6.740 líneas en una sola revisión no es revisable. **Cuatro PRs encadenados.** La
-división separa lo aditivo de lo que cambia comportamiento, en vez de agrupar por carpeta.
+51 commits y +6.740 líneas en una sola revisión no es revisable. **Cuatro PRs encadenados**, en un
+orden que separa lo aditivo de lo que cambia comportamiento **y respeta las dependencias de
+despliegue**.
+
+> **El orden importa más que el tamaño.** Una versión anterior de este documento ponía el cambio de
+> anclaje ANTES de `0064`, y eso es inseguro: la verificación transaccional que protege ese cambio
+> —§4b, que aborta si alguna regla se desfasó— **vive dentro de esa migración**. Desplegar el cambio
+> primero deja una ventana sin guarda alguna. La guarda va antes de lo que guarda.
 
 ### PR 1 — Aditivo puro *(~1.000 líneas)*
 `owedOccurrences` y sus tests, los tests de resolución fuera de orden, y **toda la documentación**
@@ -108,28 +116,39 @@ división separa lo aditivo de lo que cambia comportamiento, en vez de agrupar p
 **Nada de esto lo llama nadie todavía**, así que la afirmación «no cambia comportamiento» es
 verificable: la única función nueva no tiene callers.
 
-### PR 2 — Cambios de comportamiento en el núcleo *(~700 líneas)*
-Acá va lo que **sí cambia lo que el usuario ve**, y se revisa como tal — no como refactor:
+### PR 2 — Modelo persistente *(~1.900 líneas)* · **va antes que el PR 3**
+`0064`, los tipos, `8.1J`, el harness PGlite y las regresiones de migración, transición y guarda de
+fase. **Se aplica y no cambia ningún comportamiento** — es la mitad «expansión» del par, y eso es
+verificable: la migración deja vivo el índice de pendiente única.
+Va acá, y no después, porque **trae la guarda §4b** que el PR 3 necesita: revalida en su propia
+transacción que ninguna regla quedó desfasada, y aborta si eso cambió desde la auditoría.
+
+### PR 3 — Cambios de comportamiento en el núcleo *(~700 líneas)*
+Lo que **sí cambia lo que el usuario ve**, y se revisa como tal — no como refactor:
 
 | Cambio | Efecto observable | Evidencia |
 |---|---|---|
 | Caminante sin el techo de 750 pasos | Una regla diaria de tres años proyectaba hasta `2024-09-26`, 347 días antes del horizonte; ahora llega a hoy | `walk-positioning.test.ts` |
 | `max_occurrences` por ordinal | Una regla nacida de un movimiento con tope 3 producía **4** ocurrencias; ahora produce 3 | `max-occurrences.test.ts` |
-| Próxima fecha anclada en el calendario | Sin efecto en producción (auditoría: 0 de 61 divergentes); cambia para reglas desfasadas futuras | auditoría + `max-occurrences.test.ts` |
+| Próxima fecha anclada en el calendario | Sin efecto en producción (auditoría: 0 de 61 divergentes); cambia para reglas desfasadas futuras | auditoría + §4b del PR 2 |
 | Se retira `materializedCount` y su consulta | Una consulta menos por corrida del generador | `queries.ts` |
 
-Los cuatro son **arreglos**, no regresiones, pero ninguno es neutro. Van juntos porque el tercero es
-lo que vuelve inalcanzable el fallback del segundo.
+Los cuatro son **arreglos**, no regresiones, pero ninguno es neutro.
+**Si se prefiere una sola ventana de despliegue, los PR 2 y 3 se pueden unir.** Lo que no se puede es
+invertirlos.
 
-### PR 3 — Modelo persistente *(~1.900 líneas)*
-`0064`, los tipos, `8.1J`, el harness PGlite y las regresiones de migración, transición y guarda de
-fase. **Se aplica y no cambia ningún comportamiento** — es la mitad «expansión» del par, y eso sí es
-verificable: la migración deja vivo el índice de pendiente única.
+### PR 4 — El arreglo visible *(a escribir)* · **no se parte antes de la activación**
+Bloque 1 completo: generador con versiones y pausas, activación, reads, las cuatro superficies del
+cursor, error visible con reintento, web y nativo, copy. Termina en la prueba de aceptación.
 
-### PR 4 — El arreglo visible *(a escribir)*
-Bloque 1 completo. Termina en la prueba de aceptación. Si queda grande, se parte en **4a** (base:
-generador con versiones y pausas + activación + reads) y **4b** (superficie: dashboard y las otras
-tres lecturas, web, nativo, copy) — con el corte en B1.6, que es donde entra #118.
+**Se mantiene unido.** Activar el backlog en una parte y dejar las pantallas para otra crea un
+intervalo en el que la base tiene varias pendientes y la app **muestra una sola o duplica importes** —
+exactamente el estado que la cabecera de `0064` describe como «peor que el bug actual», y el doble
+conteo de #118 encima.
+
+Si por tamaño hubiera que partirlo igual, **la activación queda en la ÚLTIMA parte**, después de
+adaptar lectores, dashboard, web y nativo: primero todo el software capaz de convivir con varias
+pendientes, y recién entonces se retira el índice.
 
 **Lo ya mergeado a `main`: cero.** La branch está entera sin mergear, así que la división es mecánica:
 `git checkout -b` desde `main` y cherry-pick por área, sin reescribir historia ajena.
