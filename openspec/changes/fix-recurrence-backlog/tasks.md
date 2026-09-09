@@ -142,8 +142,8 @@ que habilita el backlog.
       `authenticated`, `INSERT`/`UPDATE`/`DELETE` sobre `recurrence_schedule_versions` y
       `recurrence_pauses` no alteran nada, mientras `SELECT` sigue funcionando y crear, editar,
       pausar y reanudar una regla siguen manteniendo ambas tablas.
-      Hecho en `packages/recurrences/__tests__/migration-0064-transition.test.ts` (9 casos, todos bajo
-      `authenticated`). **(a)** tiene dos caminos distintos y el primer test que escribí solo cubría
+      Hecho en `packages/recurrences/__tests__/migration-0064-transition.test.ts` (10 casos, todos
+      bajo `authenticated`). **(a)** tiene dos caminos distintos y el primer test que escribí solo cubría
       uno: editar la frecuencia sin mover `start_date` cae en el MISMO `effective_from` y lo resuelve
       el `on conflict do update`, así que el `delete` de versiones no vigentes nunca entraba en juego
       —el test pasaba con y sin él—. El caso que sí lo ejercita es **traer el inicio hacia atrás**:
