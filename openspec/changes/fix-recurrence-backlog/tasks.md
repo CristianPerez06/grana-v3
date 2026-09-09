@@ -577,8 +577,22 @@ que habilita el backlog.
       Cinco regresiones nuevas en `committed-outlook.test.ts`; cuatro fallan contra el commit anterior
       con los síntomas exactos: $0 en vez de $500.000, $600.000 en vez de $300.000, $25.000 de
       compromiso inventado, y $0 de ingreso en vez de $2.000.000.
-      **Delta de spec de `dashboard`** (`specs/dashboard/spec.md`): sin él, archivar el change dejaba la
-      spec maestra afirmando que la proyección avanza desde `last_generated_date`, enfrentada al código.
+      **Corregido (5) — un vencimiento desconocido volvía a ocupar una fecha real.** El fallback de
+      ubicación se estaba usando también como cobertura, así que un pago histórico registrado el 10/09
+      tapaba la ocurrencia verdadera del 10/09 y la proyección la perdía. Es el mismo defecto del #96
+      un nivel más arriba, y contradice lo que `0064` garantiza en la base al declarar esos
+      vencimientos desconocidos en vez de adivinarlos. Ahora las dos preguntas están separadas:
+      **ubicar** usa `due_date ?? scheduled_date`; **tapar** usa **solo** `due_date` exacto. Regresión
+      con un histórico desconocido y la ocurrencia real en la misma fecha: contra el commit anterior
+      da $300.000 en vez de $600.000.
+      **Delta de spec de `dashboard`** (`specs/dashboard/spec.md`): contiene el requirement maestro
+      **completo** con los tres párrafos afectados reescritos y seis escenarios nuevos, porque un
+      `MODIFIED` se integra reemplazando al requirement entero — un delta que dijera «lo demás queda
+      como está» habría borrado al archivarse las reglas de tarjetas, lentes, ventanas y vencidos.
+      Verificado que los 15 escenarios maestros sobreviven.
+      Dos fixtures usaban estados que el sistema no puede producir —una pendiente y treinta omitidas
+      con fecha futura, cuando el generador solo materializa lo ya vencido—: pasaron a `PREVIOUS_MONTH`
+      con fechas vencidas, y la de paginación combina seis reglas para superar el límite simulado.
 - [ ] 2.6 Copy: **"vencimientos por revisar"** — ni "pagos" (afirmaría que hubo pago) ni lenguaje de
       deuda. Actualizar `es.json` y `en.json`.
 ## 3. Diferido a changes posteriores

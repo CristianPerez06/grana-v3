@@ -566,6 +566,10 @@ describe('getCommittedOutlookForMonth — fixed expenses in the window', () => {
     // Resolved before 0064: `due_date` is null and unrecoverable. The fallback is
     // stated rather than implied — `scheduled_date` is the only date there is, so
     // the row is placed by it instead of disappearing from every window.
+    //
+    // The rule itself ended in July, so this isolates PLACEMENT: the only thing
+    // in the window is the historical payment. What such a row must NOT do —
+    // cover a calendar date — is the next test.
     const supabase = makeSupabase({
       accounts: [bank],
       recurrences: [
@@ -577,7 +581,7 @@ describe('getCommittedOutlookForMonth — fixed expenses in the window', () => {
           currency_code: 'ARS',
           description: 'Expensas',
           start_date: '2026-01-10',
-          end_date: '2026-08-31',
+          end_date: '2026-07-31',
         },
       ],
       recurrence_instances: [
@@ -600,44 +604,95 @@ describe('getCommittedOutlookForMonth — fixed expenses in the window', () => {
   })
 
   it('reads every occurrence when the server truncates the response', async () => {
-    // Thirty daily occurrences, all `skipped`, against a server capped at 5 rows.
-    // A skipped occurrence is money the user said is NOT owed, and it covers its
-    // own date. Read unpaged, the 25 past the cut stop covering theirs, so the
-    // projection re-emits them: $25.000 of commitment appears out of nothing —
-    // #118 coming back through the read layer.
-    const daily = Array.from({ length: 30 }, (_, i) => ({
-      recurrence_id: 'r-diario',
-      account_id: 'bank',
-      amount: 1_000,
-      currency_code: 'ARS',
-      description: 'Diario',
-      scheduled_date: `2026-09-${String(i + 1).padStart(2, '0')}`,
-      status: 'skipped' as const,
-    }))
+    // Window = August, and every occurrence is ALREADY DUE — the generator never
+    // materializes a future date, so a fixture of future rows would be testing a
+    // state the system cannot reach. Six rules of five days each get past a
+    // server capped at 5 rows.
+    //
+    // They are `skipped`: money the user said is NOT owed, and each covers its
+    // own date. Read unpaged, the ones past the cut stop covering theirs, so the
+    // projection re-emits them and commitment appears out of nothing — #118
+    // coming back through the read layer.
+    const ruleIds = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6']
+    const skippedDaily = ruleIds.flatMap((ruleId, r) =>
+      Array.from({ length: 5 }, (_, i) => ({
+        recurrence_id: ruleId,
+        account_id: 'bank',
+        amount: 1_000,
+        currency_code: 'ARS',
+        description: 'Diario',
+        scheduled_date: `2026-08-${String(r * 5 + i + 1).padStart(2, '0')}`,
+        status: 'skipped' as const,
+      })),
+    )
     const supabase = makeSupabase(
       {
         accounts: [bank],
-        recurrences: [
-          {
-            id: 'r-diario',
-            movement_type: 'expense',
-            account_id: 'bank',
-            amount: 1_000,
-            currency_code: 'ARS',
-            description: 'Diario',
-            start_date: '2026-09-01',
-            interval_count: 1,
-            interval_unit: 'day',
-          },
-        ],
-        recurrence_instances: daily,
+        recurrences: ruleIds.map((id, r) => ({
+          id,
+          movement_type: 'expense' as const,
+          account_id: 'bank',
+          amount: 1_000,
+          currency_code: 'ARS',
+          description: 'Diario',
+          start_date: `2026-08-${String(r * 5 + 1).padStart(2, '0')}`,
+          end_date: `2026-08-${String(r * 5 + 5).padStart(2, '0')}`,
+          interval_count: 1,
+          interval_unit: 'day',
+        })),
+        recurrence_instances: skippedDaily,
       },
       { maxRows: 5 },
     )
 
-    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
+    const out = await getCommittedOutlookForMonth(supabase, PREVIOUS_MONTH)
 
     expect(out.ARS.recurringExpense).toBe(0)
+  })
+
+  it('a historical occurrence with an unknown vencimiento does not block a real one', async () => {
+    // Window = August. A payment registered on 2026-08-10 for an occurrence whose
+    // vencimiento was overwritten before 0064 — `due_date` is null and
+    // unrecoverable — and the rule's REAL occurrence also falls on 2026-08-10.
+    //
+    // Placing the historical row by `scheduled_date` is right; letting that date
+    // COVER the calendar is not. An uncertain date occupying a real one is the
+    // shape of #96, and 0064 refuses to do it at the database level for exactly
+    // this reason. Both belong in the window: the payment that happened, and the
+    // occurrence that is still owed.
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [
+        {
+          id: 'r-expensas',
+          movement_type: 'expense',
+          account_id: 'bank',
+          amount: 300_000,
+          currency_code: 'ARS',
+          description: 'Expensas',
+          start_date: '2026-08-10',
+          end_date: '2026-08-31',
+        },
+      ],
+      recurrence_instances: [
+        {
+          recurrence_id: 'r-expensas',
+          account_id: 'bank',
+          amount: 300_000,
+          currency_code: 'ARS',
+          description: 'Expensas',
+          due_date: null,
+          scheduled_date: '2026-08-10',
+          status: 'confirmed',
+        },
+      ],
+    })
+
+    const out = await getCommittedOutlookForMonth(supabase, PREVIOUS_MONTH)
+
+    // The historical payment (300.000) plus the occurrence the rule still owes
+    // for 2026-08-10, which the unknown row must not have swallowed.
+    expect(out.ARS.recurringExpense).toBe(600_000)
   })
 
   it('does not re-commit an occurrence the user said did not apply', async () => {
@@ -812,13 +867,16 @@ describe('getCommittedOutlookForMonth — recurring income', () => {
           amount: 2_000_000,
           currency_code: 'ARS',
           description: 'Sueldo',
-          scheduled_date: '2026-09-01',
+          scheduled_date: '2026-08-01',
           status: 'pending',
         },
       ],
     })
 
-    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
+    // Window = August, and 2026-08-01 is already past: the generator only
+    // materializes dates that have arrived, so a pending occurrence in the
+    // future is a state the system cannot produce.
+    const out = await getCommittedOutlookForMonth(supabase, PREVIOUS_MONTH)
 
     // Once — not twice, and not zero.
     expect(out.ARS.recurringIncome).toBe(2_000_000)
@@ -837,8 +895,8 @@ describe('getCommittedOutlookForMonth — recurring income', () => {
           amount: 2_000_000,
           currency_code: 'ARS',
           description: 'Sueldo',
-          start_date: '2026-09-01',
-          end_date: '2026-09-30',
+          start_date: '2026-08-01',
+          end_date: '2026-08-31',
         },
       ],
       recurrence_instances: [
@@ -848,13 +906,13 @@ describe('getCommittedOutlookForMonth — recurring income', () => {
           amount: 2_000_000,
           currency_code: 'ARS',
           description: 'Sueldo',
-          scheduled_date: '2026-09-01',
+          scheduled_date: '2026-08-01',
           status: 'confirmed',
         },
       ],
     })
 
-    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
+    const out = await getCommittedOutlookForMonth(supabase, PREVIOUS_MONTH)
 
     expect(out.ARS.recurringIncome).toBe(0)
   })

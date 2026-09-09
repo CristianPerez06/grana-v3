@@ -44,5 +44,5 @@ export async function selectAllPages<T>(
     out.push(...rows)
   }
 
-  return { data: out, error: { message: 'La lectura no terminó: demasiadas páginas.' } }
+  return { data: out, error: { message: 'Read did not terminate: too many pages.' } }
 }

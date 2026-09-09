@@ -923,20 +923,34 @@ export async function getCommittedOutlookForMonth(
   if (occurrencesResult.error) throw occurrencesResult.error
   if (rulesResult.error) throw rulesResult.error
 
-  /** Where an occurrence sits in time: its vencimiento, or its only date. */
+  /**
+   * WHERE an occurrence sits in time, for counting and for display: its
+   * vencimiento, or — for one resolved before the vencimiento was a separate
+   * datum — the only date it has. See the fallback note above.
+   */
   const occurrenceDate = (row: RecurrenceOccurrenceRow): string | null =>
     row.due_date ?? row.scheduled_date
 
-  // EVERY state feeds the exclusion, `skipped` included: an occurrence the user
-  // marked as not applicable exists, and projecting it would re-commit money
-  // they said was not owed.
+  // WHICH occurrences cover a calendar date, which is NOT the same question.
+  // Only an EXACT `due_date` covers one.
+  //
+  // A row with no recoverable vencimiento is placed by `scheduled_date` above,
+  // but `scheduled_date` is a PAYMENT date, not an identity: an August cuota paid
+  // on 10-Sep would otherwise cover 10-Sep and hide the rule's real occurrence
+  // for that day — an uncertain date occupying a real one, which is precisely the
+  // shape of #96 and what 0064 refuses to do when it declares those vencimientos
+  // unknown instead of guessing them. Showing the historical payment is right;
+  // letting it reserve a date is not.
+  //
+  // EVERY state covers, `skipped` included: an occurrence the user marked as not
+  // applicable exists, and projecting it would re-commit money they said was not
+  // owed.
   const coveredByRule = new Map<string, string[]>()
   for (const row of occurrencesResult.data) {
-    const date = occurrenceDate(row)
-    if (date == null) continue
+    if (row.due_date == null) continue
     const list = coveredByRule.get(row.recurrence_id)
-    if (list == null) coveredByRule.set(row.recurrence_id, [date])
-    else list.push(date)
+    if (list == null) coveredByRule.set(row.recurrence_id, [row.due_date])
+    else list.push(row.due_date)
   }
 
   const movementTypeOf = (r: RecurrenceOccurrenceRow['recurrence']): string | undefined =>
