@@ -266,17 +266,46 @@ alter table public.recurrences
 -- installed clients write this column. The expansion has to preserve behaviour,
 -- so the value is derived with the SAME criterion as the backfill above.
 --
--- It is computed UNCONDITIONALLY, not only when the incoming value is null: the
--- database is the sole owner of this column, exactly as it is of the schedule
--- history, and a client value — the placeholder default included — must never
--- survive.
-create or replace function public.recurrence_reconstruct_from_default()
+-- On INSERT it is computed UNCONDITIONALLY, not only when the incoming value is
+-- null: the database is the sole owner of this column, exactly as it is of the
+-- schedule history, and a client value — the placeholder default included —
+-- must never survive.
+--
+-- On UPDATE it is FROZEN, and that half is not optional. `recurrences` has had a
+-- "users update own recurrences" policy since 0011, and the generated types
+-- expose every column of the table in `Update`, so an INSERT-only trigger would
+-- leave `reconstruct_from` writable by any authenticated client. That is not a
+-- cosmetic hole: this column is the floor of what the generator reconstructs, so
+-- moving it BACKWARDS fabricates months of backlog out of nothing, and moving it
+-- FORWARDS hides occurrences the user is actually owed. Neither is visible in
+-- the UI, and neither is something the app ever needs to do.
+--
+-- The guard is not an RLS policy because RLS grants or denies the whole row: the
+-- user legitimately updates amount, description, frequency and status on the
+-- same UPDATE. Only this column has to stay put, and a column-level rule lives
+-- in a trigger.
+--
+-- A later migration that DOES need to move the floor — the activation, say —
+-- can `alter table public.recurrences disable trigger
+-- trg_recurrence_reconstruct_from_guard;` around the write. That is deliberate
+-- and auditable in the migration; a client UPDATE is neither.
+create or replace function public.recurrence_reconstruct_from_guard()
 returns trigger
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 begin
+  if TG_OP = 'UPDATE' then
+    if NEW.reconstruct_from is distinct from OLD.reconstruct_from then
+      raise exception
+        'reconstruct_from es inmutable: la regla % tiene el piso %, y se intentó moverlo a %.',
+        OLD.id, OLD.reconstruct_from, NEW.reconstruct_from
+        using errcode = '23514';
+    end if;
+    return NEW;
+  end if;
+
   NEW.reconstruct_from := case
     when NEW.status = 'paused'               then (now() at time zone 'America/Argentina/Buenos_Aires')::date
     when NEW.last_generated_date is not null then NEW.last_generated_date
@@ -287,10 +316,14 @@ begin
   return NEW;
 end $$;
 
-create trigger trg_recurrence_reconstruct_from_default
-  before insert on public.recurrences
+-- The name says `guard`, not `default`: it derives the value on INSERT AND keeps
+-- it immutable on UPDATE. The coda of this migration warns about exactly this
+-- mistake in `trg_recurrence_instance_compat`, whose name hides a permanent
+-- business rule behind a temporary-sounding label. Not repeating it here.
+create trigger trg_recurrence_reconstruct_from_guard
+  before insert or update on public.recurrences
   for each row
-  execute function public.recurrence_reconstruct_from_default();
+  execute function public.recurrence_reconstruct_from_guard();
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 5 · recurrence_schedule_versions — the schedule over time

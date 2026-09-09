@@ -490,7 +490,6 @@ do $$
 declare
   missing   text;
   v_secdef  boolean;
-  v_cols    int;
   v_offend  int;
 begin
 
@@ -503,7 +502,7 @@ begin
         and column_name = col
     )
   loop
-    raise exception 'recurrence_instances.% es missing (migración 0064)', missing;
+    raise exception 'recurrence_instances.% is missing (migration 0064)', missing;
   end loop;
 
   if not exists (
@@ -511,7 +510,7 @@ begin
      where table_schema = 'public' and table_name = 'recurrences'
        and column_name = 'reconstruct_from' and is_nullable = 'NO'
   ) then
-    raise exception 'recurrences.reconstruct_from falta o es nullable (migración 0064)';
+    raise exception 'recurrences.reconstruct_from is missing or nullable (migration 0064)';
   end if;
 
   -- NOT NULL *with* a default, on purpose. Without one, `supabase gen types`
@@ -524,7 +523,7 @@ begin
      where table_schema = 'public' and table_name = 'recurrences'
        and column_name = 'reconstruct_from' and column_default like '%infinity%'
   ) then
-    raise exception 'recurrences.reconstruct_from perdió su default: los tipos generados van a exigirlo en Insert, y si el trigger falla el valor deja de fallar cerrado';
+    raise exception 'recurrences.reconstruct_from lost its default: generated types would require it on Insert, and without it the value stops failing closed if the guard is dropped';
   end if;
 
   -- And the placeholder never survives: the trigger computes the column on every
@@ -532,7 +531,7 @@ begin
   select count(*) into v_offend
     from public.recurrences where reconstruct_from = 'infinity'::date;
   if v_offend > 0 then
-    raise exception 'recurrences: % filas con reconstruct_from = infinity — el trigger que deriva la columna no corrió', v_offend;
+    raise exception 'recurrences: % rows hold reconstruct_from = infinity — the guard that derives the column did not run', v_offend;
   end if;
 
   -- (2) The two new tables and their columns.
@@ -545,7 +544,7 @@ begin
         and column_name = col
     )
   loop
-    raise exception 'recurrence_schedule_versions.% es missing', missing;
+    raise exception 'recurrence_schedule_versions.% is missing', missing;
   end loop;
 
   for missing in
@@ -556,7 +555,7 @@ begin
         and column_name = col
     )
   loop
-    raise exception 'recurrence_pauses.% es missing', missing;
+    raise exception 'recurrence_pauses.% is missing', missing;
   end loop;
 
   -- (3) Indexes. The identity index is PARTIAL on purpose: a historical
@@ -572,7 +571,7 @@ begin
       select 1 from pg_indexes where schemaname = 'public' and indexname = ix
     )
   loop
-    raise exception 'índice % no existe (migración 0064)', missing;
+    raise exception 'index % does not exist (migration 0064)', missing;
   end loop;
 
   if not exists (
@@ -581,7 +580,7 @@ begin
        and indexname = 'recurrence_instances_one_per_rule_due_date'
        and indexdef like '%WHERE (due_date IS NOT NULL)%'
   ) then
-    raise exception 'recurrence_instances_one_per_rule_due_date dejó de ser parcial: una identidad desconocida puede bloquear una conocida';
+    raise exception 'recurrence_instances_one_per_rule_due_date is no longer partial: an unknown identity can now block a known one';
   end if;
 
   -- (4) TRANSITION: the old single-pending index is still alive. See the header.
@@ -589,7 +588,7 @@ begin
     select 1 from pg_indexes
      where schemaname = 'public' and indexname = 'recurrence_instances_one_pending_per_rule'
   ) then
-    raise exception 'recurrence_instances_one_pending_per_rule ya no existe: el backlog se habilitó sin desplegar el modelo nuevo, o esta validación quedó vieja tras la activación';
+    raise exception 'recurrence_instances_one_pending_per_rule is gone: either the backlog was enabled without shipping the new model, or this check went stale after the activation';
   end if;
 
   -- (5) Constraints.
@@ -602,7 +601,7 @@ begin
        where conrelid = 'public.recurrence_instances'::regclass and conname = cn
     )
   loop
-    raise exception 'CHECK % no existe en recurrence_instances', missing;
+    raise exception 'CHECK % does not exist on recurrence_instances', missing;
   end loop;
 
   if not exists (
@@ -610,44 +609,73 @@ begin
      where conrelid = 'public.recurrences'::regclass
        and conname = 'recurrences_id_user_unique' and contype = 'u'
   ) then
-    raise exception 'recurrences_id_user_unique no existe: sin esa clave candidata las FK compuestas no se pueden declarar';
+    raise exception 'recurrences_id_user_unique does not exist: without that candidate key the composite FKs cannot be declared';
   end if;
 
   -- (6) COMPOSITE FKs. With two independent FKs (rule on one side, user on the
   --     other) and an RLS policy that only checks `user_id = auth.uid()`, the
   --     database would accept a row holding MY user and SOMEBODY ELSE'S rule.
-  select count(*) into v_cols
-    from pg_constraint
-   where conrelid = 'public.recurrence_schedule_versions'::regclass
-     and conname = 'recurrence_schedule_versions_recurrence_fk'
-     and contype = 'f'
-     and confrelid = 'public.recurrences'::regclass
-     and array_length(conkey, 1) = 2;
-  if v_cols = 0 then
-    raise exception 'recurrence_schedule_versions: la FK a recurrences no es compuesta (recurrence_id, user_id)';
-  end if;
-
-  select count(*) into v_cols
-    from pg_constraint
-   where conrelid = 'public.recurrence_pauses'::regclass
-     and conname = 'recurrence_pauses_recurrence_fk'
-     and contype = 'f'
-     and confrelid = 'public.recurrences'::regclass
-     and array_length(conkey, 1) = 2;
-  if v_cols = 0 then
-    raise exception 'recurrence_pauses: la FK a recurrences no es compuesta (recurrence_id, user_id)';
-  end if;
-
-  -- (7) Triggers.
+  --
+  --     Checked by the COLUMNS on both sides, not by "it has two of them": a
+  --     constraint with the right name, the right arity and the wrong columns
+  --     would pass a nominal check and protect nothing.
   for missing in
-    select tg from unnest(array['trg_recurrence_instance_compat',
-                                'trg_recurrence_sync_schedule_and_pauses',
-                                'trg_recurrence_reconstruct_from_default']) as tg
+    select t.child from (values
+      ('recurrence_schedule_versions', 'recurrence_schedule_versions_recurrence_fk'),
+      ('recurrence_pauses',            'recurrence_pauses_recurrence_fk')
+    ) as t(child, cname)
     where not exists (
-      select 1 from pg_trigger where tgname = tg and not tgisinternal
+      select 1
+        from pg_constraint con
+       where con.conrelid = ('public.' || t.child)::regclass
+         and con.conname  = t.cname
+         and con.contype  = 'f'
+         and con.confrelid = 'public.recurrences'::regclass
+         and con.confdeltype = 'c'  -- ON DELETE CASCADE
+         -- Local columns, in order: (recurrence_id, user_id).
+         and (select array_agg(a.attname::text order by k.ord)
+                from unnest(con.conkey) with ordinality as k(attnum, ord)
+                join pg_attribute a
+                  on a.attrelid = con.conrelid and a.attnum = k.attnum)
+             = array['recurrence_id', 'user_id']
+         -- Referenced columns, in order: (id, user_id).
+         and (select array_agg(a.attname::text order by k.ord)
+                from unnest(con.confkey) with ordinality as k(attnum, ord)
+                join pg_attribute a
+                  on a.attrelid = con.confrelid and a.attnum = k.attnum)
+             = array['id', 'user_id']
     )
   loop
-    raise exception 'trigger % no existe (migración 0064)', missing;
+    raise exception 'the FK from % to recurrences is not (recurrence_id, user_id) -> (id, user_id) ON DELETE CASCADE: a user could attach their user_id to somebody else''s rule', missing;
+  end loop;
+
+  -- (7) Triggers, checked by TABLE, FUNCTION and EVENTS — not by name. A trigger
+  --     called `trg_recurrence_reconstruct_from_guard` that only fires on INSERT
+  --     is the exact hole this section exists to catch: `reconstruct_from` is the
+  --     floor of what the generator reconstructs, `recurrences` has had a user
+  --     UPDATE policy since 0011, and the generated types expose the column in
+  --     `Update`. Moving that floor backwards fabricates months of backlog;
+  --     moving it forwards hides occurrences the user is owed.
+  for missing in
+    select t.tg from (values
+      ('trg_recurrence_instance_compat',          'recurrence_instances', 'recurrence_instance_compat',          true,  true,  false),
+      ('trg_recurrence_sync_schedule_and_pauses', 'recurrences',          'recurrence_sync_schedule_and_pauses', true,  true,  false),
+      ('trg_recurrence_reconstruct_from_guard',   'recurrences',          'recurrence_reconstruct_from_guard',   true,  true,  false)
+    ) as t(tg, tbl, fn, want_insert, want_update, want_delete)
+    where not exists (
+      select 1
+        from pg_trigger tr
+        join pg_proc pr on pr.oid = tr.tgfoid
+       where tr.tgname = t.tg
+         and not tr.tgisinternal
+         and tr.tgrelid = ('public.' || t.tbl)::regclass
+         and pr.proname = t.fn
+         and ((tr.tgtype & 4)  <> 0) = t.want_insert   -- INSERT
+         and ((tr.tgtype & 16) <> 0) = t.want_update   -- UPDATE
+         and ((tr.tgtype & 8)  <> 0) = t.want_delete   -- DELETE
+    )
+  loop
+    raise exception 'trigger % is missing, or sits on another table/function, or no longer fires on the events it must (migration 0064)', missing;
   end loop;
 
   -- (8) THE DATABASE IS THE SOLE OWNER of the new history. The two writer
@@ -656,23 +684,23 @@ begin
   --     database owns it" from a convention into a guarantee.
   for missing in
     select fn from unnest(array['recurrence_sync_schedule_and_pauses',
-                                'recurrence_reconstruct_from_default']) as fn
+                                'recurrence_reconstruct_from_guard']) as fn
   loop
     select p.prosecdef into v_secdef
       from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
      where ns.nspname = 'public' and p.proname = missing;
     if v_secdef is null then
-      raise exception 'función public.% no existe (migración 0064)', missing;
+      raise exception 'function public.% does not exist (migration 0064)', missing;
     end if;
     if not v_secdef then
-      raise exception 'public.% debe ser SECURITY DEFINER: las tablas son de solo lectura para authenticated', missing;
+      raise exception 'public.% must be SECURITY DEFINER: the tables are read-only for authenticated', missing;
     end if;
     if not exists (
       select 1 from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
        where ns.nspname = 'public' and p.proname = missing
          and array_to_string(p.proconfig, ',') like '%search_path=%'
     ) then
-      raise exception 'public.% es SECURITY DEFINER sin search_path fijo', missing;
+      raise exception 'public.% is SECURITY DEFINER without a locked search_path', missing;
     end if;
   end loop;
 
@@ -685,7 +713,7 @@ begin
        and p.tablename in ('recurrence_schedule_versions', 'recurrence_pauses')
        and p.cmd <> 'SELECT'
   loop
-    raise exception 'policy de escritura % sobre el historial: lo mantienen los triggers, no el cliente', missing;
+    raise exception 'write policy % on the history: the triggers maintain it, not the client', missing;
   end loop;
 
   -- (10) Data invariants the constraints alone do not state.
@@ -693,7 +721,7 @@ begin
     from public.recurrence_instances
    where (due_date is null) <> due_date_is_unknown;
   if v_offend > 0 then
-    raise exception 'recurrence_instances: % filas donde due_date_is_unknown no coincide con due_date', v_offend;
+    raise exception 'recurrence_instances: % rows where due_date_is_unknown disagrees with due_date', v_offend;
   end if;
 
   select count(*) into v_offend
@@ -702,10 +730,10 @@ begin
      select 1 from public.recurrence_schedule_versions v where v.recurrence_id = r.id
    );
   if v_offend > 0 then
-    raise exception 'recurrences: % reglas sin ninguna versión de cronograma — el caminante no sabría qué calendario rigió', v_offend;
+    raise exception 'recurrences: % rules with no schedule version — the walker would not know which calendar applied', v_offend;
   end if;
 
-  raise notice '✓ 8.1J — identidad de ocurrencia (0064): columnas, tablas, índices, FK compuestas, triggers y dueño único OK; el índice de pendiente única sigue vivo';
+  raise notice '✓ 8.1J — occurrence identity (0064): columns, tables, indexes, composite FKs, triggers and sole ownership OK; the single-pending index is still alive';
 end $$;
 
 

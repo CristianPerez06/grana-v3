@@ -177,6 +177,25 @@ que habilita el backlog.
       default y el placeholder de `reconstruct_from`, los invariantes de datos, y —clave en una
       expansión— que `recurrence_instances_one_pending_per_rule` **siga vivo**. Cada aserción se
       probó también en negativo: rompiendo el objeto, la sección falla con su mensaje.
+      **Segundo defecto, más grave, encontrado en la revisión:** el trigger corría solo
+      `BEFORE INSERT`, y `recurrences` tiene policy de UPDATE del usuario desde `0011`, así que
+      cualquier cliente autenticado podía escribir `reconstruct_from` — moverlo hacia atrás
+      **fabrica meses de atraso de la nada**, y hacia adelante **oculta ocurrencias que el usuario sí
+      tiene**; ninguna de las dos se ve en la UI. Ahora es `BEFORE INSERT OR UPDATE`: en INSERT
+      deriva, en UPDATE rechaza cualquier cambio con `SQLSTATE 23514`. No es una policy de RLS porque
+      RLS da o niega la fila entera y el usuario sí edita importe, descripción y estado en el mismo
+      UPDATE: congelar UNA columna es trabajo de trigger. Se renombró a
+      `trg_recurrence_reconstruct_from_guard` —la coda de esta misma migración advierte contra
+      nombres que esconden una regla permanente— y una migración futura que necesite mover el piso
+      puede `disable trigger` alrededor de la escritura, que es deliberado y auditable. Regresión
+      persistente en `apps/web/lib/recurrences/__tests__/reconstruct-from-guard.test.ts` (9 casos
+      sobre PGlite, **corriendo como el usuario**, no como superusuario): el update legítimo sigue
+      andando, los cuatro ataques —atrás, adelante, `±infinity`, y colado dentro de un update
+      legítimo— se rechazan, reescribir el mismo valor es no-op, y pausar no mueve el piso.
+      `validate_schema.sql` ahora comprueba **tabla, función y eventos** de cada trigger y las
+      **columnas exactas de las dos FK compuestas**, no solo que exista algo con ese nombre: probado
+      en negativo devolviendo el guard a solo-INSERT, invirtiendo las columnas de una FK y apuntando
+      un trigger a otra función. Los mensajes de 8.1J quedaron en inglés, como declara el bloque.
 
 ## 2. El backlog existe y se puede resolver
 
