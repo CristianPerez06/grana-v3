@@ -183,35 +183,40 @@ que habilita el backlog.
       paso acotado.
 - [ ] 1.10b **A decidir antes del generador:** el caminante ancla las ocurrencias en `start_date`,
       mientras `decideRecurrenceInstance` hace hoy `addInterval(cursor, …)`. Coinciden mientras el
-      cursor caiga sobre el cronograma —el caso normal—, y divergen por unos días cuando no.
-      Anclar en el calendario es lo correcto (no depende de cuándo se resolvió la última ocurrencia),
-      pero hay que confirmar que ninguna regla de producción tenga hoy el cursor fuera de cronograma
-      antes de cambiar la semántica. La auditoría decide **con tiempo**, pero su respuesta es una
-      foto: entre correrla y aplicar `0064` una sola edición alcanza para crear una regla desfasada.
-      Por eso la migración **revalida el invariante en su propia transacción** (sección 4b) y aborta
-      con el detalle si cambió — la consulta sirve para decidir, la migración para garantizar, y las
-      dos miden **lo mismo**. La columna que decide es **`con_proxima_distinta`**, no
-      `fuera_de_cronograma`: el cursor puede estar desalineado y la regla producir igual la fecha del
-      calendario, y al revés, una próxima fecha que SÍ está en el cronograma puede no ser la que el
-      calendario daría —mensual del día 10 con cursor `2026-02-05` da `2026-03-10`, el calendario
-      diría `2026-02-10`—. `fuera_de_cronograma` queda como diagnóstico. Regresión persistente de la
-      guardia en `packages/recurrences/__tests__/migration-0064-phase-guard.test.ts` (5 casos),
-      incluido ese caso exacto, que es el que atrapa si alguien afloja el criterio: revirtiendo 4b al
-      criterio débil, ese test —y solo ese— falla. Cruzado además contra la auditoría sobre los
-      mismos datos: con cuatro reglas sembradas, la consulta devuelve `fuera_de_cronograma = 3` y
-      `con_proxima_distinta = 2`, y la migración aborta nombrando **esas mismas 2**, con las mismas
-      fechas; la tercera —cursor desalineado pero próxima idéntica— no se marca en ninguna de las dos.
-      Cada caso levanta su Postgres en el CUERPO del test (cada uno siembra un estado pre-migración
-      distinto), así que llevan un `testTimeout` propio: falló una vez en la corrida completa del
-      monorepo y pasaba aislado. El default del paquete queda intacto — subirlo global le compraría
-      margen a este archivo escondiendo un cuelgue real en todos los demás. Las cinco unidades
-      cubiertas —día, **semana**, mes, año y el inicio movido—, y **todas las bases PGlite del
-      paquete se cierran** (`finally` en los casos que la abren en el cuerpo, `afterAll` en los que
-      la abren en un hook): sin eso se acumulaban instancias WASM durante toda la corrida, que es
-      justamente el tipo de fuga que después aparece como un archivo ajeno que expira. Documentado en `walk-positioning.test.ts`. **Ninguna forma de
-      regla es inmune**: `anchorDate` restaura el día del mes, no la fase de meses ni de años, y mover
-      `start_date` sin tocar el cursor lo deja antes del inicio, lo que desfasa hasta una regla
-      mensual o diaria de intervalo 1. La misma auditoría decide 1.7.
+      cursor caiga sobre el cronograma —el caso normal—, y divergen cuando no. Anclar en el calendario
+      es lo correcto (no depende de cuándo se resolvió la última ocurrencia), pero hay que confirmar
+      contra producción que el cambio no mueva una fecha que el usuario ya está viendo. Documentado en
+      `walk-positioning.test.ts`.
+      **Ninguna forma de regla es inmune:** `anchorDate` restaura el día del mes, no la fase de meses
+      ni de años, y mover `start_date` sin tocar el cursor lo deja antes del inicio, lo que desfasa
+      hasta una regla mensual o diaria de intervalo 1.
+      **La columna que decide es `con_proxima_distinta`**, no `fuera_de_cronograma`. No son
+      equivalentes en ninguna de las dos direcciones: el cursor puede estar desalineado y la regla
+      producir igual la fecha del calendario; y al revés, una próxima fecha que SÍ está en el
+      cronograma puede no ser la que el calendario daría —mensual del día 10 con cursor `2026-02-05`
+      da `2026-03-10`, el calendario diría `2026-02-10`, un mes de diferencia—.
+      `fuera_de_cronograma` queda como diagnóstico, no autoriza nada. La misma auditoría decide 1.7,
+      con `con_tope_sin_ordinal`.
+      **La auditoría decide, la migración garantiza.** Su respuesta es una foto: entre correrla y
+      aplicar `0064` una sola edición alcanza para crear una regla desfasada, así que la migración
+      revalida el invariante **en su propia transacción** (sección 4b) y aborta con el detalle si
+      cambió. Las dos miden lo mismo a propósito — misma cuenta, misma ventana de candidatas —: una
+      guardia más angosta que lo que se decidió es peor que ninguna.
+      **Regresión persistente** en `packages/recurrences/__tests__/migration-0064-phase-guard.test.ts`
+      (5 casos). Incluye el caso del `2026-02-05`, que es el que atrapa si alguien afloja el criterio:
+      revirtiendo 4b al débil, ese test —y solo ese— falla. Las cinco reglas desfasadas cubren las
+      **cuatro** unidades —día, semana, mes y año— más el inicio movido, que no es una unidad sino el
+      otro mecanismo de desfase. Cruzado contra la auditoría sobre los mismos datos: con cuatro reglas
+      sembradas, la consulta devuelve `fuera_de_cronograma = 3` y `con_proxima_distinta = 2`, y la
+      migración aborta nombrando **esas mismas 2** con las mismas fechas; la tercera —cursor
+      desalineado, próxima idéntica— no se marca en ninguna.
+      Cada caso levanta su Postgres en el CUERPO del test, porque cada uno siembra un estado
+      pre-migración distinto, así que llevan un `testTimeout` propio: falló una vez en la corrida
+      completa del monorepo y pasaba aislado. El default del paquete queda intacto — subirlo global le
+      compraría margen a este archivo escondiendo un cuelgue real en todos los demás. Y **todas las
+      bases PGlite del paquete se cierran** (`finally` donde se abren en el cuerpo, `afterAll` donde
+      se abren en un hook): sin eso se acumulan instancias WASM toda la corrida, que es justamente el
+      tipo de fuga que después aparece como un archivo ajeno que expira.
 - [x] 1.0 **Sincronizar con `main`** antes de seguir: la branch quedó 12 commits atrás y
       redescubrió un defecto que **#114** ya había arreglado (los tests de `packages/` no corrían;
       ahora `pnpm -r test`). Colisión de migraciones resuelta: `main` ocupó `0061`–`0063`, así que la
