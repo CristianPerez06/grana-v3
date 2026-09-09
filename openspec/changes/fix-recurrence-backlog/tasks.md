@@ -435,7 +435,8 @@ que habilita el backlog.
 Nada de esto se descarta ni se pierde: sale de **esta** entrega para que el arreglo del #96 llegue a
 producción y se pueda probar contra el uso real. Cada bloque conserva el texto con el que se analizó,
 para que el change que lo tome no empiece de cero. **No son tareas de este change**, por eso van sin
-casilla.
+casilla — y los nombres de change son destinos previstos, no changes a crear ahora: cada uno se abre
+cuando se priorice.
 
 ### → `recurrence-early-payment`
 
@@ -571,7 +572,3 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       compatibilidad, o reemplazarlo por un guard con nombre propio.
 - [ ] 5.5 Cerrar **#96** y **#118** con esta entrega — el #118 lo cierra la tarea 2.2b, que es el
       mismo código. **#104 ya no cierra acá**: se movió a `recurrence-undo` (etapa 3).
-- [ ] 5.6 Abrir los changes de la etapa 3 con el material que salió de esta entrega, para que el
-      análisis no se pierda: `recurrence-early-payment`, `recurrence-link-movement`,
-      `recurrence-undo`, `recurrence-history`, `recurrence-catch-up`, `recurrence-review-ux` y
-      `recurrence-server-generation`.

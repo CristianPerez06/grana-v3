@@ -123,8 +123,11 @@ Son cuatro instantes y cada uno vive en su propio campo:
 Una ocurrencia **sin resolver** tiene vencimiento y nada más: todavía no hubo pago, así que no puede
 tener fecha de pago.
 
-**Vas a poder:** corregir importe, fecha y cuenta al registrar, sin que eso reescriba la regla ni el
-vencimiento.
+**Vas a poder:** en **web**, corregir importe, fecha y cuenta al registrar, sin que eso reescriba la
+regla ni el vencimiento. En **nativo** el registro usa los valores de la regla: lo que esta entrega
+lleva a nativo es que el vencimiento exista, se vea y se pueda resolver, no el formulario editable.
+Lo que **no** cambia por plataforma es la garantía: el vencimiento se conserva y el importe de la
+regla no se toca, se registre desde donde se registre.
 
 **Se comprueba:** registrar el pago de junio con fecha de septiembre; el vencimiento sobrevive, junio
 no se regenera, y el importe de la regla no cambia.
@@ -175,14 +178,18 @@ próximo vencimiento es el 23 de septiembre y no aparece ninguno de junio, julio
 
 ### Y en las dos plataformas
 
-Los seis comportamientos SHALL estar disponibles en **web y en la app nativa**. Hoy no lo están: el
+Los seis comportamientos SHALL ser observables en **web y en la app nativa**. Hoy no lo están: el
 feed nativo muestra el bloque de pendientes pero **ni siquiera dispara la generación**, así que las
 ocurrencias dependen de haber abierto el hub. La lógica vive en `@grana/recurrences` y
 `@grana/money-logic`; lo que cambia por plataforma es la UI.
 
 Lo que esta entrega lleva a nativo es la **materialización** y el **bloque de vencimientos por
-revisar**. La paridad completa del formulario de resolución —importe, fecha y cuenta editables, más
-la advertencia de saldo negativo que hoy solo existe en web— queda para `recurrence-review-ux`.
+revisar**: que un vencimiento exista, se vea y se pueda resolver deja de depender de la plataforma.
+
+Lo que **sigue siendo distinto** —y conviene decirlo acá, porque los seis comportamientos no lo
+tapan—: el formulario de resolución nativo no deja editar importe, fecha ni cuenta, y no muestra la
+advertencia de saldo negativo que sí tiene web. Quien necesite corregir algo al registrar lo hace
+desde web. La paridad completa es `recurrence-review-ux`.
 
 ### Y los clientes que no se actualizan
 

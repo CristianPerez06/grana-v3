@@ -44,10 +44,9 @@ como fecha de pago, porque un cliente anterior al despliegue puede sobrescribirl
 ocurrencia, y en las ocurrencias históricas conserva un valor que no es un vencimiento confiable.
 
 El sistema SHALL registrar además **cómo** se resolvió cada ocurrencia: con un movimiento **creado**
-por la recurrencia, o con un movimiento preexistente **vinculado** por el usuario. El dato se registra
-desde esta entrega aunque todavía no exista quien lo consuma: sin él, deshacer no puede distinguir
-borrar un movimiento que la recurrencia creó de desvincular uno del usuario, y esa distinción no se
-puede reconstruir después.
+por la recurrencia, o con un movimiento preexistente **vinculado** por el usuario. Ese dato SHALL
+escribirse en el momento de resolver, porque no es reconstruible después: es lo único que distingue un
+movimiento que el sistema produjo de uno que ya era del usuario.
 
 Resolver una ocurrencia —registrando un pago, vinculando un movimiento existente u omitiéndola— NO
 SHALL alterar el cursor de generación de la regla. El sistema SHALL derivar qué falta materializar
@@ -133,8 +132,8 @@ y NO SHALL recuperarlas al reanudarla: pausar significa que la regla no está co
 sigue devengando para cobrarse junta después.
 
 Las ocurrencias que ya existían **antes** de la pausa SHALL seguir visibles y resolubles, de modo que
-el usuario pueda registrarlas u omitirlas. El sello visual que las señala como pertenecientes a una
-regla pausada queda fuera de esta entrega; que sigan estando y se puedan resolver, no.
+el usuario pueda registrarlas u omitirlas: pausar una regla NO SHALL ocultarlas ni resolverlas por su
+cuenta.
 
 Al reanudar, el sistema SHALL tomar el **próximo vencimiento futuro respetando el calendario
 original** de la regla, sin desplazarlo por la duración de la pausa.
@@ -171,8 +170,7 @@ atrás, inclusive**, calculado con la **fecha financiera argentina**. El horizon
 viejo en cualquier momento.
 
 Las ocurrencias anteriores al horizonte NO SHALL materializarse. El sistema NO SHALL afirmar que el
-período tiene información incompleta: esos pagos pueden haberse registrado a mano en su momento. El
-aviso que nombra **en la recurrencia** desde cuándo reconstruyó queda fuera de esta entrega.
+período tiene información incompleta: esos pagos pueden haberse registrado a mano en su momento.
 
 El horizonte NO acota por sí solo el volumen —doce meses de una regla diaria son unas 365
 ocurrencias—, así que la materialización SHALL hacerse por **tandas acotadas**: abrir una pantalla NO
@@ -293,18 +291,21 @@ El sistema SHALL permitir registrar el pago de una ocurrencia recurrente. Al reg
 SHALL crear una transacción real usando el mismo contrato de creación que usa un movimiento manual
 del mismo tipo, y la ocurrencia SHALL quedar vinculada a la transacción creada.
 
-El usuario SHALL poder ajustar **fecha de pago, importe y cuenta** al registrar. La fecha que elija
-SHALL ser la del movimiento y NO SHALL sobrescribir el vencimiento de la ocurrencia, que se conserva.
-La cuenta SHALL ser un override de esa ocurrencia y NO SHALL redefinir la cuenta de la regla. El
-importe SHALL comportarse igual: afecta solo a esa ocurrencia y NO SHALL reescribir el de la regla.
+**En web**, el usuario SHALL poder ajustar **fecha de pago, importe y cuenta** al registrar, y SHALL
+recibir la advertencia correspondiente si la cuenta quedara en negativo. **En la app nativa**, el
+registro SHALL usar los valores propuestos por la regla, sin edición.
+
+Cualquiera sea la plataforma y el valor con que se registre: la fecha SHALL ser la del movimiento y NO
+SHALL sobrescribir el vencimiento de la ocurrencia, que se conserva. La cuenta SHALL ser un override
+de esa ocurrencia y NO SHALL redefinir la cuenta de la regla. El importe SHALL comportarse igual:
+afecta solo a esa ocurrencia y NO SHALL reescribir el de la regla.
 
 Registrar un pago NO SHALL avanzar el cursor de generación de la regla: la ocurrencia queda resuelta
 por su propia identidad, de modo que registrar pagos en cualquier orden es seguro.
 
-La paridad completa del formulario de resolución en la app nativa —importe, fecha y cuenta editables,
-más la advertencia de saldo negativo que hoy solo existe en web— queda fuera de esta entrega. Lo que
-SHALL estar en las dos plataformas es la **materialización** del atraso y el **bloque de vencimientos
-por revisar**.
+Lo que SHALL estar disponible por igual en web y en la app nativa es la **materialización** del
+atraso y el **bloque de vencimientos por revisar**: que una ocurrencia exista, se vea y se pueda
+resolver NO SHALL depender de la plataforma.
 
 #### Scenario: Registrar un pago con otra fecha conserva el vencimiento
 
@@ -340,10 +341,10 @@ El sistema SHALL permitir omitir una ocurrencia recurrente. Omitir SHALL resolve
 transacción y sin modificar saldos ni resúmenes, y SHALL significar que **ese período no
 corresponde** — no que hubo un error de carga.
 
-Omitir SHALL ser una operación distinta de **deshacer la resolución** de una ocurrencia, que devuelve
-la ocurrencia al estado *sin resolver* y NO a omitido. Deshacer NO se implementa en esta entrega
-—queda en `recurrence-undo`, junto con el #104—, pero el sistema SHALL registrar desde ahora **cómo**
-se resolvió cada ocurrencia, porque esa distinción no se puede reconstruir después.
+Omitir SHALL ser una operación distinta de **deshacer la resolución** de una ocurrencia: deshacer
+devuelve la ocurrencia al estado *sin resolver*, nunca a omitida, porque eso afirmaría que el período
+no correspondía cuando el usuario solo se equivocó. El sistema SHALL registrar **cómo** se resolvió
+cada ocurrencia, que es el dato del que depende esa distinción.
 
 Omitir una ocurrencia NO SHALL impedir que se materialicen ni se resuelvan las siguientes.
 

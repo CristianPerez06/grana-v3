@@ -55,15 +55,19 @@ indican, para que el change que lo tome no empiece de cero):
 
 **Non-Goals**
 
-- Recordatorios, push y mail. Necesitan la generación del lado del servidor, que acá llega en su forma
-  mínima; el sistema de avisos es su propio change.
+- Recordatorios, push y mail. Necesitan la generación del lado del servidor, que **no entra acá**: el
+  mínimo cubre al cliente viejo con un gate de versión, y generar del lado del servidor es
+  `recurrence-server-generation`. El sistema de avisos es su propio change, encima de aquél.
 - Registro automático de débitos. Ver decisión 6.
 - Ajuste de importes por índice, importes estimados, calendarios avanzados, pausa con fecha.
 - Crear movimientos históricos automáticamente, o reconstruir vencimientos anteriores al horizonte.
   Ver decisión 7.
 - **Retirar `scheduled_date`.** Se conserva escribiéndose en paralelo; su eliminación es una entrega
   posterior, cuando ya no queden clientes nativos instalados que lo usen. Ver decisión 17.
-- El doble conteo de Compromisos (#118): independiente, ticket propio.
+No es non-goal, aunque una versión anterior lo listaba como tal: **el doble conteo de Compromisos
+(#118) se cierra en esta entrega**. El arreglo es el mismo código —que el dashboard, el "próximo" y la
+proyección lean los vencimientos existentes en vez de proyectarlos desde el cursor, tarea `2.2b`—, así
+que dejarlo afuera obligaba a tocar dos veces las mismas funciones.
 
 ## Decisions
 
@@ -215,8 +219,8 @@ total cuenta las instancias materializadas `pending` **y** `confirmed`.
 
 - **Etapa 1 (en este change):** que la materialización corra en cualquier pantalla de la app, en web y
   en nativo, en vez de solo en `/transactions` y el hub. Es chico y tapa la mayor parte del síntoma.
-- **Etapa 2 (fuera):** un proceso del lado del servidor (`pg_cron` o equivalente) que corra sin que
-  nadie abra la app. Es condición para los avisos y para que las recurrencias compartidas del hogar
+- **Etapa 2 (fuera, `recurrence-server-generation`):** un proceso del lado del servidor (`pg_cron` o
+  equivalente) que corra sin que nadie abra la app. Es condición para los avisos y para que las recurrencias compartidas del hogar
   se materialicen sin depender de qué miembro entró. `pg_cron` es *una* arquitectura posible, no un
   requisito; la elección es del change que lo traiga.
 
@@ -748,8 +752,12 @@ Tres cosas concretas que "por tandas" no define:
 ## Risks / Trade-offs
 
 - **La app se va a ver más cargada.** Reglas hoy trabadas van a mostrar varios vencimientos. Es el
-  dato real apareciendo. Mitigación: agrupar, rotular "por revisar" y ofrecer resolución en bloque
-  desde el primer día — no después.
+  dato real apareciendo. Lo que el mínimo pone del lado del usuario es el rótulo **"vencimientos por
+  revisar"**, que no afirma deuda, y que cada uno se resuelva por separado. Agrupar por regla y la
+  resolución en bloque **no llegan con esta entrega**: son `recurrence-review-ux` y
+  `recurrence-catch-up`. **El riesgo queda asumido, no mitigado**: un atraso largo se va a ver como
+  una lista larga, y ponerse al día va a ser vencimiento por vencimiento. Es el precio explícito de
+  entregar el arreglo antes que la comodidad.
 - **Migración con datos vivos.** El vencimiento original de las instancias ya confirmadas **no es
   recuperable**, así que no se deriva ni se aproxima: quedan con `due_date = NULL` y
   `due_date_is_unknown` (decisión 23), conservando `scheduled_date` como único dato legado. Afecta
