@@ -119,45 +119,52 @@ export function decideRecurrenceInstance(
   rule: RuleForDecision,
   today: string,
   hasPending: boolean,
-  // Instances already materialized for the rule (any status). TRANSITIONAL: it
-  // is the cap's fallback for a rule whose cursor sits off its own schedule,
-  // and it goes away once the cursor-phase audit closes 1.10b. See step 5.
-  materializedCount = 0,
 ): GenerationDecision {
   // 1. Skip if there's already a pending instance for this rule. The DB-level
   //    UNIQUE INDEX recurrence_instances_one_pending_per_rule enforces this
   //    invariant; we also short-circuit it here to avoid useless inserts.
   if (hasPending) return { generate: false, reason: 'has_pending' }
 
-  // 2. Compute the next occurrence anchored to start_date so the day-of-month
-  //    is preserved across short months (e.g. monthly rule starting on 31
-  //    becomes 28/29 in February but goes back to 31 the next month).
   const { count, unit } =
     rule.interval_count != null && rule.interval_unit != null
       ? { count: rule.interval_count, unit: rule.interval_unit }
       : presetToInterval(rule.frequency ?? 'monthly')
-  // The same calendar the projection and the "próximo" walk. `max_occurrences`
-  // is deliberately left out: the cap is applied below, against the ordinal,
-  // and a capped schedule would make the ordinal lookup stop short of the very
-  // date we are asking about.
+  // The rule's calendar, and only the calendar. `end_date` and `max_occurrences`
+  // are deliberately left out: both are applied below, with their own reason, and
+  // a schedule carrying them would make the walk stop short of the very date we
+  // are asking about.
   const schedule: OccurrenceSchedule = {
     start_date: rule.start_date,
-    end_date: rule.end_date,
+    end_date: null,
     interval_count: count,
     interval_unit: unit,
     max_occurrences: null,
   }
-  // First instance of a directly-created rule (no seed transaction): when
-  // last_generated_date is null, the first occurrence falls ON start_date — we
-  // do NOT add an interval. Rules created from a movement or a suggestion carry
-  // a non-null last_generated_date (the seed already covers start_date), so they
-  // advance by one interval as before.
-  const nextDate =
-    rule.last_generated_date == null
-      ? rule.start_date
-      : addInterval(rule.last_generated_date, unit, count, {
-          anchorDate: rule.start_date,
-        })
+
+  // 2. The next occurrence is READ OFF THE CALENDAR — the first one strictly
+  //    after the cursor — and no longer resumed from the cursor with
+  //    `addInterval(cursor, …)`.
+  //
+  //    The two agree whenever the cursor sits on the rule's own schedule, which
+  //    the cursor-phase audit measured against production: of 61 rules with a
+  //    cursor, ZERO had it off schedule and ZERO produced a different next date.
+  //    So this is behaviour-preserving today, and it is the definition that stays
+  //    correct tomorrow: the calendar does not depend on WHEN the last occurrence
+  //    happened to be resolved, while the cursor does. Migration 0064 re-checks
+  //    the same invariant in its own transaction and aborts if it stopped holding
+  //    (§4b), so the two can never drift apart silently.
+  //
+  //    With no cursor the first occurrence falls ON `start_date` — a directly
+  //    created rule is owed its own start date — and `walkOccurrences` emits it
+  //    because the window opens there and there is nothing to be strictly after.
+  //    A rule seeded from a movement carries a cursor on `start_date`, so the
+  //    seed is not proposed a second time.
+  const [nextDate] = walkOccurrences(schedule, {
+    from: rule.start_date,
+    cursor: rule.last_generated_date,
+    limit: 1,
+  })
+  if (nextDate == null) return { generate: false, reason: 'not_due' }
 
   // 3. If the next date is still in the future, nothing to do yet.
   if (nextDate > today) return { generate: false, reason: 'not_due' }
@@ -171,48 +178,24 @@ export function decideRecurrenceInstance(
 
   // 5. Stop once the rule has produced its maximum number of occurrences.
   //
-  //    The cap is counted ON THE CALENDAR — `nextDate`'s own ordinal from
-  //    `start_date` — and NOT by counting rows in `recurrence_instances`.
-  //    Counting rows gave the cap a different meaning on every surface, because
-  //    an occurrence can exist without a row: a rule created from a movement is
-  //    seeded by that movement, which covers `start_date` and materializes no
-  //    instance. So with a cap of 3, the row count reached 3 only after three
-  //    MORE occurrences, and the rule produced four in total — while the
-  //    projection and the "próximo", which both walk the calendar, stopped at
-  //    three. The extra one appeared as a pending instance on a date the
-  //    projection had never announced.
+  //    The cap is `nextDate`'s own ordinal from `start_date`, and NOT a count of
+  //    rows in `recurrence_instances`. Counting rows gave the cap a different
+  //    meaning on every surface, because an occurrence can exist without a row: a
+  //    rule created from a movement is seeded by that movement, which covers
+  //    `start_date` and materializes no instance. With a cap of 3 the row count
+  //    reached 3 only after three MORE occurrences, so the rule produced four,
+  //    while the projection and the "próximo" — both of which walk the calendar —
+  //    stopped at three. The extra one showed up as a pending instance on a date
+  //    the projection had never announced.
   //
-  //    The ordinal is the single number: it does not depend on what the user
-  //    resolved, on what a client wrote, or on rows being deleted. But it only
-  //    exists if `nextDate` is on the schedule, and it may not be —
-  //    `addInterval` resumes the cadence FROM the cursor, and NO shape of rule
-  //    is immune. Two independent mechanisms take it off:
-  //
-  //      · PHASE. `anchorDate` restores the DAY OF MONTH, not the phase of
-  //        months or years. Every 2 months from 2026-01-01 with the cursor at
-  //        2026-02-10 gives 2026-04-01, against a schedule of 01-01, 03-01,
-  //        05-01. A yearly rule whose cursor landed in another month drifts the
-  //        same way.
-  //      · A MOVED START. `updateRecurrence` moves `start_date` without touching
-  //        the cursor, leaving the cursor BEFORE the start. New start
-  //        2026-06-15 with the cursor at 2026-01-10 gives 2026-02-15 — earlier
-  //        than the rule itself. This hits even a monthly or daily rule of
-  //        interval 1, which phase alone could never drift.
-  //
-  //    So the check is on the date, never on the shape of the rule.
-  //
-  //    While the phase is unknown the cap CANNOT be read off the calendar —
-  //    rounding to the next occurrence would charge this one against a date it
-  //    is not, and drop a due date the rule was owed. Until the cursor-phase
-  //    audit closes 1.10b, such a rule keeps the behaviour it has today, the
-  //    row count, so nothing changes for it either way.
+  //    The ordinal is now the single number, with no fallback behind it: step 2
+  //    reads `nextDate` off the calendar, so it is an occurrence by construction
+  //    and always has one. There is no longer a case where the cap cannot be read.
   if (rule.max_occurrences != null) {
     const ordinal = occurrenceOrdinal(schedule, nextDate)
-    const reached =
-      ordinal != null
-        ? ordinal > rule.max_occurrences
-        : materializedCount >= rule.max_occurrences
-    if (reached) return { generate: false, reason: 'max_occurrences_reached' }
+    if (ordinal == null || ordinal > rule.max_occurrences) {
+      return { generate: false, reason: 'max_occurrences_reached' }
+    }
   }
 
   return { generate: true, scheduled_date: nextDate }
