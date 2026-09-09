@@ -109,8 +109,21 @@ que habilita el backlog.
       las pausas y las tandas acotadas (`2.1b`, `2.1d`, `2.1`). **No son dos despliegues.** Un
       generador que ya reconstruye desde el piso pero todavía ignora las versiones y las pausas le
       fabricaría atraso a una regla pausada o con la frecuencia editada — justo las que la decisión 16
-      protege. Con el índice de pendiente única todavía vivo materializa una sola por corrida y se
-      come el resto en silencio: degradado, no roto, y sin cambio visible para el usuario;
+      protege.
+      **DECISIÓN ABIERTA, a resolver antes de cerrar `2.1`: cómo se comporta el generador múltiple
+      entre este despliegue y el paso (5).** Con el índice de pendiente única todavía vivo, un insert
+      de 29 filas es UNA sentencia: la primera violación de unicidad **rechaza el lote entero**, así
+      que no materializa una y se come el resto — no materializa **ninguna**. (Una versión anterior de
+      esta nota decía «degradado, no roto»; era falso, y venía de suponer el insert fila por fila que
+      hace el generador de hoy, no las tandas acotadas que pide `2.1`.) Hay que elegir explícitamente
+      una de estas, y dejarla escrita: **(a)** que el generador nuevo emita como máximo una ocurrencia
+      por regla hasta la activación, con el tope como parámetro y no como bandera oculta; **(b)** que
+      el insert tolere el conflicto a nivel fila —`upsert` con `ignoreDuplicates` sobre una clave que
+      la base pueda usar como destino—, de modo que el lote entre igual y la base descarte lo que el
+      índice todavía no permite; o **(c)** acortar la ventana a cero desplegando código y activación
+      juntos, lo que contradice la cabecera de `0064` y por eso hoy no es la preferida. Ninguna se
+      elige por descarte: la que quede tiene que estar probada contra el harness **con el índice
+      todavía puesto**, que es el estado real durante la ventana;
       **(4)** migrar dashboard, «próximo», proyecciones y deshacer para que lean los vencimientos que
       ya existen y no el cursor;
       **(5) aplicar la ACTIVACIÓN** —la migración que retira `recurrence_instances_one_pending_per_rule`,

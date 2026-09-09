@@ -449,13 +449,20 @@ export async function confirmRecurrenceInstance(
   // explicit action ("use this amount from now on"), applied once.
   //
   // `last_generated_date` is still written for now (task 1.5). The cursor-phase
-  // audit that used to block this is DONE — 0 of 61 rules drifted — and the
-  // generator no longer picks the DATE from the cursor; it reads the calendar.
-  // What still depends on this write is four OTHER surfaces: the dashboard's
+  // audit that used to block this is DONE — 0 of 61 rules drifted.
+  //
+  // THE GENERATOR ITSELF still depends on this write. It no longer picks the
+  // DATE from the cursor — that comes off the calendar now — but it still asks
+  // the calendar for the first occurrence STRICTLY AFTER the cursor, so if this
+  // line went today the rule would be handed the same occurrence forever. That
+  // dependency ends when the generator switches to `reconstruct_from` plus the
+  // due dates that already exist (task 1.6).
+  //
+  // And four surfaces beyond the generator depend on it too: the dashboard's
   // no-double-count invariant (`packages/dashboard/src/queries.ts:841` spells it
   // out), the "próximo", the upcoming projection, and the undo in
-  // `thin-mutations.ts`. They have to start reading the due dates that already
-  // exist before this line can go, which is why it is the LAST step of the
+  // `thin-mutations.ts`. All of them have to start reading the due dates that
+  // already exist first, which is why dropping this write is the LAST step of the
   // deployment order in tasks.md.
   await supabase
     .from('recurrences')
