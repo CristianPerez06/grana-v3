@@ -201,10 +201,15 @@ export function decideRecurrenceInstance(
   return { generate: true, scheduled_date: nextDate }
 }
 
-// ── The occurrences a rule is owed (pure) ────────────────────────────────────
+// ── The occurrences a rule is owed, over ONE calendar segment (pure) ─────────
 //
-// THE question the generator asks, and the shape it has to be asked in: not "is
-// there one more?" but "which ones are missing?".
+// THE question the generator has to ask, and the shape it has to be asked in:
+// not "is there one more?" but "which ones are missing?".
+//
+// SCOPE, so this is not mistaken for the whole generator: it resolves a single
+// segment — one schedule, the one in force. Composing several of them is what
+// historical schedule versions and pause intervals need, and that lives in tasks
+// 2.1b and 2.1d, not here.
 //
 // The old question could only ever be answered once per rule, because the answer
 // was derived from a CURSOR that only moved when the user resolved something. A
@@ -224,10 +229,12 @@ export function decideRecurrenceInstance(
 //                    months). It limits the REBUILD, not what the user may
 //                    register by hand.
 //   today            Nothing in the future is owed yet.
-//   existing         The `due_date`s the rule already has, in ANY state. A
-//                    pending one is in here too: it exists, so it is not
-//                    missing — and that is the whole difference with the cursor,
-//                    which would also have blocked every date after it.
+//   existing         The `due_date`s the rule already has, in ANY state —
+//                    pending, skipped AND confirmed. What matters is that the
+//                    occurrence EXISTS, not how it ended: a pending one is not
+//                    created again, and a skipped one does not come back. That is
+//                    the whole difference with the cursor, which would also have
+//                    blocked every date after it.
 //
 // `end_date` and `max_occurrences` come in through the schedule and the walker
 // honours both: an occurrence past either is not owed.

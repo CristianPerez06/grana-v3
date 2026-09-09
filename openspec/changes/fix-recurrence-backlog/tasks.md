@@ -98,27 +98,42 @@ que habilita el backlog.
       **Qué hace falta antes:** que esas cuatro dejen de preguntarle al cursor y pasen a preguntarle
       al conjunto de `due_date` ya resueltos —el mismo criterio que usa `owedOccurrences`—, lo que a
       su vez necesita `0064` aplicada, porque `due_date` todavía no existe en producción. Es un cambio
-      coordinado de lectura, no la eliminación de dos escrituras, y el orden correcto es: aplicar
-      `0064` → migrar los cuatro lectores → recién entonces dejar de escribir el cursor. Mientras
-      tanto la columna se sigue escribiendo y **no hay daño**: el generador ya no la usa como fuente
-      de verdad (lee el calendario), así que la doble escritura es redundante, no contradictoria.
+      coordinado de lectura, no la eliminación de dos escrituras.
+      **ORDEN SEGURO, acordado, y esta tarea es el ÚLTIMO paso:**
+      **(1)** aplicar `0064`; **(2)** cablear el generador nuevo con `reconstruct_from` y **todas** las
+      identidades existentes, en lugar del cursor; **(3)** incorporar versiones de cronograma, pausas
+      y tandas de 50 (`2.1b`, `2.1d`, `2.1`); **(4)** migrar dashboard, «próximo», proyecciones y
+      deshacer para que lean los vencimientos existentes y no el cursor; **(5)** recién ahí dejar de
+      escribir `last_generated_date`.
+      Mientras tanto la columna se sigue escribiendo y **no hay daño**: el generador ya no la usa para
+      elegir la FECHA —eso lo decide el calendario—, aunque sí para saber desde dónde arrancar, así
+      que las cuatro superficies siguen leyendo un cursor que se mantiene correcto.
 - [ ] 1.6 `decideRecurrenceInstance` pierde el parámetro `hasPending` y pasa a devolver la **lista**
       de ocurrencias faltantes, derivada de `walkOccurrences` y del conjunto de `due_date` ya
       existentes.
-      **La lógica está hecha y probada; falta cablearla.** `owedOccurrences` vive en
-      `packages/money-logic/src/recurrences.ts` con 9 casos en `owed-occurrences.test.ts`: emite
-      estrictamente después del piso, la ventana de 12 meses acota la reconstrucción, `end_date` y
-      `max_occurrences` acotan la lista, y —el punto— **una pendiente sin resolver saca SU PROPIA
-      fecha y ninguna otra**, que es el #96 enunciado como propiedad. Incluye el caso exacto del
-      ticket (29 faltantes) y el de resolución fuera de orden, que con un cursor ni siquiera se podía
-      expresar.
-      **Lo que falta y por qué:** reemplazar `decideRecurrenceInstance` por esta función exige que el
-      generador pueda materializar más de una pendiente por regla, y el índice
-      `recurrence_instances_one_pending_per_rule` **sigue vivo a propósito** hasta la activación
-      (decisión 17). Cablearlo ahora haría que el generador intente 29 inserts y la base rechace 28.
-      El corte natural es la tarea 2.1, que materializa por tandas acotadas, ya del otro lado de la
-      activación. Hasta entonces `decideRecurrenceInstance` sigue como está — y ya lee la próxima
-      fecha del mismo caminante, así que no hay dos calendarios.
+      **Hecho el núcleo puro; el generador todavía NO lo usa.** `owedOccurrences`
+      (`packages/money-logic/src/recurrences.ts`, 9 casos en `owed-occurrences.test.ts`) resuelve
+      **un segmento de calendario**: dado un cronograma, un piso, un horizonte, un hoy y el conjunto
+      de vencimientos que ya existen, devuelve los que faltan. Emite estrictamente después del piso;
+      `end_date` y `max_occurrences` acotan la lista; y —el punto— **una pendiente sin resolver saca
+      SU PROPIA fecha y ninguna otra**, que es el #96 enunciado como propiedad. Incluye el caso exacto
+      del ticket (29 faltantes) y el de resolución fuera de orden, que con un cursor ni siquiera se
+      podía expresar.
+      **`existing` son los vencimientos en CUALQUIER estado** —pendiente, omitido y confirmado—, no
+      solo los resueltos: lo que decide es que la ocurrencia YA EXISTE, no cómo terminó. Una pendiente
+      sin resolver no se vuelve a crear, y una omitida tampoco reaparece.
+      **Alcance del núcleo, para que no se lo confunda con el generador completo:** trabaja sobre UN
+      cronograma, el vigente. Todavía no contempla por sí solo las versiones históricas de cronograma
+      ni los intervalos de pausa — eso es componer varios segmentos, y está pendiente en `2.1b` y
+      `2.1d`.
+      **Lo que falta y por qué:** reemplazar `decideRecurrenceInstance` exige que el generador pueda
+      materializar más de una pendiente por regla, y `recurrence_instances_one_pending_per_rule`
+      **sigue vivo a propósito** hasta la activación (decisión 17): cablearlo ahora haría que el
+      generador intente 29 inserts y la base rechace 28. Hasta entonces **el generador sigue
+      dependiendo del cursor**: `decideRecurrenceInstance` recibe `last_generated_date` y lo usa como
+      `cursor` del caminante. Lee del mismo calendario que `owedOccurrences` —no hay dos
+      cronogramas—, pero de dónde arranca sigue saliendo del cursor, no de `reconstruct_from`. Eso
+      cambia recién en el paso 2 del orden de abajo.
 - [x] 1.7 Unificar `max_occurrences`: el tope se cuenta contra el cronograma, no contra filas de
       `recurrence_instances`.
       **El defecto, medido antes de tocar nada:** con una regla creada desde un movimiento y tope 3,

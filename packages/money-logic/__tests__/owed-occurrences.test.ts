@@ -72,16 +72,20 @@ describe('owedOccurrences', () => {
     expect(owed).not.toContain('2026-06-13')
   })
 
-  it('what is already resolved is not owed, whatever its state', () => {
-    // Confirmed, skipped or pending: the row exists, so the date is not missing.
+  it('an existing due date is not owed, in ANY state', () => {
+    // What decides is that the occurrence EXISTS, not how it ended. The three
+    // states go in together so the property is pinned rather than implied:
+    //   2026-05-10  confirmed  → resolved with a movement
+    //   2026-06-10  skipped    → resolved without one; must not come back
+    //   2026-07-10  pending    → unresolved; must not be created twice
     const owed = owedOccurrences({
       schedule: monthly(),
       reconstructFrom: '2026-04-10',
       horizon: HORIZON,
       today: TODAY,
-      existing: ['2026-05-10', '2026-07-10'],
+      existing: ['2026-05-10', '2026-06-10', '2026-07-10'],
     })
-    expect(owed).toEqual(['2026-06-10', '2026-08-10'])
+    expect(owed).toEqual(['2026-08-10'])
   })
 
   it('resolving OUT OF ORDER does not regenerate what was resolved', () => {
