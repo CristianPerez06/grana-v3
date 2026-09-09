@@ -18,15 +18,24 @@ se ven en **web y en nativo**, y cada uno se resuelve **por separado y en cualqu
 | # | Qué | Por qué es indispensable |
 |---|---|---|
 | B1.1 | Aplicar `0064` (identidad `due_date` + piso `reconstruct_from`) | Sin identidad no hay forma de saber cuál vencimiento es cuál, y sin piso el generador no sabe desde dónde reconstruir |
-| B1.2 | Generador que materializa **la lista** de vencidos, en tandas acotadas | Es el arreglo del #96 |
+| B1.2 | Generador que materializa **la lista** de vencidos, **en tandas de 50 que el usuario puede continuar sin cerrar la app** (`2.1e`) | Es el arreglo del #96. La tanda no alcanza sola: una regla diaria con un año de atraso son ~8 tandas, y nadie va a abrir y cerrar la app ocho veces para ver su propio historial. El mínimo incluye **indicar en pantalla cuánto falta** y una acción **«Continuar reconstrucción»** que procesa la siguiente tanda en el momento; sin eso, «mostrarlos todos» no se cumple |
 | B1.3 | **Versiones de cronograma y pausas leídas por el generador** (`2.1b`, `2.1d`) | Sin esto, editar la frecuencia o pausar fabrica vencimientos que nunca existieron. Ver «Simplificación rechazada» |
-| B1.4 | **Migración de activación** (retira `recurrence_instances_one_pending_per_rule`) | Sin esto la base sigue admitiendo una sola pendiente por regla |
-| B1.5 | Adaptar los reads que asumen una pendiente por regla | Si no, la base tiene varias y la app muestra una |
-| B1.6 | Mover **dashboard, «próximo», proyección y deshacer** a leer los vencimientos existentes | Es el requisito de **«sin duplicados»**, y **cierra #118** — ver abajo |
-| B1.7 | Dejar de escribir `last_generated_date` (`1.5`) + el test real de orden (`1.8`) | **Acá se completa «resolver fuera de orden»**, no antes |
-| B1.8 | Materialización y bloque «por revisar» en **web y nativo** (`4.1`, `4.2`, `4.3`) | El requisito de visibilidad en las dos plataformas |
-| B1.9 | Copy: **«vencimientos por revisar»** (`2.6`) | Behaviour 2: lo que falta revisar no puede afirmar que se debe esa plata. Es texto, cuesta poco y evita mentirle al usuario |
-| B1.10 | **Error de materialización visible, con reintento** (`4.5b`, versión básica) | No es UX avanzada: hoy `queries.ts:367` hace `if (!insertError) created += 1` y descarta **cualquier** fallo en silencio. Si uno ocurre, Julieta ve «ningún vencimiento» y concluye que el #96 sigue roto. El mínimo tiene que **distinguir «falló» de «no hay nada»** y ofrecer reintentar; el diseño elaborado puede esperar |
+| B1.4 | Adaptar los reads que asumen una pendiente por regla | Si no, la base tiene varias y la app muestra una |
+| B1.5 | Mover **dashboard, «próximo», proyección y deshacer** a leer los vencimientos existentes | Es el requisito de **«sin duplicados»**, y **cierra #118** — ver abajo |
+| B1.6 | Dejar de escribir `last_generated_date` (`1.5`) + el test real de orden (`1.8`) | **Acá se completa «resolver fuera de orden»**, no antes |
+| B1.7 | Materialización y bloque «por revisar» en **web y nativo** (`4.1`, `4.2`, `4.3`) | El requisito de visibilidad en las dos plataformas |
+| B1.8 | Copy: **«vencimientos por revisar»** (`2.6`) | Behaviour 2: lo que falta revisar no puede afirmar que se debe esa plata. Es texto, cuesta poco y evita mentirle al usuario |
+| B1.9 | **Error de materialización visible, con reintento** (`4.5b`, versión básica) | No es UX avanzada: hoy `queries.ts:367` hace `if (!insertError) created += 1` y descarta **cualquier** fallo en silencio. Si uno ocurre, Julieta ve «ningún vencimiento» y concluye que el #96 sigue roto. El mínimo tiene que **distinguir «falló» de «no hay nada»** y ofrecer reintentar; el diseño elaborado puede esperar |
+| B1.10 | **Gate de versión mínima en el cliente nativo** (`2.8b`) | Requisito para activar, no una mejora. Un usuario que se quede en la app vieja nunca ejecuta el generador nuevo: su atraso no se materializa y el #96 **sigue vivo para él**, ahora sin el índice que lo contenía. `tasks.md` da dos opciones — gate de versión mínima o generación del lado del servidor (etapa 2 de la decisión 8); **para este recorte el gate es la más chica**, y la generación en servidor queda para un change posterior |
+| B1.11 | **Migración de activación** (retira `recurrence_instances_one_pending_per_rule`) | Sin esto la base sigue admitiendo una sola pendiente por regla. **Va última, y solo cuando B1.2–B1.10 están desplegadas**: el índice es lo único que hoy impide el estado intermedio en que la base tiene varias pendientes y el software todavía muestra una sola o duplica importes |
+
+> **Por qué la activación es la ÚLTIMA fila y no la cuarta.** Retirar el índice es irreversible en la
+> práctica: en cuanto se retira, la base empieza a admitir varias pendientes por regla. Todo lo que las
+> lea sin estar adaptado —reads, dashboard, «próximo», proyección, web, nativo, y el cliente viejo que
+> nunca se actualizó— pasa a mostrar una sola o a duplicar importes. Ese estado es el que la cabecera
+> de `0064` describe como **peor que el bug actual**. El orden correcto es: primero todo el software
+> capaz de convivir con varias pendientes, incluido el gate que garantiza que no queden clientes
+> incapaces, y recién entonces se retira el índice.
 
 ### Resolver fuera de orden todavía NO funciona de punta a punta
 
@@ -34,7 +43,7 @@ se ven en **web y en nativo**, y cada uno se resuelve **por separado y en cualqu
 escribiendo un **cursor global** (`last_generated_date`). Mientras eso siga, resolver agosto antes que
 julio mueve el cursor más allá de julio y el flujo real no se comporta como el núcleo puro. La
 propiedad está probada en `owedOccurrences` (`out-of-order-resolution.test.ts`), pero **el
-comportamiento se completa recién en B1.7**, y su test de punta a punta depende de eso — por eso
+comportamiento se completa recién en B1.6**, y su test de punta a punta depende de eso — por eso
 `1.8` sigue abierta.
 
 ### Simplificación del piso: RECHAZADA
@@ -53,12 +62,12 @@ En consecuencia, `2.1b` y `2.1d` **quedan dentro del mínimo** (B1.3).
 
 ### #118 se cierra dentro de esta entrega
 
-**B1.6 es, en la práctica, el arreglo de #118.** Mover el dashboard a leer los vencimientos existentes
+**B1.5 es, en la práctica, el arreglo de #118.** Mover el dashboard a leer los vencimientos existentes
 es exactamente lo que elimina el doble conteo. Recomendación: **#118 forma parte del mínimo** y se
 cierra con esta entrega, en vez de arreglarse aparte y volver a tocarse.
 
 *Alternativa, si se quiere alivio antes:* hacer #118 primero como parche independiente. Es válido,
-pero B1.6 vuelve sobre el mismo código, así que el trabajo se hace dos veces y hay riesgo de conflicto
+pero B1.5 vuelve sobre el mismo código, así que el trabajo se hace dos veces y hay riesgo de conflicto
 entre ramas.
 
 ---
@@ -92,10 +101,14 @@ Nada de esto se descarta: es exactamente el cimiento del Bloque 1.
 | «Usar este importe de acá en más» | `2.4b` | idem |
 | Agrupar por regla y colapsar el resto | `2.3` | `recurrence-review-ux` |
 | UX avanzada: aviso de historial incompleto, sellado de pausadas, paridad nativa del form de resolución, y el **diseño elaborado** del error de materialización | `2.1c`, `4.4`–`4.7`, `4.5c` | idem |
+| Generación del lado del servidor (etapa 2 de la decisión 8) | `2.8b`, opción larga | `recurrence-server-generation` |
 | Retiro de `scheduled_date` (migración C) | `5.4` | ya estaba fuera |
 
 `2.1b` y `2.1d` **no** están acá: quedaron en el mínimo. `4.5b` tampoco, en su versión básica —
-mostrar que falló y poder reintentar—; lo que se difiere es la presentación cuidada.
+mostrar que falló y poder reintentar—; lo que se difiere es la presentación cuidada. De `2.8b` se
+difiere **solo** la generación en servidor: el gate de versión mínima queda en el mínimo (B1.10),
+porque sin él no se puede activar. La generación en servidor sigue siendo deseable —cubre además a
+quien no abre la app—, pero no es lo más chico que cierra el #96.
 
 ---
 
@@ -103,7 +116,8 @@ mostrar que falló y poder reintentar—; lo que se difiere es la presentación 
 
 51 commits y +6.740 líneas en una sola revisión no es revisable. **Cuatro PRs encadenados**, en un
 orden que separa lo aditivo de lo que cambia comportamiento **y respeta las dependencias de
-despliegue**.
+despliegue**. Son cuatro PRs pero **tres ventanas de producción**: PR 1 por su cuenta, **PR 2 y PR 3
+juntos** (ver abajo), y PR 4.
 
 > **El orden importa más que el tamaño.** Una versión anterior de este documento ponía el cambio de
 > anclaje ANTES de `0064`, y eso es inseguro: la verificación transaccional que protege ese cambio
@@ -134,21 +148,29 @@ Lo que **sí cambia lo que el usuario ve**, y se revisa como tal — no como ref
 | Se retira `materializedCount` y su consulta | Una consulta menos por corrida del generador | `queries.ts` |
 
 Los cuatro son **arreglos**, no regresiones, pero ninguno es neutro.
-**Si se prefiere una sola ventana de despliegue, los PR 2 y 3 se pueden unir.** Lo que no se puede es
-invertirlos.
+
+> **Los PR 2 y 3 se revisan por separado, pero se despliegan juntos.** No es una preferencia: la
+> guarda §4b corre **una sola vez**, dentro de la transacción de `0064`. Verifica que ninguna regla
+> esté desfasada *en ese instante* y no vuelve a mirar. Si alguien edita una recurrencia entre el
+> despliegue del PR 2 y el del PR 3, el dato puede volver a desfasarse **después** de la verificación
+> y **antes** de que exista el anclaje en el calendario que la vuelve inofensiva — y en esa ventana
+> nada lo detecta. Partirlos para revisar está bien; partirlos para desplegar, no. **Una sola ventana
+> de producción**, y dentro de ella `0064` primero.
 
 ### PR 4 — El arreglo visible *(a escribir)* · **no se parte antes de la activación**
-Bloque 1 completo: generador con versiones y pausas, activación, reads, las cuatro superficies del
-cursor, error visible con reintento, web y nativo, copy. Termina en la prueba de aceptación.
+Bloque 1 completo, **en el orden de la tabla B1**: generador con tandas continuables, versiones y
+pausas, reads, las cuatro superficies del cursor, error visible con reintento, web y nativo, copy,
+gate de versión nativa, y **al final** la migración de activación. Termina en la prueba de aceptación.
 
 **Se mantiene unido.** Activar el backlog en una parte y dejar las pantallas para otra crea un
 intervalo en el que la base tiene varias pendientes y la app **muestra una sola o duplica importes** —
 exactamente el estado que la cabecera de `0064` describe como «peor que el bug actual», y el doble
 conteo de #118 encima.
 
-Si por tamaño hubiera que partirlo igual, **la activación queda en la ÚLTIMA parte**, después de
-adaptar lectores, dashboard, web y nativo: primero todo el software capaz de convivir con varias
-pendientes, y recién entonces se retira el índice.
+Si por tamaño hubiera que partirlo igual, **la activación queda en la ÚLTIMA parte** (B1.11), después
+de adaptar lectores, dashboard, web y nativo y de que el gate de versión (B1.10) esté desplegado:
+primero todo el software capaz de convivir con varias pendientes, y recién entonces se retira el
+índice.
 
 **Lo ya mergeado a `main`: cero.** La branch está entera sin mergear, así que la división es mecánica:
 `git checkout -b` desde `main` y cherry-pick por área, sin reescribir historia ajena.
