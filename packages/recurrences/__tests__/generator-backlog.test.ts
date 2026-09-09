@@ -51,17 +51,10 @@ async function createStuckRule(options: {
             ${options.intervalCount ?? 1}, '${options.intervalUnit ?? 'month'}',
             '${start}', '${options.reconstructFrom}', 'active');
   `)
-  // 0064's backfill only covers rows that existed when it ran, so a rule created
-  // afterwards gets its floor and its assumed version the same way the dual-write
-  // trigger would.
-  await db.exec(`
-    update public.recurrences set reconstruct_from = '${options.reconstructFrom}' where id = '${id}';
-    insert into public.recurrence_schedule_versions
-      (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)
-    values ('${id}', '${U_A}', '${options.reconstructFrom}',
-            ${options.intervalCount ?? 1}, '${options.intervalUnit ?? 'month'}', '${start}', true)
-    on conflict (recurrence_id, effective_from) do nothing;
-  `)
+  // No explicit floor and no explicit schedule version: 0064's own triggers
+  // derive both on insert, which is what production does for a rule created after
+  // the migration. Writing them by hand here would test the fixture, not the
+  // database.
   return id
 }
 
@@ -196,6 +189,113 @@ describe('generateDueRecurrenceInstances — a read failure is not an empty stat
       expect(result.error).not.toBeNull()
     } finally {
       await brokenDb.close()
+    }
+  }, 120_000)
+})
+
+describe('generateDueRecurrenceInstances — only the expected violation degrades', () => {
+  it('reports a rule that really failed even when another rule went through', async () => {
+    // Two rules: one materializes, one violates a CHECK — not the single-pending
+    // index, not a concurrent duplicate, a genuine failure. Reporting
+    // `error: null` because the OTHER rule worked is the silent failure this
+    // generator exists to remove, one level up: the screen would claim there is
+    // nothing to review while a rule stays invisible.
+    const failDb = await createRecurrenceIdentityDb()
+    try {
+      await failDb.exec(`
+        insert into public.recurrences
+          (id, user_id, amount, interval_count, interval_unit, start_date, last_generated_date, reconstruct_from, status)
+        values ('00000000-0000-0000-0000-0000000008f1', '${U_A}', 2500, 1, 'month',
+                '2026-07-23', '2026-07-23', '2026-07-23', 'active'),
+               ('00000000-0000-0000-0000-0000000008f2', '${U_A}', 999, 1, 'month',
+                '2026-07-23', '2026-07-23', '2026-07-23', 'active');
+        alter table public.recurrence_instances
+          add constraint chk_test_reject_that_amount check (amount <> 999);
+      `)
+
+      const result = await generateDueRecurrenceInstances(pglitePostgrest(failDb), U_A, {
+        today: TODAY,
+      })
+
+      // The healthy rule is materialized: one bad rule must not block the rest.
+      expect(result.created).toBe(1)
+      // And the broken one is reported, not swallowed.
+      expect(result.error).toContain('chk_test_reject_that_amount')
+    } finally {
+      await failDb.close()
+    }
+  }, 120_000)
+
+  it('does not report an error when a concurrent run already created the occurrence', async () => {
+    // Two generators racing. The loser violates the occurrence-identity index,
+    // which means the row exists — nothing is wrong and nothing was lost.
+    const raceDb = await createRecurrenceIdentityDb()
+    try {
+      await raceDb.exec(`
+        insert into public.recurrences
+          (id, user_id, amount, interval_count, interval_unit, start_date, last_generated_date, reconstruct_from, status)
+        values ('00000000-0000-0000-0000-0000000007f1', '${U_A}', 2500, 1, 'month',
+                '2026-07-23', '2026-07-23', '2026-07-23', 'active');
+      `)
+
+      const client = pglitePostgrest(raceDb)
+      const [first, second] = await Promise.all([
+        generateDueRecurrenceInstances(client, U_A, { today: TODAY }),
+        generateDueRecurrenceInstances(client, U_A, { today: TODAY }),
+      ])
+
+      expect(first.error).toBeNull()
+      expect(second.error).toBeNull()
+      // Exactly one row, created by exactly one of the two runs.
+      const rows = await raceDb.query<{ count: string }>(
+        `select count(*)::text as count from public.recurrence_instances
+          where recurrence_id = '00000000-0000-0000-0000-0000000007f1'`,
+      )
+      expect(rows.rows[0].count).toBe('1')
+      expect(first.created + second.created).toBe(1)
+    } finally {
+      await raceDb.close()
+    }
+  }, 120_000)
+})
+
+describe('generateDueRecurrenceInstances — the read of existing occurrences is exhaustive', () => {
+  it('does not re-create occurrences that fall past one page of results', async () => {
+    // A daily rule with a year of history already materialized. Read in one
+    // unpaged request, PostgREST would cut the list at its row cap and the
+    // generator would believe the occurrences beyond the cut are missing — and
+    // try to create them again.
+    const bigDb = await createRecurrenceIdentityDb()
+    try {
+      await bigDb.exec(`
+        insert into public.recurrences
+          (id, user_id, amount, interval_count, interval_unit, start_date, last_generated_date, reconstruct_from, status)
+        values ('00000000-0000-0000-0000-0000000006f1', '${U_A}', 100, 1, 'day',
+                '2025-09-08', '2025-09-08', '2025-09-08', 'active');
+        insert into public.recurrence_instances
+          (recurrence_id, user_id, scheduled_date, due_date, status, resolved_at)
+        select '00000000-0000-0000-0000-0000000006f1', '${U_A}', d::date, d::date, 'skipped', now()
+          from generate_series('2025-09-09'::date, '${TODAY}'::date, '1 day') as d;
+      `)
+
+      const before = await bigDb.query<{ count: string }>(
+        `select count(*)::text as count from public.recurrence_instances`,
+      )
+      // A server that truncates at 100 rows, against ~366 existing occurrences.
+      // Read once, unpaged, the generator sees 100 and believes 266 are missing.
+      const result = await generateDueRecurrenceInstances(
+        pglitePostgrest(bigDb, { maxRows: 100 }),
+        U_A,
+        { today: TODAY },
+      )
+      const after = await bigDb.query<{ count: string }>(
+        `select count(*)::text as count from public.recurrence_instances`,
+      )
+
+      expect(before.rows[0].count).toBe(after.rows[0].count)
+      expect(result).toEqual({ created: 0, remaining: 0, error: null })
+    } finally {
+      await bigDb.close()
     }
   }, 120_000)
 })

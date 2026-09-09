@@ -358,39 +358,124 @@ function horizonStart(today: string): string {
 /**
  * Pick this run's rows out of everything the rules are owed.
  *
- * Every rule's CURRENT occurrence — the most recent one already due — goes in,
- * always, even if that takes the run past the batch size. A cut that left out
- * what falls due today would reproduce the very defect this generator removes,
- * with another number. The rest of the budget is filled oldest-first, so the
- * backlog rebuilds in calendar order.
+ * `batchSize` is a HARD limit: the run never writes more rows than that. An
+ * earlier version let every rule's current occurrence through "even past the
+ * budget", which with production's 61 rules would have made a declared batch of
+ * 50 write 61 — the exact thing the batch exists to prevent. What the limit costs
+ * is covered by continuation: whatever does not fit stays in `remaining`, and the
+ * next run — the next screen the user opens, or the "continue" action — takes it.
+ *
+ * Priority inside the limit:
+ *   1. each rule's CURRENT occurrence (the most recent already due), **most
+ *      overdue rule first** — a rule with nothing materialized is the defect;
+ *      a slow rebuild is not;
+ *   2. the rest of the backlog, oldest first, so it rebuilds in calendar order.
  */
 export function selectReconstructionBatch(
   owedByRule: Map<string, string[]>,
   batchSize: number = RECONSTRUCTION_BATCH_SIZE,
 ): Map<string, string[]> {
   const picked = new Map<string, string[]>()
+  if (batchSize <= 0) return picked
+
+  const currents: Array<{ ruleId: string; date: string }> = []
   const rest: Array<{ ruleId: string; date: string }> = []
 
   for (const [ruleId, dates] of owedByRule) {
     if (dates.length === 0) continue
-    const current = dates[dates.length - 1]
-    picked.set(ruleId, [current])
+    currents.push({ ruleId, date: dates[dates.length - 1] })
     for (const date of dates.slice(0, -1)) rest.push({ ruleId, date })
   }
 
-  let budget = batchSize - picked.size
-  if (budget > 0) {
-    rest.sort((a, b) => a.date.localeCompare(b.date))
-    for (const { ruleId, date } of rest) {
-      if (budget <= 0) break
-      picked.get(ruleId)?.push(date)
+  let budget = batchSize
+  const take = (entries: Array<{ ruleId: string; date: string }>) => {
+    for (const { ruleId, date } of entries) {
+      if (budget <= 0) return
+      const dates = picked.get(ruleId)
+      if (dates == null) picked.set(ruleId, [date])
+      else dates.push(date)
       budget -= 1
     }
   }
 
+  // Oldest current first: the rule that has been stuck longest gets served
+  // before one that fell due yesterday.
+  currents.sort((a, b) => a.date.localeCompare(b.date))
+  take(currents)
+  rest.sort((a, b) => a.date.localeCompare(b.date))
+  take(rest)
+
   for (const dates of picked.values()) dates.sort()
   return picked
 }
+
+/**
+ * PostgREST caps how many rows a request returns, silently. A truncated read of
+ * the occurrences that already exist is not a slow generator: it is a generator
+ * that believes dates are missing when they are not, and tries to create them
+ * again. So every read the calendar depends on is paged to exhaustion.
+ */
+const READ_PAGE_SIZE = 1000
+
+/** Refuses to spin forever if a server ignores the range window entirely. */
+const MAX_READ_PAGES = 1000
+
+async function selectAllPages<T>(
+  build: () => {
+    range: (
+      from: number,
+      to: number,
+    ) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>
+  },
+): Promise<{ data: T[]; error: { message: string } | null }> {
+  const out: T[] = []
+
+  // Advance by what came back and stop on an EMPTY page, never on a short one.
+  // A short page does not mean the end: PostgREST also truncates at its own
+  // `db-max-rows`, which can be smaller than the window asked for, and reading
+  // "fewer than requested" as "that was the last of them" is exactly the silent
+  // cut this loop exists to survive.
+  for (let page = 0; page < MAX_READ_PAGES; page += 1) {
+    const { data, error } = await build().range(out.length, out.length + READ_PAGE_SIZE - 1)
+    if (error) return { data: out, error }
+    const rows = (data ?? []) as T[]
+    if (rows.length === 0) return { data: out, error: null }
+    out.push(...rows)
+  }
+
+  return {
+    data: out,
+    error: { message: 'La lectura de recurrencias no terminó: demasiadas páginas.' },
+  }
+}
+
+/** Postgres unique-violation SQLSTATE. */
+const UNIQUE_VIOLATION = '23505'
+
+type WriteError = { message: string; code?: string; details?: string }
+
+const mentions = (error: WriteError, index: string) =>
+  `${error.message} ${error.details ?? ''}`.includes(index)
+
+/**
+ * The single-pending index, alive until the activation migration drops it. A
+ * violation of THIS one is the expected transition state: the rule is owed more
+ * than one occurrence and the database still allows one.
+ */
+const isSinglePendingViolation = (error: WriteError | null) =>
+  error != null &&
+  error.code === UNIQUE_VIOLATION &&
+  mentions(error, 'recurrence_instances_one_pending_per_rule')
+
+/**
+ * The occurrence identity index. A violation means somebody else already created
+ * that exact occurrence — a second generator running concurrently, which is
+ * normal — so the row is not ours to create and nothing is wrong.
+ */
+const isDuplicateOccurrence = (error: WriteError | null) =>
+  error != null &&
+  error.code === UNIQUE_VIOLATION &&
+  mentions(error, 'recurrence_instances_one_per_rule_due_date')
 
 export async function generateDueRecurrenceInstances(
   supabase: GranaSupabaseClient,
@@ -407,52 +492,82 @@ export async function generateDueRecurrenceInstances(
   const today = options.today ?? formatDateISO(getTodayAR())
   const horizon = horizonStart(today)
 
-  const { data: rules, error: rulesError } = await supabase
-    .from('recurrences')
-    .select(
-      'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, last_generated_date, reconstruct_from, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
-    )
-    .eq('user_id', userId)
-    .eq('status', 'active')
+  const { data: rules, error: rulesError } = await selectAllPages<RecurrenceRuleForGeneration>(() =>
+    supabase
+      .from('recurrences')
+      .select(
+        'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, last_generated_date, reconstruct_from, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
+      )
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('id'),
+  )
 
   if (rulesError) return { created: 0, remaining: 0, error: rulesError.message }
-  if (!rules || rules.length === 0) return { created: 0, remaining: 0, error: null }
+  if (rules.length === 0) return { created: 0, remaining: 0, error: null }
 
-  const typedRules = rules as unknown as RecurrenceRuleForGeneration[]
+  const typedRules = rules
   const ruleIds = typedRules.map((rule) => rule.id)
+
+  // Nothing older than this can ever be owed — an occurrence is filtered out if it
+  // is before the horizon OR at/before its rule's floor — so it does not need
+  // reading. The floor CAN sit before the horizon, which is why this is the
+  // minimum of both and not just the horizon.
+  const oldestFloor = typedRules.reduce(
+    (oldest, rule) => (rule.reconstruct_from < oldest ? rule.reconstruct_from : oldest),
+    horizon,
+  )
 
   // The three histories the calendar is composed from. A failure in any of them
   // is NOT recoverable by carrying on: walking today's schedule over a stretch
   // whose versions we failed to read would fabricate occurrences the rule never
   // produced, and ignoring pauses would bill a paused rule. Better no run than a
-  // wrong one.
+  // wrong one. All three are paged to exhaustion, because a truncated page is not
+  // a slow generator: it is a generator that thinks an occurrence is missing and
+  // creates it again.
   const [versionsResult, pausesResult, instancesResult] = await Promise.all([
-    supabase
-      .from('recurrence_schedule_versions')
-      .select('recurrence_id, effective_from, interval_count, interval_unit, anchor_date')
-      .eq('user_id', userId)
-      .in('recurrence_id', ruleIds),
-    supabase
-      .from('recurrence_pauses')
-      .select('recurrence_id, paused_from, resumed_at')
-      .eq('user_id', userId)
-      .in('recurrence_id', ruleIds),
+    selectAllPages<{
+      recurrence_id: string
+      effective_from: string
+      interval_count: number
+      interval_unit: string
+      anchor_date: string
+    }>(() =>
+      supabase
+        .from('recurrence_schedule_versions')
+        .select('recurrence_id, effective_from, interval_count, interval_unit, anchor_date')
+        .eq('user_id', userId)
+        .in('recurrence_id', ruleIds)
+        .order('recurrence_id'),
+    ),
+    selectAllPages<{ recurrence_id: string; paused_from: string; resumed_at: string | null }>(() =>
+      supabase
+        .from('recurrence_pauses')
+        .select('recurrence_id, paused_from, resumed_at')
+        .eq('user_id', userId)
+        .in('recurrence_id', ruleIds)
+        .order('recurrence_id'),
+    ),
     // Every state, not just pending: what decides is that the occurrence EXISTS,
     // not how it ended. A skipped one must not come back and a confirmed one must
     // not be created twice.
-    supabase
-      .from('recurrence_instances')
-      .select('recurrence_id, due_date')
-      .eq('user_id', userId)
-      .in('recurrence_id', ruleIds)
-      .not('due_date', 'is', null),
+    selectAllPages<{ recurrence_id: string; due_date: string }>(() =>
+      supabase
+        .from('recurrence_instances')
+        .select('recurrence_id, due_date')
+        .eq('user_id', userId)
+        .in('recurrence_id', ruleIds)
+        .not('due_date', 'is', null)
+        .gte('due_date', oldestFloor)
+        .order('due_date'),
+    ),
   ])
 
   const readError = versionsResult.error ?? pausesResult.error ?? instancesResult.error
   if (readError) return { created: 0, remaining: 0, error: readError.message }
 
   const versionsByRule = new Map<string, ScheduleVersion[]>()
-  for (const row of versionsResult.data ?? []) {
+  for (const row of versionsResult.data) {
     const list = versionsByRule.get(row.recurrence_id as string) ?? []
     list.push({
       effective_from: row.effective_from as string,
@@ -464,7 +579,7 @@ export async function generateDueRecurrenceInstances(
   }
 
   const pausesByRule = new Map<string, PauseInterval[]>()
-  for (const row of pausesResult.data ?? []) {
+  for (const row of pausesResult.data) {
     const list = pausesByRule.get(row.recurrence_id as string) ?? []
     list.push({
       paused_from: row.paused_from as string,
@@ -474,7 +589,7 @@ export async function generateDueRecurrenceInstances(
   }
 
   const existingByRule = new Map<string, string[]>()
-  for (const row of instancesResult.data ?? []) {
+  for (const row of instancesResult.data) {
     const list = existingByRule.get(row.recurrence_id as string) ?? []
     list.push(row.due_date as string)
     existingByRule.set(row.recurrence_id as string, list)
@@ -513,15 +628,23 @@ export async function generateDueRecurrenceInstances(
 }
 
 /**
- * Write the batch, degrading only as far as the database forces.
+ * Write the batch, degrading ONLY as far as the database actually forces.
  *
  * One statement is the healthy path. Until the activation migration drops
- * `recurrence_instances_one_pending_per_rule`, though, a rule owed more than one
+ * `recurrence_instances_one_pending_per_rule`, a rule owed more than one
  * occurrence violates that index — and a violation rejects the WHOLE statement,
  * so a single batch would materialize nothing at all. Hence the two fallbacks:
- * per rule, then the current occurrence alone. After activation neither fires,
- * and this collapses back to one insert per run with no flag to flip and no
- * deploy to coordinate.
+ * per rule, then the current occurrence alone.
+ *
+ * The fallbacks fire on that violation and on NOTHING ELSE. An earlier version
+ * retried on any failure, which turned a permission error, a constraint on the
+ * payload or a dropped connection into "compatibility, carry on" — and if a later
+ * insert happened to succeed, the run reported `error: null`. A failure the user
+ * is not told about is the defect this generator exists to remove, one level up.
+ *
+ * A violation of the occurrence-identity index is a third case: it means a
+ * concurrent run already created that occurrence. Nothing is wrong and nothing is
+ * ours to create, so it counts as neither created nor failed.
  */
 async function insertReconstructedInstances(
   supabase: GranaSupabaseClient,
@@ -532,40 +655,55 @@ async function insertReconstructedInstances(
 ): Promise<{ created: number; error: string | null }> {
   if (rows.length === 0) return { created: 0, error: null }
 
-  const { error: batchError } = await supabase
-    .from('recurrence_instances')
-    .insert(rows as never)
-  if (!batchError) return { created: rows.length, error: null }
+  const insert = async (payload: unknown[]): Promise<WriteError | null> => {
+    const { error } = await supabase.from('recurrence_instances').insert(payload as never)
+    return (error as WriteError | null) ?? null
+  }
 
+  const batchError = await insert(rows)
+  if (batchError == null) return { created: rows.length, error: null }
+
+  // The batch is one statement, so its failure wrote nothing at all — whatever
+  // the reason. Retrying rule by rule is therefore always safe, and it is what
+  // keeps ONE bad rule from blocking every healthy one. The batch error itself is
+  // not reported: the per-rule pass below is the authority on what actually
+  // failed, and a rule that goes through on retry had no failure to report.
   let created = 0
-  let lastError: string | null = null
+  let failure: string | null = null
 
   for (const [ruleId, dates] of batch) {
     const rule = rulesById.get(ruleId)
     if (rule == null) continue
 
-    const { error: ruleError } = await supabase
-      .from('recurrence_instances')
-      .insert(dates.map((date) => buildPendingInstanceInsert(rule, userId, date)) as never)
-    if (!ruleError) {
+    const ruleError = await insert(
+      dates.map((date) => buildPendingInstanceInsert(rule, userId, date)),
+    )
+    if (ruleError == null) {
       created += dates.length
+      continue
+    }
+    if (isDuplicateOccurrence(ruleError)) continue
+    if (!isSinglePendingViolation(ruleError)) {
+      // Not the transition state: a real failure for this rule. Recorded, and the
+      // run carries on so the other rules still get materialized.
+      failure ??= ruleError.message
       continue
     }
 
     // The current occurrence is the one that must exist: without it the user is
     // looking at a screen that hides what falls due today.
     const current = dates[dates.length - 1]
-    const { error: singleError } = await supabase
-      .from('recurrence_instances')
-      .insert(buildPendingInstanceInsert(rule, userId, current) as never)
-    if (singleError) lastError = singleError.message
-    else created += 1
+    const singleError = await insert([buildPendingInstanceInsert(rule, userId, current)])
+    if (singleError == null) created += 1
+    else if (!isDuplicateOccurrence(singleError) && !isSinglePendingViolation(singleError)) {
+      failure ??= singleError.message
+    }
   }
 
-  // Only a run that created nothing at all is reported as a failure: a partial
-  // run is the expected shape during the transition window, and the caller shows
-  // what is left through `remaining`, not as an error.
-  return { created, error: created === 0 ? (lastError ?? batchError.message) : null }
+  // Any unexpected failure is reported, even when other rules went through: a
+  // partially failed run is still a failed run for the rules that failed, and
+  // hiding it behind a non-zero `created` is how a silent error looks.
+  return { created, error: failure }
 }
 
 // ── getTopRecurrenceSuggestion ─────────────────────────────────────────────────

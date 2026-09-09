@@ -243,3 +243,130 @@ describe('owedOccurrencesForRule — bounds', () => {
     expect(owed).toEqual([])
   })
 })
+
+describe('owedOccurrencesForRule — max_occurrences is one cap for the rule', () => {
+  // A 6-cuota purchase whose schedule the user edited. The cap counts positions
+  // on the RULE's calendar; handing it to each version separately produced it
+  // once per version — 12 cuotas for a 6-cuota purchase.
+  const editedRule = {
+    ...base,
+    versions: [
+      {
+        effective_from: '2026-01-10',
+        interval_count: 1,
+        interval_unit: 'month' as const,
+        anchor_date: '2026-01-10',
+      },
+      {
+        effective_from: '2026-04-01',
+        interval_count: 2,
+        interval_unit: 'week' as const,
+        anchor_date: '2026-04-01',
+      },
+    ],
+    pauses: [],
+    reconstructFrom: '2026-01-09',
+    horizon: '2025-09-08',
+  }
+
+  it('never produces more occurrences than the cap, across versions', () => {
+    const owed = owedOccurrencesForRule({ ...editedRule, maxOccurrences: 6 })
+
+    expect(owed).toHaveLength(6)
+  })
+
+  it('spends the cap in calendar order: the first version first', () => {
+    const owed = owedOccurrencesForRule({ ...editedRule, maxOccurrences: 6 })
+
+    // Three monthly (Jan/Feb/Mar on the 10th), then the biweekly ones from Apr 1
+    // until the cap runs out.
+    expect(owed).toEqual([
+      '2026-01-10',
+      '2026-02-10',
+      '2026-03-10',
+      '2026-04-01',
+      '2026-04-15',
+      '2026-04-29',
+    ])
+  })
+
+  it('counts an occurrence the cap already spent even if it is not owed', () => {
+    // The first three are already materialized. The cap is still 6, so only
+    // three more may appear — not six more.
+    const owed = owedOccurrencesForRule({
+      ...editedRule,
+      maxOccurrences: 6,
+      existing: ['2026-01-10', '2026-02-10', '2026-03-10'],
+    })
+
+    expect(owed).toEqual(['2026-04-01', '2026-04-15', '2026-04-29'])
+  })
+
+  it('counts occurrences hidden behind the floor', () => {
+    // The floor moved to March: January and February are not owed, but they
+    // happened, and the cap has to know it.
+    const owed = owedOccurrencesForRule({
+      ...editedRule,
+      maxOccurrences: 6,
+      reconstructFrom: '2026-03-10',
+    })
+
+    expect(owed).toEqual(['2026-04-01', '2026-04-15', '2026-04-29'])
+  })
+
+  it('does not count occurrences that fell inside a pause', () => {
+    // Paused over February and March: those two never existed, so they never
+    // spent the cap, and the rule still gets its six.
+    const owed = owedOccurrencesForRule({
+      ...editedRule,
+      maxOccurrences: 6,
+      pauses: [{ paused_from: '2026-02-01', resumed_at: '2026-04-01' }],
+    })
+
+    expect(owed).toHaveLength(6)
+    expect(owed).not.toContain('2026-02-10')
+    expect(owed).not.toContain('2026-03-10')
+  })
+
+  it('keeps the single-version cap unchanged', () => {
+    // The shape every rule in production has today: one assumed version. The fix
+    // must not move this.
+    const owed = owedOccurrencesForRule({
+      ...base,
+      versions: [
+        {
+          effective_from: '2026-01-10',
+          interval_count: 1,
+          interval_unit: 'month',
+          anchor_date: '2026-01-10',
+        },
+      ],
+      pauses: [],
+      reconstructFrom: '2026-01-09',
+      maxOccurrences: 3,
+    })
+
+    expect(owed).toEqual(['2026-01-10', '2026-02-10', '2026-03-10'])
+  })
+
+  it('counts the seed occurrence a rule born from a movement already has', () => {
+    // The rule was created from a movement on 2026-01-10, so the floor sits on
+    // it: the cap of 3 leaves two more, not three.
+    const owed = owedOccurrencesForRule({
+      ...base,
+      versions: [
+        {
+          effective_from: '2026-01-10',
+          interval_count: 1,
+          interval_unit: 'month',
+          anchor_date: '2026-01-10',
+        },
+      ],
+      pauses: [],
+      reconstructFrom: '2026-01-10',
+      maxOccurrences: 3,
+    })
+
+    expect(owed).toEqual(['2026-02-10', '2026-03-10'])
+  })
+})

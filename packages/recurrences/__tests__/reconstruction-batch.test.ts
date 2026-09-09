@@ -46,16 +46,34 @@ describe('selectReconstructionBatch', () => {
     expect(batch.get('a')).toEqual(['2026-01-31'])
   })
 
-  it('gives every rule its current occurrence even past the budget', () => {
-    // More rules with backlog than the batch size: the budget bends, because a
-    // rule left entirely unmaterialized is the defect, not a slow rebuild.
+  it('never writes more rows than the batch size, however many rules are stuck', () => {
+    // More rules with backlog than the batch size. The limit is HARD: production
+    // has 61 rules, so a batch that bent for every rule's current occurrence
+    // would write 61 rows on a run that declares 50. What does not fit is left
+    // for the next run, which is what `remaining` and the continue action are.
     const owed = new Map(
       Array.from({ length: 5 }, (_, i) => [`r${i}`, ['2026-03-01', '2026-04-01']] as const),
     )
     const batch = selectReconstructionBatch(new Map(owed), 2)
 
-    expect(batch.size).toBe(5)
+    const total = [...batch.values()].reduce((sum, dates) => sum + dates.length, 0)
+    expect(total).toBe(2)
+    // And what it did write is one current occurrence each, not one rule's history.
     for (const dates of batch.values()) expect(dates).toEqual(['2026-04-01'])
+  })
+
+  it('serves the most overdue rule first when the currents do not all fit', () => {
+    const batch = selectReconstructionBatch(
+      new Map([
+        ['fresh', ['2026-08-01']],
+        ['stuck', ['2026-02-01']],
+        ['stale', ['2026-05-01']],
+      ]),
+      2,
+    )
+
+    expect([...batch.keys()].sort()).toEqual(['stale', 'stuck'])
+    expect(batch.has('fresh')).toBe(false)
   })
 
   it('skips rules that owe nothing', () => {

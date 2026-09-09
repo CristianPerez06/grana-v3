@@ -18,17 +18,41 @@ import type { GranaSupabaseClient } from '@grana/supabase'
 
 type Filter = { sql: string; params: unknown[] }
 
-class Query implements PromiseLike<{ data: unknown[] | null; error: { message: string } | null }> {
+type QueryError = { message: string; code?: string; details?: string }
+
+class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError | null }> {
   private filters: Filter[] = []
 
   constructor(
     private readonly db: PGlite,
     private readonly table: string,
     private readonly columns: string,
+    private readonly maxRows: number,
   ) {}
+
+  private orderBy: string | null = null
+  private limit: number | null = null
+  private offset = 0
 
   eq(column: string, value: unknown): this {
     this.filters.push({ sql: `${column} = $`, params: [value] })
+    return this
+  }
+
+  gte(column: string, value: unknown): this {
+    this.filters.push({ sql: `${column} >= $`, params: [value] })
+    return this
+  }
+
+  order(column: string): this {
+    this.orderBy = column
+    return this
+  }
+
+  /** PostgREST's inclusive [from, to] window. */
+  range(from: number, to: number): this {
+    this.offset = from
+    this.limit = to - from + 1
     return this
   }
 
@@ -52,12 +76,21 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: { message: s
       return filter.sql.replace('$', `$${params.length}`)
     })
     const clause = where.length === 0 ? '' : ` where ${where.join(' and ')}`
-    return { text: `select ${this.columns} from public.${this.table}${clause}`, params }
+    const order = this.orderBy == null ? '' : ` order by ${this.orderBy}`
+    // PostgREST truncates every response at `db-max-rows`, whether or not the
+    // caller asked for a window — that is the silent cut a single unpaged read
+    // walks into.
+    const capped = Math.min(this.limit ?? this.maxRows, this.maxRows)
+    const window = ` limit ${capped} offset ${this.offset}`
+    return {
+      text: `select ${this.columns} from public.${this.table}${clause}${order}${window}`,
+      params,
+    }
   }
 
   async then<R1, R2 = never>(
     onfulfilled?:
-      | ((value: { data: unknown[] | null; error: { message: string } | null }) => R1 | PromiseLike<R1>)
+      | ((value: { data: unknown[] | null; error: QueryError | null }) => R1 | PromiseLike<R1>)
       | null,
     onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | null,
   ): Promise<R1 | R2> {
@@ -65,8 +98,27 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: { message: s
     const result = await this.db
       .query(text, params)
       .then((rows) => ({ data: toPostgrestJson(rows), error: null }))
-      .catch((error: Error) => ({ data: null, error: { message: error.message } }))
+      .catch((error: Error) => ({ data: null, error: toPostgrestError(error) }))
     return Promise.resolve(result).then(onfulfilled, onrejected)
+  }
+}
+
+/**
+ * PostgREST reports the SQLSTATE in `code` and the constraint in `details`/
+ * `message`. The generator tells an expected compatibility violation from a real
+ * failure by exactly that, so a harness that dropped the code would make the
+ * distinction untestable.
+ */
+function toPostgrestError(error: Error): {
+  message: string
+  code?: string
+  details?: string
+} {
+  const pgError = error as Error & { code?: string; detail?: string; constraint?: string }
+  return {
+    message: [error.message, pgError.constraint].filter(Boolean).join(' '),
+    code: pgError.code,
+    details: pgError.detail,
   }
 }
 
@@ -115,7 +167,7 @@ async function insert(
   db: PGlite,
   table: string,
   payload: unknown,
-): Promise<{ error: { message: string } | null }> {
+): Promise<{ error: QueryError | null }> {
   const rows = (Array.isArray(payload) ? payload : [payload]) as Array<Record<string, unknown>>
   if (rows.length === 0) return { error: null }
 
@@ -129,15 +181,26 @@ async function insert(
   return db
     .exec(`insert into public.${table} (${columns.join(', ')}) values ${values};`)
     .then(() => ({ error: null }))
-    .catch((error: Error) => ({ error: { message: error.message } }))
+    .catch((error: Error) => ({ error: toPostgrestError(error) }))
 }
 
-/** A client shaped like the one the generator takes, backed by `db`. */
-export function pglitePostgrest(db: PGlite): GranaSupabaseClient {
+/**
+ * A client shaped like the one the generator takes, backed by `db`.
+ *
+ * `maxRows` mirrors PostgREST's `db-max-rows`, which Supabase sets: it caps EVERY
+ * response, including one that asked for a bigger window. Tests lower it so a
+ * modest fixture reproduces the truncation a real project only hits at a
+ * thousand rows.
+ */
+export function pglitePostgrest(
+  db: PGlite,
+  options: { maxRows?: number } = {},
+): GranaSupabaseClient {
+  const maxRows = options.maxRows ?? 1000
   return {
     from(table: string) {
       return {
-        select: (columns: string) => new Query(db, table, columns),
+        select: (columns: string) => new Query(db, table, columns, maxRows),
         insert: (payload: unknown) => insert(db, table, payload),
       }
     },

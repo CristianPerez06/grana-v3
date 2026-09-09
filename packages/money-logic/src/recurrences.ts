@@ -367,16 +367,17 @@ export function owedOccurrencesForRule({
 
   const ordered = [...versions].sort((a, b) => a.effective_from.localeCompare(b.effective_from))
   const already = new Set(existing)
-  const owed = new Set<string>()
+  const owed: string[] = []
+
+  // How many occurrences the rule has produced SO FAR along its composed
+  // timeline. `max_occurrences` counts positions on the rule's calendar from its
+  // start — one number for the whole rule, not one per schedule version. Handing
+  // the cap to each version's walk separately let a rule edited from monthly to
+  // biweekly produce the cap TWICE, which for a 6-cuota purchase means 12 cuotas.
+  let produced = 0
 
   for (const [index, version] of ordered.entries()) {
-    const nextVersion = ordered[index + 1]
-    // This version owns the timeline from its own start until the next one takes
-    // over — never past today, and never before the horizon.
-    const from = version.effective_from > horizon ? version.effective_from : horizon
-    const versionEnd = nextVersion == null ? today : addDays(nextVersion.effective_from, -1)
-    const to = versionEnd < today ? versionEnd : today
-    if (from > to) continue
+    if (maxOccurrences != null && produced >= maxOccurrences) break
 
     const schedule: OccurrenceSchedule = {
       // The version's calendar origin, NOT the rule's start_date: it is what
@@ -386,23 +387,58 @@ export function owedOccurrencesForRule({
       end_date: endDate,
       interval_count: version.interval_count,
       interval_unit: version.interval_unit,
-      max_occurrences: maxOccurrences,
+      // Deliberately null: the cap is applied against `produced` below, across
+      // every version. Leaving it here would restart the count on each one.
+      max_occurrences: null,
     }
 
-    for (const segment of subtractPauses([{ from, to }], pauses)) {
+    // The stretch this version owns: from where it takes effect until the next
+    // one does, never past today.
+    const nextVersion = ordered[index + 1]
+    const versionEnd = nextVersion == null ? today : addDays(nextVersion.effective_from, -1)
+    const to = versionEnd < today ? versionEnd : today
+
+    // The first version's calendar reaches back to its anchor, and the
+    // occurrences between the anchor and `effective_from` are the ones the cap
+    // has already spent — the assumed version claims the schedule applied there.
+    // Counting them by arithmetic costs nothing and is exactly what
+    // `walkOccurrences` did when the cap lived in the schedule.
+    if (index === 0) {
+      produced = occurrenceIndexAt(schedule, version.effective_from, 'on-or-after')
+    }
+
+    // Where the walk STARTS. With a cap it must start where the version does,
+    // because occurrences before the horizon still spend it. Without one,
+    // clipping to the horizon is a pure saving that cannot change the answer:
+    // nothing before it is ever owed and there is no ordinal to keep.
+    const walkFrom =
+      maxOccurrences != null || version.effective_from > horizon
+        ? version.effective_from
+        : horizon
+    if (walkFrom > to) continue
+
+    for (const segment of subtractPauses([{ from: walkFrom, to }], pauses)) {
+      const remaining = maxOccurrences == null ? undefined : maxOccurrences - produced
+      if (remaining != null && remaining <= 0) break
+
       for (const date of walkOccurrences(schedule, {
         from: segment.from,
         to: segment.to,
-        // The floor applies to every segment, not just the first: nothing at or
-        // before it is ever owed.
-        cursor: reconstructFrom,
+        limit: remaining,
       })) {
-        if (!already.has(date)) owed.add(date)
+        produced += 1
+        // The three reasons a date the rule produced is not owed. They are
+        // applied AFTER counting, because a date that exists — or that predates
+        // the floor or the horizon — still occupies its position on the calendar.
+        if (date <= reconstructFrom) continue
+        if (date < horizon) continue
+        if (already.has(date)) continue
+        owed.push(date)
       }
     }
   }
 
-  return [...owed].sort()
+  return owed.sort()
 }
 
 // ── Upcoming projection (pure) ───────────────────────────────────────────────

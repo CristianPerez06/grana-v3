@@ -195,8 +195,19 @@ que habilita el backlog.
       de dar vuelta, no depende de que PostgREST pueda apuntar a un índice parcial como destino de
       `on conflict` (no puede), y después de la activación los dos fallbacks dejan de dispararse solos
       —la ruta sana vuelve a ser un insert por corrida— sin desplegar nada. Está probada **con el
-      índice puesto**, que es el estado real de la ventana: `generator-backlog.test.ts`, 8 casos sobre
-      PGlite con `0064` aplicado.
+      índice puesto**, que es el estado real de la ventana: `generator-backlog.test.ts`, 11 casos
+      sobre PGlite con `0064` aplicado.
+      **Corregido — la degradación tapaba fallos reales.** La primera versión reintentaba ante
+      *cualquier* error de inserción, de modo que un permiso, un CHECK del payload o una caída de red
+      se trataban como «compatibilidad, seguí», y si algún insert posterior salía bien la corrida
+      devolvía `error: null`. Ahora se distinguen tres casos por SQLSTATE y nombre de índice:
+      **(1)** violación de `recurrence_instances_one_pending_per_rule` → es el estado de transición,
+      degrada; **(2)** violación de `recurrence_instances_one_per_rule_due_date` → otra corrida creó
+      esa ocurrencia primero (dos generadores en paralelo): no es error ni es nuestra, se saltea;
+      **(3)** cualquier otra cosa → **se reporta**, aunque otras reglas hayan entrado. El lote fallado
+      no escribe nada por ser una sola sentencia, así que el reintento por regla siempre es seguro y
+      una regla rota deja de bloquear a las sanas. Regresiones: una regla que falla mientras otra
+      entra, y dos generadores concurrentes.
       **Lo que queda de `1.6`:** borrar `decideRecurrenceInstance`, `RuleForDecision` y
       `GenerationDecision`, hoy sin ningún caller de producción, reescribiendo contra el caminante los
       casos de `max-occurrences.test.ts`, `custom-frequency.test.ts` y `generator.test.ts` que todavía
@@ -411,6 +422,14 @@ que habilita el backlog.
       **Hecho.** El horizonte se calcula con `getTodayAR()` —`options.today` existe solo para fijar el
       día en una reconstrucción de varias corridas y en los tests— y la selección de la tanda vive en
       `selectReconstructionBatch`, aparte y probada como función pura.
+      **Corregido — las cuatro lecturas se paginan hasta agotarlas.** PostgREST corta toda respuesta
+      en su `db-max-rows` **en silencio**. Una lectura truncada de los vencimientos que ya existen no
+      es un generador lento: es un generador que cree que faltan y los vuelve a crear. La paginación
+      avanza por lo que efectivamente vino y **corta con una página vacía, nunca con una corta**: una
+      página corta no significa el final, porque el tope del servidor puede ser menor que la ventana
+      pedida. Además la lectura de instancias se acota con `gte(due_date, piso más viejo)`, que es lo
+      máximo que se puede filtrar sin perder nada. El harness ahora simula `db-max-rows`, así que la
+      regresión reproduce el corte real con 366 filas en vez de necesitar mil.
 - [x] 2.1e Tanda operativa (decisión 20): **50 ocurrencias por corrida**, **un solo `insert` en
       lote** —hoy el generador inserta de a una dentro de un `for`— y la ocurrencia vigente siempre en
       la primera corrida. Mientras queden, indicarlo en pantalla **y ofrecer "Continuar
@@ -418,9 +437,14 @@ que habilita el backlog.
       nadie va a abrir y cerrar la app ocho veces para ver su propio historial.
       **Hecho del lado del cálculo y de la escritura**, pendiente el botón: `GenerationResult` devuelve
       `created`, `remaining` y `error`, y las tres cruzan enteras hasta la acción de web y el mutator
-      nativo. La ocurrencia vigente de **cada** regla entra siempre, aunque eso pase el tope de 50: una
-      regla que no materializa nada es el defecto, una reconstrucción lenta no. Falta la superficie que
-      muestra `remaining` y ofrece «Continuar reconstrucción» — es la etapa 4.
+      nativo.
+      **Corregido — el tope de 50 ahora es un tope.** La primera versión dejaba pasar la ocurrencia
+      vigente de cada regla «aunque eso pase el tope»; con las **61 reglas** que tiene producción, una
+      tanda declarada de 50 habría escrito 61. El límite es duro, y lo que no entra queda en
+      `remaining` para la corrida siguiente —la próxima pantalla que se abra, o el botón—. Dentro del
+      límite el orden es: primero la ocurrencia vigente de cada regla, **la más atrasada primero**,
+      y después el resto del atraso, de la más vieja a la más nueva. Falta la superficie que muestra
+      `remaining` y ofrece «Continuar reconstrucción» — es la etapa 4.
 - [x] 2.1d Pausa: no materializar los vencimientos que caen durante la pausa ni recuperarlos al
       reanudar; al reanudar tomar el próximo vencimiento futuro con el calendario original. Test:
       regla del 23 pausada en junio y reanudada el 5/9 vuelve con el 23/9, sin junio, julio ni agosto.
@@ -434,11 +458,15 @@ que habilita el backlog.
       **Hecho.** El generador lee `recurrence_schedule_versions` y camina cada tramo con el cronograma
       que rigió ahí, anclado en `anchor_date`. Un límite de versión es un corte duro: la mensual del 23
       deja de emitirse el día que entra la quincenal.
-      **Hueco conocido, a resolver cuando exista la UI de edición:** con **más de una** versión,
-      `max_occurrences` cuenta ordinales sobre el calendario de cada versión, y el tope de una regla
-      editada queda mal definido. En producción hoy toda regla tiene exactamente una versión asumida,
-      así que el comportamiento es idéntico al actual; el caso solo aparece cuando se pueda editar el
-      cronograma de verdad, y ahí hay que decidir qué cuenta el tope.
+      **Corregido — el tope era por versión y `updateRecurrence` ya existe.** Lo había anotado como
+      hueco a resolver "cuando exista la UI de edición"; la UI existe hoy en web y en nativo
+      (`mutations.ts:618`), así que era un defecto vivo: una compra en 6 cuotas editada de mensual a
+      quincenal producía **12**. `max_occurrences` pasa a contarse **una sola vez para la regla**, a
+      lo largo de su línea de tiempo compuesta. Cuentan las ocurrencias que la regla produjo, aunque
+      no se deban: las que ya existen, las que quedaron detrás del piso y las anteriores al horizonte.
+      **No** cuentan las que cayeron dentro de una pausa, porque nunca existieron. Siete casos en
+      `owed-occurrences-for-rule.test.ts`, cinco de los cuales fallan contra la versión anterior; dos
+      fijan que el caso de una sola versión —el de toda regla en producción hoy— no cambió.
 - [ ] 2.2 Adaptar los reads que asumen una pendiente por regla:
       `getPendingInstancesByRecurrenceId` (hoy `Map<string, RecurrenceInstance>`) y
       `RecurrenceSummary.pending_instance` (hoy singular) pasan a colección.
