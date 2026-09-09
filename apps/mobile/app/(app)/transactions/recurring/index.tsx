@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
-import { useFocusEffect, useRouter } from 'expo-router'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'expo-router'
+import { useQuery } from '@tanstack/react-query'
 import { Plus } from 'lucide-react-native'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { duplicateRuleIds, type RecurrenceSummary } from '@grana/recurrences'
@@ -10,7 +10,6 @@ import { Segmented } from '../../../../components/ui/Segmented'
 import { SkeletonBlock } from '../../../../components/ui/SkeletonBlock'
 import { RecurrenceRuleCard } from '../../../../components/recurrences/RecurrenceRuleCard'
 import { getRecurrencesList } from '../../../../lib/recurrences/queries'
-import { generateDueInstances } from '../../../../lib/recurrences/mutators'
 import { colors } from '../../../../lib/colors'
 import { useT } from '../../../../lib/locale-context'
 
@@ -32,31 +31,12 @@ const isFinished = (rule: RecurrenceSummary, today: string): boolean =>
 export default function RecurringHubScreen() {
   const t = useT()
   const router = useRouter()
-  const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('active')
 
   const query = useQuery({
     queryKey: ['recurrences', 'list'] as const,
     queryFn: getRecurrencesList,
   })
-
-  // Lazy materialization on focus: fire-and-forget, refresh only when something
-  // was created. Idempotent (one pending per rule), so re-focus is safe.
-  useFocusEffect(
-    useCallback(() => {
-      let active = true
-      generateDueInstances()
-        .then(({ created }) => {
-          if (active && created > 0) {
-            void queryClient.invalidateQueries({ queryKey: ['recurrences'] })
-          }
-        })
-        .catch(() => {})
-      return () => {
-        active = false
-      }
-    }, [queryClient]),
-  )
 
   const today = formatDateISO(getTodayAR())
   const rules = query.data ?? []

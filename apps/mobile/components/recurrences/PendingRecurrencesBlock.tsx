@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Alert, Pressable, Text, View } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, Clock, X } from 'lucide-react-native'
+import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import type { PendingRecurrenceInstance } from '@grana/recurrences'
 import { getPendingRecurrences } from '../../lib/recurrences/queries'
 import {
@@ -129,7 +130,13 @@ export function PendingRecurrencesBlock() {
   const [openOverride, setOpenOverride] = useState<boolean | null>(null)
 
   const instances = query.data ?? []
-  const isOpen = openOverride ?? instances.length <= 1
+  // OPEN whenever anything is already due, however many there are. It used to do
+  // the opposite — collapse from two onwards — so the more the user had to
+  // review, the better it was hidden. Only a block made entirely of occurrences
+  // that have NOT fallen due yet stays collapsed.
+  const todayISO = formatDateISO(getTodayAR())
+  const hasOverdue = instances.some((instance) => instance.scheduled_date <= todayISO)
+  const isOpen = openOverride ?? hasOverdue
 
   if (instances.length === 0 && !notice) return null
 

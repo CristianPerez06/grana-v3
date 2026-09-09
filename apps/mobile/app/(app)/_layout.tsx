@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar'
 import { supabase } from '../../lib/supabase'
 import { hasRecoveryClaim } from '../../lib/recovery'
 import { PreferencesProvider } from '../../lib/preferences-context'
+import { RecurrenceMaterializationProvider } from '../../lib/recurrences/materialization-context'
 import { AppMenu } from '../../components/layout/AppMenu'
 import { TabBar } from '../../components/layout/TabBar'
 
@@ -43,6 +44,10 @@ export default function AppLayout() {
 
   return (
     <PreferencesProvider>
+      {/* Materialization runs HERE, not on the recurrences hub: tying it there
+          meant the feed showed occurrences it never produced, so a user who only
+          opened the feed depended on having visited the hub. */}
+      <RecurrenceMaterializationProvider>
       <StatusBar style="light" />
       <Modal
         visible={menuOpen}
@@ -77,6 +82,7 @@ export default function AppLayout() {
         <Tabs.Screen name="accounts" options={{ href: null }} />
         <Tabs.Screen name="settings" options={{ href: null }} />
       </Tabs>
+      </RecurrenceMaterializationProvider>
     </PreferencesProvider>
   )
 }

@@ -70,9 +70,16 @@ export const PendingRecurrencesBlock = ({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [errorByInstance, setErrorByInstance] = useState<Record<string, string>>({})
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  // Collapsible, like the recurrence-suggestion banner: open with one pending
-  // instance, collapsed with several so it stays a thin header above the card.
-  const [isOpen, setIsOpen] = useState(pending.length <= 1)
+  // OPEN whenever anything is already due, however many there are. It used to do
+  // the opposite — collapse from two onwards — so the more the user had to
+  // review, the better it was hidden. That was one of the three symptoms behind
+  // this change: "la veo en Recurrencias pero no me aparece el aviso".
+  //
+  // Only a block made entirely of occurrences that have NOT fallen due yet stays
+  // collapsed, and it is not really this block's job to shout about those.
+  const [isOpen, setIsOpen] = useState(() =>
+    pending.some((instance) => urgencyOf(instance.scheduled_date).overdue),
+  )
 
   // Edit mode: at most one instance edited at a time, to keep UI focused.
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -394,6 +401,29 @@ export const PendingRecurrencesBlock = ({
                     )}
                     {urgency.label}
                   </span>
+                  {/* WHAT RESOLVING IT WILL DO, spelled out. The row above says
+                      what is due; this says what the app is about to write —
+                      which movement, with which date, in which account — so the
+                      user is not asked to confirm something they have to infer.
+                      Hidden while editing: the form itself is showing the values
+                      it will use. */}
+                  {!isEditing && (
+                    <span className="text-[12px] text-text-soft">
+                      {t(
+                        instance.recurrence.movement_type === 'income'
+                          ? 'pending.will_create.income'
+                          : instance.recurrence.movement_type === 'transfer'
+                            ? 'pending.will_create.transfer'
+                            : 'pending.will_create.expense',
+                        {
+                          amount: formatted,
+                          date: instance.scheduled_date,
+                          account: accountName,
+                          destination: destinationName ?? '—',
+                        },
+                      )}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">

@@ -1711,12 +1711,12 @@
       "fx_rate_not_allowed": "An FX rate is not applicable to this transaction."
     },
     "pending": {
-      "title": "Pending recurring transactions",
-      "count": "{count} pending",
+      "title": "Occurrences to review",
+      "count": "{count, plural, one {# occurrence to review} other {# occurrences to review}}",
       "close_notice": "Close notice",
       "edit_aria": "Edit before confirming",
       "cancel_edit_aria": "Cancel editing",
-      "amount_changes_rule": "If it changes, the recurring rule will be updated too.",
+      "amount_changes_rule": "For this occurrence only: the rule keeps its amount.",
       "account_placeholder": "Pick what you paid it with",
       "account_instance_only": "Just this time: the rule keeps its own account.",
       "account_none_eligible": "You have no available accounts for this currency.",
@@ -1728,11 +1728,16 @@
       "skip": "Skip",
       "confirmed_success": "Transaction confirmed.",
       "skipped_success": "Transaction skipped.",
-      "subtitle": "Grana is waiting for you before recording them",
-      "all_clear": "All caught up — no recurrences waiting for your confirmation.",
+      "subtitle": "We do not know yet whether you paid them: review them and decide on each one",
+      "all_clear": "You have no occurrences to review.",
       "overdue": "{count, plural, one {Overdue by # day} other {Overdue by # days}}",
       "due_today": "Due today",
-      "due_in": "{count, plural, one {Due in # day} other {Due in # days}}"
+      "due_in": "{count, plural, one {Due in # day} other {Due in # days}}",
+      "will_create": {
+        "expense": "On registering: an expense of {amount} on {date} from {account}",
+        "income": "On registering: an income of {amount} on {date} into {account}",
+        "transfer": "On registering: a transfer of {amount} on {date}, from {account} to {destination}"
+      }
     },
     "suggestion": {
       "title": "Looks like this is recurring",
@@ -1798,6 +1803,14 @@
     "duplicate_warning_body_untitled": "You already have an active rule with the same account, currency and type, and an equal or nearly equal amount. You can create it anyway if they are different expenses.",
     "route": {
       "form_loading": "Loading the form…"
+    },
+    "materialization": {
+      "failed_title": "We could not update your occurrences",
+      "failed_body": "Some may be missing. Try again.",
+      "retry": "Retry",
+      "remaining": "{count, plural, one {# occurrence left to rebuild} other {# occurrences left to rebuild}}",
+      "continue": "Continue rebuilding",
+      "running": "Updating…"
     }
   },
   "subcategories": {

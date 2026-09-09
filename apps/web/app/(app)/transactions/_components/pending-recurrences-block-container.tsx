@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { useQueries } from '@tanstack/react-query'
+import { MaterializationNotice } from '@/lib/recurrences/components/materialization-notice'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
 import { createClient } from '@/lib/supabase/client'
 import { getPendingRecurrenceInstances } from '@/lib/recurrences/queries'
@@ -51,13 +52,21 @@ export function PendingRecurrencesBlockContainer() {
     [accountsQ.data],
   )
 
-  if (pendingQ.isPending || pendingQ.error || !pendingQ.data) return null
+  // The notice renders even with no pending instances: a materialization that
+  // FAILED must not look like a user who has nothing to review, and a rebuild
+  // that still owes occurrences has to offer to continue.
+  if (pendingQ.isPending || pendingQ.error || !pendingQ.data) return <MaterializationNotice />
 
   return (
-    <PendingRecurrencesBlock
-      pending={pendingQ.data}
-      accounts={accounts}
-      availableByAccount={availableByAccount}
-    />
+    <div className="flex flex-col gap-3">
+      <MaterializationNotice />
+      {pendingQ.data.length > 0 ? (
+        <PendingRecurrencesBlock
+          pending={pendingQ.data}
+          accounts={accounts}
+          availableByAccount={availableByAccount}
+        />
+      ) : null}
+    </div>
   )
 }
