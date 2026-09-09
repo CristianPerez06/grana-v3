@@ -119,7 +119,17 @@ export async function createRecurrenceIdentityDb(
 }
 
 export async function applyMigration(db: PGlite): Promise<void> {
-  await db.exec(MIGRATION_0064)
+  try {
+    await db.exec(MIGRATION_0064)
+  } catch (error) {
+    // 0064 runs as one transaction and its `commit` is the last statement, so an
+    // abort inside it leaves the SESSION in a failed transaction: every later
+    // statement comes back "current transaction is aborted" instead of the real
+    // answer. Closing it here means a caller that asserts on what the failed
+    // migration left behind gets to ask the question at all.
+    await db.exec('rollback;').catch(() => undefined)
+    throw error
+  }
   // 0064 creates two tables, so they need the grant the initial one could not give.
   await grantAll(db)
 }

@@ -22,14 +22,35 @@
 -- sabe antes de la ventana de deploy— y la migración es la que garantiza que lo
 -- que se migra es lo que se decidió.
 --
---   0 filas fuera de cronograma  ⇒ el anclaje en `start_date` preserva el
---                                  comportamiento actual y el esquema alcanza.
---   ≥1 fila                      ⇒ la versión asumida necesita persistir su
---                                  FASE (una fecha de inicio de secuencia,
---                                  además del `anchor_date` del clamping), para
---                                  conservar la próxima ocurrencia que hoy
---                                  produce `addInterval(cursor, …)`.
---                                  NO normalizar en silencio.
+-- LA COLUMNA QUE DECIDE 1.10b ES `con_proxima_distinta`, no
+-- `fuera_de_cronograma`. Son criterios distintos y no equivalentes:
+--
+--   · `fuera_de_cronograma` mira el CURSOR. Una regla puede tenerlo fuera y aun
+--     así producir exactamente la fecha del calendario — pasa siempre en las
+--     mensuales de intervalo 1 —, y esa regla no necesita nada.
+--   · `con_proxima_distinta` mira lo único que el usuario ve: si la PRÓXIMA
+--     FECHA que produce hoy es la misma que daría el calendario. Ni siquiera
+--     alcanza con que esa fecha esté en el cronograma: mensual del día 10 con
+--     cursor `2026-02-05` da `2026-03-10`, que está en el cronograma, mientras
+--     el calendario diría `2026-02-10` — un mes de diferencia.
+--
+--   0 con próxima distinta  ⇒ el anclaje en `start_date` preserva el
+--                             comportamiento actual y el esquema alcanza.
+--   ≥1                      ⇒ la versión asumida necesita persistir su FASE (una
+--                             fecha de inicio de secuencia, además del
+--                             `anchor_date` del clamping), para conservar la
+--                             próxima ocurrencia que hoy produce
+--                             `addInterval(cursor, …)`. NO normalizar en
+--                             silencio.
+--
+-- `fuera_de_cronograma` queda como diagnóstico: dice cuántas reglas tienen el
+-- cursor desalineado, que es el universo del que puede salir una divergencia,
+-- pero no es el número que autoriza nada.
+--
+-- La sección 4b de `0064` verifica **este mismo criterio** —misma cuenta, misma
+-- ventana de candidatas— dentro de su transacción, y aborta si cambió. Que las
+-- dos midan lo mismo no es cosmético: una guardia que protege algo más angosto
+-- que lo que se decidió es peor que no tener guardia.
 --
 -- TAMBIÉN DECIDE LA TAREA 1.7 (el tope `max_occurrences`). El tope se cuenta
 -- como el ORDINAL de la próxima fecha sobre el cronograma, y una fecha fuera del
