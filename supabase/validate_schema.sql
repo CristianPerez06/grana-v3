@@ -594,6 +594,7 @@ begin
   -- (5) Constraints.
   for missing in
     select cn from unnest(array['chk_recurrence_instances_due_date_unknown',
+                                'chk_recurrence_instances_unresolved_has_due_date',
                                 'chk_recurrence_instances_resolution_kind',
                                 'chk_recurrence_instances_linked_conversion']) as cn
     where not exists (
@@ -764,6 +765,11 @@ begin
   -- one with no `due_date` would have no identity at all, and every surface that
   -- reads the vencimiento (ordering, overdue, the confirm form's default date)
   -- narrows the type on this invariant.
+  --
+  -- `chk_recurrence_instances_unresolved_has_due_date` (checked above) is what
+  -- ENFORCES it going forward. This stays because the two answer different
+  -- questions: the constraint stops new violations, this one finds any that a
+  -- restored dump or a pre-0064 deployment left behind.
   select count(*) into v_offend
     from public.recurrence_instances
    where status = 'pending' and due_date is null;

@@ -22,10 +22,10 @@ import {
 } from './duplicates'
 import type {
   EnrichedRecurrenceInstance,
+  PendingInstance,
   PendingRecurrenceInstance,
   Recurrence,
   RecurrenceDetail,
-  RecurrenceInstance,
   RecurrenceStatus,
   RecurrenceSummary,
 } from './types'
@@ -51,7 +51,7 @@ type RecurrenceRow = Omit<RecurrenceSummary, 'pending_instances' | 'covered_occu
 
 function mapRecurrenceSummary(
   recurrence: RecurrenceRow,
-  pendingByRecurrenceId: Map<string, RecurrenceInstance[]>,
+  pendingByRecurrenceId: Map<string, PendingInstance[]>,
   upcomingByRecurrenceId: Map<string, string[]>,
   today: string,
 ): RecurrenceSummary {
@@ -141,11 +141,11 @@ async function getUpcomingOccurrenceDates(
 export async function getPendingInstancesByRecurrenceId(
   supabase: GranaSupabaseClient,
   recurrenceIds: string[],
-): Promise<Map<string, RecurrenceInstance[]>> {
-  const pendingByRecurrenceId = new Map<string, RecurrenceInstance[]>()
+): Promise<Map<string, PendingInstance[]>> {
+  const pendingByRecurrenceId = new Map<string, PendingInstance[]>()
   if (recurrenceIds.length === 0) return pendingByRecurrenceId
 
-  const { data, error } = await selectAllPages<RecurrenceInstance>(() =>
+  const { data, error } = await selectAllPages<PendingInstance>(() =>
     supabase
       .from('recurrence_instances')
       .select('*')

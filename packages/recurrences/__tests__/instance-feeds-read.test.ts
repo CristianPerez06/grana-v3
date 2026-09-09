@@ -85,9 +85,15 @@ describe('getPendingRecurrenceInstances — the global review feed', () => {
 
   it('orders by the VENCIMIENTO, even when the legacy column disagrees', async () => {
     // Two unresolved occurrences whose `scheduled_date` order is the REVERSE of
-    // their `due_date` order — what an older client leaves behind when it moves
-    // `scheduled_date`. Sorting by that column puts the later vencimiento first,
-    // so the block asks the user to review August before July.
+    // their `due_date` order. Sorting by `scheduled_date` puts the later
+    // vencimiento first, so the block asks the user to review August before July.
+    //
+    // The state is SYNTHETIC and says so: an older client overwrites
+    // `scheduled_date` when it CONFIRMS, which leaves the row resolved, so no
+    // known write produces a `pending` row whose two dates disagree. It is built
+    // by hand for one reason — to make the two columns give different answers,
+    // and pin which one the read obeys. Ordering by a column nothing else may
+    // read is a hole worth closing before something opens it.
     const ruleId = await createRule()
     await db.exec(`
       insert into public.recurrence_instances

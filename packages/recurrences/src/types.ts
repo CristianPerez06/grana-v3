@@ -67,24 +67,38 @@ export type EnrichedRecurrenceInstance = RecurrenceInstance & {
 }
 
 /**
- * An enriched instance still awaiting a decision — the feed rows.
+ * What it means for an occurrence to be STILL AWAITING A DECISION.
  *
- * The one thing it adds is that `due_date` is NOT nullable. An UNRESOLVED
- * occurrence always has an exact vencimiento: 0064's backfill set `pending` and
- * `skipped` rows exactly, its compatibility trigger derives it on insert for any
- * client that only writes `scheduled_date`, and it is immutable from then on.
- * `validate_schema.sql` asserts it.
+ * Both halves are narrowings, and they belong together: `due_date: string`
+ * without `status: 'pending'` is a promise about resolved rows too, which is
+ * false — a `confirmed` occurrence from before 0064 has no recoverable
+ * vencimiento. Read as one shape, the type says exactly what the database
+ * enforces.
  *
- * Narrowing it here is what lets every surface read the vencimiento instead of
+ * An unresolved occurrence always has an exact vencimiento: 0064's backfill set
+ * `pending` and `skipped` rows exactly, its compatibility trigger derives it on
+ * insert for any client that only writes `scheduled_date`, the immutability
+ * guard refuses to clear it, and `chk_recurrence_instances_unresolved_has_due_date`
+ * rejects the one transition that could reintroduce a NULL (a historical
+ * `confirmed` row updated back to `pending`). `validate_schema.sql` checks the
+ * same invariant over existing data.
+ *
+ * Narrowing it is what lets every surface read the vencimiento instead of
  * `scheduled_date` — which on a resolved row is a legacy date of uncertain
- * meaning and was never the occurrence's identity. It is a promise only about
- * unresolved rows, so anything that also holds history takes
- * `EnrichedRecurrenceInstance`: claiming a non-null `due_date` for a confirmed
- * 2023 occurrence would be a lie the compiler helps spread.
+ * meaning and was never the occurrence's identity. Anything that also holds
+ * history takes the un-narrowed type instead: claiming a non-null `due_date` for
+ * a confirmed 2023 occurrence would be a lie the compiler helps spread.
  */
-export type PendingRecurrenceInstance = EnrichedRecurrenceInstance & {
+type Unresolved = {
+  status: 'pending'
   due_date: string
 }
+
+/** An unresolved occurrence with no embeds — what the per-rule read returns. */
+export type PendingInstance = RecurrenceInstance & Unresolved
+
+/** An unresolved occurrence plus its embeds — the review feed rows. */
+export type PendingRecurrenceInstance = EnrichedRecurrenceInstance & Unresolved
 
 export type RecurrenceSummary = Recurrence & {
   account: RecurrenceAccount | null
@@ -99,7 +113,7 @@ export type RecurrenceSummary = Recurrence & {
    * several at once and a surface that renders `[0]` shows one of many rather
    * than the only one. Empty when the rule is up to date.
    */
-  pending_instances: RecurrenceInstance[]
+  pending_instances: PendingInstance[]
   /**
    * Occurrences of this rule that ALREADY EXIST from today onward, plus its seed
    * date when the rule was created from a movement — everything a projection has

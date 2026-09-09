@@ -69,9 +69,13 @@ describe('getPendingInstancesByRecurrenceId', () => {
   })
 
   it('orders by the VENCIMIENTO, even when the legacy column disagrees', async () => {
-    // Same shape as the global feed: `scheduled_date` ascending is the reverse
-    // of `due_date` ascending, which is what an older client leaves behind when
-    // it moves `scheduled_date`. The rule's own list has to agree with the feed.
+    // Same shape as the global feed: `scheduled_date` ascending is the reverse of
+    // `due_date` ascending. The rule's own list has to agree with the feed.
+    //
+    // Synthetic, like the feed's: no known write leaves a `pending` row whose two
+    // dates disagree (an older client overwrites `scheduled_date` at confirm
+    // time, which resolves the row). It exists to make the columns answer
+    // differently and pin which one the read obeys.
     ruleSeq += 1
     const id = `00000000-0000-0000-0000-00000000${String(3000 + ruleSeq)}`
     await db.exec(`

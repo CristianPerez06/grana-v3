@@ -66,6 +66,7 @@ export type {
   RecurrenceSummary,
   RecurrenceDetail,
   EnrichedRecurrenceInstance,
+  PendingInstance,
   PendingRecurrenceInstance,
   RecurrenceAccount,
   RecurrenceCategory,

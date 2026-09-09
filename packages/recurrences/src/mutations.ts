@@ -290,6 +290,22 @@ export async function confirmRecurrenceInstance(
     return { ok: false, formError: 'Esta instancia ya fue resuelta.' }
   }
 
+  // NO VENCIMIENTO, NO CONFIRMATION. This is unreachable through any write this
+  // code makes — the backfill filled it, the compatibility trigger derives it on
+  // insert, the immutability guard refuses to clear it and 0064's CHECK rejects
+  // the one transition that could reintroduce a NULL. It is checked anyway
+  // because the alternative is silent: falling back to `scheduled_date`, a date
+  // the spec itself declares of uncertain meaning, would file the movement in
+  // whatever month that column happens to hold. A visible refusal on data that
+  // should not exist beats a wrong number in the ledger.
+  if (instance.due_date == null) {
+    return {
+      ok: false,
+      formError:
+        'Esta ocurrencia no tiene fecha de vencimiento y no se puede registrar. Escribinos para revisarla.',
+    }
+  }
+
   const { data: rule, error: ruleError } = await supabase
     .from('recurrences')
     .select('id, movement_type, amount, status')
@@ -365,13 +381,11 @@ export async function confirmRecurrenceInstance(
     transfer_destination_account_id: instance.transfer_destination_account_id,
     currency_code: instance.currency_code as RecurrenceCurrencyCode,
     amount: payload.amount ?? Number(instance.amount),
-    // THE VENCIMIENTO IS THE DEFAULT DATE, not `scheduled_date`. The two are the
-    // same on a row this delivery wrote, and diverge on one an older client
-    // resolved — where `scheduled_date` is the day it was paid. The fallback is
-    // for a row that somehow reached `pending` without a `due_date`, which the
-    // backfill, the compatibility trigger and the guard all rule out: it keeps a
-    // confirmation from failing on data nobody should have.
-    date: payload.date ?? instance.due_date ?? instance.scheduled_date,
+    // THE VENCIMIENTO IS THE DEFAULT DATE, and there is no fallback to
+    // `scheduled_date`: a missing `due_date` was refused above rather than
+    // approximated. The date the user picks still wins — the vencimiento is the
+    // default, not a lock.
+    date: payload.date ?? instance.due_date,
     category_id:
       payload.category_id !== undefined ? payload.category_id : instance.category_id,
     subcategory_id:

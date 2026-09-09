@@ -121,9 +121,24 @@ el comportamiento—, y la activación —tarea 2.8— es la que habilita el bac
       `due_date` es `NULL` mientras ella guarda un valor que no es vencimiento. El código nuevo no la
       lee ni como vencimiento ni como fecha de pago; el trigger solo la refleja al insertar.
       **Y el movimiento se fecha por `due_date`**: la confirmación ni siquiera seleccionaba la
-      columna y construía la transacción desde `scheduled_date`, así que en una fila que resolvió un
-      cliente viejo la cuota vencida en junio entraba al historial con la fecha en que se pagó. La
-      fecha que elige el usuario sigue ganando: el vencimiento es el valor por omisión, no un candado.
+      columna y construía la transacción desde `scheduled_date`, que por definición no es el
+      vencimiento. La fecha que elige el usuario sigue ganando: el vencimiento es el valor por
+      omisión, no un candado.
+      **Sin fallback.** Si una pendiente llegara sin `due_date`, la confirmación falla con un mensaje
+      visible en vez de caer en `scheduled_date`: aproximar la fecha archiva el movimiento en el mes
+      que esa columna tenga y el error aparece meses después. Que esa fila no exista lo garantiza
+      `chk_recurrence_instances_unresolved_has_due_date` (1.1b); el rechazo es la segunda defensa,
+      para un dato que ya estuviera escrito.
+- [x] 1.1b `CHECK` persistente `chk_recurrence_instances_unresolved_has_due_date`: toda instancia
+      `pending` o `skipped` tiene `due_date`. `validate_schema.sql` (10b) ya afirmaba el invariante,
+      pero una verificación detecta datos malos cuando alguien la corre; no impide que aparezcan.
+      Hay exactamente una transición que parte de un `NULL` legítimo y que ni el trigger de
+      compatibilidad —deriva `due_date` solo en el INSERT— ni la guarda de inmutabilidad —se niega a
+      CAMBIAR una identidad existente— cubren: una `confirmed` histórica vuelta a `pending`. RLS deja
+      al usuario escribir sus propias instancias, así que es alcanzable desde el cliente.
+      Regresiones bajo `authenticated`, afirmando sobre el NOMBRE de la restricción y no sobre el
+      SQLSTATE —tres checks más de la tabla levantan `23514`—, con la fila histórica creada **antes**
+      de 0064, que es la única forma en que existe de verdad.
 - [x] 1.4b Agregar `resolution_kind` (`created` | `linked`) y `linked_conversion`, poblar
       `resolution_kind = 'created'` en las confirmadas, y **agregar sus constraints en esta misma
       migración, después del trigger**: el trigger completa el campo antes de que el `CHECK` corra,

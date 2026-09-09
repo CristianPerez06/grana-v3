@@ -72,9 +72,11 @@ function stubClient(rec: Recorder) {
     id: INSTANCE,
     recurrence_id: RULE,
     status: 'pending',
-    // The two DIVERGE on purpose. `scheduled_date` is what an older client left
-    // behind — here, the day this occurrence was last touched; `due_date` is the
-    // vencimiento and the occurrence's identity.
+    // The two DIVERGE on purpose, and the state is SYNTHETIC: an older client
+    // overwrites `scheduled_date` when it confirms, which leaves the row
+    // resolved, so nothing known produces a `pending` row whose dates disagree.
+    // They are set apart here for one reason — so the assertions can say which
+    // column the confirmation obeyed instead of matching either.
     scheduled_date: '2026-09-15',
     due_date: '2026-06-23',
     amount: RULE_AMOUNT,

@@ -131,6 +131,24 @@ alter table public.recurrence_instances
     (due_date is null) = due_date_is_unknown
   );
 
+-- AN UNRESOLVED OCCURRENCE ALWAYS HAS AN EXACT VENCIMIENTO — enforced here, not
+-- only verified after the fact.
+--
+-- The backfill above and the compatibility trigger below both produce it, and
+-- the immutability guard refuses to clear a `due_date` that already exists. What
+-- none of them covers is the one transition that starts from a legitimate NULL:
+-- a historical `confirmed` row (due_date NULL by policy) UPDATEd back to
+-- `pending`. RLS lets a user write their own instances, so that is reachable
+-- from the client, and it would leave an occurrence with no identity at all —
+-- unorderable in the feed, and with no date to give the movement it confirms.
+--
+-- `skipped` is in for the same reason: it is a resolved occurrence that still
+-- occupies its due date, and the identity index only dedupes on exact ones.
+alter table public.recurrence_instances
+  add constraint chk_recurrence_instances_unresolved_has_due_date check (
+    status = 'confirmed' or due_date is not null
+  );
+
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2 · Collision policy: abort with a report, never guess
 -- ═══════════════════════════════════════════════════════════════════════════
