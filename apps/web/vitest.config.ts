@@ -12,13 +12,6 @@ export default defineConfig({
     // sino que señala un test que no tiene nada malo, y que entrena a la gente a
     // volver a correr CI en vez de leerlo.
     hookTimeout: 60_000,
-    // Y lo mismo para el cuerpo del test, no solo para el hook: varias suites
-    // levantan su Postgres DENTRO del `it` (para aplicar —o no— una migración y
-    // comparar), y ahí el límite que corre es `testTimeout`, que por defecto son
-    // 5s. Con más suites de éstas compitiendo por CPU eso empezó a fallar de a
-    // ratos en un test que no tiene nada malo: el modo de falla más caro, porque
-    // enseña a volver a correr CI en vez de leerlo.
-    testTimeout: 60_000,
   },
   resolve: {
     alias: {

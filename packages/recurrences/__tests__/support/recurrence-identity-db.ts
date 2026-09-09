@@ -19,7 +19,7 @@ import { PGlite } from '@electric-sql/pglite'
  * expansion must leave standing.
  */
 
-const MIGRATIONS = resolve(__dirname, '../../../../../../supabase/migrations')
+const MIGRATIONS = resolve(__dirname, '../../../../supabase/migrations')
 const read = (file: string) => readFileSync(resolve(MIGRATIONS, file), 'utf-8')
 
 export const MIGRATION_0064 = read('0064_recurrence_identity_expand.sql')

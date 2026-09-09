@@ -18,6 +18,7 @@
     "@grana/validation": "workspace:*"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4",
     "vitest": "^3.0.0"
   }
 }

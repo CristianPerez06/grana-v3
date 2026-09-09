@@ -299,7 +299,7 @@ begin
   if TG_OP = 'UPDATE' then
     if NEW.reconstruct_from is distinct from OLD.reconstruct_from then
       raise exception
-        'reconstruct_from es inmutable: la regla % tiene el piso %, y se intentó moverlo a %.',
+        'reconstruct_from is immutable: rule % has floor %, and the write tried to move it to %.',
         OLD.id, OLD.reconstruct_from, NEW.reconstruct_from
         using errcode = '23514';
     end if;

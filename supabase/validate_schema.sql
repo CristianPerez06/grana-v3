@@ -649,19 +649,29 @@ begin
     raise exception 'the FK from % to recurrences is not (recurrence_id, user_id) -> (id, user_id) ON DELETE CASCADE: a user could attach their user_id to somebody else''s rule', missing;
   end loop;
 
-  -- (7) Triggers, checked by TABLE, FUNCTION and EVENTS — not by name. A trigger
-  --     called `trg_recurrence_reconstruct_from_guard` that only fires on INSERT
-  --     is the exact hole this section exists to catch: `reconstruct_from` is the
-  --     floor of what the generator reconstructs, `recurrences` has had a user
-  --     UPDATE policy since 0011, and the generated types expose the column in
-  --     `Update`. Moving that floor backwards fabricates months of backlog;
-  --     moving it forwards hides occurrences the user is owed.
+  -- (7) Triggers, checked by TABLE, FUNCTION, EVENTS, TIMING and LEVEL — not by
+  --     name. A trigger called `trg_recurrence_reconstruct_from_guard` that only
+  --     fires on INSERT is the exact hole this section exists to catch:
+  --     `reconstruct_from` is the floor of what the generator reconstructs,
+  --     `recurrences` has had a user UPDATE policy since 0011, and the generated
+  --     types expose the column in `Update`. Moving that floor backwards
+  --     fabricates months of backlog; moving it forwards hides occurrences the
+  --     user is owed.
+  --
+  --     Timing and level are part of the contract, not decoration. The same guard
+  --     moved to AFTER would still fire on both events and still pass an
+  --     events-only check, while silently doing nothing: `NEW` is not writable
+  --     after the row is in, so it could no longer DERIVE `reconstruct_from` on
+  --     insert. A STATEMENT-level trigger has no `NEW`/`OLD` at all.
+  --
+  --     `pg_trigger.tgtype` bits: 1 ROW, 2 BEFORE, 4 INSERT, 8 DELETE, 16 UPDATE.
   for missing in
     select t.tg from (values
-      ('trg_recurrence_instance_compat',          'recurrence_instances', 'recurrence_instance_compat',          true,  true,  false),
-      ('trg_recurrence_sync_schedule_and_pauses', 'recurrences',          'recurrence_sync_schedule_and_pauses', true,  true,  false),
-      ('trg_recurrence_reconstruct_from_guard',   'recurrences',          'recurrence_reconstruct_from_guard',   true,  true,  false)
-    ) as t(tg, tbl, fn, want_insert, want_update, want_delete)
+      -- name                                     table                   function                               ins   upd   del    before
+      ('trg_recurrence_instance_compat',          'recurrence_instances', 'recurrence_instance_compat',          true, true, false, true),
+      ('trg_recurrence_reconstruct_from_guard',   'recurrences',          'recurrence_reconstruct_from_guard',   true, true, false, true),
+      ('trg_recurrence_sync_schedule_and_pauses', 'recurrences',          'recurrence_sync_schedule_and_pauses', true, true, false, false)
+    ) as t(tg, tbl, fn, want_insert, want_update, want_delete, want_before)
     where not exists (
       select 1
         from pg_trigger tr
@@ -673,9 +683,11 @@ begin
          and ((tr.tgtype & 4)  <> 0) = t.want_insert   -- INSERT
          and ((tr.tgtype & 16) <> 0) = t.want_update   -- UPDATE
          and ((tr.tgtype & 8)  <> 0) = t.want_delete   -- DELETE
+         and ((tr.tgtype & 2)  <> 0) = t.want_before   -- BEFORE, else AFTER
+         and  (tr.tgtype & 1)  <> 0                    -- FOR EACH ROW
     )
   loop
-    raise exception 'trigger % is missing, or sits on another table/function, or no longer fires on the events it must (migration 0064)', missing;
+    raise exception 'trigger % is missing, or sits on another table/function, or no longer fires with the events, timing and level it must — BEFORE ROW for the two that write NEW, AFTER ROW for the history sync (migration 0064)', missing;
   end loop;
 
   -- (8) THE DATABASE IS THE SOLE OWNER of the new history. The two writer

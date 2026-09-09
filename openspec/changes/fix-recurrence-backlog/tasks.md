@@ -188,14 +188,25 @@ que habilita el backlog.
       `trg_recurrence_reconstruct_from_guard` —la coda de esta misma migración advierte contra
       nombres que esconden una regla permanente— y una migración futura que necesite mover el piso
       puede `disable trigger` alrededor de la escritura, que es deliberado y auditable. Regresión
-      persistente en `apps/web/lib/recurrences/__tests__/reconstruct-from-guard.test.ts` (9 casos
+      persistente en `packages/recurrences/__tests__/reconstruct-from-guard.test.ts` (9 casos
       sobre PGlite, **corriendo como el usuario**, no como superusuario): el update legítimo sigue
       andando, los cuatro ataques —atrás, adelante, `±infinity`, y colado dentro de un update
       legítimo— se rechazan, reescribir el mismo valor es no-op, y pausar no mueve el piso.
       `validate_schema.sql` ahora comprueba **tabla, función y eventos** de cada trigger y las
       **columnas exactas de las dos FK compuestas**, no solo que exista algo con ese nombre: probado
       en negativo devolviendo el guard a solo-INSERT, invirtiendo las columnas de una FK y apuntando
-      un trigger a otra función. Los mensajes de 8.1J quedaron en inglés, como declara el bloque.
+      un trigger a otra función. Comprueba además **timing y nivel** (`BEFORE ROW` para los dos que
+      escriben `NEW`, `AFTER ROW` para el sync del historial): un guard movido a `AFTER` conserva sus
+      eventos y pasaría un chequeo que solo los mire, pero ya no puede derivar `NEW.reconstruct_from`
+      al insertar, y uno a nivel `STATEMENT` no tiene `NEW`/`OLD`. Los tres casos, probados en
+      negativo. Los mensajes de 8.1J y la excepción del guard quedaron en inglés.
+      El harness (`__tests__/support/recurrence-identity-db.ts`) vive en el paquete dueño, con
+      `@electric-sql/pglite` como dependencia de desarrollo suya, y `packages/recurrences` estrena
+      `vitest.config.ts` con `hookTimeout` alto **solo para el hook** —el `beforeAll` levanta Postgres
+      WASM—, dejando `testTimeout` en su default de 5s: la base se arma en el hook, así que un cuerpo
+      de test que tarda es un cuelgue y no hay que darle cuerda. El `testTimeout` global que había
+      subido en `apps/web` quedó revertido: mover el test fuera de `apps/web` saca la contención que
+      yo mismo había agregado, así que la justificación desapareció con la causa.
 
 ## 2. El backlog existe y se puede resolver
 
