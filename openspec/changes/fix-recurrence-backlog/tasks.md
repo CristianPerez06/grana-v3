@@ -78,11 +78,47 @@ que habilita el backlog.
 - [x] 1.4c Quitar de `confirmRecurrenceInstance` la propagación del importe a la regla
       (`mutations.ts:446`): con resolución en bloque el resultado dependería del orden.
 - [ ] 1.5 Quitar de `confirmRecurrenceInstance` y `skipRecurrenceInstance` la escritura de
-      `last_generated_date` (`mutations.ts:443` y `:500`). Conservar la columna durante la
+      `last_generated_date` (`mutations.ts:455` y `:507`). Conservar la columna durante la
       transición; deja de ser fuente de verdad del generador.
+      **BLOQUEADA, y no por la auditoría: el cursor no lo lee solo el generador.** Relevado, hay
+      cuatro superficies más que dependen de que confirmar y omitir lo avancen:
+      **(1) El dashboard.** `packages/dashboard/src/queries.ts:841` lo dice con todas las letras —
+      *"The two never overlap: the projection advances from `last_generated_date`, so it never
+      returns an occurrence already generated — including one already confirmed, which moved the
+      cursor past itself."* El invariante de no-doble-conteo del gasto comprometido **descansa en esa
+      escritura**. Sacarla sin más contaría la misma ocurrencia dos veces —una como instancia
+      materializada y otra como proyectada—, que es justamente la familia de #118.
+      **(2) El "próximo"** (`getNextExpectedOccurrence`), en la pantalla de recurrencias
+      (`queries.ts:573`) y en el detalle del movimiento (`thin-mutations.ts:803`): seguiría mostrando
+      como próxima una fecha ya resuelta.
+      **(3) La proyección** (`projectRuleOccurrences`, `money-logic:397`), que pasa el cursor como
+      `cursor` del caminante: volvería a anunciar ocurrencias ya resueltas.
+      **(4) El deshacer** de `thin-mutations.ts:814-822`, que compara `last_generated_date` contra
+      `start_date` para decidir si limpiar la semilla.
+      **Qué hace falta antes:** que esas cuatro dejen de preguntarle al cursor y pasen a preguntarle
+      al conjunto de `due_date` ya resueltos —el mismo criterio que usa `owedOccurrences`—, lo que a
+      su vez necesita `0064` aplicada, porque `due_date` todavía no existe en producción. Es un cambio
+      coordinado de lectura, no la eliminación de dos escrituras, y el orden correcto es: aplicar
+      `0064` → migrar los cuatro lectores → recién entonces dejar de escribir el cursor. Mientras
+      tanto la columna se sigue escribiendo y **no hay daño**: el generador ya no la usa como fuente
+      de verdad (lee el calendario), así que la doble escritura es redundante, no contradictoria.
 - [ ] 1.6 `decideRecurrenceInstance` pierde el parámetro `hasPending` y pasa a devolver la **lista**
       de ocurrencias faltantes, derivada de `walkOccurrences` y del conjunto de `due_date` ya
       existentes.
+      **La lógica está hecha y probada; falta cablearla.** `owedOccurrences` vive en
+      `packages/money-logic/src/recurrences.ts` con 9 casos en `owed-occurrences.test.ts`: emite
+      estrictamente después del piso, la ventana de 12 meses acota la reconstrucción, `end_date` y
+      `max_occurrences` acotan la lista, y —el punto— **una pendiente sin resolver saca SU PROPIA
+      fecha y ninguna otra**, que es el #96 enunciado como propiedad. Incluye el caso exacto del
+      ticket (29 faltantes) y el de resolución fuera de orden, que con un cursor ni siquiera se podía
+      expresar.
+      **Lo que falta y por qué:** reemplazar `decideRecurrenceInstance` por esta función exige que el
+      generador pueda materializar más de una pendiente por regla, y el índice
+      `recurrence_instances_one_pending_per_rule` **sigue vivo a propósito** hasta la activación
+      (decisión 17). Cablearlo ahora haría que el generador intente 29 inserts y la base rechace 28.
+      El corte natural es la tarea 2.1, que materializa por tandas acotadas, ya del otro lado de la
+      activación. Hasta entonces `decideRecurrenceInstance` sigue como está — y ya lee la próxima
+      fecha del mismo caminante, así que no hay dos calendarios.
 - [x] 1.7 Unificar `max_occurrences`: el tope se cuenta contra el cronograma, no contra filas de
       `recurrence_instances`.
       **El defecto, medido antes de tocar nada:** con una regla creada desde un movimiento y tope 3,

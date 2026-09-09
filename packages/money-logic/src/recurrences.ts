@@ -201,6 +201,60 @@ export function decideRecurrenceInstance(
   return { generate: true, scheduled_date: nextDate }
 }
 
+// ── The occurrences a rule is owed (pure) ────────────────────────────────────
+//
+// THE question the generator asks, and the shape it has to be asked in: not "is
+// there one more?" but "which ones are missing?".
+//
+// The old question could only ever be answered once per rule, because the answer
+// was derived from a CURSOR that only moved when the user resolved something. A
+// rule with one unresolved pending occurrence never advanced it, so the rule
+// produced nothing again, ever — that is #96. Deriving the answer from the
+// CALENDAR minus WHAT ALREADY EXISTS has no such trap: an unresolved occurrence
+// removes its own date from the list and nothing else.
+//
+// Bounds, and why each one is there:
+//
+//   reconstructFrom  The floor. Occurrences are emitted STRICTLY AFTER it —
+//                    everything up to it the rule already considers covered.
+//                    Persisted per rule by migration 0064, which sets it to the
+//                    last known point precisely so the migration cannot invent
+//                    backlog that may never have existed.
+//   horizon          How far back the automatic reconstruction reaches (12
+//                    months). It limits the REBUILD, not what the user may
+//                    register by hand.
+//   today            Nothing in the future is owed yet.
+//   existing         The `due_date`s the rule already has, in ANY state. A
+//                    pending one is in here too: it exists, so it is not
+//                    missing — and that is the whole difference with the cursor,
+//                    which would also have blocked every date after it.
+//
+// `end_date` and `max_occurrences` come in through the schedule and the walker
+// honours both: an occurrence past either is not owed.
+
+export type OwedOccurrencesInput = {
+  schedule: OccurrenceSchedule
+  reconstructFrom: string
+  horizon: string
+  today: string
+  existing: Iterable<string>
+}
+
+export function owedOccurrences({
+  schedule,
+  reconstructFrom,
+  horizon,
+  today,
+  existing,
+}: OwedOccurrencesInput): string[] {
+  const already = new Set(existing)
+  return walkOccurrences(schedule, {
+    from: horizon,
+    to: today,
+    cursor: reconstructFrom,
+  }).filter((date) => !already.has(date))
+}
+
 // ── Upcoming projection (pure) ───────────────────────────────────────────────
 //
 // Project the next occurrences of a set of active rules within a date window,
