@@ -244,6 +244,13 @@ verificarlo y antes de que exista el anclaje que lo vuelve inofensivo.
      vigencia de los cambios de calendario.
   8. **ADDED** "Una regla pausada no acumula vencimientos durante la pausa".
 
+- `dashboard`:
+  1. **MODIFIED** "La card «Comprometido» muestra los resúmenes de tarjeta y los gastos fijos del mes
+     próximo" — lo que separa las dos fuentes de «Gastos fijos» deja de ser el cursor
+     `last_generated_date` y pasa a ser el conjunto de ocurrencias que ya existen; una ocurrencia se
+     ubica por su **vencimiento**; los ingresos suman las dos fuentes; y las lecturas se paginan.
+     **Es el arreglo de #118.**
+
 ## Impact
 
 - **Migraciones (dos, en dos pasos)**: la de **expansión** agrega la identidad de ocurrencia

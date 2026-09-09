@@ -558,6 +558,27 @@ que habilita el backlog.
       la fecha generada, cosa que el generador nunca hacía—, y por eso el defecto sobrevivió.
       `RecurrenceSummary` gana `covered_occurrences`, acotado a hoy en adelante: como las ocurrencias
       solo se materializan hasta hoy, son una fila por regla como mucho.
+      **Corregido (2) — la instancia se ubicaba por la fecha de pago.** El comentario decía
+      `due_date` pero la consulta seguía filtrando y mostrando por `scheduled_date`. Una cuota que
+      vencía el 10/08 y se pagaba el 15/09 quedaba **fuera** de agosto por la fecha de pago mientras su
+      vencimiento **sí** tapaba la proyección de agosto: el mes mostraba $0. Ahora la ocurrencia se
+      ubica y se cuenta por su vencimiento, y las dos lecturas se unificaron en **una sola**, porque
+      contar y excluir tienen que coincidir en a qué ventana pertenece cada fila y dos consultas con
+      dos filtros pueden discrepar en silencio. **Fallback explícito** para las históricas sin
+      vencimiento recuperable: se ubican por `scheduled_date`, la única fecha que tienen.
+      **Corregido (3) — un ingreso pendiente materializado desaparecía de «Ya entra».** `recurringIncome`
+      sumaba solo la proyección, y la proyección ahora resta lo que ya existe. Suma las dos fuentes,
+      como los gastos; `confirmed` y `skipped` siguen afuera.
+      **Corregido (4) — las lecturas nuevas del dashboard no paginaban.** Con un atraso diario superan
+      el `max-rows` de PostgREST, y una respuesta truncada no solo pierde importes: las filas que
+      quedan afuera dejan de tapar sus fechas y la proyección las reemite — #118 volviendo por la capa
+      de lectura. `selectAllPages` se movió a `@grana/supabase`, que es donde vive el contrato del
+      cliente, y lo usan los dos paquetes.
+      Cinco regresiones nuevas en `committed-outlook.test.ts`; cuatro fallan contra el commit anterior
+      con los síntomas exactos: $0 en vez de $500.000, $600.000 en vez de $300.000, $25.000 de
+      compromiso inventado, y $0 de ingreso en vez de $2.000.000.
+      **Delta de spec de `dashboard`** (`specs/dashboard/spec.md`): sin él, archivar el change dejaba la
+      spec maestra afirmando que la proyección avanza desde `last_generated_date`, enfrentada al código.
 - [ ] 2.6 Copy: **"vencimientos por revisar"** — ni "pagos" (afirmaría que hubo pago) ni lenguaje de
       deuda. Actualizar `es.json` y `en.json`.
 ## 3. Diferido a changes posteriores

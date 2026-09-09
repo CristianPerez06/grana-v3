@@ -1,4 +1,4 @@
-import type { GranaSupabaseClient } from '@grana/supabase'
+import { selectAllPages, type GranaSupabaseClient } from '@grana/supabase'
 import {
   addInterval,
   coveredOccurrences,
@@ -564,52 +564,6 @@ export function selectReconstructionBatch(
 
   for (const dates of picked.values()) dates.sort()
   return picked
-}
-
-/**
- * PostgREST caps how many rows a request returns, silently. A truncated read of
- * the occurrences that already exist is not a slow generator: it is a generator
- * that believes dates are missing when they are not, and tries to create them
- * again. So every read the calendar depends on is paged to exhaustion.
- */
-const READ_PAGE_SIZE = 1000
-
-/** Refuses to spin forever if a server ignores the range window entirely. */
-const MAX_READ_PAGES = 1000
-
-async function selectAllPages<T>(
-  build: () => {
-    range: (
-      from: number,
-      to: number,
-    ) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>
-  },
-): Promise<{ data: T[]; error: { message: string } | null }> {
-  const out: T[] = []
-
-  // Every caller MUST order by a set of columns that is UNIQUE. `range` is an
-  // OFFSET window, and Postgres makes no promise about how it breaks ties between
-  // one request and the next: with a non-unique order, rows can repeat across
-  // pages or be skipped entirely. A skipped pause is not a slower run — it is a
-  // vencimiento fabricated for a period the rule was not running.
-  //
-  // Advance by what came back and stop on an EMPTY page, never on a short one.
-  // A short page does not mean the end: PostgREST also truncates at its own
-  // `db-max-rows`, which can be smaller than the window asked for, and reading
-  // "fewer than requested" as "that was the last of them" is exactly the silent
-  // cut this loop exists to survive.
-  for (let page = 0; page < MAX_READ_PAGES; page += 1) {
-    const { data, error } = await build().range(out.length, out.length + READ_PAGE_SIZE - 1)
-    if (error) return { data: out, error }
-    const rows = (data ?? []) as T[]
-    if (rows.length === 0) return { data: out, error: null }
-    out.push(...rows)
-  }
-
-  return {
-    data: out,
-    error: { message: 'La lectura de recurrencias no terminó: demasiadas páginas.' },
-  }
 }
 
 /** Postgres unique-violation SQLSTATE. */

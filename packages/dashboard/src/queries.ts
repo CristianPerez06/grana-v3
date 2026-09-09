@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { GranaSupabaseClient } from '@grana/supabase'
+import { selectAllPages, type GranaSupabaseClient } from '@grana/supabase'
 import { Money } from '@grana/validation'
 import { resolveCommittedWindow } from './committed-window'
 import {
@@ -852,51 +852,31 @@ export async function getCommittedOutlookForMonth(
   // The exclusion is keyed on `due_date`, not on `scheduled_date`: for a resolved
   // occurrence `scheduled_date` holds the PAYMENT date, so an August cuota paid in
   // September would fall outside August's window and be projected as still owed.
-  const instanceStatuses = lens === 'live' ? ['pending'] : ['pending', 'confirmed']
-  const [instancesResult, rulesResult, coveredResult] = await Promise.all([
-    supabase
-      .from('recurrence_instances')
-      .select(
-        'amount, currency_code, description, scheduled_date, account_id, recurrence:recurrences(movement_type), category:categories(name), subcategory:subcategories(name)',
-      )
-      .in('status', instanceStatuses)
-      .gte('scheduled_date', windowStart)
-      .lte('scheduled_date', windowEnd),
-    supabase
-      .from('recurrences')
-      .select(
-        'id, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
-      )
-      .eq('status', 'active'),
-    // Every state, `skipped` included: an occurrence the user marked as not
-    // applicable exists, and projecting it would re-commit money they said was
-    // not owed.
-    supabase
-      .from('recurrence_instances')
-      .select('recurrence_id, due_date')
-      .not('due_date', 'is', null)
-      .gte('due_date', windowStart)
-      .lte('due_date', windowEnd),
-  ])
-  if (instancesResult.error) throw instancesResult.error
-  if (rulesResult.error) throw rulesResult.error
-  if (coveredResult.error) throw coveredResult.error
-
-  const coveredByRule = new Map<string, string[]>()
-  for (const row of (coveredResult.data ?? []) as Array<{
-    recurrence_id: string
-    due_date: string
-  }>) {
-    const list = coveredByRule.get(row.recurrence_id)
-    if (list == null) coveredByRule.set(row.recurrence_id, [row.due_date])
-    else list.push(row.due_date)
-  }
-
+  //
+  // ONE read for both jobs, on purpose. Counting an occurrence and excluding it
+  // from the projection have to agree on WHICH WINDOW it belongs to; two reads
+  // with two filters can disagree, and the way they disagree is silent. Read
+  // once, place each row once, use the same placement for both.
+  //
+  // The placement is the VENCIMIENTO. An occurrence due 23-Aug and paid 15-Sep
+  // has `scheduled_date = 2026-09-15` — the payment date — so filtering by it
+  // dropped the occurrence out of August while its `due_date` still blocked
+  // August's projection: the rent simply vanished from the month it belonged to,
+  // and reappeared in September on top of September's own.
+  //
+  // FALLBACK, stated rather than implied: an occurrence resolved before 0064 has
+  // no recoverable vencimiento (`due_date IS NULL`), and for those
+  // `scheduled_date` is the only date there is. They are placed by it — the best
+  // available answer — and they are exactly the rows the `or` below keeps.
   type MovementTypeEmbed = { movement_type: string }
-  type PendingInstanceRow = {
+  type RecurrenceOccurrenceRow = {
+    id: string
+    recurrence_id: string
+    status: string
     amount: number | string
     currency_code: string
     description: string | null
+    due_date: string | null
     scheduled_date: string | null
     account_id: string | null
     // PostgREST returns the to-one embeds as objects, but the generated types
@@ -905,7 +885,61 @@ export async function getCommittedOutlookForMonth(
     category: NameEmbed
     subcategory: NameEmbed
   }
-  const movementTypeOf = (r: PendingInstanceRow['recurrence']): string | undefined =>
+  type RecurrenceRuleRow = Omit<CommittedRecurrenceRule, 'covered'> & {
+    account_id: string | null
+    created_from_transaction_id: string | null
+    category: NameEmbed
+    subcategory: NameEmbed
+  }
+
+  // Which materialized occurrences count as a COMMITMENT, by lens. `skipped`
+  // never counts under either; it still feeds the exclusion above, because it
+  // exists.
+  const instanceStatuses = lens === 'live' ? ['pending'] : ['pending', 'confirmed']
+
+  const inWindowByDueDate = `and(due_date.gte.${windowStart},due_date.lte.${windowEnd})`
+  const legacyInWindow = `and(due_date.is.null,scheduled_date.gte.${windowStart},scheduled_date.lte.${windowEnd})`
+
+  const [occurrencesResult, rulesResult] = await Promise.all([
+    selectAllPages<RecurrenceOccurrenceRow>(() =>
+      supabase
+        .from('recurrence_instances')
+        .select(
+          'id, recurrence_id, status, amount, currency_code, description, due_date, scheduled_date, account_id, recurrence:recurrences(movement_type), category:categories(name), subcategory:subcategories(name)',
+        )
+        .or(`${inWindowByDueDate},${legacyInWindow}`)
+        .order('id'),
+    ),
+    selectAllPages<RecurrenceRuleRow>(() =>
+      supabase
+        .from('recurrences')
+        .select(
+          'id, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
+        )
+        .eq('status', 'active')
+        .order('id'),
+    ),
+  ])
+  if (occurrencesResult.error) throw occurrencesResult.error
+  if (rulesResult.error) throw rulesResult.error
+
+  /** Where an occurrence sits in time: its vencimiento, or its only date. */
+  const occurrenceDate = (row: RecurrenceOccurrenceRow): string | null =>
+    row.due_date ?? row.scheduled_date
+
+  // EVERY state feeds the exclusion, `skipped` included: an occurrence the user
+  // marked as not applicable exists, and projecting it would re-commit money
+  // they said was not owed.
+  const coveredByRule = new Map<string, string[]>()
+  for (const row of occurrencesResult.data) {
+    const date = occurrenceDate(row)
+    if (date == null) continue
+    const list = coveredByRule.get(row.recurrence_id)
+    if (list == null) coveredByRule.set(row.recurrence_id, [date])
+    else list.push(date)
+  }
+
+  const movementTypeOf = (r: RecurrenceOccurrenceRow['recurrence']): string | undefined =>
     Array.isArray(r) ? r[0]?.movement_type : (r?.movement_type ?? undefined)
 
   // Paid by credit card → excluded from "Gastos fijos": it is already inside
@@ -913,24 +947,25 @@ export async function getCommittedOutlookForMonth(
   const paidByCard = (accountId: string | null): boolean =>
     accountId != null && creditAccountIds.has(accountId)
 
-  const generatedExpenses: CommittedItemRow[] = (
-    (instancesResult.data ?? []) as unknown as PendingInstanceRow[]
-  )
-    .filter((i) => movementTypeOf(i.recurrence) === 'expense' && !paidByCard(i.account_id))
-    .map((i) => ({
-      amount: i.amount,
-      currency_code: i.currency_code,
-      description: i.description || embedName(i.subcategory) || embedName(i.category),
-      date: i.scheduled_date,
-    }))
+  const asCommittedItem = (i: RecurrenceOccurrenceRow): CommittedItemRow => ({
+    amount: i.amount,
+    currency_code: i.currency_code,
+    description: i.description || embedName(i.subcategory) || embedName(i.category),
+    // The vencimiento, not the payment date: the occurrence belongs to the month
+    // it fell due in, which is the same month whose projection it displaces.
+    date: occurrenceDate(i),
+  })
 
-  type RecurrenceRuleRow = Omit<CommittedRecurrenceRule, 'covered'> & {
-    account_id: string | null
-    created_from_transaction_id: string | null
-    category: NameEmbed
-    subcategory: NameEmbed
-  }
-  const ruleRows = (rulesResult.data ?? []) as unknown as RecurrenceRuleRow[]
+  const generatedExpenses: CommittedItemRow[] = occurrencesResult.data
+    .filter(
+      (i) =>
+        instanceStatuses.includes(i.status) &&
+        movementTypeOf(i.recurrence) === 'expense' &&
+        !paidByCard(i.account_id),
+    )
+    .map(asCommittedItem)
+
+  const ruleRows = rulesResult.data
   const labelled = (r: RecurrenceRuleRow): CommittedRecurrenceRule => ({
     ...r,
     description: r.description || embedName(r.subcategory) || embedName(r.category),
@@ -958,21 +993,33 @@ export async function getCommittedOutlookForMonth(
   result.ARS.topRecurring = topCommittedItems(fixedExpenses, 'ARS', COMMITTED_RECURRING_ROWS)
   result.USD.topRecurring = topCommittedItems(fixedExpenses, 'USD', COMMITTED_RECURRING_ROWS)
 
-  // ── Recurring INCOME projected into the same window → "Ya entra" context
-  //    band. Income is never summed into the committed total. Card-paid rules
-  //    are NOT excluded here: the exclusion is about double-counting an outflow,
-  //    and an income does not land in a statement.
+  // ── Recurring INCOME in the same window → "Ya entra" context band. Income is
+  //    never summed into the committed total. Card-paid rules are NOT excluded
+  //    here: the exclusion is about double-counting an outflow, and an income
+  //    does not land in a statement.
+  //
+  // TWO SOURCES, like the expenses, and for the same reason: an income
+  // occurrence that has already been materialized is subtracted from the
+  // projection, so if only the projection were summed the band would simply lose
+  // it — visible by opening the previous month while the current one is the
+  // running window. Only `pending` ones count: a `confirmed` income is money
+  // already in an account, and a `skipped` one is not expected at all.
+  const materializedIncome = occurrencesResult.data
+    .filter((i) => i.status === 'pending' && movementTypeOf(i.recurrence) === 'income')
+    .map(asCommittedItem)
+
   // Same gate as the expenses: over an elapsed window the projection would price
   // income at the rules' current amounts.
-  const income = sumByCurrency(
-    windowElapsed
+  const income = sumByCurrency([
+    ...materializedIncome,
+    ...(windowElapsed
       ? []
       : projectRecurrenceItems(
           ruleRows.filter((r) => r.movement_type === 'income').map(labelled),
           windowStart,
           windowEnd,
-        ),
-  )
+        )),
+  ])
   result.ARS.recurringIncome = income.ARS
   result.USD.recurringIncome = income.USD
 
