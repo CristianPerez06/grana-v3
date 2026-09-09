@@ -117,6 +117,10 @@ que habilita el backlog.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.
+      **No es una tarea de código sino una condición permanente de toda la etapa**, y por eso queda
+      abierta hasta que la entrega cierre: se verifica al final, comprobando que nada la haya violado
+      en el camino. Cuenta igual en el inventario: las abiertas de la etapa 1 son **seis** —`1.5`,
+      `1.6`, `1.7`, `1.8`, `1.9` y `1.10b`—, no cinco.
 - [x] 1.12 Tests de migración con el **caso exacto del #96** (regla cada 3 días, cursor 2026-06-10,
       pendiente del 13/06, hoy 2026-09-08): `reconstruct_from` queda en el cursor y las ocurrencias a
       reconstruir son 29 — julio 11, agosto 10, septiembre 3 — con la del 13/06 deduplicada. Y un
@@ -182,7 +186,10 @@ que habilita el backlog.
       cursor caiga sobre el cronograma —el caso normal—, y divergen por unos días cuando no.
       Anclar en el calendario es lo correcto (no depende de cuándo se resolvió la última ocurrencia),
       pero hay que confirmar que ninguna regla de producción tenga hoy el cursor fuera de cronograma
-      antes de cambiar la semántica. Documentado en `walk-positioning.test.ts`. **Ninguna forma de
+      antes de cambiar la semántica. La auditoría decide **con tiempo**, pero su respuesta es una
+      foto: entre correrla y aplicar `0064` una sola edición alcanza para crear una regla desfasada.
+      Por eso la migración **revalida el invariante en su propia transacción** (sección 4b) y aborta
+      con el detalle si cambió — la consulta sirve para decidir, la migración para garantizar. Documentado en `walk-positioning.test.ts`. **Ninguna forma de
       regla es inmune**: `anchorDate` restaura el día del mes, no la fase de meses ni de años, y mover
       `start_date` sin tocar el cursor lo deja antes del inicio, lo que desfasa hasta una regla
       mensual o diaria de intervalo 1. La misma auditoría decide 1.7.

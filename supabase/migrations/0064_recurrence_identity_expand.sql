@@ -326,6 +326,127 @@ create trigger trg_recurrence_reconstruct_from_guard
   execute function public.recurrence_reconstruct_from_guard();
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- 4b · The premise the assumed schedule versions rest on, verified HERE
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- Section 5 writes, for every existing rule, ONE assumed schedule version whose
+-- `anchor_date` is `start_date`. That is only faithful while the rule's cursor
+-- sits on its own schedule: today's generator resumes the cadence FROM the
+-- cursor (`addInterval(cursor, …)`), and if the cursor drifted off the calendar
+-- — an edit moved `start_date`, or the frequency changed after the cursor was
+-- written — then the calendar and the cursor disagree, and an assumed version
+-- that says nothing about the drift would quietly hand the rule a different next
+-- occurrence than the one the user is seeing today.
+--
+-- `docs/qa/auditoria-fase-cursor.sql` answers this question against production,
+-- but its answer is a SNAPSHOT: between running it and applying this migration
+-- the user keeps using the app, and one edit is enough to create a drifted rule.
+-- A read taken days earlier cannot be a guarantee about the moment of the write.
+-- So the invariant is re-checked HERE, inside the same transaction as the
+-- backfill: whatever the audit said, this is the state that actually gets
+-- migrated.
+--
+-- Aborting is the right outcome, and it is cheap — nothing has been committed.
+-- If this fires, the audit's answer changed and the decision it fed (task 1.10b:
+-- anchor the walker on the calendar) no longer holds unchanged: those rules need
+-- their PHASE persisted, or an explicit documented compatibility, before the
+-- assumed version can be written for them. Silently anchoring them on
+-- `start_date` would move a due date the user is already looking at.
+
+do $$
+declare
+  drifted record;
+  report  text := '';
+  total   int  := 0;
+begin
+  for drifted in
+    with cursored as (
+      -- The next date TODAY's generator would produce: addInterval(cursor, …),
+      -- with month/year clamping anchored on start_date.
+      select r.id, r.start_date, r.interval_count, r.interval_unit,
+             r.last_generated_date as cursor,
+             case r.interval_unit
+               when 'day'  then r.last_generated_date + r.interval_count
+               when 'week' then r.last_generated_date + (r.interval_count * 7)
+               else (
+                 date_trunc('month',
+                   r.last_generated_date + ((r.interval_count * case r.interval_unit when 'year' then 12 else 1 end)
+                                            || ' month')::interval)
+                 + (least(
+                      extract(day from r.start_date),
+                      extract(day from date_trunc('month',
+                        r.last_generated_date + ((r.interval_count * case r.interval_unit when 'year' then 12 else 1 end)
+                                                 || ' month')::interval) + interval '1 month - 1 day')
+                    ) - 1) * interval '1 day'
+               )::date
+             end as next_date
+        from public.recurrences r
+       where r.status <> 'deleted'
+         and r.last_generated_date is not null
+    ),
+    -- How many intervals from start_date to that date. Integer estimate; the
+    -- candidates below correct it, because end-of-month clamping can shift an
+    -- occurrence by one step.
+    estimated as (
+      select c.*,
+             case c.interval_unit
+               when 'day'   then floor((c.next_date - c.start_date)::numeric / c.interval_count)
+               when 'week'  then floor((c.next_date - c.start_date)::numeric / (c.interval_count * 7))
+               when 'month' then floor((((extract(year from c.next_date) - extract(year from c.start_date)) * 12
+                                       + (extract(month from c.next_date) - extract(month from c.start_date))))::numeric
+                                       / c.interval_count)
+               when 'year'  then floor((extract(year from c.next_date) - extract(year from c.start_date))::numeric
+                                       / c.interval_count)
+             end::int as n0
+        from cursored c
+    ),
+    candidates as (
+      select e.*, n,
+             case e.interval_unit
+               when 'day'  then e.start_date + (n * e.interval_count)
+               when 'week' then e.start_date + (n * e.interval_count * 7)
+               else (
+                 date_trunc('month',
+                   e.start_date + ((n * e.interval_count * case e.interval_unit when 'year' then 12 else 1 end)
+                                   || ' month')::interval)
+                 + (least(
+                      extract(day from e.start_date),
+                      extract(day from date_trunc('month',
+                        e.start_date + ((n * e.interval_count * case e.interval_unit when 'year' then 12 else 1 end)
+                                        || ' month')::interval) + interval '1 month - 1 day')
+                    ) - 1) * interval '1 day'
+               )::date
+             end as occurrence
+        from estimated e
+        -- Around GREATEST(n0, 0): `updateRecurrence` allows moving `start_date`
+        -- without adjusting the cursor, so the cursor — and this next date — can
+        -- land BEFORE the rule's own start.
+        cross join lateral (values (greatest(e.n0, 0) - 1), (greatest(e.n0, 0)),
+                                   (greatest(e.n0, 0) + 1), (greatest(e.n0, 0) + 2),
+                                   (greatest(e.n0, 0) + 3)) as v(n)
+       where n >= 0
+    )
+    select id, start_date, interval_count, interval_unit, cursor, next_date
+      from candidates
+     group by id, start_date, interval_count, interval_unit, cursor, next_date
+    -- No candidate equals it ⇒ the date is not on the rule's schedule.
+    having not bool_or(occurrence = next_date)
+  loop
+    total := total + 1;
+    report := report || format(
+      E'\n  rule %s · every %s %s from %s · cursor %s · next %s (off schedule)',
+      drifted.id, drifted.interval_count, drifted.interval_unit,
+      drifted.start_date, drifted.cursor, drifted.next_date
+    );
+  end loop;
+
+  if total > 0 then
+    raise exception E'Assumed schedule versions aborted: % rule(s) whose next occurrence is not on their own schedule.%\n\nThe cursor-phase audit (docs/qa/auditoria-fase-cursor.sql) answered this question BEFORE the deploy, and the answer changed since. Persist the phase of these rules, or write down an explicit compatibility for them, before migrating: anchoring them on start_date would move a due date the user is already looking at.',
+      total, report;
+  end if;
+end $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- 5 · recurrence_schedule_versions — the schedule over time
 -- ═══════════════════════════════════════════════════════════════════════════
 

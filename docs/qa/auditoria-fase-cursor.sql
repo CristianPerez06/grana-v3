@@ -14,6 +14,14 @@
 -- Esta consulta dice si eso pasa en la base real. Es SOLO LECTURA y no devuelve
 -- importes ni descripciones.
 --
+-- SU RESPUESTA ES UNA FOTO, NO UNA GARANTÍA. Entre correrla y aplicar la
+-- migración el usuario sigue usando la app, y una sola edición alcanza para
+-- crear una regla desfasada. Por eso `0064` **vuelve a verificar el invariante
+-- en su propia transacción** (sección 4b) y aborta con el detalle si cambió.
+-- Esta consulta sirve para DECIDIR con tiempo —si hay que persistir la fase, se
+-- sabe antes de la ventana de deploy— y la migración es la que garantiza que lo
+-- que se migra es lo que se decidió.
+--
 --   0 filas fuera de cronograma  ⇒ el anclaje en `start_date` preserva el
 --                                  comportamiento actual y el esquema alcanza.
 --   ≥1 fila                      ⇒ la versión asumida necesita persistir su
