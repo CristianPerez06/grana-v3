@@ -205,16 +205,20 @@ No es un detalle de implementación, porque un orden mal elegido deja un interva
 actual —la base admitiendo varias pendientes mientras la app todavía muestra una sola o duplica
 importes—:
 
-1. **Migraciones de expansión** (`0064` + `0065`), en la misma ventana: identidad, piso de
-   reconstrucción, guardas y la reparación atómica de la semilla borrada
-   (`delete_movement_unlinking_seed`). Ninguna de las dos cambia comportamiento por sí sola —`0065`
-   crea una función que todavía nadie llama— y el índice de pendiente única sigue vivo. `0065` tiene
-   que estar aplicada **antes** que el código, porque desde el paso 2 `deleteTransaction` la invoca:
-   sin la función, borrar un movimiento semilla falla para todos.
+1. **Migraciones de expansión** (`0064` + `0065` + `0066`), en la misma ventana: identidad, piso de
+   reconstrucción, guardas, la reparación atómica de la semilla borrada
+   (`delete_movement_unlinking_seed`) y la tabla de versión mínima del cliente nativo. Ninguna cambia
+   comportamiento por sí sola —`0065` crea una función que todavía nadie llama y `0066` se siembra
+   inerte en `0.0.0`— y el índice de pendiente única sigue vivo. `0065` tiene que estar aplicada
+   **antes** que el código, porque desde el paso 2 `deleteTransaction` la invoca: sin la función,
+   borrar un movimiento semilla falla para todos.
 2. **Código**: generador con tandas continuables, versiones de cronograma y pausas, reads adaptados,
    dashboard y proyección leyendo las ocurrencias existentes, dejar de escribir el cursor, superficies
    de web y nativo, copy, error de materialización visible, gate de versión.
-3. **Migración de activación**, al final: retira `recurrence_instances_one_pending_per_rule`.
+3. **Subir `min_version`**, cuando el build nuevo ya está publicado en las dos tiendas. Es una
+   acción de operador con el service role, no un deploy: desde acá un cliente viejo deja de entrar,
+   que es la condición para el paso siguiente.
+4. **Migración de activación**, al final: retira `recurrence_instances_one_pending_per_rule`.
 
 Los pasos 1 y 2 comparten **una sola ventana de producción**: la verificación transaccional de `0064`
 corre una única vez, y una edición hecha entre ambos despliegues podría desfasar el dato después de

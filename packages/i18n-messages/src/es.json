@@ -2257,5 +2257,10 @@
       "breakdown_loading": "Cargando para qué es",
       "breakdown_error": "No pudimos cargar el desglose por propósito."
     }
+  },
+  "app_update": {
+    "title": "Actualizá Grana para seguir",
+    "body": "Esta versión ya no puede mantener tus vencimientos al día: si seguís usándola, los que se te vayan venciendo dejan de aparecer. Actualizá desde la tienda y volvés a entrar.",
+    "action": "Ir a la tienda"
   }
 }

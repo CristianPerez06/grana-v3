@@ -20,6 +20,8 @@ import { hasRecoveryClaim } from '../lib/recovery'
 import { createQueryClient } from '../lib/query-client'
 import { registerFocusManager } from '../lib/focus-manager-setup'
 import { LocaleProvider } from '../lib/locale-context'
+import { useAppVersionGate } from '../lib/app-version-gate'
+import { UpdateRequiredScreen } from '../components/UpdateRequiredScreen'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 registerFocusManager()
@@ -27,6 +29,9 @@ registerFocusManager()
 export default function RootLayout() {
   const router = useRouter()
   const [queryClient] = useState(() => createQueryClient())
+  // Read once per launch; `allowed` until proven otherwise, so the gate never
+  // delays a cold start and never blocks on a read it could not make.
+  const versionGate = useAppVersionGate()
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -88,7 +93,15 @@ export default function RootLayout() {
         <View className="flex-1 bg-page">
           <LocaleProvider>
             <QueryClientProvider client={queryClient}>
-              <Slot />
+              {/* The gate replaces the app, it does not sit on top of it: a
+                  build this old cannot keep the user's vencimientos correct, so
+                  there is nothing behind the notice worth reaching. Inside
+                  LocaleProvider because the screen is translated. */}
+              {versionGate.kind === 'blocked' ? (
+                <UpdateRequiredScreen storeUrl={versionGate.storeUrl} />
+              ) : (
+                <Slot />
+              )}
             </QueryClientProvider>
           </LocaleProvider>
         </View>

@@ -2257,5 +2257,10 @@
       "breakdown_loading": "Loading what it's for",
       "breakdown_error": "We couldn't load the breakdown by purpose."
     }
+  },
+  "app_update": {
+    "title": "Update Grana to continue",
+    "body": "This version can no longer keep your due dates up to date: if you keep using it, the ones that fall due stop showing up. Update from the store and you're back in.",
+    "action": "Open the store"
   }
 }

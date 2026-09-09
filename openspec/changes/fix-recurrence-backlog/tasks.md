@@ -785,12 +785,34 @@ app. Cubre además a quien no la abre nunca. Es mejor que el gate de versión; e
 
 Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en web y en nativo.
 
-- [ ] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo
+- [x] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo
       nunca ejecuta el generador nuevo, así que su atraso no se materializa y el #96 sigue vivo para
       él — ahora sin el índice que lo contenía. De las dos opciones posibles, **este recorte toma el
       gate de versión mínima al arrancar la app nativa**, por ser la más chica. La generación del lado
       del servidor (etapa 2 de la decisión 8), que además cubre a quien no abre la app, es mejor y
       queda en `recurrence-server-generation`. El gate se despliega **antes** que la tarea 2.8.
+      **Implementación.** Migración `0066`: `app_release_requirements`, una fila por plataforma
+      (`min_version`, `store_url`), con `CHECK` de `major.minor.patch`. El mínimo vive en el servidor
+      porque un número compilado en un build no se puede subir para los builds ya instalados, que son
+      exactamente los que importan. `store_url` viaja con el requisito porque el id de App Store no
+      existe hasta publicar la app; `NULL` deja la pantalla sin botón, no sin explicación.
+      **Se siembra inerte en `0.0.0`**: aplicar la migración no bloquea a nadie, y armar el gate es
+      una acción de operador con el service role, después de que el build esté publicado en las dos
+      tiendas. Los clientes no tienen `insert`/`update`/`delete`: subir el piso deja a todo el mundo
+      afuera de la app.
+      **Falla abierta en todos los desconocidos** —lectura fallida, fila ausente, versión que
+      ninguna de las dos partes puede parsear—: esto corre antes que nada al arrancar, así que un
+      gate que se cierra ante un problema de red deja la app inutilizable para siempre. La
+      comparación es parte por parte, nunca como texto: `'1.10.0' < '1.9.0'` dejaría pasar
+      justamente los builds que quiere frenar.
+      **La lee solo un usuario con sesión.** Bloquear también en el login sería más lindo y el número
+      ni siquiera es secreto, pero `anon` sin privilegios sobre ninguna tabla de `public` es un
+      invariante de este esquema (`harden-supabase-anon-boundary`, verificado en 8.2C.3) y una
+      excepción cómoda es cómo deja de serlo. El gate cierra apenas hay sesión, que es además el
+      único estado en el que un cliente viejo puede hacer el daño que esto evita; por eso la
+      comprobación se repite en `SIGNED_IN`.
+      Tests: 16 de la lógica pura en `@grana/supabase` y 7 de la migración sobre PGlite (lectura con
+      sesión, sin sesión rechazada, ninguna escritura desde el cliente, siembra inerte, `CHECK`).
 - [ ] 2.8 **Migración B · activación**, en archivo aparte
       (`<próximo libre>_recurrence_backlog_activate.sql`, número elegido contra `main` al crearla),
       y **solo con los pasos 2 a 7 del orden ya desplegados** —generador, reads, dashboard, cursor,

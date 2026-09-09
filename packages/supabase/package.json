@@ -9,5 +9,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
   }
 }
