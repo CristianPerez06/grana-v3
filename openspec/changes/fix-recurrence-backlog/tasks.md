@@ -204,7 +204,11 @@ que habilita el backlog.
       Cada caso levanta su Postgres en el CUERPO del test (cada uno siembra un estado pre-migración
       distinto), así que llevan un `testTimeout` propio: falló una vez en la corrida completa del
       monorepo y pasaba aislado. El default del paquete queda intacto — subirlo global le compraría
-      margen a este archivo escondiendo un cuelgue real en todos los demás. Documentado en `walk-positioning.test.ts`. **Ninguna forma de
+      margen a este archivo escondiendo un cuelgue real en todos los demás. Las cinco unidades
+      cubiertas —día, **semana**, mes, año y el inicio movido—, y **todas las bases PGlite del
+      paquete se cierran** (`finally` en los casos que la abren en el cuerpo, `afterAll` en los que
+      la abren en un hook): sin eso se acumulaban instancias WASM durante toda la corrida, que es
+      justamente el tipo de fuga que después aparece como un archivo ajeno que expira. Documentado en `walk-positioning.test.ts`. **Ninguna forma de
       regla es inmune**: `anchorDate` restaura el día del mes, no la fase de meses ni de años, y mover
       `start_date` sin tocar el cursor lo deja antes del inicio, lo que desfasa hasta una regla
       mensual o diaria de intervalo 1. La misma auditoría decide 1.7.

@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { PGlite } from '@electric-sql/pglite'
 import {
   actAs,
@@ -34,6 +34,10 @@ describe('a rule that starts in the future, edited before it starts', () => {
   beforeAll(async () => {
     db = await createRecurrenceIdentityDb()
     await actAs(db, U_A)
+  })
+
+  afterAll(async () => {
+    await db.close()
   })
 
   /**
@@ -111,6 +115,10 @@ describe('the history is read-only for the user and maintained by the database',
   beforeAll(async () => {
     db = await createRecurrenceIdentityDb()
     await actAs(db, U_A)
+  })
+
+  afterAll(async () => {
+    await db.close()
   })
 
   /**

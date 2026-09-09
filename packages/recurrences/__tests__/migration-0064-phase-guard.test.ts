@@ -3,7 +3,6 @@ import {
   applyMigration,
   createRecurrenceIdentityDb,
   seedRule,
-  U_A,
 } from './support/recurrence-identity-db'
 
 /**
@@ -22,12 +21,19 @@ const drifted = async (
   rules: Array<Parameters<typeof seedRule>[1]>,
 ): Promise<{ ok: true } | { ok: false; message: string }> => {
   const db = await createRecurrenceIdentityDb({ applyMigration: false })
-  for (const rule of rules) await seedRule(db, rule)
   try {
-    await applyMigration(db)
-    return { ok: true }
-  } catch (error) {
-    return { ok: false, message: (error as Error).message }
+    for (const rule of rules) await seedRule(db, rule)
+    try {
+      await applyMigration(db)
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, message: (error as Error).message }
+    }
+  } finally {
+    // Each case builds its own Postgres, so leaving them open piles up WASM
+    // instances for the whole run — memory the suite never gets back, and the
+    // kind of thing that only shows up as an unrelated file timing out.
+    await db.close()
   }
 }
 
@@ -108,6 +114,15 @@ describe('0064 §4b — the migration aborts on a rule whose calendar disagrees 
         interval_unit: 'day',
         last_generated_date: '2026-06-10',
       },
+      // Phase: every 2 weeks from 2026-05-04, cursor six days later. Today gives
+      // 2026-05-24; the calendar's next is 2026-05-18.
+      {
+        id: '00000000-0000-4000-8000-00000000b015',
+        start_date: '2026-05-04',
+        interval_count: 2,
+        interval_unit: 'week',
+        last_generated_date: '2026-05-10',
+      },
       // A moved start: the cursor now sits BEFORE the rule begins. Reaches even
       // a monthly rule of interval 1, which phase alone could never drift.
       {
@@ -120,8 +135,8 @@ describe('0064 §4b — the migration aborts on a rule whose calendar disagrees 
     ])
     expect(result.ok).toBe(false)
     if (result.ok) return
-    expect(result.message).toContain('4 rule(s)')
-    for (const suffix of ['b011', 'b012', 'b013', 'b014']) {
+    expect(result.message).toContain('5 rule(s)')
+    for (const suffix of ['b011', 'b012', 'b013', 'b014', 'b015']) {
       expect(result.message).toContain(`00000000-0000-4000-8000-00000000${suffix}`)
     }
     // And it points at the column of the audit that measures the same thing, so
@@ -131,30 +146,34 @@ describe('0064 §4b — the migration aborts on a rule whose calendar disagrees 
 
   it('the abort rolls the WHOLE migration back, not just the versions', async () => {
     const db = await createRecurrenceIdentityDb({ applyMigration: false })
-    await seedRule(db, {
-      id: RULE,
-      start_date: '2026-01-01',
-      interval_count: 2,
-      interval_unit: 'month',
-      last_generated_date: '2026-02-10',
-    })
-    await expect(applyMigration(db)).rejects.toThrow()
+    try {
+      await seedRule(db, {
+        id: RULE,
+        start_date: '2026-01-01',
+        interval_count: 2,
+        interval_unit: 'month',
+        last_generated_date: '2026-02-10',
+      })
+      await expect(applyMigration(db)).rejects.toThrow()
 
-    // Everything 0064 does lives in one transaction, so a rule that was fine
-    // does not come out half-migrated either.
-    const { rows } = await db.query<{ n: number }>(`
-      select count(*)::int as n from information_schema.columns
-       where table_schema = 'public' and table_name = 'recurrences'
-         and column_name = 'reconstruct_from'
-    `)
-    expect(rows[0].n).toBe(0)
+      // Everything 0064 does lives in one transaction, so a rule that was fine
+      // does not come out half-migrated either.
+      const { rows } = await db.query<{ n: number }>(`
+        select count(*)::int as n from information_schema.columns
+         where table_schema = 'public' and table_name = 'recurrences'
+           and column_name = 'reconstruct_from'
+      `)
+      expect(rows[0].n).toBe(0)
 
-    const tables = await db.query<{ n: number }>(`
-      select count(*)::int as n from information_schema.tables
-       where table_schema = 'public'
-         and table_name in ('recurrence_schedule_versions', 'recurrence_pauses')
-    `)
-    expect(tables.rows[0].n).toBe(0)
+      const tables = await db.query<{ n: number }>(`
+        select count(*)::int as n from information_schema.tables
+         where table_schema = 'public'
+           and table_name in ('recurrence_schedule_versions', 'recurrence_pauses')
+      `)
+      expect(tables.rows[0].n).toBe(0)
+    } finally {
+      await db.close()
+    }
   }, BOOTS_POSTGRES)
 
   it('a rule with no cursor is never flagged: it has no phase to lose', async () => {
@@ -163,6 +182,5 @@ describe('0064 §4b — the migration aborts on a rule whose calendar disagrees 
       { id: '00000000-0000-4000-8000-00000000b021', start_date: '2020-01-31', last_generated_date: null },
     ])
     expect(result.ok).toBe(true)
-    expect(U_A).toBeTruthy()
   }, BOOTS_POSTGRES)
 })

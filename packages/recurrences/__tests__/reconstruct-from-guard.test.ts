@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { PGlite } from '@electric-sql/pglite'
 import {
   actAs,
@@ -36,6 +36,10 @@ describe('reconstruct_from — derived on INSERT', () => {
 
   beforeAll(async () => {
     db = await createRecurrenceIdentityDb()
+  })
+
+  afterAll(async () => {
+    await db.close()
   })
 
   // These two seed as the superuser on purpose: what they assert is the
@@ -106,6 +110,10 @@ describe('reconstruct_from — frozen on UPDATE, as the user', () => {
       last_generated_date: '2026-06-01',
     })
     await actAs(db, U_A)
+  })
+
+  afterAll(async () => {
+    await db.close()
   })
 
   const floor = async () => {

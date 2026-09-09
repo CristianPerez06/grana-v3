@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { PGlite } from '@electric-sql/pglite'
 import { walkOccurrences, type OccurrenceSchedule } from '@grana/money-logic'
 import {
@@ -72,6 +72,10 @@ describe('0064 — the exact #96 case', () => {
       status: 'pending',
     })
     await applyMigration(db)
+  })
+
+  afterAll(async () => {
+    await db.close()
   })
 
   it('the floor lands on the cursor, not earlier', async () => {
@@ -168,6 +172,10 @@ describe('0064 — a rule whose frequency was edited', () => {
     await applyMigration(db)
   })
 
+  afterAll(async () => {
+    await db.close()
+  })
+
   it('the assumed version does not reach back before the cursor', async () => {
     const { rows } = await db.query<{ effective_from: string; is_assumed: boolean }>(
       `select effective_from::text, is_assumed
@@ -203,6 +211,10 @@ describe('0064 — the three shapes of a directly created rule', () => {
     // (c) born from a movement: the seed already covers start_date.
     await seedRule(db, { id: ruleId('c'), start_date: '2026-06-08', last_generated_date: '2026-06-08' })
     await applyMigration(db)
+  })
+
+  afterAll(async () => {
+    await db.close()
   })
 
   function ruleId(k: 'a' | 'b' | 'c') {
@@ -269,6 +281,10 @@ describe('0064 — identity: a confirmed occurrence does not block the real due 
       status: 'confirmed',
     })
     await applyMigration(db)
+  })
+
+  afterAll(async () => {
+    await db.close()
   })
 
   it('the historical confirmed row is declared unknown, not approximated', async () => {
