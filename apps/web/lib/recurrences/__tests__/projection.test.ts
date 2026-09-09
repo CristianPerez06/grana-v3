@@ -13,7 +13,7 @@ const monthly = (overrides: Partial<RuleForProjection> = {}): RuleForProjection 
   interval_count: 1,
   interval_unit: 'month',
   max_occurrences: null,
-  last_generated_date: null,
+  covered: [],
   ...overrides,
 })
 
@@ -78,36 +78,52 @@ describe('projectRuleOccurrences', () => {
 })
 
 describe('getNextExpectedOccurrence', () => {
-  it('returns the same day when today IS an occurrence and nothing is confirmed yet', () => {
-    // Monthly on the 1st, today Jun 1, no cursor ⇒ próximo = Jun 1 (fires today).
-    expect(getNextExpectedOccurrence(monthly(), '2026-06-01', null)).toBe('2026-06-01')
+  it('returns the same day when today IS an occurrence and nothing covers it yet', () => {
+    // Monthly on the 1st, today Jun 1, nothing covered ⇒ próximo = Jun 1.
+    expect(getNextExpectedOccurrence(monthly(), '2026-06-01', [])).toBe('2026-06-01')
   })
 
   it('rolls forward past occurrences — a past start_date does NOT surface as próximo', () => {
-    // Monthly on day 19, today Jun 23, no cursor ⇒ Jun 19 passed ⇒ próximo = Jul 19.
+    // Monthly on day 19, today Jun 23 ⇒ Jun 19 passed ⇒ próximo = Jul 19.
     expect(
-      getNextExpectedOccurrence(monthly({ start_date: '2026-05-19' }), '2026-06-23', null),
+      getNextExpectedOccurrence(monthly({ start_date: '2026-05-19' }), '2026-06-23', []),
     ).toBe('2026-07-19')
   })
 
-  it('rolls past today when today\'s occurrence is already the cursor (seeded/confirmed)', () => {
+  it('rolls past today when today\'s occurrence already exists', () => {
     // The real Epe case: movement loaded TODAY (Jun 23) marked monthly. The seed
-    // covers Jun 23 (last_generated_date = Jun 23), so próximo = Jul 23, not today.
+    // movement covers Jun 23, so próximo = Jul 23, not today.
     expect(
-      getNextExpectedOccurrence(monthly({ start_date: '2026-06-23' }), '2026-06-23', '2026-06-23'),
+      getNextExpectedOccurrence(monthly({ start_date: '2026-06-23' }), '2026-06-23', [
+        '2026-06-23',
+      ]),
     ).toBe('2026-07-23')
   })
 
-  it('returns today when the cursor is an older occurrence and today is due', () => {
-    // Confirmed last month (cursor May 23); today Jun 23 is the next, still due.
+  it('returns today when only an older occurrence exists and today is due', () => {
+    // Confirmed last month (May 23 exists); today Jun 23 is the next, still due.
     expect(
-      getNextExpectedOccurrence(monthly({ start_date: '2026-05-23' }), '2026-06-23', '2026-05-23'),
+      getNextExpectedOccurrence(monthly({ start_date: '2026-05-23' }), '2026-06-23', [
+        '2026-05-23',
+      ]),
     ).toBe('2026-06-23')
+  })
+
+  it('skips an unresolved occurrence too: it is already listed as due', () => {
+    // Under the cursor this returned Jun 23 — the SAME date the review block was
+    // showing — because an unresolved occurrence never moved the cursor. Each
+    // occurrence belongs in one place, not two.
+    expect(
+      getNextExpectedOccurrence(monthly({ start_date: '2026-05-23' }), '2026-06-23', [
+        '2026-05-23',
+        '2026-06-23',
+      ]),
+    ).toBe('2026-07-23')
   })
 
   it('returns start_date when the rule starts in the future', () => {
     expect(
-      getNextExpectedOccurrence(monthly({ start_date: '2026-09-10' }), '2026-06-23', null),
+      getNextExpectedOccurrence(monthly({ start_date: '2026-09-10' }), '2026-06-23', []),
     ).toBe('2026-09-10')
   })
 
@@ -116,7 +132,7 @@ describe('getNextExpectedOccurrence', () => {
       getNextExpectedOccurrence(
         monthly({ start_date: '2026-01-19', end_date: '2026-06-01' }),
         '2026-06-23',
-        null,
+        [],
       ),
     ).toBeNull()
   })
@@ -127,7 +143,7 @@ describe('getNextExpectedOccurrence', () => {
       getNextExpectedOccurrence(
         monthly({ start_date: '2026-01-19', max_occurrences: 2 }),
         '2026-06-23',
-        null,
+        [],
       ),
     ).toBeNull()
   })
@@ -135,18 +151,18 @@ describe('getNextExpectedOccurrence', () => {
   it('honors end-of-month clamping when rolling forward', () => {
     // Monthly on the 31st, today Mar 1 ⇒ próximo = Mar 31 (Feb clamps to 28).
     expect(
-      getNextExpectedOccurrence(monthly({ start_date: '2026-01-31' }), '2026-03-01', null),
+      getNextExpectedOccurrence(monthly({ start_date: '2026-01-31' }), '2026-03-01', []),
     ).toBe('2026-03-31')
   })
 })
 
-describe('projectRuleOccurrences — cursor (last_generated_date)', () => {
+describe('projectRuleOccurrences — occurrences that already exist', () => {
   it('does NOT project an occurrence already covered by the seed movement', () => {
     // The real case: a movement loaded on Aug 4 marked "Recurrente" seeds the
-    // rule (last_generated_date = Aug 4). Announcing Aug 4 as upcoming would
-    // draw a gasto the user already registered.
+    // rule, so Aug 4 is covered by the movement itself. Announcing it as upcoming
+    // would draw a gasto the user already registered.
     const out = projectRuleOccurrences(
-      monthly({ start_date: '2026-08-04', last_generated_date: '2026-08-04' }),
+      monthly({ start_date: '2026-08-04', covered: ['2026-08-04'] }),
       '2026-08-04',
       '2026-08-11',
     )
@@ -155,24 +171,24 @@ describe('projectRuleOccurrences — cursor (last_generated_date)', () => {
 
   it('projects start_date for a direct rule with nothing materialized', () => {
     const out = projectRuleOccurrences(
-      monthly({ start_date: '2026-08-07', last_generated_date: null }),
+      monthly({ start_date: '2026-08-07', covered: [] }),
       '2026-08-04',
       '2026-08-11',
     )
     expect(out).toEqual(['2026-08-07'])
   })
 
-  it('skips an occurrence whose cursor sits in the future, and finds the next one', () => {
-    // The orphaned-zombie shape: cursor on a future date whose seed movement was
-    // deleted. The rule cannot fire on Aug 7 — it must not be drawn as upcoming.
-    const rule = monthly({ start_date: '2026-08-07', last_generated_date: '2026-08-07' })
+  it('skips a covered occurrence in the future, and finds the next one', () => {
+    // The orphaned-zombie shape: a future occurrence already covered. The rule
+    // cannot fire on Aug 7 — it must not be drawn as upcoming.
+    const rule = monthly({ start_date: '2026-08-07', covered: ['2026-08-07'] })
     expect(projectRuleOccurrences(rule, '2026-08-04', '2026-08-31')).toEqual([])
     expect(projectRuleOccurrences(rule, '2026-08-04', '2026-09-30')).toEqual(['2026-09-07'])
   })
 
-  it('still projects occurrences past the cursor', () => {
+  it('still projects the occurrences that are NOT covered', () => {
     const out = projectRuleOccurrences(
-      monthly({ start_date: '2026-06-05', last_generated_date: '2026-07-05' }),
+      monthly({ start_date: '2026-06-05', covered: ['2026-07-05'] }),
       '2026-08-01',
       '2026-09-30',
     )
@@ -185,14 +201,14 @@ describe('projection and próximo cannot diverge', () => {
   // used to walk the calendar independently, and one ignored the cursor. They
   // now share one walker; this asserts they keep agreeing.
   const cases: RuleForProjection[] = [
-    monthly({ id: 'a', start_date: '2026-08-04', last_generated_date: '2026-08-04' }),
-    monthly({ id: 'b', start_date: '2026-08-07', last_generated_date: null }),
-    monthly({ id: 'c', start_date: '2026-08-07', last_generated_date: '2026-08-07' }),
-    monthly({ id: 'd', start_date: '2026-06-05', last_generated_date: '2026-07-05' }),
-    monthly({ id: 'e', start_date: '2026-01-31', last_generated_date: '2026-01-31' }),
-    monthly({ id: 'f', start_date: '2026-06-01', interval_count: 2, interval_unit: 'week', last_generated_date: '2026-07-27' }),
-    monthly({ id: 'g', start_date: '2026-05-01', end_date: '2026-08-01', last_generated_date: '2026-07-01' }),
-    monthly({ id: 'h', start_date: '2026-05-01', max_occurrences: 2, last_generated_date: '2026-05-01' }),
+    monthly({ id: 'a', start_date: '2026-08-04', covered: ['2026-08-04'] }),
+    monthly({ id: 'b', start_date: '2026-08-07', covered: [] }),
+    monthly({ id: 'c', start_date: '2026-08-07', covered: ['2026-08-07'] }),
+    monthly({ id: 'd', start_date: '2026-06-05', covered: ['2026-07-05'] }),
+    monthly({ id: 'e', start_date: '2026-01-31', covered: ['2026-01-31']}),
+    monthly({ id: 'f', start_date: '2026-06-01', interval_count: 2, interval_unit: 'week', covered: ['2026-07-27']}),
+    monthly({ id: 'g', start_date: '2026-05-01', end_date: '2026-08-01', covered: ['2026-07-01']}),
+    monthly({ id: 'h', start_date: '2026-05-01', max_occurrences: 2, covered: ['2026-05-01']}),
   ]
 
   it.each(cases.map((r) => [r.id, r] as const))(
@@ -201,7 +217,7 @@ describe('projection and próximo cannot diverge', () => {
       const today = '2026-08-04'
       // A wide window so the projection is not truncated by its upper bound.
       const [firstProjected] = projectRuleOccurrences(rule, today, '2028-12-31')
-      const next = getNextExpectedOccurrence(rule, today, rule.last_generated_date)
+      const next = getNextExpectedOccurrence(rule, today, rule.covered)
       expect(firstProjected ?? null).toBe(next)
     },
   )

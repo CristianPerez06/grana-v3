@@ -97,6 +97,7 @@ function makeSupabase(db: Db) {
     const inFilters: Record<string, unknown[]> = {}
     const gte: Record<string, string> = {}
     const lte: Record<string, string> = {}
+    const notNull: string[] = []
 
     const keep = <T extends Record<string, unknown>>(rows: T[]): T[] =>
       rows
@@ -104,6 +105,7 @@ function makeSupabase(db: Db) {
         .filter((r) => Object.entries(inFilters).every(([c, v]) => v.includes(r[c])))
         .filter((r) => Object.entries(gte).every(([c, v]) => String(r[c]) >= v))
         .filter((r) => Object.entries(lte).every(([c, v]) => String(r[c]) <= v))
+        .filter((r) => notNull.every((c) => r[c] != null))
 
     const run = () => {
       switch (table) {
@@ -151,7 +153,7 @@ function makeSupabase(db: Db) {
                 interval_count: 1,
                 interval_unit: 'month',
                 max_occurrences: null,
-                last_generated_date: null,
+                created_from_transaction_id: null,
                 status: 'active',
                 category: null,
                 subcategory: null,
@@ -162,7 +164,15 @@ function makeSupabase(db: Db) {
           }
         case 'recurrence_instances':
           return {
-            data: keep(db.recurrence_instances ?? []).map((i) => ({
+            data: keep(
+              (db.recurrence_instances ?? []).map((i) => ({
+                // The generator writes both: `due_date` is the identity and
+                // `scheduled_date` mirrors it until an old client overwrites it
+                // on confirm. A fixture that only sets one means the other.
+                due_date: i.scheduled_date,
+                ...i,
+              })),
+            ).map((i) => ({
               ...i,
               category: null,
               subcategory: null,
@@ -192,6 +202,13 @@ function makeSupabase(db: Db) {
       },
       lte: (c: string, v: string) => {
         lte[c] = v
+        return b
+      },
+      not: (c: string, operator: string, value: unknown) => {
+        if (operator !== 'is' || value !== null) {
+          throw new Error(`unexpected not(${operator})`)
+        }
+        notNull.push(c)
         return b
       },
       then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
@@ -367,8 +384,6 @@ describe('getCommittedOutlookForMonth — fixed expenses in the window', () => {
           currency_code: 'ARS',
           description: 'Alquiler',
           start_date: '2026-01-05',
-          // The generator already produced September's occurrence.
-          last_generated_date: '2026-09-05',
         },
       ],
       recurrence_instances: [
@@ -387,6 +402,84 @@ describe('getCommittedOutlookForMonth — fixed expenses in the window', () => {
     const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.recurringExpense).toBe(500_000)
     expect(out.ARS.topRecurring).toHaveLength(1)
+  })
+
+  it('#118: an UNRESOLVED occurrence is not counted twice', async () => {
+    // The exact shape of #118, and the reason it survived: generating a pending
+    // occurrence never advanced `last_generated_date` — only resolving one did.
+    // So the cursor stayed at August while September sat unresolved, the
+    // instances read counted it, and the projection walking from August emitted
+    // it again. Half a million pesos of rent, twice, for precisely the user who
+    // had not caught up.
+    //
+    // An earlier version of the test above hid this by setting the cursor to the
+    // generated date, which the generator never did.
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [
+        {
+          id: 'r-alquiler',
+          movement_type: 'expense',
+          account_id: 'bank',
+          amount: 500_000,
+          currency_code: 'ARS',
+          description: 'Alquiler',
+          start_date: '2026-01-05',
+        },
+      ],
+      recurrence_instances: [
+        {
+          recurrence_id: 'r-alquiler',
+          account_id: 'bank',
+          amount: 500_000,
+          currency_code: 'ARS',
+          description: 'Alquiler',
+          scheduled_date: '2026-09-05',
+          status: 'pending',
+        },
+      ],
+    })
+
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
+
+    expect(out.ARS.recurringExpense).toBe(500_000)
+    expect(out.ARS.topRecurring).toHaveLength(1)
+  })
+
+  it('does not re-commit an occurrence the user said did not apply', async () => {
+    // `skipped` means "this period does not correspond". It never counts as a
+    // commitment — and it must not come back as a projected one either, which is
+    // what happens the moment the projection stops looking at what exists.
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [
+        {
+          id: 'r-gimnasio',
+          movement_type: 'expense',
+          account_id: 'bank',
+          amount: 80_000,
+          currency_code: 'ARS',
+          description: 'Gimnasio',
+          start_date: '2026-01-05',
+        },
+      ],
+      recurrence_instances: [
+        {
+          recurrence_id: 'r-gimnasio',
+          account_id: 'bank',
+          amount: 80_000,
+          currency_code: 'ARS',
+          description: 'Gimnasio',
+          scheduled_date: '2026-09-05',
+          status: 'skipped',
+        },
+      ],
+    })
+
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
+
+    expect(out.ARS.recurringExpense).toBe(0)
+    expect(out.ARS.topRecurring).toHaveLength(0)
   })
 
   it('ignores a recurrence whose occurrence falls outside the window', async () => {

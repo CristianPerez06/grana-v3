@@ -1,6 +1,7 @@
 import type { GranaSupabaseClient } from '@grana/supabase'
 import {
   addInterval,
+  coveredOccurrences,
   detectRecurrenceSuggestions,
   formatDateISO,
   getNextExpectedOccurrence,
@@ -45,20 +46,28 @@ const INSTANCE_SELECT = `
   subcategory:subcategories(id, name, canonical_name, category_id, user_id)
 `
 
-type RecurrenceRow = Omit<RecurrenceSummary, 'pending_instances'>
+type RecurrenceRow = Omit<RecurrenceSummary, 'pending_instances' | 'covered_occurrences'>
 
 function mapRecurrenceSummary(
   recurrence: RecurrenceRow,
   pendingByRecurrenceId: Map<string, RecurrenceInstance[]>,
+  upcomingByRecurrenceId: Map<string, string[]>,
   today: string,
 ): RecurrenceSummary {
+  const covered = coveredOccurrences({
+    startDate: recurrence.start_date,
+    seededFromMovement: recurrence.created_from_transaction_id != null,
+    existing: upcomingByRecurrenceId.get(recurrence.id) ?? [],
+  })
+
   return {
     ...recurrence,
     pending_instances: pendingByRecurrenceId.get(recurrence.id) ?? [],
-    // Calendar "próximo": next occurrence >= today AND after the rule's cursor
-    // (last_generated_date — the last occurrence already confirmed/omitted or
-    // seeded from a movement). Independent of the pending (due) instance, whose
-    // date sits at <= today. See RecurrenceSummary.next_occurrence.
+    covered_occurrences: [...covered],
+    // Calendar "próximo": the next occurrence >= today that does NOT already
+    // exist. It used to be "after the cursor", which announced as upcoming an
+    // occurrence the user already had sitting unresolved — the same date in two
+    // places at once.
     next_occurrence: getNextExpectedOccurrence(
       {
         start_date: recurrence.start_date,
@@ -68,9 +77,44 @@ function mapRecurrenceSummary(
         max_occurrences: recurrence.max_occurrences,
       },
       today,
-      recurrence.last_generated_date,
+      covered,
     ),
   }
+}
+
+/**
+ * The occurrence dates each rule already has FROM `since` ONWARD, in any state.
+ *
+ * Only the ones from today matter for the projection and for "próximo": the past
+ * is what the review block shows, not what a projection could double-count. That
+ * keeps this read to roughly one row per rule instead of a year of history.
+ */
+async function getUpcomingOccurrenceDates(
+  supabase: GranaSupabaseClient,
+  recurrenceIds: string[],
+  since: string,
+): Promise<Map<string, string[]>> {
+  const byRule = new Map<string, string[]>()
+  if (recurrenceIds.length === 0) return byRule
+
+  const { data, error } = await selectAllPages<{ recurrence_id: string; due_date: string }>(() =>
+    supabase
+      .from('recurrence_instances')
+      .select('recurrence_id, due_date')
+      .in('recurrence_id', recurrenceIds)
+      .not('due_date', 'is', null)
+      .gte('due_date', since)
+      .order('due_date')
+      .order('recurrence_id'),
+  )
+  if (error) throw error
+
+  for (const row of data) {
+    const list = byRule.get(row.recurrence_id)
+    if (list == null) byRule.set(row.recurrence_id, [row.due_date])
+    else list.push(row.due_date)
+  }
+  return byRule
 }
 
 /**
@@ -141,14 +185,16 @@ export async function getRecurrences(
   if (error) throw error
 
   const recurrences = (data ?? []) as unknown as RecurrenceRow[]
-  const pendingByRecurrenceId = await getPendingInstancesByRecurrenceId(
-    supabase,
-    recurrences.map((recurrence) => recurrence.id),
-  )
-
+  const ids = recurrences.map((recurrence) => recurrence.id)
   const today = formatDateISO(getTodayAR())
+
+  const [pendingByRecurrenceId, upcomingByRecurrenceId] = await Promise.all([
+    getPendingInstancesByRecurrenceId(supabase, ids),
+    getUpcomingOccurrenceDates(supabase, ids, today),
+  ])
+
   return recurrences.map((recurrence) =>
-    mapRecurrenceSummary(recurrence, pendingByRecurrenceId, today),
+    mapRecurrenceSummary(recurrence, pendingByRecurrenceId, upcomingByRecurrenceId, today),
   )
 }
 
@@ -220,10 +266,19 @@ export async function getRecurrenceDetail(
     .slice()
     .reverse()
 
+  const today = formatDateISO(getTodayAR())
   const recurrenceSummary = mapRecurrenceSummary(
     recurrence as unknown as RecurrenceRow,
     pending.length === 0 ? new Map() : new Map([[pending[0].recurrence_id, pending]]),
-    formatDateISO(getTodayAR()),
+    new Map([
+      [
+        id,
+        instances
+          .filter((instance) => instance.due_date != null && instance.due_date >= today)
+          .map((instance) => instance.due_date as string),
+      ],
+    ]),
+    today,
   )
 
   return {
@@ -329,7 +384,6 @@ export type RecurrenceRuleForGeneration = {
   max_occurrences: number | null
   start_date: string
   end_date: string | null
-  last_generated_date: string | null
   reconstruct_from: string
   amount: number
   account_id: string
@@ -605,7 +659,7 @@ export async function generateDueRecurrenceInstances(
     supabase
       .from('recurrences')
       .select(
-        'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, last_generated_date, reconstruct_from, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
+        'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, reconstruct_from, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
       )
       .eq('user_id', userId)
       .eq('status', 'active')
@@ -1010,7 +1064,7 @@ export async function getDuplicateRulesFor(
   const { data, error } = await supabase
     .from('recurrences')
     .select(
-      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, last_generated_date',
+      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id',
     )
     .eq('status', 'active')
   if (error) throw error
@@ -1023,15 +1077,29 @@ export async function getDuplicateRulesFor(
       interval_count: number
       interval_unit: IntervalUnit
       max_occurrences: number | null
-      last_generated_date: string | null
+      created_from_transaction_id: string | null
     }
   >
+
+  const upcoming = await getUpcomingOccurrenceDates(
+    supabase,
+    rules.map((rule) => rule.id),
+    today,
+  )
 
   return findDuplicateRules(
     candidate,
     rules.map((rule) => ({
       ...rule,
-      next_occurrence: getNextExpectedOccurrence(rule, today, rule.last_generated_date),
+      next_occurrence: getNextExpectedOccurrence(
+        rule,
+        today,
+        coveredOccurrences({
+          startDate: rule.start_date,
+          seededFromMovement: rule.created_from_transaction_id != null,
+          existing: upcoming.get(rule.id) ?? [],
+        }),
+      ),
     })),
     options,
   )

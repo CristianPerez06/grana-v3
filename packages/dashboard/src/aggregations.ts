@@ -718,7 +718,7 @@ export function projectRecurrenceItems(
       interval_count: r.interval_count,
       interval_unit: r.interval_unit,
       max_occurrences: r.max_occurrences,
-      last_generated_date: r.last_generated_date,
+      covered: r.covered,
     })),
     windowStart,
     windowEnd,

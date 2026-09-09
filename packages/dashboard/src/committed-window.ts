@@ -20,8 +20,9 @@ import { financialTodayISO } from '@grana/money-logic'
 // Cards split 1 from {2,3}: under `live` the payment state is today's and there
 // is an overdue carryover from today; under `snapshot` both are evaluated at the
 // cut. Fixed expenses split {1,2} from 3: projecting active rules stays valid
-// while the window has not ended, because the `last_generated_date` cursor has
-// not passed it yet.
+// while the window has not ended, because what the projection subtracts is the
+// set of occurrences that already exist, and inside a running window there are
+// still dates with no row yet.
 //
 // Deriving one field from the other is the bug this file exists to prevent. A
 // single `mode` taken from "has the window ended?" reports the current month's

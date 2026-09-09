@@ -75,6 +75,16 @@ export type RecurrenceSummary = Recurrence & {
    */
   pending_instances: RecurrenceInstance[]
   /**
+   * Occurrences of this rule that ALREADY EXIST from today onward, plus its seed
+   * date when the rule was created from a movement — everything a projection has
+   * to subtract so it does not announce as upcoming something that already is.
+   *
+   * Bounded by construction: occurrences are only materialized up to today, so
+   * this holds today's at most, and a future `start_date` for a seeded rule.
+   * A plain array, not a Set, because it crosses the server/client boundary.
+   */
+  covered_occurrences: string[]
+  /**
    * Next scheduled occurrence on or after today (the calendar "próximo"), or null
    * if the rule has no further occurrence. Computed from start_date — NOT from
    * `pending_instances`, whose dates are the DUE occurrences awaiting a decision

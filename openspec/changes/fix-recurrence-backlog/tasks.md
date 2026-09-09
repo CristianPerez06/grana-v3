@@ -527,12 +527,37 @@ que habilita el backlog.
       lo que permitió ejercitar estos dos reads y no solo el que usa `select('*')`.
       **Sin consumidores rotos:** `pending_instance` no lo leía nadie fuera del paquete, así que el
       cambio de forma no arrastra UI. Mostrar varias en pantalla es la etapa 4.
-- [ ] 2.2b Migrar **dashboard, "próximo", proyección y deshacer** para que lean los vencimientos que
-      ya existen —en **cualquier** estado: pendiente, omitido y confirmado— en vez del cursor. Es el
-      paso (4) del orden, hoy descrito dentro de `1.5` sin identificador propio. **Es el arreglo de
-      #118**: mientras la proyección avance desde `last_generated_date` y el atraso ya esté
-      materializado, la misma ocurrencia se cuenta dos veces —una materializada y otra proyectada—.
-      Ver el relevamiento de las cuatro superficies en `1.5`.
+- [x] 2.2b Migrar **dashboard, "próximo", proyección y deshacer** para que lean los vencimientos que
+      ya existen —en **cualquier** estado: pendiente, omitido y confirmado— en vez del cursor.
+      **Hecho, y con eso #118 queda cerrado.** El núcleo cambia de forma: `RuleForProjection` pierde
+      `last_generated_date` y gana `covered: Iterable<string>`, y `getNextExpectedOccurrence` recibe
+      ese conjunto en vez de un cursor. Sacar el campo del tipo fue deliberado: TypeScript enumeró
+      las cinco superficies que había que migrar, en vez de dejarlas a la vista.
+      **Las dos fuentes de cobertura, y la segunda es la fácil de olvidar:** los `due_date` de las
+      instancias existentes **y** el `start_date` de una regla creada desde un movimiento, que no
+      tiene fila de instancia —el movimiento semilla **es** esa ocurrencia—. El cursor codificaba eso
+      implícitamente al quedar seteado en la fecha de la semilla; nombrarlo es lo que permite
+      soltarlo. Vive en `coveredOccurrences`, una sola función que arman todos los llamadores.
+      **Por qué el cursor era incorrecto en las dos direcciones:** cubría de más, porque resolver
+      agosto lo movía más allá de julio, que la regla seguía debiendo; y cubría de menos, porque
+      generar una pendiente **nunca** lo avanzaba —solo resolverla—, así que la lectura de instancias
+      la contaba y la proyección, caminando desde el cursor, la emitía otra vez. La misma cuota, dos
+      veces, justo para quien no se puso al día. Eso es #118.
+      **La exclusión del dashboard se hace por `due_date`, no por `scheduled_date`:** en una
+      ocurrencia resuelta `scheduled_date` guarda la fecha de **pago**, así que una cuota de agosto
+      pagada en septiembre caería fuera de la ventana de agosto y volvería a proyectarse como debida.
+      **«Próximo» también cambia, y es visible:** antes anunciaba como próxima una ocurrencia que el
+      usuario ya tenía sin resolver —la misma fecha en dos lugares—. Ahora cada ocurrencia aparece en
+      uno solo: en el bloque de «por revisar» si existe, en la proyección si no.
+      **Deshacer deja de leer el cursor sin cambiar de criterio:** la regla se encuentra **por**
+      `created_from_transaction_id`, así que es semilla por definición y el cursor solo repetía eso;
+      preguntar `start_date > today` dice lo mismo y no depende de que el cursor se haya mantenido.
+      Regresiones: `#118: an UNRESOLVED occurrence is not counted twice` y una omitida que no vuelve
+      como compromiso. Contra el camino viejo dan **1.000.000 en vez de 500.000** y 80.000 en vez de
+      0. La versión anterior del test que cubría esto tenía una fixture irreal —le ponía el cursor en
+      la fecha generada, cosa que el generador nunca hacía—, y por eso el defecto sobrevivió.
+      `RecurrenceSummary` gana `covered_occurrences`, acotado a hoy en adelante: como las ocurrencias
+      solo se materializan hasta hoy, son una fila por regla como mucho.
 - [ ] 2.6 Copy: **"vencimientos por revisar"** — ni "pagos" (afirmaría que hubo pago) ni lenguaje de
       deuda. Actualizar `es.json` y `en.json`.
 ## 3. Diferido a changes posteriores

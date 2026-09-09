@@ -5,6 +5,7 @@ import { resolveCommittedWindow } from './committed-window'
 import {
   balanceSumsFromRows,
   cajaCutOrFilter,
+  coveredOccurrences,
   categoryOwnPortion,
   computeCategoryNet,
   countsAsCategorySpend,
@@ -830,19 +831,29 @@ export async function getCommittedOutlookForMonth(
   //    under either lens.
   //
   //  · Occurrences of the active rules PROJECTED over the window, which depends
-  //    on `windowElapsed` and NOT on the lens. While the window has not ended the
-  //    `last_generated_date` cursor has not passed it, so the projection still
-  //    returns what has not materialized — true for the current month AND for the
-  //    previous one, whose window is the month now running. Once the window has
-  //    ended the projection is dropped: it would price occurrences at the rules'
-  //    CURRENT amounts (confirm propagates a corrected amount back to the rule),
-  //    lose the rules retired since, and invent the ones created after.
+  //    on `windowElapsed` and NOT on the lens. While the window has not ended some
+  //    of its dates still have no row, so the projection returns what has not
+  //    materialized — true for the current month AND for the previous one, whose
+  //    window is the month now running. Once the window has ended the projection
+  //    is dropped: it would price occurrences at the rules' CURRENT amounts
+  //    (confirm propagates a corrected amount back to the rule), lose the rules
+  //    retired since, and invent the ones created after.
   //
-  // The two never overlap: the projection advances from `last_generated_date`, so
-  // it never returns an occurrence already generated — including one already
-  // confirmed, which moved the cursor past itself.
+  // THE TWO MUST NOT OVERLAP, and what keeps them apart is the third read below:
+  // every occurrence that already EXISTS in the window, in any state, subtracted
+  // from the projection.
+  //
+  // It used to be the `last_generated_date` cursor, and that was #118. The cursor
+  // only moved when the user RESOLVED an occurrence, so an unresolved one sat
+  // BEFORE it: the instances read counted it, and the projection — walking from
+  // the cursor — emitted it again. The same commitment, twice, exactly for the
+  // rules the user had not caught up on.
+  //
+  // The exclusion is keyed on `due_date`, not on `scheduled_date`: for a resolved
+  // occurrence `scheduled_date` holds the PAYMENT date, so an August cuota paid in
+  // September would fall outside August's window and be projected as still owed.
   const instanceStatuses = lens === 'live' ? ['pending'] : ['pending', 'confirmed']
-  const [instancesResult, rulesResult] = await Promise.all([
+  const [instancesResult, rulesResult, coveredResult] = await Promise.all([
     supabase
       .from('recurrence_instances')
       .select(
@@ -854,12 +865,32 @@ export async function getCommittedOutlookForMonth(
     supabase
       .from('recurrences')
       .select(
-        'id, start_date, end_date, interval_count, interval_unit, max_occurrences, last_generated_date, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
+        'id, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
       )
       .eq('status', 'active'),
+    // Every state, `skipped` included: an occurrence the user marked as not
+    // applicable exists, and projecting it would re-commit money they said was
+    // not owed.
+    supabase
+      .from('recurrence_instances')
+      .select('recurrence_id, due_date')
+      .not('due_date', 'is', null)
+      .gte('due_date', windowStart)
+      .lte('due_date', windowEnd),
   ])
   if (instancesResult.error) throw instancesResult.error
   if (rulesResult.error) throw rulesResult.error
+  if (coveredResult.error) throw coveredResult.error
+
+  const coveredByRule = new Map<string, string[]>()
+  for (const row of (coveredResult.data ?? []) as Array<{
+    recurrence_id: string
+    due_date: string
+  }>) {
+    const list = coveredByRule.get(row.recurrence_id)
+    if (list == null) coveredByRule.set(row.recurrence_id, [row.due_date])
+    else list.push(row.due_date)
+  }
 
   type MovementTypeEmbed = { movement_type: string }
   type PendingInstanceRow = {
@@ -893,8 +924,9 @@ export async function getCommittedOutlookForMonth(
       date: i.scheduled_date,
     }))
 
-  type RecurrenceRuleRow = CommittedRecurrenceRule & {
+  type RecurrenceRuleRow = Omit<CommittedRecurrenceRule, 'covered'> & {
     account_id: string | null
+    created_from_transaction_id: string | null
     category: NameEmbed
     subcategory: NameEmbed
   }
@@ -902,6 +934,11 @@ export async function getCommittedOutlookForMonth(
   const labelled = (r: RecurrenceRuleRow): CommittedRecurrenceRule => ({
     ...r,
     description: r.description || embedName(r.subcategory) || embedName(r.category),
+    covered: coveredOccurrences({
+      startDate: r.start_date,
+      seededFromMovement: r.created_from_transaction_id != null,
+      existing: coveredByRule.get(r.id) ?? [],
+    }),
   })
 
   const projectedExpenses = windowElapsed

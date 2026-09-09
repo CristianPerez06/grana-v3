@@ -460,10 +460,40 @@ export type OccurrenceSchedule = {
 
 export type RuleForProjection = OccurrenceSchedule & {
   id: string
-  // Cursor of the last occurrence already materialized — by the seed movement
-  // that created the rule, or by an instance the user confirmed/omitted. Every
-  // projection MUST honor it (see walkOccurrences).
-  last_generated_date: string | null
+  /**
+   * Every occurrence this rule ALREADY COVERS — build it with
+   * `coveredOccurrences`. Projections subtract it, so an occurrence that exists
+   * is never announced as upcoming as well.
+   *
+   * This replaces the `last_generated_date` cursor, which said "everything up to
+   * here is covered" and was wrong in both directions. It over-covered, because
+   * resolving August moved it past July, which the rule still owed; and it
+   * under-covered, because an unresolved occurrence never advanced it, so the
+   * projection re-emitted a date that already had a row — the same commitment
+   * counted twice, once materialized and once projected, which is #118.
+   */
+  covered: Iterable<string>
+}
+
+/**
+ * The occurrences a rule already covers, from the two places that can cover one.
+ *
+ * There are exactly two, and the second is easy to forget: a rule created from a
+ * movement has NO instance row for its first occurrence — the seed transaction
+ * itself is that occurrence — so `start_date` is covered even though nothing in
+ * `recurrence_instances` says so. The old cursor encoded this implicitly by
+ * being set to the seed's date; naming it is what lets the cursor go.
+ */
+export function coveredOccurrences(input: {
+  startDate: string
+  /** True when the rule was created from an existing movement. */
+  seededFromMovement: boolean
+  /** Due dates of the rule's existing instances, in ANY state. */
+  existing: Iterable<string>
+}): Set<string> {
+  const covered = new Set(input.existing)
+  if (input.seededFromMovement) covered.add(input.startDate)
+  return covered
 }
 
 export type ProjectedOccurrence = {
@@ -631,32 +661,36 @@ export function projectRuleOccurrences(
   windowStart: string,
   windowEnd: string,
 ): string[] {
-  return walkOccurrences(rule, {
-    from: windowStart,
-    to: windowEnd,
-    cursor: rule.last_generated_date,
-  })
+  const covered = rule.covered instanceof Set ? rule.covered : new Set(rule.covered)
+  return walkOccurrences(rule, { from: windowStart, to: windowEnd }).filter(
+    (date) => !covered.has(date),
+  )
 }
 
 // The next occurrence a rule is still expected to produce — the calendar
 // "próximo" for display. The earliest occurrence that is BOTH:
 //   (a) on or after `today` — never surface a past date as "próximo"; and
-//   (b) strictly after `lastGeneratedDate` — the cursor of the last occurrence
-//       already confirmed/omitted (advanced by confirm & skip). Without (b), a
-//       rule whose occurrence for *today* was already confirmed would still show
-//       today as "próximo" instead of rolling to the next interval.
+//   (b) not already covered — see `coveredOccurrences`. Without (b) a rule whose
+//       occurrence for *today* already exists would announce it as coming.
 // Returns null when the rule has no further occurrence (finished or capped out).
+//
+// (b) used to be "strictly after the cursor", which answered a different
+// question: the cursor only moved when the user RESOLVED something, so an
+// occurrence sitting unresolved was announced as upcoming while also being
+// listed as due. Each occurrence now appears in exactly one place — the review
+// block if it exists, the projection if it does not.
 export function getNextExpectedOccurrence(
   rule: OccurrenceSchedule,
   today: string,
-  lastGeneratedDate: string | null,
+  covered: Iterable<string>,
 ): string | null {
-  const [next] = walkOccurrences(rule, {
-    from: today,
-    cursor: lastGeneratedDate,
-    limit: 1,
-  })
-  return next ?? null
+  const already = covered instanceof Set ? covered : new Set(covered)
+  // Bounded because the walk is: it steps forward only while it keeps landing on
+  // dates that already exist, and occurrences exist only up to today.
+  for (const date of walkOccurrences(rule, { from: today })) {
+    if (!already.has(date)) return date
+  }
+  return null
 }
 
 // Flatten every rule's in-window occurrences into a single date-sorted list.

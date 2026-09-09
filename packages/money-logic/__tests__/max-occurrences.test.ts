@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  coveredOccurrences,
   decideRecurrenceInstance,
   getNextExpectedOccurrence,
   occurrenceOrdinal,
@@ -17,16 +18,26 @@ const seededRule = (cap: number | null): RuleForProjection => ({
   interval_count: 1,
   interval_unit: 'month',
   max_occurrences: cap,
-  last_generated_date: '2026-05-01',
+  // The seed movement covers start_date and leaves no instance row behind.
+  covered: coveredOccurrences({
+    startDate: '2026-05-01',
+    seededFromMovement: true,
+    existing: [],
+  }),
 })
 
 const FAR_FUTURE = '2028-01-01'
 
 // Run the generator the way it actually runs: each instance it creates is later
 // confirmed, which advances the cursor and lets the next call see it.
-const runGenerator = (rule: RuleForProjection, today: string): string[] => {
+const runGenerator = (
+  rule: RuleForProjection,
+  today: string,
+  options: { fromCursor?: string | null } = {},
+): string[] => {
   const produced: string[] = []
-  let cursor = rule.last_generated_date
+  let cursor: string | null =
+    options.fromCursor !== undefined ? options.fromCursor : rule.start_date
   for (let guard = 0; guard < 50; guard++) {
     const decision = decideRecurrenceInstance(
       { ...rule, last_generated_date: cursor },
@@ -66,8 +77,12 @@ describe('a cursor off the schedule: the calendar decides, not the cursor', () =
   // `anchorDate` restores the DAY OF MONTH, not the phase of months or years. A
   // MOVED START: `updateRecurrence` moves `start_date` without touching the
   // cursor, which reaches even a monthly or daily rule of interval 1.
-  const rule = (o: Partial<RuleForProjection>): RuleForProjection => ({
-    id: 'r',
+  // These feed `decideRecurrenceInstance`, which is the one place that still
+  // speaks in cursors — the projection stopped.
+  type DecisionRule = Omit<RuleForProjection, 'covered' | 'id'> & {
+    last_generated_date: string | null
+  }
+  const rule = (o: Partial<DecisionRule>): DecisionRule => ({
     start_date: '2026-05-01',
     end_date: null,
     interval_count: 1,
@@ -165,7 +180,7 @@ describe('a cursor off the schedule: the calendar decides, not the cursor', () =
     // occurrence, so the next one, 2026-06-12, is the 15th. A cap of 15 lets it
     // through and a cap of 14 does not — the same rule as for a drifted one,
     // which is the point of removing the fallback.
-    const onPhase = (cap: number | null): RuleForProjection =>
+    const onPhase = (cap: number | null): DecisionRule =>
       rule({
         start_date: '2026-05-01',
         interval_count: 3,
@@ -207,24 +222,25 @@ describe('max_occurrences is one number across every surface', () => {
     expect(1 + projected.length).toBe(3)
 
     // And nothing is offered after the last one.
-    expect(getNextExpectedOccurrence(rule, '2026-07-02', '2026-07-01')).toBeNull()
+    expect(
+      getNextExpectedOccurrence(rule, '2026-07-02', ['2026-05-01', ...materialized]),
+    ).toBeNull()
   })
 
   it('a directly created rule with a cap of 3 also produces 3, start_date included', () => {
     // No seed movement: the cursor is null and the 1st occurrence falls ON
     // start_date, so all three are materialized.
-    const rule = { ...seededRule(3), last_generated_date: null }
+    const rule: RuleForProjection = { ...seededRule(3), covered: [] }
 
-    const materialized = runGenerator(rule, FAR_FUTURE)
+    const materialized = runGenerator(rule, FAR_FUTURE, { fromCursor: null })
     expect(materialized).toEqual(['2026-05-01', '2026-06-01', '2026-07-01'])
     expect(materialized.length).toBe(3)
   })
 
   it('deleting instance rows does not hand the rule extra occurrences', () => {
     // The old cap read the rows back, so wiping them reopened the rule. The
-    // ordinal only knows the calendar and the cursor, which the rows do not own.
-    const rule = seededRule(3)
-    const exhausted = { ...rule, last_generated_date: '2026-07-01' }
+    // ordinal only knows the calendar, which the rows do not own.
+    const exhausted = { ...seededRule(3), last_generated_date: '2026-07-01' }
     expect(decideRecurrenceInstance(exhausted, FAR_FUTURE, false)).toEqual({
       generate: false,
       reason: 'max_occurrences_reached',

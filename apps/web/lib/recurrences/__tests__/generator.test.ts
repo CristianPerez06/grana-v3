@@ -96,7 +96,6 @@ describe('buildPendingInstanceInsert — shared propagation', () => {
     max_occurrences: null,
     start_date: '2026-01-15',
     end_date: null,
-    last_generated_date: null,
     reconstruct_from: '2026-01-14',
     amount: 100000,
     account_id: 'acc-1',

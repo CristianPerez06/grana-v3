@@ -772,7 +772,7 @@ export async function deleteTransaction(
   const { data: seededRule } = await supabase
     .from('recurrences')
     .select(
-      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences, last_generated_date',
+      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences',
     )
     .eq('created_from_transaction_id', id)
     .eq('user_id', userId)
@@ -788,7 +788,6 @@ export async function deleteTransaction(
       interval_count: number
       interval_unit: IntervalUnit
       max_occurrences: number | null
-      last_generated_date: string | null
     }
     const today = options.today ?? formatDateISO(getTodayAR())
     const ruleIsLive = rule.status !== 'deleted'
@@ -800,25 +799,31 @@ export async function deleteTransaction(
         seededRecurrence: {
           id: rule.id,
           description: rule.description,
-          next_occurrence: getNextExpectedOccurrence(rule, today, rule.last_generated_date),
+          // The rule was found BY `created_from_transaction_id`, so it is seeded
+          // by definition and its `start_date` is the occurrence this very
+          // movement covers. That is the whole of what the cursor used to say
+          // here, stated directly.
+          next_occurrence: getNextExpectedOccurrence(rule, today, [rule.start_date]),
         },
       }
     }
 
     // Unlink so the RESTRICT lets the movement go. For a live rule being kept:
-    // if the cursor sits on a FUTURE start_date, the occurrence it claims to
-    // have covered is precisely the movement being deleted — leaving it would
-    // make the rule skip that period entirely (the orphan defect 0053 repairs).
-    const cursorCoversDeletedSeed =
-      ruleIsLive &&
-      rule.last_generated_date != null &&
-      rule.last_generated_date === rule.start_date &&
-      rule.last_generated_date > today
+    // a FUTURE `start_date` is an occurrence covered by the movement being
+    // deleted, so leaving the coverage in place would make the rule skip that
+    // period entirely (the orphan defect 0053 repairs).
+    //
+    // This used to be read off the cursor — `last_generated_date === start_date
+    // && > today`. Since the rule was found BY `created_from_transaction_id`, it
+    // IS seeded, so the cursor was only restating that; asking `start_date`
+    // directly says the same thing and does not depend on a cursor having been
+    // maintained. `last_generated_date` is still cleared while the column exists.
+    const seedCoversFutureOccurrence = ruleIsLive && rule.start_date > today
 
     const { error: unlinkError } = await supabase
       .from('recurrences')
       .update(
-        (cursorCoversDeletedSeed
+        (seedCoversFutureOccurrence
           ? { created_from_transaction_id: null, last_generated_date: null }
           : { created_from_transaction_id: null }) as never,
       )
