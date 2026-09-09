@@ -12,7 +12,8 @@ el usuario **no tiene cómo registrarla desde la recurrencia**. Si tampoco carga
 sus gastos y saldos quedan incompletos. Una ocurrencia por revisar, por sí sola, **nunca modifica un
 saldo** — lo que falta no es el saldo, es la vía para registrarlo. Y todo esto sin ningún aviso.
 
-Del uso real salieron otros tres síntomas que **no son #96**, y que este change también resuelve:
+Del uso real salieron otros tres síntomas que **no son #96**. Los dos primeros los resuelve este
+change; el tercero se difiere:
 
 - **"Tengo recurrencias que no veo."** La generación no existe del lado del servidor: es un efecto de
   cliente que corre al entrar a `/transactions` o al hub. La app abre en `/dashboard`. Quien entra y
@@ -24,7 +25,8 @@ Del uso real salieron otros tres síntomas que **no son #96**, y que este change
 - **"Vence en 20 días, lo pagué hoy, y no tengo manera de marcarlo."** Confirmar exige una instancia
   pendiente, y esa instancia solo nace cuando llegó la fecha. El único camino disponible —cargar el
   gasto a mano— es peor que no hacer nada: queda sin vincular, la regla lo va a proponer igual, y el
-  usuario termina duplicando el gasto u omitiéndolo a mano.
+  usuario termina duplicando el gasto u omitiéndolo a mano. **Sale de esta entrega**: es
+  `recurrence-early-payment` junto con `recurrence-link-movement`.
 
 El relevamiento completo, con los quince defectos y su evidencia, está en
 `docs/qa/relevamiento-recurrencias-2026-09-03.md`.
@@ -32,14 +34,25 @@ El relevamiento completo, con los quince defectos y su evidencia, está en
 **Se conserva el enfoque propuesta + confirmación; se reemplaza el invariante de una sola pendiente.**
 La base caja es más conservadora que el auto-posteo de otras apps y es lo que hace coherente el módulo
 Compartido: eso no se toca. Lo que se va es "una sola ocurrencia sin resolver por regla", y con él
-llegan las válvulas de escape que faltaban: resolver fuera de orden, pagar antes, y decir "esto ya lo
-cargué".
+llega la válvula de escape que faltaba: **resolver en cualquier orden**.
+
+> **Alcance de esta entrega.** El change se recortó al mínimo que cierra el #96 con una experiencia
+> usable, más el doble conteo del #118 que ese mismo arreglo elimina. Pagar antes del vencimiento,
+> vincular un movimiento ya cargado, resolver en bloque, deshacer (#104) y el historial enriquecido
+> **quedan para changes posteriores**, listados al final. El motivo es de tamaño: la entrega llevaba
+> seis mil líneas sin producir todavía ningún cambio visible, y un arreglo que no se puede probar
+> contra el uso real no se puede dar por bueno.
 
 ## What Changes
 
-Once comportamientos. Cada uno dice **qué vas a ver**, **qué vas a poder hacer** y **cómo lo
+Seis comportamientos. Cada uno dice **qué vas a ver**, **qué vas a poder hacer** y **cómo lo
 comprobamos**. El ejemplo que los atraviesa: el alquiler de $450.000 que vence todos los 23, con la
 ocurrencia de junio sin revisar, mirado un 8 de septiembre.
+
+**La prueba de aceptación de la entrega, en términos de uso:** una regla con varios vencimientos sin
+revisar los muestra **todos**, uno sin resolver **no traba** a los siguientes, no aparece **ninguno
+duplicado**, se ven en **web y en nativo**, y cada uno se resuelve **por separado y en cualquier
+orden**.
 
 ### 1. Un vencimiento sin revisar no traba los siguientes
 
@@ -54,16 +67,23 @@ pagos, ni omitidos. Julio lee $0 en gastos fijos. Y mientras nadie toque junio, 
 queda registrado, y septiembre se genera cuando llega su fecha.
 
 **Hasta dónde mira hacia atrás:** los últimos **12 meses**. Lo anterior no se reconstruye —serían
-cientos de filas de reglas abandonadas—, y el aviso lo dice **de la recurrencia, no del mes**:
+cientos de filas de reglas abandonadas—. El límite es de lo que la app reconstruye sola; vos siempre
+podés registrar un pago más viejo.
 
-> *Esta recurrencia tiene historial anterior a septiembre de 2025 que Grana no reconstruyó.*
-
-La diferencia importa: decir que el mes tiene información incompleta sería falso si esos pagos los
-cargaste a mano en su momento. El límite es de lo que la app reconstruye sola; vos siempre podés
-registrar un pago más viejo.
+**Y cuando son muchos:** la reconstrucción va por **tandas de 50**, con el vencimiento vigente
+siempre en la primera. Mientras queden, la pantalla lo dice y ofrece **"Continuar reconstrucción"**,
+que procesa la siguiente tanda ahí mismo. Sin esa acción, una regla diaria con un año de atraso
+obligaría a abrir y cerrar la app unas ocho veces para terminar de ver el propio historial, que no es
+una tarea que se le pueda pedir a nadie.
 
 Los vencimientos reconstruidos son elementos por revisar: **no son movimientos ni tocan ningún
 saldo** hasta que los resuelvas.
+
+> **Lo que falta:** el cartel que nombra desde cuándo reconstruyó (*"esta recurrencia tiene historial
+> anterior a septiembre de 2025"*) queda para `recurrence-review-ux`. Es el borde áspero conocido de
+> este mínimo: quien arrastre más de un año ve doce meses sin que nada explique el corte. Lo que sí
+> vale desde ahora es la regla negativa — la app **no** afirma que esos meses tengan información
+> incompleta, porque esos pagos podés haberlos cargado a mano en su momento.
 
 > ⚠️ **Esto hace que la app se vea más cargada, no menos.** Hoy se ve prolija porque está escondiendo
 > trabajo sin hacer. Es el dato real apareciendo, no una regresión.
@@ -81,35 +101,15 @@ plata. El total se muestra como referencia de lo que hay para revisar, nunca com
 
 **Se comprueba:** el rótulo y el copy no usan lenguaje de deuda en ninguna de las dos plataformas.
 
-### 3. Podés registrar un pago antes del vencimiento
-
-**Hoy:** el alquiler vence el 23, lo pagaste el 3, y **no hay ningún botón**. El hub lo lista con
-"Próximo: 23 de septiembre" y nada más.
-
-**Vas a ver:** en la fila de la recurrencia, un botón **"Ya lo pagué"**.
-
-**Vas a poder:** registrarlo el 3, con el formulario de confirmación de siempre.
-
-**Se comprueba:** con hoy = 3 de septiembre y el alquiler venciendo el 23, registrar el pago. Se crea
-el gasto con fecha 3 de septiembre y el vencimiento del 23 queda resuelto.
-
-### 4. Pagar antes no corre el calendario
-
-**Vas a ver:** después de pagar el 3 lo que vencía el 23 de septiembre, el próximo vencimiento sigue
-siendo el **23 de octubre**.
-
-**Por qué:** el ritmo es del alquiler, no de cuándo pagaste. Si el ciclo se recalculara desde el pago
-real, la fecha se correría hacia atrás mes a mes hasta desfasarse del alquiler de verdad.
-
-**Se comprueba:** pagar tres meses seguidos unos días antes; el vencimiento sigue cayendo el 23.
-
-### 5. Vencimiento, fecha de pago y fecha de carga son datos distintos
+### 3. El vencimiento deja de pisarse con la fecha de pago
 
 **Hoy:** confirmar **pisa** el vencimiento con la fecha que elijas. La ocurrencia pierde para siempre
-el vencimiento que le dio origen, y el historial no puede contestar "¿qué vencimiento pagué el 3?".
+el vencimiento que le dio origen. Ese borrado no es un problema estético: sin el vencimiento no hay
+forma de saber qué ocurrencia era cuál, y por eso hoy el atraso no se puede materializar sin correr
+riesgo de duplicar.
 
-**Vas a ver:** en el historial, cada cosa por separado: *vencía el 23/06 · lo pagaste el 03/09 · lo
-cargaste el 08/09*.
+**Vas a ver:** que registrar el pago de junio con fecha 3 de septiembre deja el vencimiento en el
+**23/06** y el movimiento en el **03/09**, y que junio **no vuelve a aparecer** como pendiente.
 
 Son cuatro instantes y cada uno vive en su propio campo:
 
@@ -118,99 +118,23 @@ Son cuatro instantes y cada uno vive en su propio campo:
 | **Vencimiento** | Cuándo tocaba. Lo fija el calendario de la regla y no cambia nunca. |
 | **Fecha de pago** | Cuándo salió la plata. La elegís vos; es la fecha del movimiento. |
 | **Fecha de carga** | Cuándo quedó registrado en la app. |
-| **Fecha de resolución** | Cuándo se resolvió el vencimiento (registrando o vinculando). |
+| **Fecha de resolución** | Cuándo se resolvió el vencimiento. |
 
 Una ocurrencia **sin resolver** tiene vencimiento y nada más: todavía no hubo pago, así que no puede
 tener fecha de pago.
 
-**Vas a poder:** registrar cada caso como fue, sin que la app elija por vos:
+**Vas a poder:** corregir importe, fecha y cuenta al registrar, sin que eso reescriba la regla ni el
+vencimiento.
 
-| Lo que pasó | Qué queda registrado |
-|---|---|
-| Pagaste el 23/06 y lo cargás en septiembre | Pago el **23/06**. Junio se corrige, y está bien que se corrija. |
-| Vencía el 23/06 y pagaste el 03/09 | Pago el **03/09**, asentando que corresponde al vencimiento de junio. |
-| Vencía el 23/09 y pagaste el 03/09 | Pago el **03/09**. El próximo sigue siendo el 23/10. |
+**Se comprueba:** registrar el pago de junio con fecha de septiembre; el vencimiento sobrevive, junio
+no se regenera, y el importe de la regla no cambia.
 
-**Se comprueba:** los tres casos, verificando que el vencimiento original sobrevive en los tres.
+> **Lo que esta entrega guarda pero todavía no muestra.** Los cuatro instantes quedan **registrados**
+> desde ahora —es lo que hace posible todo lo demás—, pero el historial que los presenta por separado
+> (*vencía el 23/06 · lo pagaste el 03/09 · lo cargaste el 08/09*) se construye en
+> `recurrence-history`. Guardar el dato es del mínimo; exhibirlo, no.
 
-### 6. Podés vincular un pago que ya cargaste
-
-**Hoy:** no existe. Si ya cargaste el alquiler a mano, tus opciones son confirmarlo (y tenerlo dos
-veces) u omitirlo (y perder el rastro).
-
-**Vas a ver:** en la fila del vencimiento, la opción **"Ya lo cargué"**, que te deja elegir entre tus
-movimientos.
-
-**Vas a poder:** decir "este gasto del martes es el alquiler de septiembre". El vencimiento queda
-resuelto y **no se crea ningún gasto nuevo**.
-
-La app recuerda **cómo** se resolvió cada vencimiento —con un movimiento que ella creó, o con uno
-tuyo que vinculaste—, porque deshacer no significa lo mismo en los dos casos (ver 8).
-
-**Si la recurrencia es compartida con el hogar**, vincular un gasto tuyo no puede cambiar en silencio
-lo que le debe el otro: solo se acepta si el movimiento ya tiene un reparto compatible, y si no lo
-tiene la app te explica que va a convertirlo en compartido y te pide confirmación. La conversión y la
-vinculación pasan juntas o no pasa ninguna.
-
-**Cómo se rotula:** el movimiento queda marcado como **"vinculado a esta recurrencia"**, no como
-"originado en" — existía antes, la recurrencia no lo creó.
-
-**Se comprueba:** cargar un gasto suelto, vincularlo, y verificar que el total del mes no cambió y
-que el rótulo dice "vinculado". En una regla compartida, que la deuda del hogar quede igual que si el
-gasto se hubiera registrado desde la recurrencia.
-
-### 7. Podés revisar varios juntos, corrigiendo cada uno
-
-**Vas a ver:** una acción **"Ponerse al día"** sobre el grupo, con una fila por vencimiento.
-
-**Vas a poder:** para cada fila, corregir **fecha, importe y cuenta**, y elegir entre cuatro salidas:
-registrar el pago · vincular uno existente · indicar que no corresponde · dejarlo pendiente. Antes de
-guardar, un resumen de lo que va a pasar.
-
-**Por qué corregir es parte del funcionamiento básico y no una opción:** si estás registrando pagos
-reales, el importe puede no ser el que la regla suponía —un alquiler que ajustó— y la cuenta puede no
-ser la de siempre.
-
-**Corregir un importe afecta solo a ese vencimiento.** Hoy no es así: confirmar con otro importe
-reescribe el de la regla, de modo que resolver junio, julio y agosto con importes distintos dejaría
-la regla con el que se haya guardado último — un resultado que depende del orden. Si además querés
-que el importe nuevo valga para adelante, hay una acción aparte, **"Usar este importe de acá en
-más"**, que se aplica una sola vez y toma el del vencimiento más reciente.
-
-**La pasada es todo o nada.** Si algo falla a mitad de camino, no queda medio grupo resuelto: o se
-guardan todos los cambios o no se guarda ninguno, y la pantalla dice qué pasó.
-
-**Se comprueba:** resolver tres meses en una pasada, con importes distintos entre sí y uno pagado
-desde otra cuenta; el importe de la regla no cambia. Y forzar un error en el tercero: los dos
-primeros tampoco quedan guardados.
-
-### 8. Podés deshacer, y deshacer no es lo mismo que omitir
-
-**Hoy:** ningún movimiento creado al confirmar una recurrencia se puede borrar (#104). El diálogo
-falla siempre con "Algo salió mal".
-
-**Vas a ver:** dos salidas distintas, con nombres distintos.
-
-**Vas a poder:** elegir la que corresponde:
-
-| Lo que quisiste decir | Qué queda |
-|---|---|
-| **"Me equivoqué al cargar este pago"** (lo creó la recurrencia) | El movimiento se borra y el vencimiento **vuelve a estar por revisar**. |
-| **"Me equivoqué al vincular"** (el movimiento era tuyo) | El movimiento **se conserva** —vuelve a ser un gasto suelto— y el vencimiento vuelve a estar por revisar. Si al vincularlo la app lo había convertido en compartido, deshacer **también revierte eso**: vuelve a ser personal y la deuda del hogar se deshace. |
-| **"Este período no corresponde"** | El vencimiento queda **omitido**. No se espera ningún pago. |
-
-**Por qué la primera fila y la segunda no son la misma:** si vinculaste un gasto que habías cargado
-vos, deshacer no puede borrarlo — la recurrencia no lo creó y no le corresponde destruirlo.
-
-**Por qué la tercera es distinta de las dos anteriores:** el plan actual del #104 convierte
-**siempre** el pago borrado en "omitido". Eso resuelve una restricción de la base, pero le hace decir
-al dato algo que quizá no quisiste: que ese mes no correspondía, cuando solo te equivocaste al
-cargarlo.
-
-**El #104 se implementa dentro de este change**, no después: depende del modelo nuevo y de un índice
-que este change elimina. Los dos tickets cierran con la misma entrega.
-
-### 9. Cambiar la frecuencia no inventa vencimientos viejos
+### 4. Cambiar la frecuencia no inventa vencimientos viejos
 
 **Vas a ver:** si cambiás una regla de mensual a quincenal, la app te dice **desde cuándo** rige el
 cambio y no toca nada anterior.
@@ -222,7 +146,7 @@ fabricaría vencimientos que nunca existieron.
 **Se comprueba:** cambiar una regla mensual con seis meses de historial a quincenal; no aparece
 ningún vencimiento nuevo con fecha anterior al cambio.
 
-### 10. Si la app no puede actualizar tus vencimientos, te lo dice
+### 5. Si la app no puede actualizar tus vencimientos, te lo dice
 
 **Hoy:** si la materialización falla, el error se descarta en silencio. La pantalla queda igual que si
 no tuvieras nada por revisar — indistinguible de estar al día.
@@ -232,13 +156,15 @@ reintentar. Nunca un vacío que parezca "no tenés nada".
 
 **Se comprueba:** forzar el fallo; la pantalla lo dice y el reintento funciona.
 
-### 11. Pausar no te acumula una deuda para después
+### 6. Pausar no te acumula una deuda para después
 
 **Vas a ver:** al pausar el gimnasio en enero y reanudarlo el 5 de septiembre, la app vuelve con el
 **próximo vencimiento futuro** —el 23 de septiembre— y no con los ocho meses de la pausa.
 
-**Vas a poder:** los vencimientos que ya existían **antes** de pausar siguen ahí, con sello
-"Pausada", por si querés registrarlos u omitirlos. Los que caían durante la pausa no existen.
+**Vas a poder:** los vencimientos que ya existían **antes** de pausar siguen ahí, por si querés
+registrarlos u omitirlos. Los que caían durante la pausa no existen. (El sello visual "Pausada" sobre
+esas filas queda para `recurrence-review-ux`; lo que no se difiere es que sigan estando y se puedan
+resolver.)
 
 **Por qué:** pausar significa "esto no está corriendo", no "esto se sigue devengando y te lo cobro
 todo junto después". Nadie pausa el gimnasio esperando que al volver le aparezcan las cuotas de los
@@ -249,10 +175,39 @@ próximo vencimiento es el 23 de septiembre y no aparece ninguno de junio, julio
 
 ### Y en las dos plataformas
 
-Los once comportamientos SHALL estar disponibles en **web y en la app nativa**. Hoy no lo están: el
-bloque de pendientes nativo no deja editar importe ni fecha, no muestra la advertencia de saldo
-negativo que sí tiene web, y el feed nativo ni siquiera dispara la generación. La lógica vive en
-`@grana/recurrences` y `@grana/money-logic`; lo que cambia por plataforma es la UI.
+Los seis comportamientos SHALL estar disponibles en **web y en la app nativa**. Hoy no lo están: el
+feed nativo muestra el bloque de pendientes pero **ni siquiera dispara la generación**, así que las
+ocurrencias dependen de haber abierto el hub. La lógica vive en `@grana/recurrences` y
+`@grana/money-logic`; lo que cambia por plataforma es la UI.
+
+Lo que esta entrega lleva a nativo es la **materialización** y el **bloque de vencimientos por
+revisar**. La paridad completa del formulario de resolución —importe, fecha y cuenta editables, más
+la advertencia de saldo negativo que hoy solo existe en web— queda para `recurrence-review-ux`.
+
+### Y los clientes que no se actualizan
+
+Un usuario que se quede en una versión vieja de la app nativa nunca ejecuta el generador nuevo: su
+atraso no se materializa y el #96 **sigue vivo para él** — ahora sin el índice que lo contenía. Por
+eso esta entrega incluye un **gate de versión mínima** en el cliente nativo, que se despliega
+**antes** de retirar el índice. La alternativa que además cubre a quien no abre la app —generar del
+lado del servidor— es mejor, pero es un change aparte: `recurrence-server-generation`.
+
+### Orden de despliegue
+
+No es un detalle de implementación, porque un orden mal elegido deja un intervalo peor que el bug
+actual —la base admitiendo varias pendientes mientras la app todavía muestra una sola o duplica
+importes—:
+
+1. **Migración de expansión** (`0064`): identidad, piso de reconstrucción, guardas. No cambia ningún
+   comportamiento; el índice de pendiente única sigue vivo.
+2. **Código**: generador con tandas continuables, versiones de cronograma y pausas, reads adaptados,
+   dashboard y proyección leyendo las ocurrencias existentes, dejar de escribir el cursor, superficies
+   de web y nativo, copy, error de materialización visible, gate de versión.
+3. **Migración de activación**, al final: retira `recurrence_instances_one_pending_per_rule`.
+
+Los pasos 1 y 2 comparten **una sola ventana de producción**: la verificación transaccional de `0064`
+corre una única vez, y una edición hecha entre ambos despliegues podría desfasar el dato después de
+verificarlo y antes de que exista el anclaje que lo vuelve inofensivo.
 
 ## Capabilities
 
@@ -272,23 +227,24 @@ negativo que sí tiene web, y el feed nativo ni siquiera dispara la generación.
   3. **MODIFIED** "El usuario puede confirmar una instancia recurrente" — vencimiento y fecha de pago
      como datos separados; resolver un pago deja de mover el cursor de generación.
   4. **MODIFIED** "El usuario puede omitir una instancia recurrente" — omitir declara que el período
-     no corresponde, y se distingue de deshacer.
+     no corresponde y deja de bloquear las siguientes. **Deshacer** (#104) no está acá: va en
+     `recurrence-undo`.
   5. **MODIFIED** "El modulo Movimientos muestra pendientes recurrentes separados del historial" —
      lenguaje "por revisar", el aviso llega al dashboard y deja de plegarse cuando hay vencidos.
   6. **ADDED** "Cada ocurrencia recurrente tiene una identidad estable".
-  7. **ADDED** "El usuario puede registrar el pago de una ocurrencia antes de su vencimiento".
-  8. **ADDED** "El usuario puede vincular un movimiento existente a una ocurrencia".
-  9. **ADDED** "El usuario puede resolver en bloque las ocurrencias sin revisar".
-  10. **ADDED** "El sistema materializa las ocurrencias vencidas sin depender de la navegación" —
-      incluye el horizonte de 12 meses, el error visible con reintento y la vigencia de los cambios
-      de calendario.
+  7. **ADDED** "El sistema materializa las ocurrencias vencidas sin depender de la navegación" —
+     incluye el horizonte de 12 meses, las tandas continuables, el error visible con reintento y la
+     vigencia de los cambios de calendario.
+  8. **ADDED** "Una regla pausada no acumula vencimientos durante la pausa".
 
 ## Impact
 
-- **Migración**: se elimina el índice `recurrence_instances_one_pending_per_rule`; se agrega la
-  identidad de ocurrencia (`due_date`) protegida en todos los estados; `scheduled_date` deja de ser
-  pisado al confirmar y **se retira**; durante la transición queda como columna legada de
-  compatibilidad, que el código nuevo no lee.
+- **Migraciones (dos, en dos pasos)**: la de **expansión** agrega la identidad de ocurrencia
+  (`due_date`) protegida en todos los estados, el piso de reconstrucción, las versiones de cronograma
+  y las pausas, y no cambia ningún comportamiento. La de **activación**, al final de la entrega,
+  elimina `recurrence_instances_one_pending_per_rule`. `scheduled_date` **no se retira acá**: queda
+  como columna legada de compatibilidad que el código nuevo no lee, y su retiro es la migración C,
+  fuera de esta entrega.
 - `packages/money-logic/src/recurrences.ts` — `decideRecurrenceInstance` devuelve una **lista** de
   ocurrencias en vez de una decisión única; una sola definición de `max_occurrences`.
 - `packages/recurrences/src/queries.ts` — el generador camina el calendario; los reads dejan de
@@ -297,16 +253,41 @@ negativo que sí tiene web, y el feed nativo ni siquiera dispara la generación.
 - `packages/recurrences/src/types.ts` — `RecurrenceSummary.pending_instance` es singular y pasa a
   colección.
 - `packages/recurrences/src/mutations.ts` — confirmar y omitir dejan de escribir
-  `last_generated_date`; nacen registrar-anticipado, vincular y deshacer.
-- `apps/web` — bloque de pendientes en el dashboard, "Ponerse al día", "Ya lo pagué", "Ya lo cargué".
-- `apps/mobile` — las mismas superficies, más la generación en el feed.
+  `last_generated_date`.
+- `packages/dashboard` — el dashboard, el "próximo" y la proyección pasan a leer los vencimientos
+  existentes en vez de proyectarlos desde el cursor. **Es lo que elimina el doble conteo de #118.**
+- `apps/web` — bloque de vencimientos por revisar en el dashboard, materialización a nivel layout,
+  error visible con reintento.
+- `apps/mobile` — las mismas superficies, más la generación en el feed y el gate de versión mínima.
 - **Datos existentes**: las reglas hoy trabadas van a materializar su atraso. Es el efecto buscado, y
   hay que anticiparlo: usuarios que hoy ven un pendiente van a ver varios.
 - `recurrence_instances` gana **cómo se resolvió** cada ocurrencia (movimiento creado por la
-  recurrencia vs. movimiento del usuario vinculado), sin el cual deshacer no puede distinguir borrar
-  de desvincular.
-- **Alcance**: **#104 se implementa dentro de este change** y cierra con él. #118 (doble conteo en
-  Compromisos) es **independiente** y no espera a esto.
+  recurrencia vs. movimiento del usuario vinculado). El dato se **registra** en esta entrega —lo
+  escribe la migración de expansión— aunque quien lo consume, deshacer, llegue después: sin él,
+  `recurrence-undo` no puede distinguir borrar de desvincular.
+- **Alcance**: cierra **#96** y **#118**. **#104 ya no cierra acá**: pasa a `recurrence-undo`.
+
+## Diferido a changes posteriores
+
+Nada de esto se descarta: se saca de esta entrega para que el arreglo del #96 llegue a producción y
+se pueda probar contra el uso real. Cada fila conserva su análisis; el texto completo de los
+comportamientos que salieron vive en el historial de este archivo.
+
+| Qué sale | Por qué puede esperar | Change |
+|---|---|---|
+| **Pago anticipado** ("ya lo pagué"), y que pagar antes no corra el calendario | Es una comodidad. Sin él, el usuario espera al vencimiento —que es lo que hace hoy— | `recurrence-early-payment` |
+| **Vinculación** ("ya lo cargué"), incluida la de reglas compartidas | Sin él, el camino sigue siendo confirmar u omitir. Es el diferido más caro: quien ya cargó el gasto a mano queda sin salida limpia | `recurrence-link-movement` |
+| **Deshacer**, cerrando **#104** | Hoy tampoco se puede deshacer: el diálogo falla siempre. No empeora nada | `recurrence-undo` |
+| **Historial enriquecido** (vencimiento / pago / carga por separado) | El dato ya se guarda; falta mostrarlo | `recurrence-history` |
+| **Resolución masiva** "ponerse al día" y "usar este importe de acá en más" | Con el backlog visible ya se puede resolver uno por uno. La pasada en bloque es velocidad, no capacidad | `recurrence-catch-up` |
+| **UX avanzada**: aviso de historial no reconstruido, sello "Pausada", paridad nativa del formulario de resolución, agrupar por regla, y el diseño cuidado del error de materialización | Ninguno cambia lo que se puede hacer, solo cuán cómodo es | `recurrence-review-ux` |
+| **Generación del lado del servidor** | El gate de versión resuelve el caso bloqueante con menos trabajo | `recurrence-server-generation` |
+| **Retiro de `scheduled_date`** (migración C) | Ya estaba fuera: exige que ningún cliente viejo quede escribiéndola | — |
+
+Lo que **no** se difirió, aunque se propuso: el error de materialización visible con reintento (en su
+versión básica), y las versiones de cronograma y las pausas leídas por el generador. Los tres son
+condición para que el mínimo sea correcto, no mejoras — sin los dos últimos, editar la frecuencia o
+pausar fabrica vencimientos que nunca existieron.
 
 ## Fuera de esta primera entrega
 

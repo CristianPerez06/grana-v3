@@ -1,8 +1,62 @@
 # Tasks: fix-recurrence-backlog
 
-Cinco etapas. La 1 son cimientos y no tiene nada visible: existe porque sin ella la 2 fabrica
-duplicados. Las etapas 2-4 entregan los once comportamientos de `proposal.md`. El **#104** se
-implementa acá (tarea 3.4) y cierra con esta entrega; el **#118** es independiente y no entra.
+La 1 son cimientos y no tiene nada visible: existe porque sin ella la 2 fabrica duplicados. Las
+etapas 2 y 4 entregan los **seis comportamientos** de `proposal.md`, y la 4b los activa. Esta entrega
+cierra **#96** y **#118**; el **#104** salió del alcance y va en `recurrence-undo`.
+
+> **El alcance se recortó** (aprobado el 2026-09-09). Quedó adentro lo estrictamente necesario para
+> cerrar el #96 con una experiencia usable; salieron pago anticipado, vinculación, resolución en
+> bloque, deshacer (#104), historial enriquecido y la UX avanzada, listados en la **etapa 3**. El
+> motivo es de tamaño: la branch llevaba 51 commits y más de seis mil líneas sin producir todavía
+> ningún cambio visible.
+
+## Orden — no es una sugerencia
+
+Este es el orden en que las cosas se **aplican sobre datos reales**. Escribir y probar el código
+contra el harness local no depende de él.
+
+| # | Paso | Tareas |
+|---|---|---|
+| 1 | Migración de **expansión** (`0064`): identidad, piso, versiones, pausas, guardas | 1.1–1.4e, 1.11 |
+| 2 | Generador que materializa la lista, en tandas continuables, leyendo versiones y pausas | 2.1, 2.1e, 2.1d, 2.1b, 1.6 |
+| 3 | Reads que dejan de asumir una pendiente por regla | 2.2 |
+| 4 | Dashboard, "próximo", proyección y deshacer leen los vencimientos existentes | 2.2b |
+| 5 | Dejar de escribir `last_generated_date` + test real de orden | 1.5, 1.8 |
+| 6 | Superficies: materialización y bloque "por revisar" en web y nativo, copy, error visible | 4.1–4.5b, 2.6 |
+| 7 | **Gate de versión mínima** en el cliente nativo | 2.8b |
+| 8 | Migración de **activación**: retira el índice de pendiente única | 2.8 |
+
+Los pasos 1 y 2 comparten **una sola ventana de producción**: la verificación transaccional de `0064`
+(§4b) corre una única vez, y una edición hecha entre ambos despliegues podría desfasar el dato después
+de verificarlo y antes de que exista el anclaje que lo vuelve inofensivo.
+
+El paso 8 va **último**, y no antes: el índice es lo único que hoy impide el estado intermedio en que
+la base admite varias pendientes y el software todavía muestra una sola o duplica importes — el mismo
+estado que la cabecera de `0064` describe como peor que el bug actual.
+
+## División en PRs — cuatro revisiones, tres despliegues
+
+La branch acumuló 51 commits y más de seis mil líneas: eso no se revisa de una sola vez. Se parte en
+cuatro PRs encadenados. **No son cuatro proyectos**: son cuatro unidades de revisión sobre las tres
+ventanas de despliegue de la tabla de arriba. Nada está mergeado a `main`, así que la división es
+mecánica: `git checkout -b` desde `main` y cherry-pick por área.
+
+| PR | Qué lleva | Despliegue |
+|---|---|---|
+| **1 — Aditivo** *(~1.000 líneas)* | `owedOccurrences` y sus tests, los tests de resolución fuera de orden, y toda la documentación. La única función nueva **no tiene callers**, y por eso "no cambia comportamiento" es verificable | Ventana A |
+| **2 — Modelo persistente** *(~1.900 líneas)* | `0064`, los tipos, `8.1J`, el harness PGlite y las regresiones de migración, transición y guarda de fase. Deja vivo el índice de pendiente única | **Ventana B** |
+| **3 — Núcleo** *(~700 líneas)* | Lo que sí cambia lo que el usuario ve: caminante sin el techo de 750 pasos, `max_occurrences` por ordinal, próxima fecha anclada en el calendario, y se retira `materializedCount` | **Ventana B** |
+| **4 — El arreglo visible** *(a escribir)* | Etapas 2, 4 y 4b, en el orden de la tabla. Termina en la prueba de aceptación | Ventana C |
+
+**Los PR 2 y 3 se revisan aparte pero se despliegan juntos.** La guarda §4b de `0064` corre una sola
+vez: si alguien edita una recurrencia entre ambos despliegues, el dato puede volver a desfasarse
+después de la verificación y antes de que exista el anclaje en el calendario que lo vuelve
+inofensivo, y en esa ventana nada lo detecta. Dentro de la ventana, `0064` va primero: **la guarda va
+antes de lo que guarda**.
+
+**El PR 4 no se parte antes de la activación.** Si por tamaño hubiera que partirlo igual, la
+activación queda en la última parte, después del gate de versión y de que todas las superficies
+soporten varias pendientes.
 
 ## 1. Cimientos: modelo persistente
 
@@ -100,18 +154,12 @@ que habilita el backlog.
       confirmado; el mismo criterio que usa `owedOccurrences`, donde lo que decide es que la
       ocurrencia exista y no cómo terminó—. Es un cambio coordinado de lectura, no la eliminación de
       dos escrituras.
-      **ORDEN DE DESPLIEGUE, y esta tarea es el ÚLTIMO paso (6 de 6).** Es el orden en que las cosas se
-      APLICAN sobre datos reales; **no** es lo que habilita escribir el código, que se implementa y se
-      prueba contra el harness local sin tocar producción:
-      **(1)** aplicar `0064` — la expansión, que no cambia ningún comportamiento;
-      **(2+3)** desplegar el generador nuevo **como una sola unidad**, web y nativo: `reconstruct_from`
-      y todas las identidades existentes en lugar del cursor, JUNTO con las versiones de cronograma,
-      las pausas y las tandas acotadas (`2.1b`, `2.1d`, `2.1`). **No son dos despliegues.** Un
-      generador que ya reconstruye desde el piso pero todavía ignora las versiones y las pausas le
-      fabricaría atraso a una regla pausada o con la frecuencia editada — justo las que la decisión 16
-      protege.
+      **DÓNDE VA EN EL ORDEN: paso 5 de 8**, según la tabla del encabezado — que es la única fuente
+      de verdad del orden; acá no se repite para que no puedan divergir. Va después de que dashboard,
+      "próximo", proyección y deshacer lean los vencimientos existentes (tarea `2.2b`), y antes de la
+      activación.
       **DECISIÓN ABIERTA, a resolver antes de cerrar `2.1`: cómo se comporta el generador múltiple
-      entre este despliegue y el paso (5).** Con el índice de pendiente única todavía vivo, un insert
+      entre el despliegue del código y la activación (paso 8).** Con el índice de pendiente única todavía vivo, un insert
       de 29 filas es UNA sentencia: la primera violación de unicidad **rechaza el lote entero**, así
       que no materializa una y se come el resto — no materializa **ninguna**. (Una versión anterior de
       esta nota decía «degradado, no roto»; era falso, y venía de suponer el insert fila por fila que
@@ -123,19 +171,7 @@ que habilita el backlog.
       índice todavía no permite; o **(c)** acortar la ventana a cero desplegando código y activación
       juntos, lo que contradice la cabecera de `0064` y por eso hoy no es la preferida. Ninguna se
       elige por descarte: la que quede tiene que estar probada contra el harness **con el índice
-      todavía puesto**, que es el estado real durante la ventana;
-      **(4)** migrar dashboard, «próximo», proyecciones y deshacer para que lean los vencimientos que
-      ya existen y no el cursor;
-      **(5) aplicar la ACTIVACIÓN** —la migración que retira `recurrence_instances_one_pending_per_rule`,
-      con el número elegido contra `main` al escribirla—. **Va acá y no antes, por dos razones que
-      apuntan al mismo lado.** La primera la escribe `0064` en su propia cabecera: retirar el índice
-      antes de que las apps entiendan el modelo nuevo deja a la base acumulando atraso mientras la app
-      sigue mostrando una sola ocurrencia — invisible, y peor que el bug actual. La segunda es el
-      dashboard: si el atraso se materializa mientras la proyección todavía avanza desde el cursor, el
-      cursor sigue clavado en junio y la proyección vuelve a emitir julio y agosto **además** de las
-      pendientes ya materializadas — la misma ocurrencia contada dos veces, la familia de #118. Por eso
-      el paso (4) va antes que este;
-      **(6)** recién ahí dejar de escribir `last_generated_date`, que es esta tarea.
+      todavía puesto**, que es el estado real durante la ventana.
       Mientras tanto la columna se sigue escribiendo y **no hay daño**: el generador ya no la usa para
       elegir la FECHA —eso lo decide el calendario—, aunque sí para saber desde dónde arrancar, así
       que las cuatro superficies siguen leyendo un cursor que se mantiene correcto.
@@ -377,9 +413,6 @@ que habilita el backlog.
       la primera corrida. Mientras queden, indicarlo en pantalla **y ofrecer "Continuar
       reconstrucción"**, que procesa otra tanda sin cerrar la app: una regla diaria son ~8 tandas y
       nadie va a abrir y cerrar la app ocho veces para ver su propio historial.
-- [ ] 2.1c Aviso de historial no reconstruido **en la recurrencia** ("tiene historial anterior a
-      <mes> que no se reconstruyó"), no como "este mes tiene información incompleta": esos pagos
-      pueden haberse cargado a mano.
 - [ ] 2.1d Pausa: no materializar los vencimientos que caen durante la pausa ni recuperarlos al
       reanudar; al reanudar tomar el próximo vencimiento futuro con el calendario original. Test:
       regla del 23 pausada en junio y reanudada el 5/9 vuelve con el 23/9, sin junio, julio ni agosto.
@@ -389,56 +422,110 @@ que habilita el backlog.
 - [ ] 2.2 Adaptar los reads que asumen una pendiente por regla:
       `getPendingInstancesByRecurrenceId` (hoy `Map<string, RecurrenceInstance>`) y
       `RecurrenceSummary.pending_instance` (hoy singular) pasan a colección.
-- [ ] 2.3 Agrupar por regla en las superficies de "por revisar", con el resto colapsado cuando el
-      grupo es largo, sin que ninguna ocurrencia deje de ser accesible.
-- [ ] 2.4 Acción "Ponerse al día": resolución en bloque con fila por ocurrencia, cada una con fecha,
-      importe y cuenta editables, y las cuatro salidas (registrar · vincular · no corresponde ·
-      dejar sin resolver). **Atómica de verdad** (decisión 22): RPC de Postgres `SECURITY INVOKER`,
-      no orquestador con rollback compensatorio — la compensación también puede fallar y deja
-      movimientos creados con ocurrencias sin resolver.
-- [ ] 2.4b Acción separada "Usar este importe de acá en más", aplicada una sola vez y tomando el
-      importe de la ocurrencia más reciente del grupo.
-- [ ] 2.5 Resumen previo a aplicar: movimientos que se van a crear y efecto sobre el saldo de cada
-      cuenta involucrada.
+- [ ] 2.2b Migrar **dashboard, "próximo", proyección y deshacer** para que lean los vencimientos que
+      ya existen —en **cualquier** estado: pendiente, omitido y confirmado— en vez del cursor. Es el
+      paso (4) del orden, hoy descrito dentro de `1.5` sin identificador propio. **Es el arreglo de
+      #118**: mientras la proyección avance desde `last_generated_date` y el atraso ya esté
+      materializado, la misma ocurrencia se cuenta dos veces —una materializada y otra proyectada—.
+      Ver el relevamiento de las cuatro superficies en `1.5`.
 - [ ] 2.6 Copy: **"vencimientos por revisar"** — ni "pagos" (afirmaría que hubo pago) ni lenguaje de
       deuda. Actualizar `es.json` y `en.json`.
-- [ ] 2.8 **Migración B · activación**, en archivo aparte
-      (`<próximo libre>_recurrence_backlog_activate.sql`, número elegido contra `main` al crearla),
-      y solo con los reads del paso 2.2 ya desplegados en
-      web y nativo: eliminar `recurrence_instances_one_pending_per_rule`. Desde acá existe el
-      backlog. Las constraints de `resolution_kind` ya entraron en la expansión (tarea 1.4b).
-- [ ] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo
-      nunca ejecuta el generador nuevo, así que su atraso no se materializa y el #96 sigue vivo para
-      él. Hace falta **una de dos**: gate de versión mínima al arrancar la app nativa, o generación
-      del lado del servidor (etapa 2 de la decisión 8), que además cubre a quien no abre la app.
-- [ ] 2.7 Tests: tres meses resueltos en una pasada con importes distintos y una cuenta distinta, sin
-      que cambie el importe de la regla; un fallo en el tercero no deja los dos primeros guardados;
-      dejar uno sin resolver no bloquea los demás.
+## 3. Diferido a changes posteriores
 
-## 3. Pago anticipado, vinculación y deshacer
+Nada de esto se descarta ni se pierde: sale de **esta** entrega para que el arreglo del #96 llegue a
+producción y se pueda probar contra el uso real. Cada bloque conserva el texto con el que se analizó,
+para que el change que lo tome no empiece de cero. **No son tareas de este change**, por eso van sin
+casilla.
 
-- [ ] 3.1 "Ya lo pagué": materializar la próxima ocurrencia bajo demanda y abrir el formulario de
-      resolución con la fecha de pago en hoy, editable. Disponible en el hub y en el detalle de la
-      regla. No ofrecerla en reglas pausadas.
-- [ ] 3.2 Verificar que el pago anticipado no desplaza el cronograma — test de tres meses seguidos
-      pagados unos días antes, con el vencimiento sin moverse.
-- [ ] 3.3 "Ya lo cargué": vincular un movimiento existente. No crea transacción; marca el movimiento
-      como **"vinculado a esta recurrencia"** —no "originado en", que existía antes—; filtra por
-      moneda y tipo compatibles; excluye los ya vinculados; registra la resolución como `linked`.
-- [ ] 3.3b Vinculación en reglas **compartidas**, tres casos: reparto compatible → directo; movimiento
-      personal → explicar la conversión, pedir confirmación y marcar `linked_conversion`; movimiento
-      con **otro hogar u otro reparto** → **excluir de los candidatos**, para no reemplazar una deuda
-      que el otro miembro ya ve. Conversión + vinculación en una **sola RPC transaccional**. Test: la deuda del hogar queda igual que registrando desde la
-      recurrencia, y un fallo no deja el movimiento convertido a medias.
-- [ ] 3.4 Deshacer, **cerrando #104 en esta misma entrega**: devuelve la ocurrencia a *sin resolver*
-      (nunca a omitida) y actúa según cómo se resolvió — `created` elimina el movimiento; `linked` lo
-      conserva y desvincula; `linked` que además había **convertido** el movimiento a compartido
-      revierte también la conversión y la deuda, en una **sola RPC transaccional**. Con `one_pending_per_rule` eliminado desaparece la restricción que
-      obligaba a marcarlo `skipped`.
-- [ ] 3.5 Historial de la regla: mostrar vencimiento, fecha de pago y fecha de carga por separado.
-- [ ] 3.6 Tests: vincular no cambia el total del mes; deshacer un `created` elimina el movimiento;
-      deshacer un `linked` lo conserva y el total del mes no cambia; en ambos casos la ocurrencia
-      queda resoluble de nuevo.
+### → `recurrence-early-payment`
+
+3.1 "Ya lo pagué": materializar la próxima ocurrencia bajo demanda y abrir el formulario de
+resolución con la fecha de pago en hoy, editable. Disponible en el hub y en el detalle de la regla.
+No ofrecerla en reglas pausadas.
+
+3.2 Verificar que el pago anticipado no desplaza el cronograma — test de tres meses seguidos pagados
+unos días antes, con el vencimiento sin moverse.
+
+### → `recurrence-link-movement`
+
+3.3 "Ya lo cargué": vincular un movimiento existente. No crea transacción; marca el movimiento como
+**"vinculado a esta recurrencia"** —no "originado en", que existía antes—; filtra por moneda y tipo
+compatibles; excluye los ya vinculados; registra la resolución como `linked`.
+
+3.3b Vinculación en reglas **compartidas**, tres casos: reparto compatible → directo; movimiento
+personal → explicar la conversión, pedir confirmación y marcar `linked_conversion`; movimiento con
+**otro hogar u otro reparto** → **excluir de los candidatos**, para no reemplazar una deuda que el
+otro miembro ya ve. Conversión + vinculación en una **sola RPC transaccional**. Test: la deuda del
+hogar queda igual que registrando desde la recurrencia, y un fallo no deja el movimiento convertido a
+medias.
+
+### → `recurrence-undo` (cierra **#104**)
+
+3.4 Deshacer: devuelve la ocurrencia a *sin resolver* (nunca a omitida) y actúa según cómo se
+resolvió — `created` elimina el movimiento; `linked` lo conserva y desvincula; `linked` que además
+había **convertido** el movimiento a compartido revierte también la conversión y la deuda, en una
+**sola RPC transaccional**. Con `one_pending_per_rule` eliminado desaparece la restricción que
+obligaba a marcarlo `skipped`.
+
+**Lo que esta entrega le deja preparado:** `resolution_kind` y `linked_conversion` se escriben desde
+la migración de expansión (tarea 1.4b). Sin ese dato, deshacer no puede distinguir borrar un
+movimiento que la recurrencia creó de desvincular uno del usuario, y la distinción no se reconstruye
+después.
+
+### → `recurrence-history`
+
+3.5 Historial de la regla: mostrar vencimiento, fecha de pago y fecha de carga por separado.
+
+3.6 Tests: vincular no cambia el total del mes; deshacer un `created` elimina el movimiento; deshacer
+un `linked` lo conserva y el total del mes no cambia; en ambos casos la ocurrencia queda resoluble de
+nuevo.
+
+**Lo que esta entrega le deja preparado:** los cuatro instantes ya viven en campos separados y
+`due_date` es inmutable. Falta mostrarlos.
+
+### → `recurrence-catch-up`
+
+2.4 Acción "Ponerse al día": resolución en bloque con fila por ocurrencia, cada una con fecha,
+importe y cuenta editables, y las cuatro salidas (registrar · vincular · no corresponde · dejar sin
+resolver). **Atómica de verdad** (decisión 22): RPC de Postgres `SECURITY INVOKER`, no orquestador
+con rollback compensatorio — la compensación también puede fallar y deja movimientos creados con
+ocurrencias sin resolver.
+
+2.4b Acción separada "Usar este importe de acá en más", aplicada una sola vez y tomando el importe de
+la ocurrencia más reciente del grupo.
+
+2.5 Resumen previo a aplicar: movimientos que se van a crear y efecto sobre el saldo de cada cuenta
+involucrada.
+
+2.7 Tests: tres meses resueltos en una pasada con importes distintos y una cuenta distinta, sin que
+cambie el importe de la regla; un fallo en el tercero no deja los dos primeros guardados; dejar uno
+sin resolver no bloquea los demás.
+
+### → `recurrence-review-ux`
+
+2.1c Aviso de historial no reconstruido **en la recurrencia** ("tiene historial anterior a <mes> que
+no se reconstruyó"), no como "este mes tiene información incompleta": esos pagos pueden haberse
+cargado a mano. **Es el borde áspero conocido del mínimo**: quien arrastre más de un año ve doce
+meses sin que nada explique el corte.
+
+2.3 Agrupar por regla en las superficies de "por revisar", con el resto colapsado cuando el grupo es
+largo, sin que ninguna ocurrencia deje de ser accesible.
+
+4.5c Señalar los períodos anteriores al horizonte como de información incompleta, con la vía para
+completarlos a mano.
+
+4.6 Paridad nativa del formulario de resolución: importe, fecha y cuenta editables, más la
+advertencia de saldo negativo que hoy solo existe en web.
+
+4.7 Sellar como "Pausada" las ocurrencias anteriores a una pausa, que siguen resolubles.
+
+Además, el **diseño cuidado** del error de materialización. Lo que **no** se difiere es que el error
+se vea y se pueda reintentar: eso es la tarea 4.5b, y está en el mínimo.
+
+### → `recurrence-server-generation`
+
+La otra mitad de 2.8b: generar del lado del servidor, en vez de depender de que el cliente abra la
+app. Cubre además a quien no la abre nunca. Es mejor que el gate de versión; es más grande.
 
 ## 4. Visibilidad y paridad
 
@@ -451,12 +538,26 @@ que habilita el backlog.
       cuenta.
 - [ ] 4.5b Un fallo de materialización se muestra con opción de reintentar, distinguible de "no hay
       vencimientos por revisar". Reemplaza los `catch` vacíos de los disparadores actuales.
-- [ ] 4.5c Señalar los períodos anteriores al horizonte como de información incompleta, con la vía
-      para completarlos a mano.
-- [ ] 4.6 Paridad nativa del formulario de resolución: importe, fecha y cuenta editables, más la
-      advertencia de saldo negativo que hoy solo existe en web.
-- [ ] 4.7 Sellar como "Pausada" las ocurrencias anteriores a una pausa, que siguen resolubles.
-- [ ] 4.8 Recorrer los once comportamientos de `proposal.md` en web y en nativo antes de cerrar.
+- [ ] 4.8 Recorrer los **seis** comportamientos de `proposal.md` en web y en nativo antes de cerrar,
+      terminando en la prueba de aceptación: varios vencimientos visibles, ninguno trabando al
+      siguiente, sin duplicados, resolubles por separado y en cualquier orden.
+
+## 4b. Activación — va última
+
+Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en web y en nativo.
+
+- [ ] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo
+      nunca ejecuta el generador nuevo, así que su atraso no se materializa y el #96 sigue vivo para
+      él — ahora sin el índice que lo contenía. De las dos opciones posibles, **este recorte toma el
+      gate de versión mínima al arrancar la app nativa**, por ser la más chica. La generación del lado
+      del servidor (etapa 2 de la decisión 8), que además cubre a quien no abre la app, es mejor y
+      queda en `recurrence-server-generation`. El gate se despliega **antes** que la tarea 2.8.
+- [ ] 2.8 **Migración B · activación**, en archivo aparte
+      (`<próximo libre>_recurrence_backlog_activate.sql`, número elegido contra `main` al crearla),
+      y **solo con los pasos 2 a 7 del orden ya desplegados** —generador, reads, dashboard, cursor,
+      superficies de web y nativo, y el gate de versión—: eliminar
+      `recurrence_instances_one_pending_per_rule`. Desde acá existe el
+      backlog. Las constraints de `resolution_kind` ya entraron en la expansión (tarea 1.4b).
 
 ## 5. Cierre
 
@@ -468,4 +569,9 @@ que habilita el backlog.
       **no** eliminar `trg_recurrence_instance_compat` entero. Contiene la inmutabilidad de
       `due_date`, que es permanente; borrarlo reabre el agujero. Quitar solo las ramas de
       compatibilidad, o reemplazarlo por un guard con nombre propio.
-- [ ] 5.5 Cerrar **#96** y **#104** con esta entrega. **#118** queda abierto: es independiente.
+- [ ] 5.5 Cerrar **#96** y **#118** con esta entrega — el #118 lo cierra la tarea 2.2b, que es el
+      mismo código. **#104 ya no cierra acá**: se movió a `recurrence-undo` (etapa 3).
+- [ ] 5.6 Abrir los changes de la etapa 3 con el material que salió de esta entrega, para que el
+      análisis no se pierda: `recurrence-early-payment`, `recurrence-link-movement`,
+      `recurrence-undo`, `recurrence-history`, `recurrence-catch-up`, `recurrence-review-ux` y
+      `recurrence-server-generation`.

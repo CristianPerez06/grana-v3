@@ -24,17 +24,34 @@ sacarlo no es cambiar un índice. Tres cosas dependen de que solo pueda haber un
 Por eso el change tiene una etapa de cimientos antes de la funcionalidad visible. No es prolijidad:
 sin ella, el arreglo al #96 fabrica duplicados.
 
+> **Este documento conserva las 24 decisiones completas, incluidas las de lo que se difirió.** El
+> alcance de la entrega se recortó el 2026-09-09 y vive en `proposal.md` y `tasks.md`; las decisiones
+> que quedaron fuera se señalan donde corresponde, con el change que las va a tomar. Se conservan a
+> propósito: el análisis costó más que el código y no tiene por qué repetirse.
+
 ## Goals / Non-Goals
 
-**Goals**
+**Goals** *(recortados el 2026-09-09 — ver `proposal.md`)*
 
-- Que un vencimiento sin revisar no bloquee los siguientes.
-- Que se pueda registrar un pago antes del vencimiento, sin correr el calendario.
-- Que se pueda vincular un movimiento ya cargado, sin duplicar el gasto.
-- Que se pueda resolver el atraso en bloque, corrigiendo fecha, importe y cuenta de cada uno.
+- Que un vencimiento sin revisar no bloquee los siguientes, y que se pueda resolver cualquiera en
+  cualquier orden, sin duplicados.
 - Que vencimiento, fecha de pago, fecha de carga y fecha de resolución sean cuatro instantes
   distintos y sobrevivan los cuatro.
-- Paridad completa web ↔ nativo.
+- Que editar la frecuencia o pausar no fabrique vencimientos que nunca existieron.
+- Que un fallo al materializar se vea, en vez de parecer "estás al día".
+- Materialización y bloque de "vencimientos por revisar" en web **y** en nativo.
+
+**Movidos a changes posteriores** (el análisis de cada uno sigue acá, en las decisiones que se
+indican, para que el change que lo tome no empiece de cero):
+
+- Registrar un pago antes del vencimiento, sin correr el calendario — decisión 4 →
+  `recurrence-early-payment`.
+- Vincular un movimiento ya cargado, sin duplicar el gasto — decisiones 13 y 14b →
+  `recurrence-link-movement`.
+- Deshacer, distinguiendo lo creado de lo vinculado — decisiones 14 y 15 → `recurrence-undo`.
+- Resolver el atraso en bloque, corrigiendo cada fila — decisiones 9, 11 y 22 →
+  `recurrence-catch-up`.
+- Paridad completa web ↔ nativo del formulario de resolución → `recurrence-review-ux`.
 
 **Non-Goals**
 
@@ -115,6 +132,8 @@ vencimiento: los otros tres nacen al resolverla. Sin esta separación no hay ide
 
 ### 4. Pagar antes no mueve el calendario
 
+> **Fuera de esta entrega** — `recurrence-early-payment`. La decisión se conserva porque es la que impide que el calendario se corra.
+
 **Recomendación.** Registrar el pago de una ocurrencia **resuelve esa ocurrencia**; la siguiente sale
 del cronograma de la regla, no del pago. Si el alquiler vence el 23 y se paga el 3, el próximo vence
 el 23 del mes siguiente.
@@ -170,6 +189,8 @@ es la solución al bloqueo del #96 y queda fuera de esta entrega.
 
 ### 7. El pasado no se re-proyecta; se marca como incompleto y se puede completar
 
+> **Parcial.** El horizonte de 12 meses está en esta entrega. El **aviso** que nombra desde cuándo reconstruyó va en `recurrence-review-ux`; es el borde áspero conocido del mínimo.
+
 **Recomendación.** No reconstruir automáticamente los meses cerrados: usaría los montos de hoy,
 perdería las reglas retiradas e inventaría las creadas después.
 
@@ -201,6 +222,8 @@ total cuenta las instancias materializadas `pending` **y** `confirmed`.
 
 ### 9. Corregir un importe afecta un vencimiento, no la regla
 
+> **Parcial.** Que corregir el importe al registrar no reescriba la regla **sí** está en esta entrega (tarea 1.4c, ya hecha). La acción separada "usar este importe de acá en más" va en `recurrence-catch-up`.
+
 **Recomendación.** El importe que el usuario ajusta al resolver vale **solo para ese vencimiento**.
 
 Hoy no es así: `confirmRecurrenceInstance` propaga el importe corregido a la regla
@@ -228,6 +251,8 @@ y rompe la identidad de ocurrencias ya resueltas.
 
 ### 22. "Todo o nada" significa una transacción de Postgres, no rollback compensatorio
 
+> **Fuera de esta entrega** — `recurrence-catch-up`. Es el cómo de la decisión 11.
+
 El repo resuelve hoy las operaciones compuestas con orquestadores que **compensan** —crean, y si algo
 falla borran lo creado—. Para tres operaciones de este change eso no alcanza:
 
@@ -246,6 +271,8 @@ camino que el repo ya usa para las lecturas compuestas (`get_movements_page`,
 
 ### 11. La resolución en bloque es atómica
 
+> **Fuera de esta entrega** — `recurrence-catch-up`.
+
 **Recomendación.** Todo o nada. Un grupo a medio aplicar deja al usuario sin saber qué se guardó, con
 movimientos creados y vencimientos sin resolver mezclados, y sin forma de repetir la operación sin
 duplicar.
@@ -263,6 +290,8 @@ No es cosmético: es la diferencia entre "estás al día" y "no sabemos", y hoy 
 cuando pasa lo segundo.
 
 ### 13. Vincular a una regla compartida no puede alterar la deuda en silencio
+
+> **Fuera de esta entrega** — `recurrence-link-movement`.
 
 **Recomendación.** Tres casos, y solo dos se aceptan:
 
@@ -290,6 +319,8 @@ de lo que corresponde, en silencio.
 
 ### 14. Deshacer distingue lo que la recurrencia creó de lo que el usuario vinculó
 
+> **Parcial.** El **dato** que hace posible la distinción (`resolution_kind`, `linked_conversion`) lo escribe esta entrega, porque no se puede reconstruir después. Deshacer se implementa en `recurrence-undo`.
+
 **Recomendación.** La ocurrencia SHALL registrar **cómo** se resolvió:
 
 | Cómo se resolvió | Qué hace deshacer |
@@ -315,12 +346,16 @@ dejaría la deuda del hogar movida por una operación que el usuario deshizo.
 
 ### 14b. Un movimiento vinculado se rotula como vinculado, no como originado
 
+> **Fuera de esta entrega** — `recurrence-link-movement`.
+
 **Recomendación.** Un movimiento que existía antes de la recurrencia NO SHALL mostrarse como
 "originado en esta recurrencia": no lo originó, el usuario lo cargó por su cuenta. El rótulo correcto
 es **"vinculado a esta recurrencia"**. La distinción es la misma que gobierna deshacer (decisión 14)
 y tiene que ser visible, no solo interna.
 
 ### 15. Deshacer y omitir son dos operaciones, no una
+
+> **Parcial.** Que omitir signifique "este período no corresponde" y no bloquee las siguientes está en esta entrega. Deshacer va en `recurrence-undo`, junto con el #104.
 
 **Recomendación.** Definirlas acá aunque el #104 las implemente:
 
@@ -334,10 +369,13 @@ y tiene que ser visible, no solo interna.
 El plan actual del #104 convierte siempre el pago borrado en `skipped` para esquivar el índice
 `one_pending_per_rule`. Con ese índice eliminado la restricción desaparece.
 
-**Por eso el #104 se implementa dentro de este change y cierra con él.** Una versión anterior lo
-dejaba "para después" en el design mientras el spec y las tareas ya lo incluían — una contradicción.
-Separarlo obligaría a escribir el arreglo del #104 contra un modelo que este change está por
-reemplazar, para reescribirlo enseguida.
+**El #104 salió de esta entrega con el recorte de alcance (2026-09-09) y va en `recurrence-undo`.**
+El argumento original —escribir el arreglo del #104 contra un modelo que este change está por
+reemplazar obliga a reescribirlo enseguida— sigue en pie, y por eso lo que este change **sí** entrega
+es el dato del que depende: `resolution_kind` y `linked_conversion`, escritos por la migración de
+expansión. La distinción entre borrar y desvincular no se puede reconstruir después, así que se
+registra desde ahora aunque quien la consuma llegue en otro change. Lo que se difiere es la
+implementación de deshacer, no su modelo.
 
 ### 16. Una pausa no acumula deuda: lo que pasó durante la pausa no se recupera
 
@@ -717,10 +755,15 @@ Tres cosas concretas que "por tandas" no define:
   `due_date_is_unknown` (decisión 23), conservando `scheduled_date` como único dato legado. Afecta
   solo al historial, no a montos ni saldos, y **no bloquea** la materialización del vencimiento
   verdadero.
-- **Colisión con #104.** Los dos tocan la misma restricción. Hay que ordenarlos explícitamente.
-- **Superficie amplia.** Toca money-logic, el paquete de recurrencias, dos apps y una migración. Se
-  mitiga con las etapas de `tasks.md`, no partiendo el change: los once comportamientos son un solo
-  entregable y separarlos dejaría la etapa de cimientos sin nada que un usuario pueda validar.
+- **Colisión con #104.** Los dos tocan la misma restricción. Se ordenan explícitamente: este change
+  retira el índice y deja escrito `resolution_kind`; `recurrence-undo` implementa deshacer encima.
+- **Superficie amplia.** Toca money-logic, el paquete de recurrencias, dos apps y dos migraciones.
+  **El recorte de alcance del 2026-09-09 la redujo**: la entrega quedó en los seis comportamientos
+  que cierran el #96 y el #118, y pago anticipado, vinculación, resolución en bloque, deshacer,
+  historial enriquecido y la UX avanzada pasaron a changes posteriores. Una versión anterior de este
+  documento sostenía que los once comportamientos eran un solo entregable indivisible; era falso, y
+  el costo de creerlo fueron 51 commits sin ningún cambio visible. Lo que sí es indivisible es el
+  mínimo: los cimientos solos no le sirven a ningún usuario.
 
 ## Migration Plan
 

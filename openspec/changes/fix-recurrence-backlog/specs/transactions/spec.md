@@ -44,8 +44,10 @@ como fecha de pago, porque un cliente anterior al despliegue puede sobrescribirl
 ocurrencia, y en las ocurrencias históricas conserva un valor que no es un vencimiento confiable.
 
 El sistema SHALL registrar además **cómo** se resolvió cada ocurrencia: con un movimiento **creado**
-por la recurrencia, o con un movimiento preexistente **vinculado** por el usuario. Ese dato SHALL
-gobernar qué hace deshacer.
+por la recurrencia, o con un movimiento preexistente **vinculado** por el usuario. El dato se registra
+desde esta entrega aunque todavía no exista quien lo consuma: sin él, deshacer no puede distinguir
+borrar un movimiento que la recurrencia creó de desvincular uno del usuario, y esa distinción no se
+puede reconstruir después.
 
 Resolver una ocurrencia —registrando un pago, vinculando un movimiento existente u omitiéndola— NO
 SHALL alterar el cursor de generación de la regla. El sistema SHALL derivar qué falta materializar
@@ -57,8 +59,7 @@ cualquier orden NO SHALL producir duplicados ni saltear ocurrencias.
 - **WHEN** una ocurrencia vence el `2026-06-23` y el usuario registra su pago con fecha `2026-09-03`
 - **THEN** la ocurrencia conserva `2026-06-23` como vencimiento
 - **AND** el movimiento creado queda fechado el `2026-09-03`
-- **AND** el historial de la regla permite ver que el pago del `2026-09-03` corresponde al
-  vencimiento de junio
+- **AND** el vencimiento de junio no vuelve a materializarse
 
 #### Scenario: Resolver fuera de orden no regenera lo ya resuelto
 
@@ -92,153 +93,6 @@ cualquier orden NO SHALL producir duplicados ni saltear ocurrencias.
 - **WHEN** un proceso intenta materializar una ocurrencia cuyo vencimiento ya tiene una instancia,
   sea pendiente, pagada u omitida
 - **THEN** el sistema no crea una segunda instancia para ese vencimiento
-
-### Requirement: El usuario puede registrar el pago de una ocurrencia antes de su vencimiento
-
-El sistema SHALL permitir registrar el pago de la próxima ocurrencia de una regla activa **aunque su
-vencimiento todavía no haya llegado**, sin esperar a que la ocurrencia se materialice por sí sola. La
-acción SHALL estar disponible desde el hub de recurrencias y desde el detalle de la regla, en web y
-en la app nativa.
-
-Al registrar el pago anticipado, el sistema SHALL abrir el mismo formulario de resolución que usa una
-ocurrencia vencida, con la fecha de pago propuesta en el día en curso y editable.
-
-Registrar un pago por adelantado NO SHALL desplazar el cronograma de la regla: la ocurrencia
-siguiente SHALL calcularse a partir del vencimiento de la regla y NO a partir de la fecha en que el
-usuario pagó.
-
-#### Scenario: Pago anticipado sin correr el calendario
-
-- **WHEN** hoy es el `2026-09-03`, una regla mensual vence los días 23, y el usuario registra el pago
-  de la ocurrencia del `2026-09-23`
-- **THEN** se crea un movimiento con fecha `2026-09-03`
-- **AND** la ocurrencia del `2026-09-23` queda resuelta
-- **AND** el próximo vencimiento de la regla es el `2026-10-23`
-
-#### Scenario: Pagos anticipados repetidos no desfasan la regla
-
-- **WHEN** el usuario registra anticipadamente tres meses seguidos, cada uno unos días antes del 23
-- **THEN** el vencimiento sigue cayendo el día 23 de cada mes
-
-#### Scenario: Una regla pausada no ofrece pago anticipado
-
-- **WHEN** el usuario abre el detalle de una regla pausada
-- **THEN** la acción de registrar un pago anticipado no está disponible
-
-### Requirement: El usuario puede vincular un movimiento existente a una ocurrencia
-
-El sistema SHALL permitir resolver una ocurrencia recurrente **vinculándola a un movimiento que ya
-existe**, en lugar de crear uno nuevo. Al vincular, el sistema NO SHALL crear ninguna transacción: la
-ocurrencia SHALL quedar resuelta apuntando al movimiento existente, que SHALL pasar a mostrarse como
-originado en esa regla.
-
-El sistema SHALL ofrecer para vincular únicamente movimientos compatibles con la ocurrencia —misma
-moneda, mismo tipo de movimiento— y NO SHALL permitir vincular un movimiento ya vinculado a otra
-ocurrencia. La ocurrencia SHALL quedar marcada como resuelta **por vinculación**, distinta de
-resuelta por un movimiento creado por la recurrencia.
-
-Un movimiento vinculado SHALL rotularse como **"vinculado a esta recurrencia"** y NO como "originado
-en" ella: existía antes y la recurrencia no lo creó.
-
-Cuando la regla es **compartida con un hogar**, vincular NO SHALL alterar la deuda entre miembros sin
-que el usuario lo sepa:
-
-- si el movimiento ya tiene un **reparto compatible** con el de la regla, SHALL vincularse directo;
-- si el movimiento es **personal**, el sistema SHALL explicar que va a convertirse en gasto compartido
-  con el reparto de la regla y SHALL pedir confirmación explícita;
-- si el movimiento ya es compartido con **otro hogar o con otro reparto**, NO SHALL ofrecerse como
-  candidato. Reemplazar un reparto existente destruiría una deuda que el otro miembro ya ve.
-
-La conversión y la vinculación SHALL aplicarse dentro de una **única transacción de base de datos**:
-NO SHALL quedar un movimiento convertido a compartido sin vincular, ni una ocurrencia vinculada sin
-el reparto aplicado. Lo mismo aplica a deshacer esa resolución, que revierte el reparto y desvincula.
-
-#### Scenario: Vincular no duplica el gasto
-
-- **WHEN** el usuario ya había cargado a mano el gasto del alquiler y lo vincula a la ocurrencia
-  correspondiente
-- **THEN** no se crea ningún movimiento nuevo
-- **AND** el total de gastos del mes no cambia
-- **AND** la ocurrencia queda resuelta y el movimiento aparece como vinculado a la regla, no como originado en ella
-
-#### Scenario: Vincular a una regla compartida pide confirmación
-
-- **WHEN** el usuario vincula un gasto personal a una ocurrencia de una regla compartida 50·50
-- **THEN** el sistema explica que el movimiento se va a registrar como gasto compartido con ese
-  reparto y pide confirmación
-- **AND** sin confirmación no se modifica ni el movimiento ni la ocurrencia
-
-#### Scenario: Un movimiento con otro reparto no se ofrece para vincular
-
-- **WHEN** el usuario busca un movimiento para vincular a una ocurrencia de una regla compartida y
-  existe uno compartido con otro hogar o con un reparto distinto
-- **THEN** ese movimiento no aparece entre los candidatos
-- **AND** ninguna deuda existente se modifica
-
-#### Scenario: La conversión a compartido y la vinculación son atómicas
-
-- **WHEN** falla la vinculación de un movimiento que el sistema estaba convirtiendo a compartido
-- **THEN** el movimiento queda como estaba, sin reparto
-- **AND** la deuda del hogar no cambia
-
-#### Scenario: Un movimiento ya vinculado no se ofrece de nuevo
-
-- **WHEN** el usuario busca un movimiento para vincular a una ocurrencia
-- **THEN** los movimientos ya vinculados a otra ocurrencia no aparecen entre las opciones
-
-### Requirement: El usuario puede resolver en bloque las ocurrencias sin revisar
-
-El sistema SHALL agrupar las ocurrencias sin resolver de una misma regla y SHALL ofrecer resolverlas
-en una sola pasada. Para **cada** ocurrencia del grupo el usuario SHALL poder revisar y corregir
-**fecha de pago, importe y cuenta** antes de guardar, y SHALL poder elegir entre cuatro salidas:
-registrar el pago, vincular un movimiento existente, indicar que el período no corresponde, o dejarla
-sin resolver.
-
-Antes de aplicar, el sistema SHALL mostrar un resumen de lo que va a ocurrir, incluidos los
-movimientos que se van a crear y su efecto sobre el saldo de las cuentas involucradas.
-
-La resolución en bloque SHALL ser **atómica dentro de una única transacción de base de datos**, y NO
-SHALL apoyarse en deshacer lo hecho ante un error: un rollback compensatorio también puede fallar
-—una interrupción después de crear los movimientos deja al usuario con movimientos creados y
-ocurrencias sin resolver, sin forma de repetir la operación sin duplicar—. O se aplican todos los
-cambios del grupo o no se aplica ninguno. Ante un fallo, el sistema SHALL informarlo y dejar el grupo
-exactamente como estaba.
-
-El importe que el usuario corrija SHALL afectar **únicamente esa ocurrencia** y NO SHALL modificar el
-importe de la regla — de lo contrario, resolver varias ocurrencias con importes distintos dejaría la
-regla con un valor que depende del orden de ejecución. Actualizar la regla SHALL ser una acción
-explícita y separada, aplicada una sola vez y tomando el importe de la ocurrencia **más reciente** del
-grupo.
-
-Dejar una ocurrencia sin resolver NO SHALL impedir resolver las demás ni bloquear la generación de
-las siguientes.
-
-#### Scenario: Ponerse al día corrigiendo cada pago
-
-- **WHEN** una regla tiene sin resolver los vencimientos de junio, julio y agosto, y el usuario los
-  resuelve juntos con importes distintos entre sí y uno pagado desde otra cuenta
-- **THEN** se crean tres movimientos, cada uno con el importe, la fecha y la cuenta que el usuario
-  indicó
-- **AND** ninguno usa el importe de la regla cuando el usuario lo corrigió
-
-#### Scenario: Corregir importes no reescribe la regla
-
-- **WHEN** el usuario resuelve tres ocurrencias con importes distintos entre sí
-- **THEN** cada movimiento se crea con su propio importe
-- **AND** el importe de la regla no cambia, cualquiera sea el orden en que se procesaron
-
-#### Scenario: Un fallo a mitad de camino no deja el grupo partido
-
-- **WHEN** el usuario resuelve tres ocurrencias juntas y la tercera falla
-- **THEN** no se crea ningún movimiento
-- **AND** las tres ocurrencias siguen sin resolver
-- **AND** el sistema informa que la operación no se aplicó
-
-#### Scenario: Resolver algunas y dejar otras
-
-- **WHEN** el usuario registra el pago de julio y agosto y deja junio sin resolver
-- **THEN** junio sigue disponible sin resolver
-- **AND** la regla sigue generando las ocurrencias siguientes con normalidad
 
 ### Requirement: El sistema materializa las ocurrencias vencidas sin depender de la navegación
 
@@ -278,8 +132,9 @@ El sistema NO SHALL materializar las ocurrencias cuyo vencimiento cae mientras l
 y NO SHALL recuperarlas al reanudarla: pausar significa que la regla no está corriendo, no que se
 sigue devengando para cobrarse junta después.
 
-Las ocurrencias que ya existían **antes** de la pausa SHALL seguir visibles y resolubles, señaladas
-como pertenecientes a una regla pausada, de modo que el usuario pueda registrarlas u omitirlas.
+Las ocurrencias que ya existían **antes** de la pausa SHALL seguir visibles y resolubles, de modo que
+el usuario pueda registrarlas u omitirlas. El sello visual que las señala como pertenecientes a una
+regla pausada queda fuera de esta entrega; que sigan estando y se puedan resolver, no.
 
 Al reanudar, el sistema SHALL tomar el **próximo vencimiento futuro respetando el calendario
 original** de la regla, sin desplazarlo por la duración de la pausa.
@@ -294,7 +149,7 @@ original** de la regla, sin desplazarlo por la duración de la pausa.
 
 - **WHEN** una regla tenía un vencimiento sin resolver antes de pausarse
 - **THEN** ese vencimiento sigue visible y resoluble
-- **AND** se muestra señalado como perteneciente a una regla pausada
+- **AND** pausar la regla no lo oculta ni lo resuelve por su cuenta
 
 ## MODIFIED Requirements
 
@@ -315,9 +170,9 @@ atrás, inclusive**, calculado con la **fecha financiera argentina**. El horizon
 únicamente a la **reconstrucción automática**: el usuario SHALL poder registrar a mano un pago más
 viejo en cualquier momento.
 
-Las ocurrencias anteriores al horizonte NO SHALL materializarse. El sistema SHALL señalarlo **en la
-recurrencia**, nombrando desde cuándo reconstruyó, y NO SHALL afirmar que el período tiene
-información incompleta: esos pagos pueden haberse registrado a mano en su momento.
+Las ocurrencias anteriores al horizonte NO SHALL materializarse. El sistema NO SHALL afirmar que el
+período tiene información incompleta: esos pagos pueden haberse registrado a mano en su momento. El
+aviso que nombra **en la recurrencia** desde cuándo reconstruyó queda fuera de esta entrega.
 
 El horizonte NO acota por sí solo el volumen —doce meses de una regla diaria son unas 365
 ocurrencias—, así que la materialización SHALL hacerse por **tandas acotadas**: abrir una pantalla NO
@@ -345,7 +200,7 @@ La fecha de cada ocurrencia SHALL ser la que corresponde por cronograma, nunca l
 - **WHEN** el usuario abre la app después de varios períodos sin resolver una regla mensual
 - **THEN** el sistema materializa las ocurrencias vencidas de esos períodos, cada una con su propia
   fecha de vencimiento
-- **AND** las presenta agrupadas, de modo que el usuario pueda resolverlas en una sola pasada
+- **AND** el usuario puede resolver cualquiera de ellas por separado, en el orden que quiera
 
 #### Scenario: Una ocurrencia sin resolver no bloquea la siguiente
 
@@ -359,11 +214,11 @@ La fecha de cada ocurrencia SHALL ser la que corresponde por cronograma, nunca l
 - **THEN** la ocurrencia vigente queda materializada
 - **AND** las anteriores dentro del horizonte siguen siendo accesibles y resolubles
 
-#### Scenario: Más allá del horizonte se avisa en la recurrencia
+#### Scenario: Más allá del horizonte no se reconstruye
 
 - **WHEN** una regla mensual arrancó hace tres años y nunca se resolvió ninguna ocurrencia
 - **THEN** se materializan las ocurrencias de los últimos 12 meses
-- **AND** la recurrencia avisa que tiene historial anterior que no fue reconstruido
+- **AND** no se materializa ninguna anterior
 - **AND** no se afirma que esos meses tengan información incompleta
 - **AND** ningún saldo cambia por esa materialización
 
@@ -446,8 +301,10 @@ importe SHALL comportarse igual: afecta solo a esa ocurrencia y NO SHALL reescri
 Registrar un pago NO SHALL avanzar el cursor de generación de la regla: la ocurrencia queda resuelta
 por su propia identidad, de modo que registrar pagos en cualquier orden es seguro.
 
-Estas capacidades SHALL estar disponibles por igual en web y en la app nativa, incluida la
-advertencia de saldo negativo que hoy solo existe en web.
+La paridad completa del formulario de resolución en la app nativa —importe, fecha y cuenta editables,
+más la advertencia de saldo negativo que hoy solo existe en web— queda fuera de esta entrega. Lo que
+SHALL estar en las dos plataformas es la **materialización** del atraso y el **bloque de vencimientos
+por revisar**.
 
 #### Scenario: Registrar un pago con otra fecha conserva el vencimiento
 
@@ -470,12 +327,6 @@ advertencia de saldo negativo que hoy solo existe en web.
   con la cotización de ese día
 - **AND** el saldo cash/bank no cambia
 
-#### Scenario: Registrar el pago en la app nativa ofrece los mismos ajustes
-
-- **WHEN** el usuario registra un pago recurrente desde la app nativa
-- **THEN** puede ajustar fecha, importe y cuenta igual que en web
-- **AND** recibe la misma advertencia si la cuenta quedaría en negativo
-
 #### Scenario: Confirmar consumo de tarjeta en periodo pagado falla
 
 - **WHEN** una ocurrencia recurrente de tarjeta tiene fecha dentro de un periodo ya pagado
@@ -489,23 +340,10 @@ El sistema SHALL permitir omitir una ocurrencia recurrente. Omitir SHALL resolve
 transacción y sin modificar saldos ni resúmenes, y SHALL significar que **ese período no
 corresponde** — no que hubo un error de carga.
 
-Omitir SHALL ser una operación distinta de **deshacer la resolución** de una ocurrencia. Deshacer
-SHALL devolver la ocurrencia al estado **sin resolver** —nunca a omitida, porque eso afirmaría que el
-período no correspondía cuando el usuario solo se equivocó— y SHALL actuar sobre el movimiento según
-**cómo** se había resuelto:
-
-- si el movimiento lo **creó la recurrencia**, deshacer SHALL eliminarlo;
-- si el usuario había **vinculado** un movimiento suyo, deshacer SHALL **conservarlo** —vuelve a ser
-  un movimiento suelto— y solo SHALL romper el vínculo.
-
-Borrar un movimiento que la recurrencia no creó destruiría un dato del usuario que el sistema nunca
-tuvo derecho a producir.
-
-Cuando la vinculación hubiera **convertido** un movimiento personal en compartido, deshacer SHALL
-revertir también esa conversión —devolverlo a personal y deshacer la deuda que generó— además de
-romper el vínculo. Si el movimiento ya era compartido antes de vincularse, deshacer SHALL únicamente
-desvincular. Ambas SHALL ser atómicas: un movimiento desvinculado que quedara compartido dejaría la
-deuda del hogar movida por una operación que el usuario deshizo.
+Omitir SHALL ser una operación distinta de **deshacer la resolución** de una ocurrencia, que devuelve
+la ocurrencia al estado *sin resolver* y NO a omitido. Deshacer NO se implementa en esta entrega
+—queda en `recurrence-undo`, junto con el #104—, pero el sistema SHALL registrar desde ahora **cómo**
+se resolvió cada ocurrencia, porque esa distinción no se puede reconstruir después.
 
 Omitir una ocurrencia NO SHALL impedir que se materialicen ni se resuelvan las siguientes.
 
@@ -514,29 +352,6 @@ Omitir una ocurrencia NO SHALL impedir que se materialicen ni se resuelvan las s
 - **WHEN** el usuario omite una ocurrencia sin resolver
 - **THEN** la ocurrencia queda omitida
 - **AND** no se inserta ninguna fila en `transactions`
-
-#### Scenario: Deshacer un pago creado por la recurrencia elimina el movimiento
-
-- **WHEN** el usuario deshace un pago que había registrado desde la recurrencia
-- **THEN** el movimiento se elimina
-- **AND** la ocurrencia vuelve a estar sin resolver, no omitida
-- **AND** el usuario puede volver a registrarla
-
-#### Scenario: Deshacer una vinculación que convirtió el movimiento revierte la conversión
-
-- **WHEN** el usuario deshace una ocurrencia compartida que había resuelto vinculando un movimiento
-  personal, que el sistema convirtió a compartido al vincularlo
-- **THEN** el movimiento se conserva y vuelve a ser personal
-- **AND** la deuda del hogar vuelve a su estado anterior
-- **AND** la ocurrencia vuelve a estar sin resolver
-
-#### Scenario: Deshacer una vinculación conserva el movimiento
-
-- **WHEN** el usuario deshace la resolución de una ocurrencia que había resuelto vinculando un
-  movimiento suyo
-- **THEN** el movimiento se conserva y vuelve a figurar como un movimiento suelto
-- **AND** la ocurrencia vuelve a estar sin resolver
-- **AND** el total de gastos del mes no cambia
 
 ### Requirement: El modulo Movimientos muestra pendientes recurrentes separados del historial
 
