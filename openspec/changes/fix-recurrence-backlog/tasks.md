@@ -100,18 +100,29 @@ que habilita el backlog.
       confirmado; el mismo criterio que usa `owedOccurrences`, donde lo que decide es que la
       ocurrencia exista y no cómo terminó—. Es un cambio coordinado de lectura, no la eliminación de
       dos escrituras.
-      **ORDEN DE DESPLIEGUE, y esta tarea es el ÚLTIMO paso.** Es el orden en que las cosas se
+      **ORDEN DE DESPLIEGUE, y esta tarea es el ÚLTIMO paso (6 de 6).** Es el orden en que las cosas se
       APLICAN sobre datos reales; **no** es lo que habilita escribir el código, que se implementa y se
       prueba contra el harness local sin tocar producción:
-      **(1)** aplicar `0064`;
-      **(2+3)** desplegar el generador nuevo **como una sola unidad**: `reconstruct_from` y todas las
-      identidades existentes en lugar del cursor, JUNTO con las versiones de cronograma, las pausas y
-      las tandas acotadas (`2.1b`, `2.1d`, `2.1`). **No son dos despliegues.** Un generador que ya
-      reconstruye desde el piso pero todavía ignora las versiones y las pausas le fabricaría atraso a
-      una regla pausada o con la frecuencia editada — justo las que la decisión 16 protege;
-      **(4)** migrar dashboard, «próximo», proyecciones y deshacer para que lean los vencimientos
-      existentes y no el cursor;
-      **(5)** recién ahí dejar de escribir `last_generated_date`.
+      **(1)** aplicar `0064` — la expansión, que no cambia ningún comportamiento;
+      **(2+3)** desplegar el generador nuevo **como una sola unidad**, web y nativo: `reconstruct_from`
+      y todas las identidades existentes en lugar del cursor, JUNTO con las versiones de cronograma,
+      las pausas y las tandas acotadas (`2.1b`, `2.1d`, `2.1`). **No son dos despliegues.** Un
+      generador que ya reconstruye desde el piso pero todavía ignora las versiones y las pausas le
+      fabricaría atraso a una regla pausada o con la frecuencia editada — justo las que la decisión 16
+      protege. Con el índice de pendiente única todavía vivo materializa una sola por corrida y se
+      come el resto en silencio: degradado, no roto, y sin cambio visible para el usuario;
+      **(4)** migrar dashboard, «próximo», proyecciones y deshacer para que lean los vencimientos que
+      ya existen y no el cursor;
+      **(5) aplicar la ACTIVACIÓN** —la migración que retira `recurrence_instances_one_pending_per_rule`,
+      con el número elegido contra `main` al escribirla—. **Va acá y no antes, por dos razones que
+      apuntan al mismo lado.** La primera la escribe `0064` en su propia cabecera: retirar el índice
+      antes de que las apps entiendan el modelo nuevo deja a la base acumulando atraso mientras la app
+      sigue mostrando una sola ocurrencia — invisible, y peor que el bug actual. La segunda es el
+      dashboard: si el atraso se materializa mientras la proyección todavía avanza desde el cursor, el
+      cursor sigue clavado en junio y la proyección vuelve a emitir julio y agosto **además** de las
+      pendientes ya materializadas — la misma ocurrencia contada dos veces, la familia de #118. Por eso
+      el paso (4) va antes que este;
+      **(6)** recién ahí dejar de escribir `last_generated_date`, que es esta tarea.
       Mientras tanto la columna se sigue escribiendo y **no hay daño**: el generador ya no la usa para
       elegir la FECHA —eso lo decide el calendario—, aunque sí para saber desde dónde arrancar, así
       que las cuatro superficies siguen leyendo un cursor que se mantiene correcto.
@@ -164,20 +175,27 @@ que habilita el backlog.
       confirma por el otro lado: `con_tope_sin_ordinal = 0` en producción, así que tampoco había hoy
       ninguna regla que dependiera de él.
 
-- [x] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
+- [ ] 1.8 Tests de resolución fuera de orden: resolver agosto y después julio no regenera agosto, no
       saltea junio, y no mueve el cronograma.
-      Hecho en `packages/money-logic/__tests__/out-of-order-resolution.test.ts` (8 casos) sobre
-      `owedOccurrences`, escrito como una **secuencia** con aserciones en cada paso y no como una
-      foto: regla mensual del 10, piso el `2026-05-10`, hoy el `2026-09-08`, con junio, julio y agosto
-      adeudados. Cubre los tres puntos en un mismo caso —agosto desaparece de la lista, junio y julio
-      siguen ahí—, más el hueco dejado en el medio que no vence ni se corre, que el piso no lo arrastra
-      la resolución, y que omitir una y confirmar otra da lo mismo porque lo que cuenta es que la
-      ocurrencia exista. El caso central recorre **cuatro órdenes de resolución distintos** y verifica
-      en cada paso que todo lo adeudado sea una fecha que el calendario produjo — nunca una corrida —
-      y que las tres se emitan exactamente una vez.
-      **Probado en negativo**, que es lo que le da valor: devolviendo `owedOccurrences` a la semántica
-      de CURSOR —tomar el máximo resuelto en vez del conjunto— fallan **7** casos. Con un cursor esto
-      no se puede ni expresar: resolver agosto arrastraría la regla más allá de julio y lo perdería.
+      **Hecho el núcleo puro; falta la secuencia real.**
+      `packages/money-logic/__tests__/out-of-order-resolution.test.ts` (8 casos) fija la propiedad
+      sobre `owedOccurrences`, como secuencia con aserciones en cada paso: agosto desaparece de la
+      lista, junio y julio siguen ahí, el hueco del medio no vence ni se corre, el piso no lo arrastra
+      la resolución, y omitir una o confirmar otra da lo mismo porque lo que cuenta es que la
+      ocurrencia exista. El caso central recorre **cuatro órdenes distintos** y verifica que todo lo
+      adeudado sea una fecha que el calendario produjo. Probado en negativo: devolviendo
+      `owedOccurrences` a la semántica de cursor fallan **7** casos.
+      **Lo que NO prueban, y por eso la tarea sigue abierta:** arman el conjunto de existentes a mano.
+      No pasan por `confirmRecurrenceInstance` ni por `skipRecurrenceInstance`, y **el flujo real
+      todavía se comporta distinto**, porque esas dos siguen escribiendo el cursor. Un test verde
+      sobre el núcleo no dice nada sobre lo que le pasa hoy al usuario.
+      **La cobertura que falta**, sobre el harness de PGlite: **(1)** confirmar agosto; **(2)**
+      confirmar u omitir julio; **(3)** verificar que **ninguna** de las dos operaciones escribió
+      `last_generated_date`; **(4)** recalcular lo adeudado; **(5)** comprobar que agosto no
+      reaparece, que junio sigue accesible y que el calendario no se movió.
+      **Depende de 1.5**, y no por comodidad: el paso (3) exige que la escritura del cursor ya no
+      exista, y 1.5 es el paso (6) del orden de despliegue. Antes de eso el test no podría pasar sin
+      afirmar lo contrario de lo que el código hace.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.

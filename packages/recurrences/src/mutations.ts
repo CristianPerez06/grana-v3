@@ -448,8 +448,15 @@ export async function confirmRecurrenceInstance(
   // a result that depends on EXECUTION ORDER. Updating the rule is a separate,
   // explicit action ("use this amount from now on"), applied once.
   //
-  // `last_generated_date` is still written for now (task 1.5): dropping it
-  // depends on the cursor-phase audit against production.
+  // `last_generated_date` is still written for now (task 1.5). The cursor-phase
+  // audit that used to block this is DONE — 0 of 61 rules drifted — and the
+  // generator no longer picks the DATE from the cursor; it reads the calendar.
+  // What still depends on this write is four OTHER surfaces: the dashboard's
+  // no-double-count invariant (`packages/dashboard/src/queries.ts:841` spells it
+  // out), the "próximo", the upcoming projection, and the undo in
+  // `thin-mutations.ts`. They have to start reading the due dates that already
+  // exist before this line can go, which is why it is the LAST step of the
+  // deployment order in tasks.md.
   await supabase
     .from('recurrences')
     .update({ last_generated_date: instance.scheduled_date })
