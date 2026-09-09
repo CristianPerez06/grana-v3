@@ -53,13 +53,17 @@ const SCHEMA = `
     -- defaulted: these tests are about WHICH dates get materialized, not about
     -- the row payload, which buildPendingInstanceInsert covers as a unit test.
     frequency           text not null default 'monthly',
+    movement_type       text not null default 'expense',
     account_id          uuid,
     transfer_destination_account_id uuid,
     currency_code       text not null default 'ARS',
     category_id         uuid,
     subcategory_id      uuid,
     household_id        uuid,
-    default_split       jsonb
+    default_split       jsonb,
+    -- The seed link. A rule created from a movement covers its own start_date
+    -- with that movement, which is why the generator must not materialize it.
+    created_from_transaction_id uuid
   );
 
   create table public.recurrence_instances (
@@ -105,7 +109,8 @@ const SCHEMA = `
     id uuid primary key default gen_random_uuid(),
     user_id uuid references auth.users(id) on delete cascade,
     name text not null default 'Cuenta',
-    type text not null default 'bank'
+    type text not null default 'bank',
+    is_active boolean not null default true
   );
   create table public.categories (
     id uuid primary key default gen_random_uuid(),

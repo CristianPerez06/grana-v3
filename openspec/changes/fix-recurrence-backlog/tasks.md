@@ -227,8 +227,32 @@ que habilita el backlog.
       (`1.5`) enunciada como «ninguna escritura sobre la regla», no como «ningún campo cursor»: una
       escritura a nivel regla es la forma en que una resolución por ocurrencia se filtra a todas las
       demás, y el importe (`1.4c`) fue ese mismo defecto con otro nombre de columna.
-      Contra el commit anterior fallan **3**: omitir julio dejaba el cursor en `2026-07-23` y omitir
-      junio lo movía **hacia atrás** a `2026-06-23`, que es el mecanismo del #96 a la vista.
+      Contra el commit anterior falla: omitir julio dejaba el cursor en `2026-07-23`, moviéndolo
+      **hacia atrás** respecto de agosto, que es el mecanismo del #96 a la vista.
+      **Corregido — el test usa la confirmación real y es UNA sola secuencia.** La primera versión
+      confirmaba agosto por SQL directo, así que de las tres resoluciones solo dos pasaban por una
+      mutación; ahora `confirmRecurrenceInstance` corre de verdad, con los creadores de movimientos
+      mockeados —el mismo seam de `confirm-writes.test.ts`—, y todo lo demás es real: la validación,
+      la cuenta, la escritura de la instancia y lo que la mutación hace (y no hace) sobre la regla.
+      Y los siete `it` que compartían una base y dependían del orden pasaron a **un solo `it` con
+      aserciones en cada paso**: una suite que no se puede correr caso por caso no dice cuál se rompió.
+- [x] 1.8b **Regresión de la semilla futura**, que el paso 5 rompía sin que ningún test lo viera.
+      Borrar el movimiento que originó una regla, cuando ese movimiento estaba fechado en el
+      **futuro**, perdía la ocurrencia que cubría. La reparación de `0053` limpiaba
+      `last_generated_date` para que el generador volviera a producir `start_date`; el generador ya no
+      lee esa columna y `reconstruct_from` —derivado de la semilla— es **inmutable por diseño**, así
+      que limpiar el cursor no reparaba nada.
+      **La reparación ahora materializa la ocurrencia directamente**, que es la única fecha que
+      sabemos que perdió su cobertura. El piso se queda donde está, que es para lo que es inmutable.
+      **Consecuencia conocida, dicha y no escondida:** la ocurrencia aparece **ahora** y no en su
+      fecha de vencimiento, porque el piso no se puede bajar para que el generador la emita más tarde.
+      Mostrarla antes cuesta menos que perderla, y además mantiene de acuerdo al generador con la
+      proyección: desvinculada la regla, la proyección deja de considerar `start_date` cubierta y si
+      no la anunciaría como próxima una fecha que el generador nunca podría producir.
+      Regresiones: `delete-seeded-recurrence.test.ts` verifica que la desvinculación materializa esa
+      ocurrencia —y que los dos casos que **no** deben repararse siguen sin materializar nada—, y
+      `future-seed-repair.test.ts` recorre la secuencia completa sobre la base real, incluida la
+      comprobación de que el piso rechaza moverse. Contra el commit anterior falla.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
       no queden clientes nativos instalados que lo usen.

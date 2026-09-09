@@ -772,7 +772,7 @@ export async function deleteTransaction(
   const { data: seededRule } = await supabase
     .from('recurrences')
     .select(
-      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences',
+      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, household_id, default_split',
     )
     .eq('created_from_transaction_id', id)
     .eq('user_id', userId)
@@ -788,6 +788,14 @@ export async function deleteTransaction(
       interval_count: number
       interval_unit: IntervalUnit
       max_occurrences: number | null
+      amount: number
+      account_id: string
+      transfer_destination_account_id: string | null
+      currency_code: string
+      category_id: string | null
+      subcategory_id: string | null
+      household_id: string | null
+      default_split: unknown
     }
     const today = options.today ?? formatDateISO(getTodayAR())
     const ruleIsLive = rule.status !== 'deleted'
@@ -808,16 +816,29 @@ export async function deleteTransaction(
       }
     }
 
-    // Unlink so the RESTRICT lets the movement go. For a live rule being kept:
-    // a FUTURE `start_date` is an occurrence covered by the movement being
-    // deleted, so leaving the coverage in place would make the rule skip that
-    // period entirely (the orphan defect 0053 repairs).
+    // Unlink so the RESTRICT lets the movement go. For a live rule being kept, a
+    // FUTURE `start_date` is an occurrence covered by the movement being deleted:
+    // leave nothing in its place and the rule skips that period entirely, which
+    // is the orphan defect 0053 repairs.
     //
-    // This used to be read off the cursor — `last_generated_date === start_date
-    // && > today`. Since the rule was found BY `created_from_transaction_id`, it
-    // IS seeded, so the cursor was only restating that; asking `start_date`
-    // directly says the same thing and does not depend on a cursor having been
-    // maintained. `last_generated_date` is still cleared while the column exists.
+    // HOW THE REPAIR WORKS NOW, and why it had to change. It used to clear
+    // `last_generated_date` so the generator would produce `start_date` again.
+    // The generator no longer reads that column: it reconstructs strictly after
+    // `reconstruct_from`, which 0064 derived from the seed's date and made
+    // IMMUTABLE. Clearing the cursor therefore repairs nothing — the occurrence
+    // is simply lost.
+    //
+    // So the repair materializes the occurrence directly. It is the one date we
+    // know lost its cover, so we create it instead of asking the generator to
+    // rediscover it. The floor stays where it is, which is the point of it being
+    // immutable: an occurrence hidden by the bug before it must stay reachable.
+    //
+    // KNOWN CONSEQUENCE, stated rather than hidden: the occurrence appears NOW
+    // rather than on its due date, because the floor cannot be lowered to let the
+    // generator emit it later. Showing an occurrence early is a smaller cost than
+    // losing it, and it also keeps the generator and the projection agreeing —
+    // once the rule is unlinked, the projection stops treating `start_date` as
+    // covered and would otherwise announce a date the generator can never produce.
     const seedCoversFutureOccurrence = ruleIsLive && rule.start_date > today
 
     const { error: unlinkError } = await supabase
@@ -831,6 +852,27 @@ export async function deleteTransaction(
       .eq('user_id', userId)
 
     if (unlinkError) return { ok: false, errorCode: unlinkError.code }
+
+    if (seedCoversFutureOccurrence) {
+      // A unique violation here means the occurrence already exists — another
+      // process got there first — which is the outcome we wanted anyway.
+      await supabase.from('recurrence_instances').insert({
+        recurrence_id: rule.id,
+        user_id: userId,
+        due_date: rule.start_date,
+        scheduled_date: rule.start_date,
+        status: 'pending',
+        amount: rule.amount,
+        account_id: rule.account_id,
+        transfer_destination_account_id: rule.transfer_destination_account_id,
+        currency_code: rule.currency_code,
+        category_id: rule.category_id,
+        subcategory_id: rule.subcategory_id,
+        description: rule.description,
+        household_id: rule.household_id,
+        split: rule.household_id ? rule.default_split : null,
+      } as never)
+    }
   }
 
   const { error } = await supabase
