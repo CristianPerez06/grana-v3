@@ -32,6 +32,11 @@ describe('reconstruct_from — derived on INSERT', () => {
     db = await createRecurrenceIdentityDb()
   })
 
+  // These two seed as the superuser on purpose: what they assert is the
+  // derivation itself, which does not depend on who is writing. The case where
+  // the caller matters — a client trying to impose a value — runs as the user,
+  // at the end of this block.
+
   it('a rule with no cursor gets start_date - 1, so its first occurrence survives', async () => {
     await seedRule(db, { id: RULE, start_date: '2026-05-01', last_generated_date: null })
     const { rows } = await db.query<{ reconstruct_from: string }>(
@@ -49,24 +54,37 @@ describe('reconstruct_from — derived on INSERT', () => {
     expect(rows[0].reconstruct_from).toBe('2026-06-01')
   })
 
-  it('the placeholder default never survives an insert', async () => {
-    // A client that sends a value does not impose it: the database is the sole
-    // owner, and `infinity` is only there so the generated types do not demand
-    // the column on Insert.
+  it('AS THE USER: a client that sends a value does not impose it', async () => {
+    // The real threat model, so it runs with the same privileges a client has.
+    // The database is the sole owner of the column, and `infinity` is only there
+    // so the generated types do not demand it on Insert.
     const id = '00000000-0000-4000-8000-00000000e003'
+    await actAs(db, U_A)
     await db.exec(`
       insert into public.recurrences (id, user_id, start_date, status, reconstruct_from)
       values ('${id}', '${U_A}', '2026-05-01', 'active', '1990-01-01');
     `)
+    await actAsAdmin(db)
+
     const { rows } = await db.query<{ reconstruct_from: string }>(
       `select reconstruct_from::text from public.recurrences where id = '${id}'`,
     )
     expect(rows[0].reconstruct_from).toBe('2026-04-30')
+  })
 
-    const { rows: leftovers } = await db.query<{ n: number }>(
+  it('AS THE USER: the placeholder default never survives an insert', async () => {
+    const id = '00000000-0000-4000-8000-00000000e004'
+    await actAs(db, U_A)
+    await db.exec(`
+      insert into public.recurrences (id, user_id, start_date, status)
+      values ('${id}', '${U_A}', '2026-05-01', 'active');
+    `)
+    await actAsAdmin(db)
+
+    const { rows } = await db.query<{ n: number }>(
       `select count(*)::int as n from public.recurrences where reconstruct_from = 'infinity'::date`,
     )
-    expect(leftovers[0].n).toBe(0)
+    expect(rows[0].n).toBe(0)
   })
 })
 

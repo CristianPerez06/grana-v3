@@ -188,10 +188,13 @@ que habilita el backlog.
       `trg_recurrence_reconstruct_from_guard` —la coda de esta misma migración advierte contra
       nombres que esconden una regla permanente— y una migración futura que necesite mover el piso
       puede `disable trigger` alrededor de la escritura, que es deliberado y auditable. Regresión
-      persistente en `packages/recurrences/__tests__/reconstruct-from-guard.test.ts` (9 casos
-      sobre PGlite, **corriendo como el usuario**, no como superusuario): el update legítimo sigue
-      andando, los cuatro ataques —atrás, adelante, `±infinity`, y colado dentro de un update
-      legítimo— se rechazan, reescribir el mismo valor es no-op, y pausar no mueve el piso.
+      persistente en `packages/recurrences/__tests__/reconstruct-from-guard.test.ts`, 10 casos sobre
+      PGlite. **Ocho corren bajo el rol `authenticated`** —los seis de UPDATE (el update legítimo
+      sigue andando; los cuatro ataques, atrás, adelante, `±infinity` y colado dentro de un update
+      legítimo, se rechazan; reescribir el mismo valor es no-op; pausar no mueve el piso) más los dos
+      de INSERT donde el que escribe importa: un cliente que manda un valor no lo impone, y el
+      placeholder no sobrevive—. **Los dos restantes siembran como superusuario a propósito**: lo que
+      afirman es la derivación en sí (`start_date - 1` y el cursor), que no depende de quién escribe.
       `validate_schema.sql` ahora comprueba **tabla, función y eventos** de cada trigger y las
       **columnas exactas de las dos FK compuestas**, no solo que exista algo con ese nombre: probado
       en negativo devolviendo el guard a solo-INSERT, invirtiendo las columnas de una FK y apuntando
@@ -199,7 +202,14 @@ que habilita el backlog.
       escriben `NEW`, `AFTER ROW` para el sync del historial): un guard movido a `AFTER` conserva sus
       eventos y pasaría un chequeo que solo los mire, pero ya no puede derivar `NEW.reconstruct_from`
       al insertar, y uno a nivel `STATEMENT` no tiene `NEW`/`OLD`. Los tres casos, probados en
-      negativo. Los mensajes de 8.1J y la excepción del guard quedaron en inglés.
+      negativo. Comprueba también **`tgenabled`** y el **schema de la función**, los dos falsos verdes
+      que quedaban: `ALTER TABLE … DISABLE TRIGGER` deja el nombre, la tabla, la función y los bits
+      idénticos —medido: `tgtype` sigue en 23, solo `tgenabled` pasa de `O` a `D`— y el usuario
+      vuelve a mover el piso a `2020-01-01` sin resistencia; y un trigger apuntado a una función
+      homónima fuera de `public` pasaba igual. El primero importa especialmente porque esta misma
+      migración documenta que una migración futura PUEDE desactivar el guard alrededor de una
+      escritura deliberada: lo que `validate_schema` tiene que atrapar es que alguien se olvide de
+      volver a activarlo. Los mensajes de 8.1J y la excepción del guard quedaron en inglés.
       El harness (`__tests__/support/recurrence-identity-db.ts`) vive en el paquete dueño, con
       `@electric-sql/pglite` como dependencia de desarrollo suya, y `packages/recurrences` estrena
       `vitest.config.ts` con `hookTimeout` alto **solo para el hook** —el `beforeAll` levanta Postgres

@@ -664,6 +664,18 @@ begin
   --     after the row is in, so it could no longer DERIVE `reconstruct_from` on
   --     insert. A STATEMENT-level trigger has no `NEW`/`OLD` at all.
   --
+  --     `tgenabled` is checked for the same reason, and it is the sharpest of the
+  --     lot: `ALTER TABLE … DISABLE TRIGGER` leaves the name, the table, the
+  --     function and every bit exactly as they are, and reopens the hole
+  --     completely. 0064 itself documents that a later migration MAY disable the
+  --     guard around a deliberate write — so the thing this file has to catch is
+  --     someone forgetting to switch it back on. 'O' fires for origin and local
+  --     writes, 'A' always; 'D' is disabled and 'R' only on a replica, and
+  --     neither protects the writes the app actually makes.
+  --
+  --     And the function is matched by SCHEMA too: a same-named function outside
+  --     `public` would otherwise pass.
+  --
   --     `pg_trigger.tgtype` bits: 1 ROW, 2 BEFORE, 4 INSERT, 8 DELETE, 16 UPDATE.
   for missing in
     select t.tg from (values
@@ -680,6 +692,8 @@ begin
          and not tr.tgisinternal
          and tr.tgrelid = ('public.' || t.tbl)::regclass
          and pr.proname = t.fn
+         and pr.pronamespace = 'public'::regnamespace
+         and tr.tgenabled in ('O', 'A')                -- enabled for normal writes
          and ((tr.tgtype & 4)  <> 0) = t.want_insert   -- INSERT
          and ((tr.tgtype & 16) <> 0) = t.want_update   -- UPDATE
          and ((tr.tgtype & 8)  <> 0) = t.want_delete   -- DELETE
@@ -687,7 +701,7 @@ begin
          and  (tr.tgtype & 1)  <> 0                    -- FOR EACH ROW
     )
   loop
-    raise exception 'trigger % is missing, or sits on another table/function, or no longer fires with the events, timing and level it must — BEFORE ROW for the two that write NEW, AFTER ROW for the history sync (migration 0064)', missing;
+    raise exception 'trigger % is missing, DISABLED, sits on another table or on a same-named function outside public, or no longer fires with the events, timing and level it must — BEFORE ROW for the two that write NEW, AFTER ROW for the history sync (migration 0064)', missing;
   end loop;
 
   -- (8) THE DATABASE IS THE SOLE OWNER of the new history. The two writer
