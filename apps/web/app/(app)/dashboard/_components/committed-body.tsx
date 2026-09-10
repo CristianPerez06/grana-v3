@@ -109,7 +109,14 @@ export const CommittedBody = ({ summary, groups }: Props) => {
                 {group.icon}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[13.5px] font-extrabold text-text">{group.label}</span>
+                {/* Trunca igual que su bajada. Sin esto el rótulo envolvía a dos
+                    líneas ("Gastos / fijos") mientras la bajada se cortaba con
+                    puntos suspensivos: dos reglas distintas para el mismo
+                    desborde, en la misma fila. Es el mismo defecto que se
+                    corrigió en la tira Compartido (#98). */}
+                <span className="block truncate text-[13.5px] font-extrabold text-text">
+                  {group.label}
+                </span>
                 <span className="block truncate text-[11.5px] font-semibold text-text-soft">
                   {group.sub}
                 </span>
