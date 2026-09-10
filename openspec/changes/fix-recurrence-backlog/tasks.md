@@ -174,7 +174,7 @@ el comportamiento—, la verificación —tarea 2.8b— es la condición para el
       `createRecurrence` citaba `decideRecurrenceInstance`, el de `pauseRecurrence` decía que la
       próxima generación «se computa desde `last_generated_date` como siempre», y el de
       `acceptRecurrenceSuggestion` no decía por qué esa fecha importa.
-- [ ] 1.6 El generador deriva la **lista** de ocurrencias faltantes del calendario y del conjunto de
+- [x] 1.6 El generador deriva la **lista** de ocurrencias faltantes del calendario y del conjunto de
       `due_date` ya existentes, en lugar de pedir una fecha por vez.
       **Cableado y probado contra la base real.** `generateDueRecurrenceInstances` ya no llama a
       `decideRecurrenceInstance` ni lee `last_generated_date`: compone
@@ -320,7 +320,7 @@ el comportamiento—, la verificación —tarea 2.8b— es la condición para el
       **Orden de despliegue:** `0065` es aditiva y viaja con `0064` en la misma ventana (paso 1b). Lo
       que no puede es ir después del código: desde el paso 5 `deleteTransaction` la invoca, y sin la
       función borrar un movimiento que sembró una recurrencia falla para todos.
-- [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
+- [x] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
       paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior: hay que
       sacar antes las ramas de compatibilidad del trigger y las lecturas que todavía la muestran —el
       historial la ordena y la muestra—, y eso tiene su propia verificación.
@@ -328,6 +328,10 @@ el comportamiento—, la verificación —tarea 2.8b— es la condición para el
       abierta hasta que la entrega cierre: se verifica al final, comprobando que nada la haya violado
       en el camino. Cuenta igual en el inventario: tras cerrar `1.7` y `1.10b` con la auditoría, las
       abiertas de la etapa 1 son **cuatro** —`1.5`, `1.6`, `1.8` y esta—.
+      **Verificado al cierre:** el insert de una ocurrencia nueva sigue escribiendo
+      `scheduled_date: dueDate` junto a `due_date`, el historial sigue ordenando y mostrando por
+      `scheduled_date`, y el trigger de compatibilidad de `0064` sigue en pie. Nada de la entrega la
+      retiró, que es lo que esta condición pedía.
 - [x] 1.12 Tests de migración con el **caso exacto del #96** (regla cada 3 días, cursor 2026-06-10,
       pendiente del 13/06, hoy 2026-09-08): `reconstruct_from` queda en el cursor y las ocurrencias a
       reconstruir son 29 — julio 11, agosto 10, septiembre 3 — con la del 13/06 deduplicada. Y un
@@ -1020,13 +1024,18 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
 
 ## 5. Cierre
 
-- [ ] 5.1 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm lint:mobile`, `pnpm typecheck:mobile`.
+- [x] 5.1 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm lint:mobile`, `pnpm typecheck:mobile`.
 - [ ] 5.2 Archivar el change y aplicar los deltas al spec maestro de `transactions`
       (`RENAMED` + `MODIFIED` + `ADDED`), sin dejar secciones delta en el maestro.
-- [ ] 5.3 `pnpm openspec:check` en verde.
-- [ ] 5.4 Dejar anotado para la **migración C** (fuera de esta entrega): al retirar `scheduled_date`,
+- [x] 5.3 `pnpm openspec:check` en verde.
+- [x] 5.4 Dejar anotado para la **migración C** (fuera de esta entrega): al retirar `scheduled_date`,
       **no** eliminar `trg_recurrence_instance_compat` entero. Contiene la inmutabilidad de
       `due_date`, que es permanente; borrarlo reabre el agujero. Quitar solo las ramas de
       compatibilidad, o reemplazarlo por un guard con nombre propio.
+      **Dónde quedó anotado:** en el spec, no acá. Una nota en un change archivado la lee quien va a
+      buscarla; la regla tiene que encontrarla quien NO la está buscando. El delta de `transactions`
+      lo convierte en requisito —la inmutabilidad SHALL sobrevivir al retiro de la columna legada, y
+      quitar el guard entero está prohibido explícitamente—, así que al archivar viaja al spec
+      maestro y queda en el camino de cualquiera que toque esto después.
 - [ ] 5.5 Cerrar **#96** y **#118** con esta entrega — el #118 lo cierra la tarea 2.2b, que es el
       mismo código. **#104 ya no cierra acá**: se movió a `recurrence-undo` (etapa 3).

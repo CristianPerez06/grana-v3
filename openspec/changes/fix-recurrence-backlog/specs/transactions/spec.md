@@ -29,6 +29,11 @@ inmutable como cualquier otro.
 Una vez establecido, un vencimiento exacto SHALL ser inmutable: NO SHALL poder moverse a otra fecha
 ni volver a desconocido.
 
+Esa inmutabilidad SHALL sobrevivir al retiro de la columna legada de compatibilidad. Hoy la sostiene
+el mismo guard de base que deriva esa columna, así que la entrega que la retire NO SHALL eliminar el
+guard entero —eso reabriría el agujero que este change cierra—: SHALL quitar únicamente sus ramas de
+compatibilidad, o reemplazarlo por un guard con nombre propio que conserve la regla.
+
 El sistema SHALL distinguir cuatro instantes que hoy se pisan entre sí, y ninguno SHALL derivarse de
 otro:
 
