@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, Clock, Pencil, Repeat, Users, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { formatDateISO, getTodayAR } from '@/lib/date'
+import { formatDateISO, formatShortDate, getTodayAR } from '@/lib/date'
 import { getCategoryName } from '@/lib/categories/display'
 import {
   confirmRecurrenceInstance,
@@ -425,7 +425,10 @@ export const PendingRecurrencesBlock = ({
                     <span className="text-[12px] text-text-soft">
                       {t(WILL_CREATE_KEY[preview.kind], {
                         amount: formatted,
-                        date: preview.date,
+                        // Read by a person, not by a machine: the raw ISO sat
+                        // under a header saying "Jueves, 10 de septiembre".
+                        // Native already formatted it; this is what closes that gap.
+                        date: formatShortDate(preview.date),
                         account: preview.account ?? accountName,
                         destination: preview.destination ?? '—',
                       })}

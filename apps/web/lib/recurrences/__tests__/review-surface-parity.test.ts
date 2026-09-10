@@ -95,3 +95,13 @@ describe('a failed read of the pending occurrences is visible on both platforms'
     expect(source).not.toMatch(/data\s*\?\?\s*\[\]\s*$/m)
   })
 })
+
+describe('the "al registrarlo" line reads as a date, not as an ISO string', () => {
+  // Caught in QA: web interpolated `preview.date` raw, so the row said "el
+  // 2026-09-08" under a header reading "Jueves, 10 de septiembre". Native had
+  // always formatted it, so this was also the two platforms disagreeing.
+  it.each([WEB_BLOCK, NATIVE_BLOCK])('%s formats it', (file) => {
+    const source = read(file)
+    expect(source).toMatch(/date: formatShortDate\(/)
+  })
+})
