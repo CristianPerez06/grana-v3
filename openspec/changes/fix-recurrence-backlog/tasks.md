@@ -61,8 +61,8 @@ inofensivo, y en esa ventana nada lo detecta. Dentro de la ventana, `0064` va pr
 antes de lo que guarda**.
 
 **El PR 4 no se parte antes de la activación.** Si por tamaño hubiera que partirlo igual, la
-activación queda en la última parte, después del gate de versión y de que todas las superficies
-soporten varias pendientes.
+activación queda en la última parte, después de la verificación de 2.8b y de que todas las
+superficies soporten varias pendientes.
 
 ## 1. Cimientos: modelo persistente
 
@@ -753,8 +753,9 @@ se vea y se pueda reintentar: eso es la tarea 4.5b, y está en el mínimo.
 
 ### → `recurrence-server-generation`
 
-La otra mitad de 2.8b: generar del lado del servidor, en vez de depender de que el cliente abra la
-app. Cubre además a quien no la abre nunca. Es mejor que el gate de versión; es más grande.
+Lo que 2.8b necesita en cuanto haya builds nativos distribuidos: generar del lado del servidor, en
+vez de depender de que el cliente abra la app. Cubre además a quien no la abre nunca. Es lo único que
+alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; es más grande.
 
 ## 4. Visibilidad y paridad
 
@@ -785,38 +786,33 @@ app. Cubre además a quien no la abre nunca. Es mejor que el gate de versión; e
 
 Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en web y en nativo.
 
-- [x] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo
+- [ ] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo
       nunca ejecuta el generador nuevo, así que su atraso no se materializa y el #96 sigue vivo para
-      él — ahora sin el índice que lo contenía. De las dos opciones posibles, **este recorte toma el
-      gate de versión mínima al arrancar la app nativa**, por ser la más chica. La generación del lado
-      del servidor (etapa 2 de la decisión 8), que además cubre a quien no abre la app, es mejor y
-      queda en `recurrence-server-generation`. El gate se despliega **antes** que la tarea 2.8.
-      **Implementación.** Migración `0066`: `app_release_requirements`, una fila por plataforma
-      (`min_version`, `store_url`), con `CHECK` de `major.minor.patch`. El mínimo vive en el servidor
-      porque un número compilado en un build no se puede subir para los builds ya instalados, que son
-      exactamente los que importan. `store_url` viaja con el requisito porque el id de App Store no
-      existe hasta publicar la app; `NULL` deja la pantalla sin botón, no sin explicación.
-      **Se siembra inerte en `0.0.0`**: aplicar la migración no bloquea a nadie, y armar el gate es
-      una acción de operador con el service role, después de que el build esté publicado en las dos
-      tiendas. Los clientes no tienen `insert`/`update`/`delete`: subir el piso deja a todo el mundo
-      afuera de la app.
-      **Falla abierta en todos los desconocidos** —lectura fallida, fila ausente, versión que
-      ninguna de las dos partes puede parsear—: esto corre antes que nada al arrancar, así que un
-      gate que se cierra ante un problema de red deja la app inutilizable para siempre. La
-      comparación es parte por parte, nunca como texto: `'1.10.0' < '1.9.0'` dejaría pasar
-      justamente los builds que quiere frenar.
-      **La lee solo un usuario con sesión.** Bloquear también en el login sería más lindo y el número
-      ni siquiera es secreto, pero `anon` sin privilegios sobre ninguna tabla de `public` es un
-      invariante de este esquema (`harden-supabase-anon-boundary`, verificado en 8.2C.3) y una
-      excepción cómoda es cómo deja de serlo. El gate cierra apenas hay sesión, que es además el
-      único estado en el que un cliente viejo puede hacer el daño que esto evita; por eso la
-      comprobación se repite en `SIGNED_IN`.
-      Tests: 16 de la lógica pura en `@grana/supabase` y 7 de la migración sobre PGlite (lectura con
-      sesión, sin sesión rechazada, ninguna escritura desde el cliente, siembra inerte, `CHECK`).
+      él — ahora sin el índice que lo contenía.
+      **Un gate de versión mínima en el cliente NO lo resuelve, y por eso se revirtió** (estaba
+      implementado y se sacó): el gate viaja dentro del build nuevo, así que la app ya instalada —la
+      única que importa— no lo ejecuta, no conoce la tabla que lo alimenta y no hay `expo-updates`
+      que le haga llegar ese código. Subir el mínimo no la toca. Frena builds *futuros*, que no es el
+      problema. Dos defectos más que aparecieron en la revisión y que hoy quedan sin efecto pero
+      valen si esto vuelve: `expo.version` nunca se mueve de `1.0.0` con `appVersionSource: remote`
+      —lo que incrementa `autoIncrement` es `versionCode`/`buildNumber`, y Expo recomienda leer la
+      versión nativa con `expo-application`—, y el estado `blocked` tiene que ser irreversible hasta
+      reiniciar, con las respuestas obsoletas ignoradas y una lectura fallida conservando el estado
+      anterior.
+      **Lo que sí resuelve** es del lado del servidor: rechazar las escrituras del cliente viejo, o
+      generar el atraso sin depender de qué cliente abrió la app. Los dos son
+      `recurrence-server-generation`.
+      **Para esta primera activación la condición se VERIFICA, no se construye**: no hay builds
+      nativos distribuidos —el pipeline de EAS es interno, APK y simulador, y el commit `1cc2182a`
+      que lo montó dice "without going through TestFlight / Play Store yet"— y se confirmó que no
+      queda ningún build anterior en uso. Deja de valer en cuanto haya una app publicada.
+      **Paso obligatorio antes de 2.8:** confirmar, en el momento de activar, que sigue sin haber
+      ningún cliente nativo anterior en uso. Si lo hay, 2.8 no se aplica hasta tener el control del
+      lado del servidor.
 - [ ] 2.8 **Migración B · activación**, en archivo aparte
       (`<próximo libre>_recurrence_backlog_activate.sql`, número elegido contra `main` al crearla),
-      y **solo con los pasos 2 a 7 del orden ya desplegados** —generador, reads, dashboard, cursor,
-      superficies de web y nativo, y el gate de versión—: eliminar
+      y **solo con los pasos 2 a 6 del orden ya desplegados** —generador, reads, dashboard, cursor y
+      superficies de web y nativo—, más la verificación de 2.8b: eliminar
       `recurrence_instances_one_pending_per_rule`. Desde acá existe el
       backlog. Las constraints de `resolution_kind` ya entraron en la expansión (tarea 1.4b).
 - [ ] 2.8c **Regresión que solo se puede escribir con la activación**, y que hoy falta: la prueba de

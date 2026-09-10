@@ -226,27 +226,6 @@ export type Database = {
           },
         ]
       }
-      app_release_requirements: {
-        Row: {
-          min_version: string
-          platform: string
-          store_url: string | null
-          updated_at: string
-        }
-        Insert: {
-          min_version: string
-          platform: string
-          store_url?: string | null
-          updated_at?: string
-        }
-        Update: {
-          min_version?: string
-          platform?: string
-          store_url?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       card_networks: {
         Row: {
           brand_color: string | null

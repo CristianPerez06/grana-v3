@@ -814,39 +814,6 @@ begin
     raise exception 'authenticated cannot execute public.delete_movement_unlinking_seed (migration 0065)';
   end if;
 
-  -- (12) The minimum supported native client (migration 0066). It is a
-  -- REQUIREMENT FOR THE ACTIVATION: dropping the single-pending index while a
-  -- user is still on a build that does not run the new generator leaves #96
-  -- alive for them, now with nothing containing it. Without this table the app
-  -- has no way to say "this build is too old".
-  if to_regclass('public.app_release_requirements') is null then
-    raise exception 'public.app_release_requirements is missing (migration 0066) — the activation cannot be gated';
-  end if;
-
-  select count(*) into v_offend
-    from public.app_release_requirements
-   where platform in ('ios', 'android');
-  if v_offend <> 2 then
-    raise exception 'app_release_requirements: expected one row per platform (ios, android), found %', v_offend;
-  end if;
-
-  -- A value the client cannot parse makes the gate fail OPEN, so a typo would
-  -- silently disarm it. The CHECK is what stops one from being written.
-  if not exists (
-    select 1 from pg_constraint
-     where conrelid = 'public.app_release_requirements'::regclass
-       and conname = 'chk_app_release_requirements_min_version'
-  ) then
-    raise exception 'CHECK chk_app_release_requirements_min_version does not exist — an unparseable minimum would disarm the version gate';
-  end if;
-
-  -- Readable by a signed-in user, and by `anon` never: 8.2C.3 already enforces
-  -- the second half over every table, and this is the one place where making an
-  -- exception would have been tempting.
-  if not has_table_privilege('authenticated', 'public.app_release_requirements', 'SELECT') then
-    raise exception 'authenticated cannot read public.app_release_requirements — the version gate would fail open for everyone';
-  end if;
-
   raise notice '✓ 8.1J — occurrence identity (0064): columns, tables, indexes, composite FKs, triggers and sole ownership OK; the single-pending index is still alive; the atomic seed repair (0065) is in place';
 end $$;
 

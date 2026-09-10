@@ -56,8 +56,9 @@ indican, para que el change que lo tome no empiece de cero):
 **Non-Goals**
 
 - Recordatorios, push y mail. Necesitan la generación del lado del servidor, que **no entra acá**: el
-  mínimo cubre al cliente viejo con un gate de versión, y generar del lado del servidor es
-  `recurrence-server-generation`. El sistema de avisos es su propio change, encima de aquél.
+  mínimo no tiene que cubrir al cliente viejo porque todavía no hay builds nativos distribuidos (ver
+  decisión 17), y generar del lado del servidor es `recurrence-server-generation`. El sistema de
+  avisos es su propio change, encima de aquél.
 - Registro automático de débitos. Ver decisión 6.
 - Ajuste de importes por índice, importes estimados, calendarios avanzados, pausa con fecha.
 - Crear movimientos históricos automáticamente, o reconstruir vencimientos anteriores al horizonte.
@@ -549,9 +550,7 @@ La expansión son dos migraciones que viajan juntas, y recién después el despl
 |---|---|---|---|
 | **A · Expansión** | `0064_recurrence_identity_expand.sql` | Columnas, tablas nuevas, backfill, trigger de compatibilidad | **Sin cambios.** El índice de pendiente única sigue vivo. |
 | **A' · Expansión** | `0065_delete_seeded_movement_atomically.sql` | Crea `delete_movement_unlinking_seed` | **Sin cambios**: nadie la llama todavía. Tiene que estar aplicada antes del despliegue, porque el código nuevo la invoca al borrar un movimiento semilla. |
-| **A'' · Expansión** | `0066_min_supported_app_version.sql` | Crea `app_release_requirements`, sembrada en `0.0.0` | **Sin cambios**: el gate existe pero no bloquea a nadie. Armarlo es una acción de operador posterior, no un efecto del deploy. |
 | — | *(despliegue de web y nativo con el modelo nuevo)* | | |
-| — | *(el operador sube `min_version` cuando el build está publicado en las dos tiendas)* | | |
 | **B · Activación** | `<próximo libre>_recurrence_backlog_activate.sql` | Elimina el índice de pendiente única | El backlog empieza a existir. |
 | **C · Retiro** | entrega posterior | Retira `scheduled_date` y las **ramas de compatibilidad** del trigger | — |
 
@@ -563,16 +562,24 @@ singular. Dos mecanismos, complementarios:
   `recurrence_instances` que, cuando el cliente no los provee, deriva `due_date` de `scheduled_date`
   y pone `resolution_kind = 'created'` al pasar a `confirmed`. Una escritura de un cliente viejo
   produce así una fila válida en el modelo nuevo sin que el cliente sepa nada. Se retira en C.
-- **Versión mínima (requisito para activar, no una mejora).** Una versión anterior la llamaba
-  "recomendada, para la experiencia". Es más que eso: **un usuario que solo conserve el cliente viejo
+- **El cliente viejo (requisito para activar, no una mejora).** Una versión anterior lo llamaba
+  "recomendado, para la experiencia". Es más que eso: **un usuario que solo conserve el cliente viejo
   nunca ejecuta el generador nuevo**, así que su atraso no se materializa nunca y sigue sin backlog —
   el #96 sigue vivo para él. El trigger protege la integridad de lo que ese cliente escribe; no hace
   que ejecute lógica que no tiene.
 
-  Por eso, antes de activar hace falta **una de dos**: un gate de versión mínima al arrancar la app
-  nativa, o **generación del lado del servidor**, que materializa el atraso sin depender de qué
-  cliente abrió la app. La segunda es la que además resuelve el caso de quien no abre la app en
-  absoluto, y es la etapa 2 de la decisión 8.
+  **Y un gate de versión mínima en el cliente NO lo resuelve.** Se intentó y se descartó, por una
+  razón de lógica y no de implementación: el gate viaja dentro del build nuevo, así que la app ya
+  instalada —la única que importa acá— no lo ejecuta, no conoce la tabla que lo alimenta y no hay
+  `expo-updates` que le haga llegar ese código. Subir el mínimo no la toca. Frena builds *futuros*.
+
+  Quedan dos caminos reales, los dos del lado del servidor: **rechazar las escrituras del cliente
+  viejo**, o **generar el atraso del lado del servidor**, que además cubre a quien no abre la app y
+  es la etapa 2 de la decisión 8. Los dos son `recurrence-server-generation`.
+
+  Para la PRIMERA activación no hace falta ninguno: no hay builds nativos distribuidos —el pipeline
+  de EAS es interno— y no queda ninguno anterior en uso. La condición se cumple **verificándola**,
+  no construyéndola; deja de valer en cuanto haya una app publicada.
 
 ### Decisión 17b · Retirar `scheduled_date` es gradual, no parte de esta entrega
 

@@ -194,10 +194,22 @@ desde web. La paridad completa es `recurrence-review-ux`.
 ### Y los clientes que no se actualizan
 
 Un usuario que se quede en una versión vieja de la app nativa nunca ejecuta el generador nuevo: su
-atraso no se materializa y el #96 **sigue vivo para él** — ahora sin el índice que lo contenía. Por
-eso esta entrega incluye un **gate de versión mínima** en el cliente nativo, que se despliega
-**antes** de retirar el índice. La alternativa que además cubre a quien no abre la app —generar del
-lado del servidor— es mejor, pero es un change aparte: `recurrence-server-generation`.
+atraso no se materializa y el #96 **sigue vivo para él** — ahora sin el índice que lo contenía.
+
+Una versión anterior de esta propuesta resolvía eso con un **gate de versión mínima en el cliente
+nativo**. No sirve, y la razón es de lógica, no de implementación: **el gate viaja dentro del build
+nuevo**. Una app ya instalada no lo ejecuta, no conoce la tabla que lo alimenta y no hay
+`expo-updates` que le haga llegar ese código. Subir el mínimo no la toca. Un gate cliente frena
+builds *futuros*; el problema son los que ya están instalados.
+
+Para esta primera activación **no hace falta**: no hay distribución en tiendas —el pipeline de EAS es
+interno, APK y simulador, y el commit que lo montó lo dice— y se verificó que no queda ningún build
+anterior en uso. La condición se vuelve entonces una **verificación previa a la activación**, no una
+pieza de software: ver la tarea 2.8b.
+
+Cuando existan builds nativos distribuidos esto vuelve a hacer falta, y solo lo cubre algo del lado
+del servidor —rechazar las escrituras del cliente viejo, o generar el atraso sin depender de qué
+cliente abrió la app—: `recurrence-server-generation`.
 
 ### Orden de despliegue
 
@@ -205,19 +217,17 @@ No es un detalle de implementación, porque un orden mal elegido deja un interva
 actual —la base admitiendo varias pendientes mientras la app todavía muestra una sola o duplica
 importes—:
 
-1. **Migraciones de expansión** (`0064` + `0065` + `0066`), en la misma ventana: identidad, piso de
-   reconstrucción, guardas, la reparación atómica de la semilla borrada
-   (`delete_movement_unlinking_seed`) y la tabla de versión mínima del cliente nativo. Ninguna cambia
-   comportamiento por sí sola —`0065` crea una función que todavía nadie llama y `0066` se siembra
-   inerte en `0.0.0`— y el índice de pendiente única sigue vivo. `0065` tiene que estar aplicada
-   **antes** que el código, porque desde el paso 2 `deleteTransaction` la invoca: sin la función,
-   borrar un movimiento semilla falla para todos.
+1. **Migraciones de expansión** (`0064` + `0065`), en la misma ventana: identidad, piso de
+   reconstrucción, guardas y la reparación atómica de la semilla borrada
+   (`delete_movement_unlinking_seed`). Ninguna de las dos cambia comportamiento por sí sola —`0065`
+   crea una función que todavía nadie llama— y el índice de pendiente única sigue vivo. `0065` tiene
+   que estar aplicada **antes** que el código, porque desde el paso 2 `deleteTransaction` la invoca:
+   sin la función, borrar un movimiento semilla falla para todos.
 2. **Código**: generador con tandas continuables, versiones de cronograma y pausas, reads adaptados,
    dashboard y proyección leyendo las ocurrencias existentes, dejar de escribir el cursor, superficies
-   de web y nativo, copy, error de materialización visible, gate de versión.
-3. **Subir `min_version`**, cuando el build nuevo ya está publicado en las dos tiendas. Es una
-   acción de operador con el service role, no un deploy: desde acá un cliente viejo deja de entrar,
-   que es la condición para el paso siguiente.
+   de web y nativo, copy, error de materialización visible.
+3. **Verificar que no queda ningún cliente nativo anterior en uso** (tarea 2.8b). No es software: es
+   una comprobación, y es la condición para el paso siguiente.
 4. **Migración de activación**, al final: retira `recurrence_instances_one_pending_per_rule`.
 
 Los pasos 1 y 2 comparten **una sola ventana de producción**: la verificación transaccional de `0064`
@@ -280,7 +290,7 @@ verificarlo y antes de que exista el anclaje que lo vuelve inofensivo.
   existentes en vez de proyectarlos desde el cursor. **Es lo que elimina el doble conteo de #118.**
 - `apps/web` — bloque de vencimientos por revisar en el dashboard, materialización a nivel layout,
   error visible con reintento.
-- `apps/mobile` — las mismas superficies, más la generación en el feed y el gate de versión mínima.
+- `apps/mobile` — las mismas superficies, más la generación en el feed.
 - **Datos existentes**: las reglas hoy trabadas van a materializar su atraso. Es el efecto buscado, y
   hay que anticiparlo: usuarios que hoy ven un pendiente van a ver varios.
 - `recurrence_instances` gana **cómo se resolvió** cada ocurrencia (movimiento creado por la
@@ -303,7 +313,7 @@ comportamientos que salieron vive en el historial de este archivo.
 | **Historial enriquecido** (vencimiento / pago / carga por separado) | El dato ya se guarda; falta mostrarlo | `recurrence-history` |
 | **Resolución masiva** "ponerse al día" y "usar este importe de acá en más" | Con el backlog visible ya se puede resolver uno por uno. La pasada en bloque es velocidad, no capacidad | `recurrence-catch-up` |
 | **UX avanzada**: aviso de historial no reconstruido, sello "Pausada", paridad nativa del formulario de resolución, agrupar por regla, y el diseño cuidado del error de materialización | Ninguno cambia lo que se puede hacer, solo cuán cómodo es | `recurrence-review-ux` |
-| **Generación del lado del servidor** | El gate de versión resuelve el caso bloqueante con menos trabajo | `recurrence-server-generation` |
+| **Generación del lado del servidor** | Sin builds nativos distribuidos, nadie se queda en un cliente viejo | `recurrence-server-generation` |
 | **Retiro de `scheduled_date`** (migración C) | Ya estaba fuera: exige que ningún cliente viejo quede escribiéndola | — |
 
 Lo que **no** se difirió, aunque se propuso: el error de materialización visible con reintento (en su
