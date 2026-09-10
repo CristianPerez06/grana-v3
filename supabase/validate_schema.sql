@@ -848,6 +848,88 @@ begin
   raise notice '✓ 8.1J — occurrence identity (0064): columns, tables, indexes, composite FKs, triggers and sole ownership OK; the atomic seed repair (0065) is in place; the backlog is ACTIVATED (0066), so a rule may owe several unresolved occurrences';
 end $$;
 
+-- ── 8.1K · a schedule version can stop before the next one starts (0068) ───
+-- Deliberately OUTSIDE the shared block: that block describes the expansion, and
+-- `validate_schema_transition.sql` runs it in a window where 0068 does not exist
+-- yet. This section belongs to the final state only.
+do $$
+declare
+  v_check_def text;
+  v_orphans   int;
+begin
+  if not exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'recurrence_schedule_versions'
+       and column_name = 'effective_until'
+  ) then
+    raise exception 'recurrence_schedule_versions.effective_until is missing: 0068 was not applied, so a schedule version cannot stop before the next one starts and correcting an anchor duplicates the cycle in flight';
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'recurrences'
+       and column_name = 'schedule_effective_from'
+  ) then
+    raise exception 'recurrences.schedule_effective_from is missing: the reads that do not walk versions have no floor, and during a gap they announce occurrences the generator will never create';
+  end if;
+
+  -- The floor decides which occurrences exist. A rule without one falls back to
+  -- projecting from its raw columns, which is the drift this column closes.
+  select count(*) into v_orphans
+    from public.recurrences where schedule_effective_from is null;
+  if v_orphans > 0 then
+    raise exception 'recurrences: % rows without schedule_effective_from', v_orphans;
+  end if;
+
+  select pg_get_constraintdef(c.oid) into v_check_def
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+   where n.nspname = 'public' and t.relname = 'recurrence_schedule_versions'
+     and c.conname = 'chk_schedule_versions_effective_range';
+  if v_check_def is null then
+    raise exception 'chk_schedule_versions_effective_range is missing: a version could end before it starts';
+  end if;
+  if v_check_def not like '%effective_until%effective_from%' then
+    raise exception 'chk_schedule_versions_effective_range does not compare the two ends: %', v_check_def;
+  end if;
+
+  -- No version may already violate it, whatever the CHECK says today.
+  if exists (
+    select 1 from public.recurrence_schedule_versions
+     where effective_until is not null and effective_until < effective_from
+  ) then
+    raise exception 'recurrence_schedule_versions: a version ends before it starts';
+  end if;
+
+  -- Moving an anchor goes through the RPC, and the anonymous role executes
+  -- neither of the two functions it needs (0067's rule, applied at birth).
+  if to_regprocedure('public.update_recurrence_schedule(uuid, jsonb, date)') is null then
+    raise exception 'update_recurrence_schedule is missing: an anchor could be moved without saying from when, which is what duplicated a salary in QA';
+  end if;
+  if to_regprocedure('public.recurrence_candidate_effective_dates(date, int, text, date)') is null then
+    raise exception 'recurrence_candidate_effective_dates is missing: the server cannot recompute the dates it validates against';
+  end if;
+  if has_function_privilege('anon', 'public.update_recurrence_schedule(uuid, jsonb, date)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.recurrence_candidate_effective_dates(date, int, text, date)', 'EXECUTE') then
+    raise exception 'COBERTURA RLS: anon conserva EXECUTE sobre las funciones de 0068';
+  end if;
+  if not has_function_privilege('authenticated', 'public.update_recurrence_schedule(uuid, jsonb, date)', 'EXECUTE') then
+    raise exception 'authenticated cannot execute update_recurrence_schedule: moving an anchor is impossible';
+  end if;
+
+  if not exists (
+    select 1 from pg_trigger
+     where tgrelid = 'public.recurrences'::regclass
+       and tgname = 'trg_recurrence_resolve_schedule_effective_from'
+       and not tgisinternal
+  ) then
+    raise exception 'trg_recurrence_resolve_schedule_effective_from is missing: the floor would be whatever a client sends';
+  end if;
+
+  raise notice '✓ 8.1K — the schedule gap (0068): effective_until, the floor on every rule, the RPC that requires an effective date, and anon kept out';
+end $$;
+
 -- ┌── SHARED CONTRACT · occurrence identity ─────────────────────────────────┐
 -- │ BYTE-IDENTICAL in three files: migration 0066, validate_schema.sql and   │
 -- │ validate_schema_transition.sql. SQL applied by hand has no include, so   │

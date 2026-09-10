@@ -77,15 +77,30 @@ alter table public.recurrences
 comment on column public.recurrences.schedule_effective_from is
   'Since when the current schedule rules. Maintained by recurrence_sync_schedule_and_pauses.';
 
+-- The version that describes the schedule the rule has TODAY, not simply the
+-- newest one and not `start_date`. They usually coincide; where they do not, the
+-- newest version may describe a schedule the rule no longer has —a future
+-- version left by an edit— and `start_date` says when the rule began, which is a
+-- different question from when its current schedule started ruling.
+-- Correlated subqueries rather than a lateral join: in an UPDATE the FROM list
+-- cannot reference the target row, and the choice depends on it.
 update public.recurrences r
-   set schedule_effective_from = v.effective_from
-  from (
-    select distinct on (recurrence_id) recurrence_id, effective_from
-      from public.recurrence_schedule_versions
-     order by recurrence_id, effective_from desc
-  ) v
- where v.recurrence_id = r.id
-   and r.schedule_effective_from is distinct from v.effective_from;
+   set schedule_effective_from = coalesce(
+     (select v.effective_from
+        from public.recurrence_schedule_versions v
+       where v.recurrence_id = r.id
+         and v.interval_count = r.interval_count
+         and v.interval_unit  = r.interval_unit
+         and v.anchor_date    = r.start_date
+       order by v.effective_from desc
+       limit 1),
+     (select v.effective_from
+        from public.recurrence_schedule_versions v
+       where v.recurrence_id = r.id
+       order by v.effective_from desc
+       limit 1),
+     r.start_date
+   );
 
 commit;
 
@@ -113,6 +128,13 @@ begin
     NEW.schedule_effective_from := NEW.start_date;
     return NEW;
   end if;
+
+  -- THE COLUMN BELONGS TO THE TRIGGER. Whatever the client sent is discarded
+  -- before anything else: a floor a client could move is a floor that stops
+  -- meaning anything, and this one decides which occurrences exist. Column-level
+  -- privileges would say it more declaratively, but they would also block the
+  -- RPC, which runs as the caller on purpose.
+  NEW.schedule_effective_from := OLD.schedule_effective_from;
 
   if NEW.start_date is distinct from OLD.start_date then
     -- THE ANSWER IS REQUIRED. Moving the anchor is ambiguous by nature: the
@@ -229,7 +251,7 @@ commit;
 
 begin;
 
--- ── 5 · The only way to move an anchor ─────────────────────────────────────
+-- ── 5 · The two dates the user chooses between ────────────────────────────
 --
 -- The patch and the chosen effective date travel in ONE transaction, because
 -- half of this edit is not a valid state: an anchor moved without an effective
@@ -240,6 +262,77 @@ begin;
 -- The patchable columns are enumerated on purpose. A generic "merge this jsonb"
 -- would also let a client set `user_id`.
 
+-- The two dates the user is asked to choose between, RECOMPUTED HERE. The
+-- question is drawn by the client, but the answer is verified against the
+-- calendar by the database: a date that reaches the trigger unchecked opens a
+-- version on a day the schedule never produces, and every occurrence after it
+-- lands on the wrong phase.
+--
+-- Generated from the anchor, not by stepping a cursor: Postgres clamps
+-- `anchor + n months` to the last valid day the same way the walker does with
+-- its anchor, so a rule on the 31st comes back to the 31st after February.
+create or replace function public.recurrence_candidate_effective_dates(
+  p_anchor         date,
+  p_interval_count int,
+  p_interval_unit  text,
+  p_from           date
+)
+returns table (effective_from date)
+language plpgsql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  v_step interval := case p_interval_unit
+                       when 'day'   then make_interval(days   => p_interval_count)
+                       when 'week'  then make_interval(weeks  => p_interval_count)
+                       when 'month' then make_interval(months => p_interval_count)
+                       when 'year'  then make_interval(years  => p_interval_count)
+                     end;
+  v_skip int;
+begin
+  if v_step is null or p_interval_count < 1 then
+    raise exception 'unknown schedule: % every %', p_interval_unit, p_interval_count
+      using errcode = 'check_violation';
+  end if;
+
+  -- Jump most of the way arithmetically instead of walking from the anchor: a
+  -- rule every 3 days anchored years back would be tens of thousands of steps.
+  v_skip := greatest(
+    0,
+    case p_interval_unit
+      when 'day'   then (p_from - p_anchor) / (p_interval_count * 1)
+      when 'week'  then (p_from - p_anchor) / (p_interval_count * 7)
+      when 'month' then ((extract(year from age(p_from, p_anchor))::int * 12
+                          + extract(month from age(p_from, p_anchor))::int) / p_interval_count)
+      when 'year'  then (extract(year from age(p_from, p_anchor))::int / p_interval_count)
+    end - 1
+  );
+
+  return query
+    select d
+      from generate_series(v_skip, v_skip + 40) as n,
+           lateral (select (p_anchor + (v_step * n))::date as d) x
+     where d >= p_from
+     order by d
+     limit 2;
+end $$;
+
+-- ── 6 · The only way to move an anchor ─────────────────────────────────────
+--
+-- The patch and the chosen effective date travel in ONE transaction, because
+-- half of this edit is not a valid state: an anchor moved without an effective
+-- date is the bug, and an effective date without the anchor is nothing. The
+-- setting is `true` (transaction-local), so it cannot leak into another
+-- statement.
+--
+-- SECURITY INVOKER on purpose: the update has to be refused by the same RLS that
+-- refuses every other write. A definer function would be the one place in the
+-- module where ownership is checked by hand.
+--
+-- The patchable columns are enumerated on purpose. A generic "merge this jsonb"
+-- would also let a client set `user_id`.
 create or replace function public.update_recurrence_schedule(
   p_id                      uuid,
   p_patch                   jsonb,
@@ -250,19 +343,45 @@ language plpgsql
 security invoker
 set search_path = public, pg_temp
 as $$
+declare
+  v_rule    public.recurrences%rowtype;
+  v_next    public.recurrences%rowtype;
+  v_today   date := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
+  v_ok      boolean;
 begin
+  -- Locked for the whole decision: the candidates are computed from the rule's
+  -- own schedule, and a concurrent edit between reading it and writing would
+  -- validate the date against a calendar that no longer applies.
+  select * into v_rule from public.recurrences where id = p_id for update;
+  if not found then
+    raise exception 'recurrence % not found', p_id using errcode = 'no_data_found';
+  end if;
+
+  -- The patch, merged over the current row, is what the new schedule WILL be.
+  v_next := jsonb_populate_record(v_rule, p_patch);
+
+  select exists (
+    select 1 from public.recurrence_candidate_effective_dates(
+      v_next.start_date, v_next.interval_count, v_next.interval_unit, v_today
+    ) c where c.effective_from = p_schedule_effective_from
+  ) into v_ok;
+
+  if not v_ok then
+    raise exception 'the effective date % is not one of the next two occurrences of that schedule', p_schedule_effective_from
+      using errcode = 'check_violation';
+  end if;
+
   perform set_config('grana.schedule_effective_from', p_schedule_effective_from::text, true);
 
   update public.recurrences r
      set (amount, frequency, interval_count, interval_unit, start_date, end_date,
           description, category_id, subcategory_id, account_id,
           transfer_destination_account_id, max_occurrences)
-       = (select p.amount, p.frequency, p.interval_count, p.interval_unit, p.start_date,
-                 p.end_date, p.description, p.category_id, p.subcategory_id, p.account_id,
-                 p.transfer_destination_account_id, p.max_occurrences
-            from jsonb_populate_record(r, p_patch) p)
-   where r.id = p_id
-     and r.user_id = auth.uid();
+       = (v_next.amount, v_next.frequency, v_next.interval_count, v_next.interval_unit,
+          v_next.start_date, v_next.end_date, v_next.description, v_next.category_id,
+          v_next.subcategory_id, v_next.account_id, v_next.transfer_destination_account_id,
+          v_next.max_occurrences)
+   where r.id = p_id;
 
   if not found then
     raise exception 'recurrence % not found', p_id using errcode = 'no_data_found';
@@ -274,6 +393,10 @@ end $$;
 revoke execute on function public.update_recurrence_schedule(uuid, jsonb, date) from public;
 revoke execute on function public.update_recurrence_schedule(uuid, jsonb, date) from anon;
 grant  execute on function public.update_recurrence_schedule(uuid, jsonb, date) to authenticated;
+
+revoke execute on function public.recurrence_candidate_effective_dates(date, int, text, date) from public;
+revoke execute on function public.recurrence_candidate_effective_dates(date, int, text, date) from anon;
+grant  execute on function public.recurrence_candidate_effective_dates(date, int, text, date) to authenticated;
 
 -- ── Self-check ─────────────────────────────────────────────────────────────
 DO $check$
@@ -298,8 +421,9 @@ begin
     raise exception '0068 failed: recurrences.schedule_effective_from is missing';
   end if;
 
-  if has_function_privilege('anon', 'public.update_recurrence_schedule(uuid, jsonb, date)', 'EXECUTE') then
-    raise exception '0068 failed: anon can execute update_recurrence_schedule';
+  if has_function_privilege('anon', 'public.update_recurrence_schedule(uuid, jsonb, date)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.recurrence_candidate_effective_dates(date, int, text, date)', 'EXECUTE') then
+    raise exception '0068 failed: anon can execute one of the new functions';
   end if;
 
   if not has_function_privilege('authenticated', 'public.update_recurrence_schedule(uuid, jsonb, date)', 'EXECUTE') then

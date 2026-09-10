@@ -756,6 +756,7 @@ export type Database = {
           anchor_date: string
           created_at: string
           effective_from: string
+          effective_until: string | null
           id: string
           interval_count: number
           interval_unit: string
@@ -767,6 +768,7 @@ export type Database = {
           anchor_date: string
           created_at?: string
           effective_from: string
+          effective_until: string | null
           id?: string
           interval_count: number
           interval_unit: string
@@ -778,6 +780,7 @@ export type Database = {
           anchor_date?: string
           created_at?: string
           effective_from?: string
+          effective_until?: string | null
           id?: string
           interval_count?: number
           interval_unit?: string
@@ -839,6 +842,7 @@ export type Database = {
           max_occurrences: number | null
           movement_type: string
           reconstruct_from: string
+          schedule_effective_from: string | null
           start_date: string
           status: string
           subcategory_id: string | null
@@ -864,6 +868,7 @@ export type Database = {
           max_occurrences?: number | null
           movement_type: string
           reconstruct_from?: string
+          schedule_effective_from?: string | null
           start_date: string
           status?: string
           subcategory_id?: string | null
@@ -889,6 +894,7 @@ export type Database = {
           max_occurrences?: number | null
           movement_type?: string
           reconstruct_from?: string
+          schedule_effective_from?: string | null
           start_date?: string
           status?: string
           subcategory_id?: string | null

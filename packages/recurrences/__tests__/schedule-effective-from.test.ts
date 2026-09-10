@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { PGlite } from '@electric-sql/pglite'
 import {
@@ -80,6 +82,21 @@ const floorOf = async (ruleId: string): Promise<string | null> => {
   return rows[0].f
 }
 
+/**
+ * The two dates the user would be offered, asked to the same function the RPC
+ * validates against. The tests take their dates from HERE and not from the
+ * calendar of the day they run: an anchor written by hand only lines up with
+ * today by luck, and a suite that depends on today's day of the month is a suite
+ * that breaks tomorrow.
+ */
+const candidatesFor = async (anchor: string): Promise<[string, string]> => {
+  const { rows } = await db.query<{ effective_from: string }>(
+    `select effective_from::text from public.recurrence_candidate_effective_dates(
+       '${anchor}'::date, 1, 'month', ((now() at time zone 'America/Argentina/Buenos_Aires')::date))`,
+  )
+  return [rows[0].effective_from, rows[1].effective_from]
+}
+
 const correctAnchor = (ruleId: string, anchor: string, effectiveFrom: string) =>
   db.exec(`
     select public.update_recurrence_schedule(
@@ -96,6 +113,20 @@ describe('the effective date is required, not inferred', () => {
     const state = await sqlstateOf(
       db,
       `update public.recurrences set start_date = '2026-06-10' where id = '${rule}'`,
+    )
+    expect(state).toBe('23514')
+  })
+
+  it('rejects a date the schedule never produces', async () => {
+    // The client draws the question; the database recomputes the answer. A date
+    // that got through unchecked would open a version on a day off the calendar,
+    // and every occurrence after it would land on the wrong phase.
+    const rule = await seedRule()
+    const [immediate] = await candidatesFor('2026-06-10')
+    const state = await sqlstateOf(
+      db,
+      `select public.update_recurrence_schedule('${rule}'::uuid,
+         jsonb_build_object('start_date', '2026-06-10'), '${shift(immediate, 1)}'::date)`,
     )
     expect(state).toBe('23514')
   })
@@ -124,9 +155,14 @@ describe('the effective date is required, not inferred', () => {
 
 describe('the outgoing version is closed so the two never overlap', () => {
   it('closes it yesterday when the new one starts today', async () => {
-    const rule = await seedRule()
+    // Anchored on today's own day of the month, so the FIRST candidate is today.
     const now = await today()
-    await correctAnchor(rule, '2026-06-10', now)
+    const anchor = `2026-06-${now.slice(8)}`
+    const rule = await seedRule()
+    const [immediate] = await candidatesFor(anchor)
+    expect(immediate).toBe(now)
+
+    await correctAnchor(rule, anchor, immediate)
 
     const versions = await versionsOf(rule)
     expect(versions[0].effective_until).toBe(shift(now, -1))
@@ -137,7 +173,7 @@ describe('the outgoing version is closed so the two never overlap', () => {
   it('closes it today when the new one starts later, leaving the gap empty', async () => {
     const rule = await seedRule()
     const now = await today()
-    const later = shift(now, 30)
+    const [, later] = await candidatesFor('2026-06-10')
     await correctAnchor(rule, '2026-06-10', later)
 
     const versions = await versionsOf(rule)
@@ -149,7 +185,7 @@ describe('the outgoing version is closed so the two never overlap', () => {
 
   it('records the floor on the rule, for the reads that do not know about versions', async () => {
     const rule = await seedRule()
-    const later = shift(await today(), 30)
+    const [, later] = await candidatesFor('2026-06-10')
     await correctAnchor(rule, '2026-06-10', later)
     expect(await floorOf(rule)).toBe(later)
   })
@@ -180,3 +216,78 @@ describe('the shape of the data', () => {
     expect(rows[0]).toEqual({ anon: false, auth: true })
   })
 })
+
+describe('the deployment window', () => {
+  /**
+   * `0068` is applied BEFORE the code that uses it, so for a while the live
+   * client is the old one: it never sends `start_date` on an update, and it must
+   * keep editing everything else exactly as it did. A migration that made the
+   * deployed app start failing would be a migration that has to be applied at
+   * the same second as a deploy, and there is no such second.
+   */
+  it('the client of today keeps editing what it always edited', async () => {
+    const rule = await seedRule()
+    await expect(
+      db.exec(`
+        update public.recurrences
+           set amount = 4200, description = 'editada por el cliente viejo',
+               end_date = '2027-01-01', interval_count = 2
+         where id = '${rule}'
+      `),
+    ).resolves.toBeDefined()
+
+    const versions = await versionsOf(rule)
+    // A frequency-only change keeps ruling from today, as it always did.
+    expect(versions[versions.length - 1].effective_from).toBe(await today())
+    expect(await floorOf(rule)).toBe(await today())
+  })
+
+  it('ignores a floor a client tries to set by hand', async () => {
+    // The column decides which occurrences exist. A client that could move it
+    // could make its own backlog appear or vanish.
+    const rule = await seedRule()
+    const before = await floorOf(rule)
+    await db.exec(
+      `update public.recurrences set schedule_effective_from = '2020-01-01' where id = '${rule}'`,
+    )
+    expect(await floorOf(rule)).toBe(before)
+  })
+})
+
+/**
+ * The section of `validate_schema.sql` that pins this migration, LIFTED AND RUN.
+ * A validator nobody executes is a validator that drifts: 8.1J's check was wrong
+ * twice before anyone noticed, in opposite directions.
+ */
+function scheduleGapBranchOfValidateSchema(): string {
+  const sql = readFileSync(
+    resolve(__dirname, '../../../supabase/validate_schema.sql'),
+    'utf-8',
+  )
+  const start = sql.indexOf('-- ── 8.1K · a schedule version can stop before the next one starts (0068) ───')
+  if (start < 0) throw new Error('the 8.1K section moved: update this extraction')
+  const from = sql.indexOf('do $$', start)
+  const end = sql.indexOf('end $$;', from)
+  return sql.slice(from, end + 'end $$;'.length)
+}
+
+describe('validate_schema.sql · 8.1K', () => {
+  it('passes against a database that has 0068', async () => {
+    await actAsAdmin(db)
+    await expect(db.exec(scheduleGapBranchOfValidateSchema())).resolves.toBeDefined()
+    await actAs(db, U_A)
+  })
+
+  it('REFUSES a database that does not', async () => {
+    // The state this exists to catch: the code deployed and the migration not,
+    // where an anchor moves with an implicit effective date again.
+    const bare = await createRecurrenceIdentityDb()
+    try {
+      await expect(db_exec_on(bare)).rejects.toThrow(/0068 was not applied/)
+    } finally {
+      await bare.close()
+    }
+  })
+})
+
+const db_exec_on = (target: PGlite) => target.exec(scheduleGapBranchOfValidateSchema())

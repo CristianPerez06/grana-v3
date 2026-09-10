@@ -89,6 +89,34 @@ una pregunta en el formulario. El detalle está en `proposal.md`; acá va el tra
       del hueco** —el 9 de octubre— que es el único lugar donde la pregunta existe. Verificado
       quitando el corte: ahí sí falla.
 
+## 1c. Los bordes que pidió la revisión
+
+- [x] 1c.1 `schedule_effective_from` se inicializa desde **la versión que describe el cronograma actual**
+      —misma frecuencia y mismo ancla—, no desde la más nueva a secas ni desde `start_date`. La más
+      nueva puede describir un cronograma que la regla ya no tiene, y `start_date` dice cuándo empezó
+      la regla, que es otra pregunta.
+- [x] 1c.2 **La columna es del trigger.** Lo que mande el cliente se descarta antes de nada: un piso que
+      el cliente pueda mover deja de significar algo, y este decide qué ocurrencias existen. Los
+      privilegios por columna lo dirían más declarativamente, pero también bloquearían al RPC, que
+      corre como el usuario a propósito.
+- [x] 1c.3 El RPC **bloquea la regla con `FOR UPDATE`** y **recalcula las candidatas en la base**: la
+      pregunta la dibuja el cliente, la respuesta la verifica el servidor. Una fecha que llegara sin
+      verificar abriría una versión en un día que el calendario no produce, y todo lo posterior caería
+      en la fase equivocada. `SECURITY INVOKER`, para que la rechace el mismo RLS que rechaza
+      cualquier otra escritura.
+- [x] 1c.4 **Ventana de despliegue: `0068` → código.** Probado: el cliente actual nunca manda
+      `start_date` en un update, así que sigue editando importe, frecuencia, fin y descripción sin
+      cambios. Una migración que rompiera la app desplegada exigiría aplicarse en el mismo segundo que
+      un deploy, y ese segundo no existe.
+- [x] 1c.5 **Las tres superficies coinciden dentro del hueco.** Una prueba común arma las dos
+      representaciones de la misma regla —versiones para el generador, columnas para "próxima fecha" y
+      la proyección— y compara las tres respuestas en tres días del hueco y en el día que arranca.
+- [x] 1c.6 Tipos y validador: `types.ts` fija las dos columnas nuevas, y `validate_schema.sql` suma la
+      sección **8.1K** con la columna, el `CHECK`, las dos funciones, sus permisos y el trigger. La
+      sección va **fuera del bloque compartido**: ese bloque describe la expansión y el validador de
+      transición lo corre en una ventana donde `0068` todavía no existe. Y se **ejecuta** en un test,
+      porque un validador que nadie corre se desalinea — el de 8.1J estuvo mal dos veces.
+
 ## 3. Cierre
 
 - [ ] 3.1 QA manual en las dos plataformas, con el caso real del sueldo.

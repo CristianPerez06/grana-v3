@@ -206,3 +206,64 @@ describe('what the screens say during the gap', () => {
     expect(projectRuleOccurrences(rule, '2026-10-01', '2026-10-31')).toEqual(['2026-10-10'])
   })
 })
+
+describe('the three surfaces agree inside the gap', () => {
+  /**
+   * The generator reads versions; "próxima fecha" and the dashboard projection
+   * read the rule's own columns. That is the split that let them drift, and a
+   * gap is where drifting becomes visible: one says nothing is owed, another
+   * announces a date. Both representations are built here from ONE description
+   * of the same rule, and the three answers are compared.
+   */
+  const CHOSEN = '2026-10-10'
+  const versions = [
+    { effective_from: '2026-06-08', effective_until: '2026-09-10', ...monthly('2026-06-08') },
+    { effective_from: CHOSEN, effective_until: null, ...monthly('2026-06-10') },
+  ]
+  const asRule = {
+    id: 'r1',
+    start_date: '2026-06-10',
+    end_date: null,
+    interval_count: 1,
+    interval_unit: 'month' as const,
+    max_occurrences: null,
+    schedule_effective_from: CHOSEN,
+    covered: new Set(['2026-07-08', '2026-08-08', '2026-09-08']),
+  }
+
+  const insideTheGap = ['2026-09-11', '2026-09-30', '2026-10-09']
+
+  it.each(insideTheGap)('on %s nobody owes, announces or projects anything', (day) => {
+    const owedNow = owedOccurrencesForRule({
+      versions,
+      pauses: [],
+      reconstructFrom: '2026-06-08',
+      horizon: '2026-01-01',
+      today: day,
+      existing: asRule.covered,
+      endDate: null,
+      maxOccurrences: null,
+    })
+    expect(owedNow).toEqual([])
+    // The next date is the first one of the new schedule, never a date the old
+    // calendar would have produced in between.
+    expect(getNextExpectedOccurrence(asRule, day, asRule.covered)).toBe(CHOSEN)
+    expect(projectRuleOccurrences(asRule, day, '2026-10-09')).toEqual([])
+  })
+
+  it('and on the day it starts, the three say the same date', () => {
+    const owedNow = owedOccurrencesForRule({
+      versions,
+      pauses: [],
+      reconstructFrom: '2026-06-08',
+      horizon: '2026-01-01',
+      today: CHOSEN,
+      existing: asRule.covered,
+      endDate: null,
+      maxOccurrences: null,
+    })
+    expect(owedNow).toEqual([CHOSEN])
+    expect(getNextExpectedOccurrence(asRule, CHOSEN, asRule.covered)).toBe(CHOSEN)
+    expect(projectRuleOccurrences(asRule, CHOSEN, '2026-10-31')).toEqual([CHOSEN])
+  })
+})
