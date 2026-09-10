@@ -24,6 +24,7 @@ const read = (file: string) => readFileSync(resolve(MIGRATIONS, file), 'utf-8')
 
 export const MIGRATION_0064 = read('0064_recurrence_identity_expand.sql')
 export const MIGRATION_0065 = read('0065_delete_seeded_movement_atomically.sql')
+export const MIGRATION_ACTIVATE = read('0066_recurrence_backlog_activate.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -203,6 +204,27 @@ export async function applyMigration(db: PGlite): Promise<void> {
   // 0065 rides along: it is the atomic delete the seeded-rule repair runs, and
   // every test that applies the expansion wants it available.
   await db.exec(MIGRATION_0065)
+}
+
+/**
+ * The ACTIVATION (0066): retires `recurrence_instances_one_pending_per_rule`.
+ *
+ * Applied from the shipped file, never as a hand-written `drop index`. The
+ * migration refuses to run unless the new model is in place, and a test that
+ * dropped the index itself would prove the generator works in a state the
+ * migration would not have produced.
+ */
+export async function applyActivation(db: PGlite): Promise<void> {
+  try {
+    await db.exec(MIGRATION_ACTIVATE)
+  } catch (error) {
+    // Same reason as `applyMigration`: the file is one transaction whose
+    // `commit` is the last statement, so an abort inside it leaves the session
+    // in a failed transaction and every later question answers "current
+    // transaction is aborted" instead of the truth.
+    await db.exec('rollback;').catch(() => undefined)
+    throw error
+  }
 }
 
 /** What Supabase grants `authenticated` on every table of `public`. */

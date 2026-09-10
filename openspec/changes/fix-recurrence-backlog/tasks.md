@@ -812,20 +812,38 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       **Paso obligatorio antes de 2.8:** confirmar, en el momento de activar, que sigue sin haber
       ningún cliente nativo anterior en uso. Si lo hay, 2.8 no se aplica hasta tener el control del
       lado del servidor.
-- [ ] 2.8 **Migración B · activación**, en archivo aparte
-      (`<próximo libre>_recurrence_backlog_activate.sql`, número elegido contra `main` al crearla),
-      y **solo con los pasos 2 a 6 del orden ya desplegados** —generador, reads, dashboard, cursor y
-      superficies de web y nativo—, más la verificación de 2.8b: eliminar
-      `recurrence_instances_one_pending_per_rule`. Desde acá existe el
-      backlog. Las constraints de `resolution_kind` ya entraron en la expansión (tarea 1.4b).
-- [ ] 2.8c **Regresión que solo se puede escribir con la activación**, y que hoy falta: la prueba de
-      las 61 reglas siembra reglas **sin** pendiente previa, así que ejercita la inanición entre
-      reglas pero no el caso exacto del #96. Con la migración escrita, agregar: sembrar 61 reglas
-      **cada una con una pendiente vieja sin resolver**, retirar el índice, correr dos tandas y
-      comprobar que las 61 terminen con su vencimiento vigente materializado. Es la única forma de
-      verificar que el nivel `blocked` de `selectReconstructionBatch` deja de costar cuando la
-      restricción desaparece — antes de la activación esas 61 reglas no pueden recibir nada, y el
-      test solo podría afirmar que no se rompe.
+- [x] 2.8 **Migración B · activación**: `0066_recurrence_backlog_activate.sql` (número elegido contra
+      `main`; el `0066` del gate revertido quedó libre). Se aplica **solo con los pasos 2 a 6 del
+      orden ya desplegados** —generador, reads, dashboard, cursor y superficies de web y nativo—, más
+      la verificación de 2.8b: elimina `recurrence_instances_one_pending_per_rule`. Desde acá existe
+      el backlog. Las constraints de `resolution_kind` ya entraron en la expansión (tarea 1.4b).
+      **Se niega a correr fuera de orden.** Lo único de las tres condiciones que la base puede ver es
+      si el modelo nuevo está: aborta sin `due_date`, sin el índice de identidad
+      `recurrence_instances_one_per_rule_due_date` —que una vez retirado el otro es lo ÚNICO que
+      impide que dos corridas materialicen la misma ocurrencia— y si hay pendientes sin vencimiento.
+      Autoverifica después del `drop`: un `drop` sobre un nombre equivocado dejaría la migración
+      "exitosa" y el #96 intacto. Es idempotente y lleva el rollback escrito, con su límite dicho —
+      recrear el índice falla en cuanto una regla acumuló dos pendientes, y por eso el orden no es
+      negociable.
+      **`validate_schema.sql` 8.1J (4) cambió de exigencia a informe.** Antes exigía que el índice de
+      pendiente única siguiera vivo y su propio mensaje admitía que quedaría obsoleto tras la
+      activación; quedó obsoleto. Como los checks (1) a (3) ya abortan si falta cualquier parte del
+      modelo nuevo, los dos estados son legítimos y lo único útil es decir en cuál está: TRANSITION o
+      ACTIVATED. Un archivo que falla cuando el change termina enseña a ignorarlo.
+- [x] 2.8c **Regresión que solo se puede escribir con la activación**: `activation-backlog.test.ts`.
+      61 reglas, **cada una con una pendiente vieja sin resolver** —la forma exacta del #96, al
+      tamaño de producción—, y el mismo archivo mide los dos lados. **Con el índice vivo**: dos
+      corridas y ninguna de las 61 recibe su vencimiento vigente, sin error, informando lo que queda
+      debiendo. **Después de la activación**: dos corridas y las 61 lo tienen, con la ocurrencia sin
+      revisar intacta —materializar el atraso no resuelve nada por sí solo—; una tercera cierra el
+      resto sin duplicar, y al final las 61 sostienen tres pendientes a la vez, que es la fila que
+      0011 hacía imposible. Eso es lo que verifica que el nivel `blocked` de
+      `selectReconstructionBatch` deja de costar cuando la restricción desaparece.
+      La activación se aplica **desde el archivo publicado** (`applyActivation`), nunca con un `drop
+      index` escrito a mano: la migración se niega a correr si el modelo nuevo no está, y soltar el
+      índice por afuera probaría el generador en un estado que la migración no habría producido.
+      Más `activation-migration.test.ts`: las dos negativas, la idempotencia, que sigue rechazando la
+      MISMA ocurrencia dos veces, y que dos pendientes de una regla pasan a ser posibles.
 
 ## 5. Cierre
 

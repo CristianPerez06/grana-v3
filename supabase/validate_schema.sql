@@ -479,11 +479,13 @@ end $$;
 -- Comments in English per AGENTS.md; the rest of this file predates that rule.
 --
 -- This is the EXPAND half of an expand/activate pair, and the checks below are
--- shaped by that: they assert the new model is fully installed AND that the old
--- one is still standing. Dropping `recurrence_instances_one_pending_per_rule`
--- before web and native ship the new model would leave the database piling up
--- backlog while the app still shows a single occurrence — invisible, and worse
--- than the bug the change removes.
+-- shaped by that: they assert the new model is fully installed, and then REPORT
+-- which side of the activation (0066) the schema is on. Dropping
+-- `recurrence_instances_one_pending_per_rule` before web and native ship the new
+-- model would leave the database piling up backlog while the app still shows a
+-- single occurrence — invisible, and worse than the bug the change removes; the
+-- part of that the database can see is checked here, and the rest is the deploy
+-- order in `openspec/changes/fix-recurrence-backlog/`.
 -- =============================================================================
 
 do $$
@@ -583,12 +585,23 @@ begin
     raise exception 'recurrence_instances_one_per_rule_due_date is no longer partial: an unknown identity can now block a known one';
   end if;
 
-  -- (4) TRANSITION: the old single-pending index is still alive. See the header.
-  if not exists (
+  -- (4) WHICH PHASE. An earlier version of this check demanded that the old
+  -- single-pending index still exist, and said in its own error message that it
+  -- would go stale after the activation. It did: 0066 retires that index ON
+  -- PURPOSE, and a file that fails once the change is finished trains people to
+  -- ignore it.
+  --
+  -- What it was really guarding is that the index is not dropped while the new
+  -- model is missing — and by the time execution reaches here, checks (1) to (3)
+  -- have already raised if any part of that model were absent. So both states
+  -- are legitimate and the only useful thing left is to say which one this is.
+  if exists (
     select 1 from pg_indexes
      where schemaname = 'public' and indexname = 'recurrence_instances_one_pending_per_rule'
   ) then
-    raise exception 'recurrence_instances_one_pending_per_rule is gone: either the backlog was enabled without shipping the new model, or this check went stale after the activation';
+    raise notice '· 8.1J — TRANSITION: expansion applied, single-pending index still alive (0066 not applied yet)';
+  else
+    raise notice '· 8.1J — ACTIVATED: the backlog exists; a rule may owe several unresolved occurrences (0066 applied)';
   end if;
 
   -- (5) Constraints.

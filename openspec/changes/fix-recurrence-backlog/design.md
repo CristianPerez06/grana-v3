@@ -553,7 +553,7 @@ La expansión son dos migraciones que viajan juntas, y recién después el despl
 | **A · Expansión** | `0064_recurrence_identity_expand.sql` | Columnas, tablas nuevas, backfill, trigger de compatibilidad | **Sin cambios.** El índice de pendiente única sigue vivo. |
 | **A' · Expansión** | `0065_delete_seeded_movement_atomically.sql` | Crea `delete_movement_unlinking_seed` | **Sin cambios**: nadie la llama todavía. Tiene que estar aplicada antes del despliegue, porque el código nuevo la invoca al borrar un movimiento semilla. |
 | — | *(despliegue de web y nativo con el modelo nuevo)* | | |
-| **B · Activación** | `<próximo libre>_recurrence_backlog_activate.sql` | Elimina el índice de pendiente única | El backlog empieza a existir. |
+| **B · Activación** | `0066_recurrence_backlog_activate.sql` | Elimina el índice de pendiente única | El backlog empieza a existir. |
 | **C · Retiro** | entrega posterior | Retira `scheduled_date` y las **ramas de compatibilidad** del trigger | — |
 
 **"Nativo desplegado" no significa "todos actualizaron".** Una app instalada no se actualiza porque
