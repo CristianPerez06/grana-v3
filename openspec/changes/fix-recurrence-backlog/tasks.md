@@ -844,6 +844,24 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
       Si alguna vez se quiere hacer igual, son dos minutos — wifi del host apagado, `Cmd + R` en el
       simulador, y mirar que donde va el bloque diga "No pudimos leer tus vencimientos".
 
+- [x] 4.9 **Hallazgo del cutover, ajeno al #96 y arreglado acá:** `validate_schema.sql`, corrida justo
+      después de aplicar `0066`, falló con `COBERTURA RLS: anon conserva EXECUTE sobre
+      public.card_period_pending`. No lo causó la activación —`0066` solo borra un índice—: `0055`
+      cerró el rol anónimo con una barrida (`revoke execute on all functions in schema public from
+      anon`) y `0061` creó esa función después sin su propio revoke, a diferencia de sus tres
+      hermanas del mismo archivo. Postgres le da EXECUTE a PUBLIC en cada función nueva y Supabase se
+      lo da a `anon` directamente, así que una barrida solo cubre lo que ya existe: la puerta se
+      reabrió sola. Barrí las 45 funciones de todas las migraciones y es la única que faltaba — las
+      otras 24 sin revoke devuelven `trigger`, que el chequeo excluye a propósito porque Postgres no
+      deja invocarlas fuera de un trigger.
+      Lo expuesto es poco: la función es `security invoker` y lee bajo RLS, así que sin sesión
+      devuelve cero filas. El valor de la invariante es que RLS deje de ser un punto único de falla.
+      Lo arregla `0067`, con self-check en las **dos** direcciones y regresión en PGlite. Dos cosas
+      medidas, no supuestas: revocar solo a `PUBLIC` NO le saca el permiso a `anon` (por eso el
+      revoke va dos veces, la lección que `0055` documenta), y el flujo de pago de tarjeta sobrevive
+      igual **sin** el grant a `authenticated`, porque los RPC que lo llaman son SECURITY DEFINER —
+      el grant se conserva por superficie de API y consistencia con `0061`, no por necesidad.
+
 ## 4b. Activación — va última
 
 Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en web y en nativo.
