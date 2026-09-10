@@ -295,6 +295,18 @@ export function owedOccurrences({
 export type ScheduleVersion = {
   /** Since when this version applies. Nothing before it is described by it. */
   effective_from: string
+  /**
+   * The last day, INCLUSIVE, on which this version may produce. `null` means
+   * "until the next one starts", which is how every version read before #121.
+   *
+   * It exists because the end of a version could only be DERIVED from the start
+   * of the next, and that made a GAP inexpressible — the stretch where a rule's
+   * old schedule has stopped and the new one has not begun. Without it,
+   * correcting an anchor to rule from next month left the old schedule firing
+   * one more time in between, on the old date: the same duplicate, one cycle
+   * later.
+   */
+  effective_until?: string | null
   interval_count: number
   interval_unit: IntervalUnit
   /**
@@ -395,8 +407,14 @@ export function owedOccurrencesForRule({
     // The stretch this version owns: from where it takes effect until the next
     // one does, never past today.
     const nextVersion = ordered[index + 1]
-    const versionEnd = nextVersion == null ? today : addDays(nextVersion.effective_from, -1)
-    const to = versionEnd < today ? versionEnd : today
+    // The EARLIEST of the three things that can end a version: its own explicit
+    // end, the start of the next one, and today. Taking the minimum is what makes
+    // a gap possible — an explicit end before the next version starts produces a
+    // stretch nobody describes, and nothing owed inside it.
+    const bounds = [today]
+    if (version.effective_until != null) bounds.push(version.effective_until)
+    if (nextVersion != null) bounds.push(addDays(nextVersion.effective_from, -1))
+    const to = bounds.reduce((earliest, bound) => (bound < earliest ? bound : earliest))
 
     // The first version's calendar reaches back to its anchor, and the
     // occurrences between the anchor and `effective_from` are the ones the cap
@@ -456,6 +474,18 @@ export type OccurrenceSchedule = {
   interval_count: number
   interval_unit: IntervalUnit
   max_occurrences: number | null
+  /**
+   * Since when the CURRENT schedule rules, when it is not simply "always".
+   *
+   * The generator reads a rule's schedule from its versions; these two readers —
+   * "próxima fecha" and the dashboard projection — read it from the columns
+   * above, which describe only the newest version. That was invisible while the
+   * newest version always ruled from the past. Correcting an anchor to take
+   * effect NEXT cycle opens a stretch where the new schedule does not rule yet
+   * and the old one has stopped, and without this floor both readers would
+   * announce a date the generator is never going to create.
+   */
+  schedule_effective_from?: string | null
 }
 
 export type RuleForProjection = OccurrenceSchedule & {
@@ -662,9 +692,12 @@ export function projectRuleOccurrences(
   windowEnd: string,
 ): string[] {
   const covered = rule.covered instanceof Set ? rule.covered : new Set(rule.covered)
-  return walkOccurrences(rule, { from: windowStart, to: windowEnd }).filter(
-    (date) => !covered.has(date),
-  )
+  // The window never reaches before the schedule rules: see
+  // `schedule_effective_from`.
+  const floor = rule.schedule_effective_from
+  const from = floor != null && floor > windowStart ? floor : windowStart
+  if (from > windowEnd) return []
+  return walkOccurrences(rule, { from, to: windowEnd }).filter((date) => !covered.has(date))
 }
 
 // The next occurrence a rule is still expected to produce — the calendar
@@ -685,9 +718,14 @@ export function getNextExpectedOccurrence(
   covered: Iterable<string>,
 ): string | null {
   const already = covered instanceof Set ? covered : new Set(covered)
+  // Never earlier than the day the current schedule starts ruling: during a gap
+  // the answer is the first date of the NEW schedule, not the next one the old
+  // calendar would have produced. See `schedule_effective_from`.
+  const floor = rule.schedule_effective_from
+  const from = floor != null && floor > today ? floor : today
   // Bounded because the walk is: it steps forward only while it keeps landing on
   // dates that already exist, and occurrences exist only up to today.
-  for (const date of walkOccurrences(rule, { from: today })) {
+  for (const date of walkOccurrences(rule, { from })) {
     if (!already.has(date)) return date
   }
   return null

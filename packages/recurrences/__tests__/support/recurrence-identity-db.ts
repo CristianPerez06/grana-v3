@@ -25,6 +25,7 @@ const read = (file: string) => readFileSync(resolve(MIGRATIONS, file), 'utf-8')
 export const MIGRATION_0064 = read('0064_recurrence_identity_expand.sql')
 export const MIGRATION_0065 = read('0065_delete_seeded_movement_atomically.sql')
 export const MIGRATION_ACTIVATE = read('0066_recurrence_backlog_activate.sql')
+export const MIGRATION_0068 = read('0068_schedule_version_effective_until.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -36,6 +37,10 @@ const SCHEMA = `
     select (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid
   $$;
   create role authenticated;
+  -- PostgREST's anonymous role. Present because the migrations revoke privileges
+  -- from it by name, and a revoke against a role that does not exist is an error
+  -- — the harness has to look like the database the SQL is written for.
+  create role anon;
   grant usage on schema public to authenticated;
   grant usage on schema auth to authenticated;
 
@@ -204,6 +209,22 @@ export async function applyMigration(db: PGlite): Promise<void> {
   // 0065 rides along: it is the atomic delete the seeded-rule repair runs, and
   // every test that applies the expansion wants it available.
   await db.exec(MIGRATION_0065)
+}
+
+/**
+ * 0068: a schedule version can stop before the next one starts, and moving an
+ * anchor has to say from when. Separate from `applyMigration` because the tests
+ * of the expansion itself assert on the world BEFORE this one — the trigger it
+ * replaces is 0064's, and a test that pinned 0064's behaviour has to keep
+ * pinning it.
+ */
+export async function applyEffectiveUntil(db: PGlite): Promise<void> {
+  try {
+    await db.exec(MIGRATION_0068)
+  } catch (error) {
+    await db.exec('rollback;').catch(() => undefined)
+    throw error
+  }
 }
 
 /**

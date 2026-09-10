@@ -20,18 +20,34 @@ una pregunta en el formulario. El detalle está en `proposal.md`; acá va el tra
 
 ## 1b. La vigencia se elige, no se adivina
 
-- [ ] 1b.1 **Migración `0068`**: `recurrence_schedule_versions` suma `effective_until DATE NULL` — el último
-      día en que una versión puede producir. `NULL` = hasta que empiece la siguiente, que es el
-      comportamiento de hoy, así que ninguna versión existente cambia de significado. Número elegido
-      contra `main`.
-- [ ] 1b.2 El trigger deja de inferir la vigencia de un cambio de `start_date`: la **recibe**. Al aplicarla,
-      cierra la versión saliente con `effective_until = hoy`. Eso es lo que impide que el cronograma
-      viejo produzca una ocurrencia más en el hueco — el `8 de octubre` que reaparecería si la versión
-      nueva simplemente empezara el `10 de octubre`.
+- [x] 1b.1 **Migración `0068`**: `recurrence_schedule_versions` suma `effective_until DATE NULL` — el último
+      día, **inclusive**, en que una versión puede producir — con un `CHECK` que impida
+      `effective_until < effective_from`. `NULL` = hasta que empiece la siguiente, que es el
+      comportamiento de hoy, así que ninguna versión existente cambia de significado. `recurrences` suma
+      `schedule_effective_from`, mantenido por el trigger: el piso que necesitan las lecturas que no
+      leen versiones. Número elegido contra `main`.
+- [x] 1b.2 El trigger deja de inferir la vigencia de un cambio de `start_date`: la **recibe**, y **rechaza**
+      el cambio si no viene. Al aplicarla, cierra la versión saliente en
+      **`least(hoy, vigencia - 1)`**: si la nueva empieza hoy la vieja termina ayer, y si empieza más
+      adelante termina hoy — nunca se superponen. Ese cierre es lo que impide que el cronograma viejo
+      produzca una ocurrencia más en el hueco: el `8 de octubre` que reaparecería si la versión nueva
+      simplemente empezara el `10 de octubre`.
       El comportamiento para un cambio **solo de frecuencia** no cambia.
-- [ ] 1b.3 El walker compartido (`owedOccurrencesForRule`) respeta el corte: una versión termina en
-      `effective_until` cuando lo tiene, y el hueco hasta la siguiente **no produce nada**. Hoy el fin
-      de una versión se deriva del comienzo de la otra, así que un hueco es inexpresable.
+- [ ] 1b.2b **RPC**: la vigencia y el patch de la regla viajan en **una sola transacción**. Un `update`
+      suelto de `start_date` ya no es un camino válido, y la base es la que lo garantiza — no la
+      buena voluntad del cliente. Con su `revoke` a `anon` y su `grant` a `authenticated`, como enseñó
+      `0067`.
+- [x] 1b.3 El walker compartido (`owedOccurrencesForRule`) cierra cada versión en el **menor** entre
+      `effective_until`, el día anterior a la versión siguiente y hoy. El hueco hasta la siguiente **no
+      produce nada**. Hoy el fin de una versión se deriva del comienzo de la otra, así que un hueco es
+      inexpresable.
+- [x] 1b.3b **Las otras lecturas también respetan el hueco.** `getNextExpectedOccurrence` (la "Próxima
+      fecha" del detalle, del hub y del aviso de duplicados) y `projectUpcomingOccurrences` (la
+      proyección del dashboard) caminan hoy el calendario con los campos crudos de la regla, sin mirar
+      versiones. Si solo el generador respetara el corte, durante el hueco la UI proyectaría un
+      vencimiento que la base decidió que no existe. Es una brecha **preexistente** —el generador y las
+      pantallas derivan el calendario de fuentes distintas— que este change cierra porque el hueco la
+      vuelve visible.
 - [ ] 1b.4 La mutación acepta la fecha elegida y la **valida contra el cronograma nuevo**: SHALL ser una
       ocurrencia real de ese cronograma y no anterior a hoy. Una fecha cualquiera abriría una vigencia
       que el calendario nunca produce.
@@ -55,18 +71,23 @@ una pregunta en el formulario. El detalle está en `proposal.md`; acá va el tra
 
 ## 2b. Los cuatro casos del borde
 
-- [ ] 2b.1 **A** — el ciclo ya resuelto: regla mensual anclada al 8, con el 8 de septiembre confirmado;
+- [x] 2b.1 **A** — el ciclo ya resuelto: regla mensual anclada al 8, con el 8 de septiembre confirmado;
       hoy 10 de septiembre se corrige al día 10 eligiendo el **10 de octubre**. No se materializa el
       10 de septiembre **ni el 8 de octubre**, y la próxima fecha es el 10 de octubre.
-- [ ] 2b.2 **B** — el ciclo sin resolver: misma regla, hoy 5 de septiembre, se elige el **10 de
+- [x] 2b.2 **B** — el ciclo sin resolver: misma regla, hoy 5 de septiembre, se elige el **10 de
       septiembre**. Septiembre vence el 10 y no también el 8.
-- [ ] 2b.3 **C** — con atraso: julio y agosto sin resolver se materializan **el día 8**, y solo lo
+- [x] 2b.3 **C** — con atraso: julio y agosto sin resolver se materializan **el día 8**, y solo lo
       posterior a la vigencia elegida usa el 10.
-- [ ] 2b.4 **Cada N días**: una regla cada 3 días se corre un día y las dos fechas ofrecidas son
+- [x] 2b.4 **Cada N días**: una regla cada 3 días se corre un día y las dos fechas ofrecidas son
       ocurrencias reales del cronograma nuevo.
-- [ ] 2b.5 Regresión del hueco: entre `effective_until` y el comienzo de la versión siguiente **no se
+- [x] 2b.5 Regresión del hueco: entre `effective_until` y el comienzo de la versión siguiente **no se
       produce ninguna ocurrencia**, que es la trampa que hace insuficiente cualquier fórmula de
       vigencia automática.
+      **Cuidado con dónde se para el test:** parado en el día del cambio, el caso del hueco pasa
+      con y sin el corte, porque una caminata nunca va más allá de hoy y la fecha vieja del ciclo
+      siguiente todavía es futuro. Prueba la ELECCIÓN, no el corte. La regresión se para **dentro
+      del hueco** —el 9 de octubre— que es el único lugar donde la pregunta existe. Verificado
+      quitando el corte: ahí sí falla.
 
 ## 3. Cierre
 

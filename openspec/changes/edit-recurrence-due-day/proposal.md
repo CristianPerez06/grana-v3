@@ -28,6 +28,12 @@ Tampoco sirve razonar por "mes" o "período": una regla cada 3 días no tiene ni
 
 **Entonces la ambigüedad la resuelve el usuario, con fechas concretas.** Al cambiar la fecha de referencia, el formulario pregunta **"¿Cuál querés que sea el primer vencimiento con la nueva referencia?"** y ofrece las **dos primeras fechas del cronograma nuevo** —para el sueldo, `10 de septiembre` y `10 de octubre`—. Funciona igual para una regla semanal o cada N días, porque no nombra períodos: nombra días.
 
+### El hueco no lo respeta nadie más que el generador — y eso ya pasaba
+
+Auditadas las lecturas que caminan un cronograma, **ninguna mira las versiones**: `getNextExpectedOccurrence` —la "Próxima fecha" del detalle, del hub y del aviso de duplicados— y `projectUpcomingOccurrences` —la proyección del dashboard— caminan el calendario con los campos crudos de la regla. Hoy eso pasa desapercibido porque la versión vigente coincide con esos campos; con un hueco dejaría de coincidir, y la UI proyectaría un vencimiento que la base decidió que no existe.
+
+O sea que el hueco obliga a cerrar una brecha **que ya estaba abierta**: el generador y las pantallas derivan el calendario de fuentes distintas. Se cierra dando a esas dos lecturas el piso que la base ya conoce.
+
 ### Por qué esto obliga a una migración
 
 La elección **se persiste**, no se infiere. Y hay una trampa que la hace imposible con el modelo actual: si el usuario elige octubre, **no alcanza** con abrir la versión nueva el 10/10. El cronograma viejo gobierna hasta el día anterior a la versión siguiente, así que produciría el **8 de octubre** antes de que la nueva empiece — el duplicado vuelve, corrido un mes.
@@ -38,8 +44,11 @@ Hace falta que una versión pueda **dejar de producir antes** de que arranque la
 
 - El drawer de edición de una regla suma un campo **Fecha de referencia**, que edita el ancla del calendario (`start_date`). Va en web y en nativo, en el mismo commit, por la política de paridad.
 - Al cambiarla, el formulario **pregunta desde qué vencimiento rige**, ofreciendo las dos primeras fechas del cronograma nuevo. La respuesta viaja con la mutación; no se adivina.
-- **Migración `0068`**: `recurrence_schedule_versions` suma `effective_until` —el último día en que una versión puede producir—, y el trigger deja de inferir la vigencia: la recibe. `NULL` conserva el comportamiento actual, así que las versiones que ya existen no cambian de significado.
-- El walker compartido (`owedOccurrencesForRule`) respeta ese corte: una versión termina en `effective_until` cuando lo tiene, y el hueco hasta la versión siguiente **no produce nada**.
+- **Migración `0068`**: `recurrence_schedule_versions` suma `effective_until` —el último día, **inclusive**, en que una versión puede producir— con un `CHECK` que impide `effective_until < effective_from`. `NULL` conserva el comportamiento actual, así que las versiones que ya existen no cambian de significado. `recurrences` suma `schedule_effective_from`: desde cuándo rige el cronograma vigente, mantenido por el mismo trigger, para que **toda** lectura tenga el piso sin salir de la fila que ya lee.
+- Al aplicar una vigencia, la versión saliente se cierra en **`least(hoy, vigencia_elegida - 1)`**: si la nueva empieza hoy, la vieja termina ayer; si empieza más adelante, termina hoy. Nunca se superponen dos cronogramas.
+- **La vigencia llega de forma atómica y obligatoria**: un RPC aplica el patch de la regla y la fecha elegida en la misma transacción, y el trigger **rechaza** un cambio de ancla que no la traiga. Una vigencia implícita es exactamente lo que produjo el duplicado.
+- El walker compartido (`owedOccurrencesForRule`) cierra cada versión en el **menor** entre `effective_until`, el día anterior a la versión siguiente, y hoy. El hueco **no produce nada**.
+- `getNextExpectedOccurrence` y `projectUpcomingOccurrences` respetan el mismo piso, así que "Próxima fecha", el aviso de duplicados y la proyección del dashboard no pueden mostrar un vencimiento que el generador nunca va a crear.
 - La etiqueta es "Fecha de referencia" y no "Día de vencimiento": para una regla semanal o cada N días no hay un "día" del mes, y el nombre sería incorrecto justo en los casos donde el campo más se necesita.
 - El formulario dice qué va a pasar antes de guardar: el cambio rige desde acá, y las ocurrencias que ya existen conservan su vencimiento.
 - El spec de `transactions` deja de fijar el field set mutable en cuatro campos y pasa a cinco, con las tres reglas del cambio escritas: rige desde el cambio, no reconstruye el pasado, y funciona con la regla activa o pausada.
