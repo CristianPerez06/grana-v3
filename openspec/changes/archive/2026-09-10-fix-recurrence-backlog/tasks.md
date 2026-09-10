@@ -1025,7 +1025,7 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
 ## 5. Cierre
 
 - [x] 5.1 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm lint:mobile`, `pnpm typecheck:mobile`.
-- [ ] 5.2 Archivar el change y aplicar los deltas al spec maestro de `transactions`
+- [x] 5.2 Archivar el change y aplicar los deltas al spec maestro de `transactions`
       (`RENAMED` + `MODIFIED` + `ADDED`), sin dejar secciones delta en el maestro.
 - [x] 5.3 `pnpm openspec:check` en verde.
 - [x] 5.4 Dejar anotado para la **migración C** (fuera de esta entrega): al retirar `scheduled_date`,
@@ -1037,5 +1037,8 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       lo convierte en requisito —la inmutabilidad SHALL sobrevivir al retiro de la columna legada, y
       quitar el guard entero está prohibido explícitamente—, así que al archivar viaja al spec
       maestro y queda en el camino de cualquiera que toque esto después.
-- [ ] 5.5 Cerrar **#96** y **#118** con esta entrega — el #118 lo cierra la tarea 2.2b, que es el
-      mismo código. **#104 ya no cierra acá**: se movió a `recurrence-undo` (etapa 3).
+- [x] 5.5 Dejar **#96** y **#118** referenciados para cierre automático — `Closes #96` y `Closes #118`
+      en la descripción del PR. El cierre efectivo ocurre al hacer **Squash and merge**, no a mano:
+      un ticket cerrado antes del merge afirma que el arreglo está en `main` cuando todavía no lo
+      está. El #118 lo cierra la tarea 2.2b, que es el mismo código. **#104 ya no cierra acá**: se
+      movió a `recurrence-undo` (etapa 3).

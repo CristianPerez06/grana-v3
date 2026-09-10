@@ -1,13 +1,92 @@
-## RENAMED Requirements
-
-- FROM: `### Requirement: El sistema genera instancias recurrentes de forma secuencial`
-- TO: `### Requirement: El sistema genera todas las ocurrencias vencidas de una regla`
-
-**Reason**: el título describía el invariante que este change elimina — "secuencial" significaba "de
-a una, y la siguiente solo después de resolver la anterior", que es exactamente lo que traba la
-recurrencia (#96). El requirement pasa a describir la generación completa del atraso.
-
 ## ADDED Requirements
+
+### Requirement: El sistema genera todas las ocurrencias vencidas de una regla
+
+El sistema SHALL materializar **todas** las ocurrencias vencidas de una regla activa, y NO SHALL
+detenerse porque exista otra ocurrencia sin resolver. Una ocurrencia sin resolver NO SHALL impedir
+que se materialicen las posteriores.
+
+Las ocurrencias SHALL materializarse en orden de calendario. El sistema PUEDE materializarlas por
+tandas cuando el atraso es grande, siempre que la **ocurrencia vigente** —la más reciente ya
+vencida— quede materializada en la primera tanda: un corte que dejara afuera lo que vence hoy
+reproduciría el defecto que este requirement elimina. Ninguna ocurrencia SHALL quedar fuera del
+alcance del sistema por efecto de una tanda o de un tope de presentación.
+
+El sistema SHALL materializar las ocurrencias vencidas dentro de un **horizonte de 12 meses hacia
+atrás, inclusive**, calculado con la **fecha financiera argentina**. El horizonte SHALL aplicar
+únicamente a la **reconstrucción automática**: el usuario SHALL poder registrar a mano un pago más
+viejo en cualquier momento.
+
+Las ocurrencias anteriores al horizonte NO SHALL materializarse. El sistema NO SHALL afirmar que el
+período tiene información incompleta: esos pagos pueden haberse registrado a mano en su momento.
+
+El horizonte NO acota por sí solo el volumen —doce meses de una regla diaria son unas 365
+ocurrencias—, así que la materialización SHALL hacerse por **tandas acotadas**: abrir una pantalla NO
+SHALL disparar cientos de escrituras, y la tanda SHALL completarse a lo largo de sucesivas aperturas,
+con la ocurrencia vigente siempre en la primera.
+
+Mientras queden ocurrencias por reconstruir, el sistema SHALL indicarlo **y SHALL ofrecer continuar
+la reconstrucción sin cerrar la aplicación**. Sin el aviso, una lista que crece sola entre visitas es
+indistinguible de un error; sin la acción, un atraso grande obligaría al usuario a abrir y cerrar la
+app tantas veces como tandas queden, que no es una tarea que se le pueda pedir.
+
+Una ocurrencia materializada por este mecanismo SHALL ser un **elemento por revisar**, no un
+movimiento: NO SHALL impactar saldos, ni el gasto del mes, ni resúmenes de tarjeta hasta que el
+usuario la resuelva.
+
+Cuando el cronograma de una regla se edita, el cambio SHALL regir **desde una fecha de vigencia** y
+NO SHALL reinterpretar las ocurrencias anteriores a ella. Sin esa regla, el sistema leería la
+diferencia entre el cronograma nuevo y el historial viejo como huecos, y materializaría vencimientos
+que nunca correspondieron.
+
+La fecha de cada ocurrencia SHALL ser la que corresponde por cronograma, nunca la fecha actual.
+
+#### Scenario: Usuario vuelve después de varios meses
+
+- **WHEN** el usuario abre la app después de varios períodos sin resolver una regla mensual
+- **THEN** el sistema materializa las ocurrencias vencidas de esos períodos, cada una con su propia
+  fecha de vencimiento
+- **AND** el usuario puede resolver cualquiera de ellas por separado, en el orden que quiera
+
+#### Scenario: Una ocurrencia sin resolver no bloquea la siguiente
+
+- **WHEN** una regla mensual tiene la ocurrencia de junio sin resolver y llega el vencimiento de julio
+- **THEN** la ocurrencia de julio se materializa igual
+- **AND** el usuario puede resolver la de julio sin haber tocado la de junio
+
+#### Scenario: Un atraso largo no deja afuera lo que vence hoy
+
+- **WHEN** una regla diaria acumula noventa ocurrencias sin resolver
+- **THEN** la ocurrencia vigente queda materializada
+- **AND** las anteriores dentro del horizonte siguen siendo accesibles y resolubles
+
+#### Scenario: Más allá del horizonte no se reconstruye
+
+- **WHEN** una regla mensual arrancó hace tres años y nunca se resolvió ninguna ocurrencia
+- **THEN** se materializan las ocurrencias de los últimos 12 meses
+- **AND** no se materializa ninguna anterior
+- **AND** no se afirma que esos meses tengan información incompleta
+- **AND** ningún saldo cambia por esa materialización
+
+#### Scenario: Un atraso voluminoso no se materializa de una sola vez
+
+- **WHEN** una regla diaria acumula un año de ocurrencias sin resolver y el usuario abre la app
+- **THEN** la ocurrencia vigente queda materializada
+- **AND** la pantalla no queda bloqueada esperando cientos de escrituras
+- **AND** las restantes se completan en sucesivas aperturas
+- **AND** mientras queden pendientes de reconstruir, la app lo indica en vez de aparentar que terminó
+
+#### Scenario: El usuario puede continuar la reconstrucción sin salir
+
+- **WHEN** quedan ocurrencias por reconstruir después de la primera tanda
+- **THEN** la app ofrece continuar la reconstrucción
+- **AND** al usarla se procesa otra tanda sin cerrar ni volver a abrir la aplicación
+
+#### Scenario: Cambiar la frecuencia no fabrica vencimientos anteriores
+
+- **WHEN** una regla mensual con seis meses de historial resuelto se edita a quincenal
+- **THEN** no se materializa ninguna ocurrencia con fecha anterior a la vigencia del cambio
+- **AND** las ocurrencias ya resueltas conservan su vencimiento original
 
 ### Requirement: Cada ocurrencia recurrente tiene una identidad estable
 
@@ -166,94 +245,6 @@ original** de la regla, sin desplazarlo por la duración de la pausa.
 
 ## MODIFIED Requirements
 
-### Requirement: El sistema genera todas las ocurrencias vencidas de una regla
-
-El sistema SHALL materializar **todas** las ocurrencias vencidas de una regla activa, y NO SHALL
-detenerse porque exista otra ocurrencia sin resolver. Una ocurrencia sin resolver NO SHALL impedir
-que se materialicen las posteriores.
-
-Las ocurrencias SHALL materializarse en orden de calendario. El sistema PUEDE materializarlas por
-tandas cuando el atraso es grande, siempre que la **ocurrencia vigente** —la más reciente ya
-vencida— quede materializada en la primera tanda: un corte que dejara afuera lo que vence hoy
-reproduciría el defecto que este requirement elimina. Ninguna ocurrencia SHALL quedar fuera del
-alcance del sistema por efecto de una tanda o de un tope de presentación.
-
-El sistema SHALL materializar las ocurrencias vencidas dentro de un **horizonte de 12 meses hacia
-atrás, inclusive**, calculado con la **fecha financiera argentina**. El horizonte SHALL aplicar
-únicamente a la **reconstrucción automática**: el usuario SHALL poder registrar a mano un pago más
-viejo en cualquier momento.
-
-Las ocurrencias anteriores al horizonte NO SHALL materializarse. El sistema NO SHALL afirmar que el
-período tiene información incompleta: esos pagos pueden haberse registrado a mano en su momento.
-
-El horizonte NO acota por sí solo el volumen —doce meses de una regla diaria son unas 365
-ocurrencias—, así que la materialización SHALL hacerse por **tandas acotadas**: abrir una pantalla NO
-SHALL disparar cientos de escrituras, y la tanda SHALL completarse a lo largo de sucesivas aperturas,
-con la ocurrencia vigente siempre en la primera.
-
-Mientras queden ocurrencias por reconstruir, el sistema SHALL indicarlo **y SHALL ofrecer continuar
-la reconstrucción sin cerrar la aplicación**. Sin el aviso, una lista que crece sola entre visitas es
-indistinguible de un error; sin la acción, un atraso grande obligaría al usuario a abrir y cerrar la
-app tantas veces como tandas queden, que no es una tarea que se le pueda pedir.
-
-Una ocurrencia materializada por este mecanismo SHALL ser un **elemento por revisar**, no un
-movimiento: NO SHALL impactar saldos, ni el gasto del mes, ni resúmenes de tarjeta hasta que el
-usuario la resuelva.
-
-Cuando el cronograma de una regla se edita, el cambio SHALL regir **desde una fecha de vigencia** y
-NO SHALL reinterpretar las ocurrencias anteriores a ella. Sin esa regla, el sistema leería la
-diferencia entre el cronograma nuevo y el historial viejo como huecos, y materializaría vencimientos
-que nunca correspondieron.
-
-La fecha de cada ocurrencia SHALL ser la que corresponde por cronograma, nunca la fecha actual.
-
-#### Scenario: Usuario vuelve después de varios meses
-
-- **WHEN** el usuario abre la app después de varios períodos sin resolver una regla mensual
-- **THEN** el sistema materializa las ocurrencias vencidas de esos períodos, cada una con su propia
-  fecha de vencimiento
-- **AND** el usuario puede resolver cualquiera de ellas por separado, en el orden que quiera
-
-#### Scenario: Una ocurrencia sin resolver no bloquea la siguiente
-
-- **WHEN** una regla mensual tiene la ocurrencia de junio sin resolver y llega el vencimiento de julio
-- **THEN** la ocurrencia de julio se materializa igual
-- **AND** el usuario puede resolver la de julio sin haber tocado la de junio
-
-#### Scenario: Un atraso largo no deja afuera lo que vence hoy
-
-- **WHEN** una regla diaria acumula noventa ocurrencias sin resolver
-- **THEN** la ocurrencia vigente queda materializada
-- **AND** las anteriores dentro del horizonte siguen siendo accesibles y resolubles
-
-#### Scenario: Más allá del horizonte no se reconstruye
-
-- **WHEN** una regla mensual arrancó hace tres años y nunca se resolvió ninguna ocurrencia
-- **THEN** se materializan las ocurrencias de los últimos 12 meses
-- **AND** no se materializa ninguna anterior
-- **AND** no se afirma que esos meses tengan información incompleta
-- **AND** ningún saldo cambia por esa materialización
-
-#### Scenario: Un atraso voluminoso no se materializa de una sola vez
-
-- **WHEN** una regla diaria acumula un año de ocurrencias sin resolver y el usuario abre la app
-- **THEN** la ocurrencia vigente queda materializada
-- **AND** la pantalla no queda bloqueada esperando cientos de escrituras
-- **AND** las restantes se completan en sucesivas aperturas
-- **AND** mientras queden pendientes de reconstruir, la app lo indica en vez de aparentar que terminó
-
-#### Scenario: El usuario puede continuar la reconstrucción sin salir
-
-- **WHEN** quedan ocurrencias por reconstruir después de la primera tanda
-- **THEN** la app ofrece continuar la reconstrucción
-- **AND** al usarla se procesa otra tanda sin cerrar ni volver a abrir la aplicación
-
-#### Scenario: Cambiar la frecuencia no fabrica vencimientos anteriores
-
-- **WHEN** una regla mensual con seis meses de historial resuelto se edita a quincenal
-- **THEN** no se materializa ninguna ocurrencia con fecha anterior a la vigencia del cambio
-- **AND** las ocurrencias ya resueltas conservan su vencimiento original
-
 ### Requirement: La generación de instancias recurrentes usa intervalo+unidad y corta por la primera condición de fin
 
 El sistema SHALL calcular la fecha de cada ocurrencia recurrente aplicando `interval_count` veces la
@@ -274,6 +265,27 @@ cronograma, de modo que no puedan dar números distintos para la misma regla.
 etiqueta de presentación. Para los cuatro presets, la etiqueta y el intervalo SHALL ser coherentes
 (`weekly` ⇒ 1 `week`, `biweekly` ⇒ 2 `week`, `monthly` ⇒ 1 `month`, `annual` ⇒ 1 `year`); `custom`
 admite cualquier intervalo válido. Esa coherencia SHALL estar enforced por un `CHECK` en la base.
+
+#### Scenario: Primera instancia de una regla con semilla (last_generated_date no nulo)
+
+- **WHEN** una regla tiene `start_date = 2026-01-15`, fue creada desde un movimiento de esa fecha y
+  aún no generó ocurrencias nuevas
+- **THEN** la primera ocurrencia materializada vence el `2026-02-15`
+- **AND** la semilla NO se vuelve a materializar: lo que fija ese piso es `reconstruct_from`, no
+  `last_generated_date` — la columna vieja dejó de gobernar la generación en este change, y el piso
+  se derivó de ella una sola vez, al expandir el modelo
+
+#### Scenario: Primera instancia de una regla directa (last_generated_date nulo)
+
+- **WHEN** una regla mensual tiene `start_date = 2026-01-15`, fue creada directamente y hoy es
+  ≥ `2026-01-15`
+- **THEN** la primera ocurrencia materializada vence **el `2026-01-15`**
+- **AND** las siguientes se materializan igual aunque esa quede sin resolver
+
+#### Scenario: Regla directa con start_date futuro no genera todavía
+
+- **WHEN** una regla directa tiene `start_date = 2026-12-01` y hoy es anterior a esa fecha
+- **THEN** no se materializa ninguna ocurrencia hasta que la fecha llegue
 
 #### Scenario: Clamping de fin de mes en febrero
 
@@ -298,6 +310,16 @@ admite cualquier intervalo válido. Esa coherencia SHALL estar enforced por un `
 - **WHEN** cualquier cliente intenta insertar o actualizar una regla con `frequency = 'weekly'` e
   `interval_count = 1`, `interval_unit = 'month'`
 - **THEN** la base rechaza la escritura por violación del `CHECK`
+
+#### Scenario: La generación corta cuando alcanza max_occurrences
+
+- **WHEN** una regla con `max_occurrences = 3` ya tiene 3 instancias materializadas
+- **THEN** no se generan más instancias
+
+#### Scenario: Una frecuencia custom admite cualquier intervalo
+
+- **WHEN** un cliente crea una regla con `frequency = 'custom'`, `interval_count = 3` e `interval_unit = 'day'`
+- **THEN** la base acepta la escritura y el generador programa cada 3 días
 
 ### Requirement: El usuario puede confirmar una instancia recurrente
 
@@ -349,6 +371,18 @@ resolver NO SHALL depender de la plataforma.
 - **AND** no se crea ninguna transaccion
 - **AND** la ocurrencia permanece sin resolver para que el usuario edite la fecha u omita
 
+#### Scenario: Confirmar gasto cash/bank recurrente
+
+- **WHEN** el usuario confirma una instancia de gasto recurrente en cuenta cash o bank
+- **THEN** el sistema crea una transaccion `type='expense'` con `status=NULL`
+- **AND** el saldo de esa cuenta baja segun las reglas existentes
+
+#### Scenario: Confirmar transferencia recurrente
+
+- **WHEN** el usuario confirma una instancia de transferencia recurrente
+- **THEN** el sistema crea una transaccion `type='transfer'`
+- **AND** el saldo de la cuenta origen baja y el de la cuenta destino sube
+
 ### Requirement: El usuario puede omitir una instancia recurrente
 
 El sistema SHALL permitir omitir una ocurrencia recurrente. Omitir SHALL resolverla sin crear
@@ -366,6 +400,12 @@ Omitir una ocurrencia NO SHALL impedir que se materialicen ni se resuelvan las s
 
 - **WHEN** el usuario omite una ocurrencia sin resolver
 - **THEN** la ocurrencia queda omitida
+- **AND** no se inserta ninguna fila en `transactions`
+
+#### Scenario: Omitir gasto recurrente
+
+- **WHEN** el usuario omite una instancia pendiente
+- **THEN** la ocurrencia queda marcada como omitida, conservando su vencimiento
 - **AND** no se inserta ninguna fila en `transactions`
 
 ### Requirement: El modulo Movimientos muestra pendientes recurrentes separados del historial
@@ -407,3 +447,34 @@ Estas reglas SHALL aplicar por igual en web y en la app nativa.
 - **THEN** el rótulo las presenta como vencimientos por revisar
 - **AND** no afirma que el usuario debe esa suma
 - **AND** no afirma que esos pagos ya ocurrieron
+
+#### Scenario: Pendiente recurrente visible sobre el historial
+
+- **WHEN** existen instancias recurrentes pendientes
+- **THEN** `/transactions` muestra un bloque de pendientes con acciones de confirmar, editar y omitir
+- **AND** debajo muestra el historial real de movimientos
+
+#### Scenario: Movimiento confirmado aparece en historial
+
+- **WHEN** el usuario confirma una instancia recurrente
+- **THEN** se crea una transaccion real
+- **AND** el movimiento aparece en el historial global segun su fecha contable
+
+## REMOVED Requirements
+
+### Requirement: El sistema genera instancias recurrentes de forma secuencial
+
+**Reason**: el requirement ERA el #96. Exigía "como máximo una instancia pendiente por regla activa"
+y que la siguiente se generara "solamente después de que la instancia actual haya sido confirmada u
+omitida": una ocurrencia que el usuario no resolvía trababa su regla para siempre. No se puede
+modificar en su lugar porque sus tres escenarios afirman el comportamiento que este change elimina
+—"abrir /transactions nuevamente no genera otra instancia para esa regla", "muestra solo la
+instancia pendiente más antigua", "no genera automáticamente todas las ocurrencias atrasadas"—.
+Lo reemplaza el requirement agregado **"El sistema genera todas las ocurrencias vencidas de una
+regla"**, que describe la generación completa del atraso.
+
+**Migration**: el corte por fecha final, lo único de este requirement que sigue vigente, no se
+pierde: vive en "La generación de instancias recurrentes usa intervalo+unidad y corta por la primera
+condición de fin", con su escenario "Corte por end_date". Del lado de los datos la migración es
+`0066`, que retira el índice `recurrence_instances_one_pending_per_rule` — el que imponía la regla
+vieja en la base.
