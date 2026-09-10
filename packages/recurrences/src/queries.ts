@@ -1060,3 +1060,43 @@ export async function getDuplicateRulesFor(
     options,
   )
 }
+
+/**
+ * How long a materialization run may take before the UI stops waiting for it.
+ *
+ * Not a network setting: it is how long a person will stare at a spinner before
+ * the app owes them an answer.
+ */
+export const GENERATION_TIMEOUT_MS = 15_000
+
+/**
+ * A materialization run that always comes back.
+ *
+ * WITHOUT THIS, A DEAD NETWORK IS WORSE THAN A FAILURE. `fetch` does not reject
+ * when there is no route to the host — it hangs, and how long it hangs is up to
+ * the operating system: on an iPhone with the network off it took well over a
+ * minute. The whole time the notice reads "Actualizando…" with its retry
+ * DISABLED, because a run is in flight. So the one screen whose job is to say "we
+ * could not update your vencimientos" says nothing and offers nothing, which is
+ * the failure mode the change exists to remove — arrived at from the other side.
+ *
+ * The losing promise is not cancelled: there is no abort signal threaded through
+ * the client, and adding one buys little. A run that lands after the deadline
+ * has still written whatever it wrote, and materialization is idempotent — what
+ * an occurrence owes is derived from its calendar minus what already exists — so
+ * the next run reconciles. The cost of the race is a run reported as failed that
+ * actually succeeded; the cost of no timeout is a spinner with no way out.
+ */
+export function withGenerationTimeout(
+  run: Promise<GenerationResult>,
+  timeoutMs: number = GENERATION_TIMEOUT_MS,
+): Promise<GenerationResult> {
+  let timer: ReturnType<typeof setTimeout>
+  const deadline = new Promise<GenerationResult>((resolve) => {
+    timer = setTimeout(
+      () => resolve({ created: 0, remaining: 0, error: 'generation_timeout' }),
+      timeoutMs,
+    )
+  })
+  return Promise.race([run, deadline]).finally(() => clearTimeout(timer))
+}

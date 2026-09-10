@@ -14,6 +14,8 @@ export {
   getRecurrenceLinkedTransactionIds,
   getRecurrenceLinkForTransaction,
   generateDueRecurrenceInstances,
+  withGenerationTimeout,
+  GENERATION_TIMEOUT_MS,
   getTopRecurrenceSuggestion,
   getDuplicateRulesFor,
   buildPendingInstanceInsert,

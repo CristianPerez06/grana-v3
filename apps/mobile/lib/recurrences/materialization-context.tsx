@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { withGenerationTimeout } from '@grana/recurrences'
 import { generateDueInstances } from './mutators'
 
 /**
@@ -43,7 +44,9 @@ export function RecurrenceMaterializationProvider({
     inFlight.current = true
     setRunning(true)
 
-    generateDueInstances()
+    // Wrapped so a dead network cannot leave this spinning forever with its
+    // retry disabled — see `withGenerationTimeout`.
+    withGenerationTimeout(generateDueInstances())
       .then((result) => {
         setRemaining(result.remaining)
         setError(result.error)

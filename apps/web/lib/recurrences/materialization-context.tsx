@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { withGenerationTimeout } from '@grana/recurrences'
 import { generateDueRecurrenceInstancesAction } from '@/app/_actions/recurrences'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 
@@ -55,7 +56,9 @@ export function RecurrenceMaterializationProvider({
     inFlight.current = true
     setRunning(true)
 
-    generateDueRecurrenceInstancesAction()
+    // Wrapped so a dead network cannot leave this spinning forever with its
+    // retry disabled — see `withGenerationTimeout`.
+    withGenerationTimeout(generateDueRecurrenceInstancesAction())
       .then((result) => {
         setRemaining(result.remaining)
         setError(result.error)
