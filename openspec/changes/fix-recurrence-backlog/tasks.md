@@ -800,7 +800,12 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
       qué hay y el botón dice qué hace apretarlo, sin nombrar el mecanismo.
       **(d) la acción entra entera.** Con la etiqueta larga, frase y botón lado a lado se dejaban
       media pantalla cada uno y lo que se cortaba era el botón. El aviso apila: la frase arriba, la
-      acción abajo a lo ancho —en nativo siempre, en web por debajo de `sm`—.
+      acción abajo —en nativo siempre, en web por debajo de `sm`—.
+      **(e) el encabezado del bloque no se parte.** La píldora del contador es `shrink-0`, así que lo
+      que diga se lo saca a la columna del título: con la frase entera adentro —"2 vencimientos por
+      revisar"— el título quedaba en una columna de ~60px y se cortaba una palabra por renglón. La
+      píldora dice el conteo y nada más ("2 por revisar", como el bloque de reintegros al lado), y el
+      subtítulo se acorta a lo que aporta: "Todavía no sabemos si los pagaste".
 - [ ] 4.8 Recorrer los **seis** comportamientos de `proposal.md` en web y en nativo antes de cerrar,
       terminando en la prueba de aceptación: varios vencimientos visibles, ninguno trabando al
       siguiente, sin duplicados, resolubles por separado y en cualquier orden.

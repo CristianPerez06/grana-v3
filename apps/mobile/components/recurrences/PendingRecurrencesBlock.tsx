@@ -252,6 +252,12 @@ export function PendingRecurrencesBlock() {
                 {t('recurrences.pending.subtitle')}
               </Text>
             </View>
+            {/* The pill is `shrink-0`, so whatever it says it takes from the
+                title column first. With the old sentence in it — "2 vencimientos
+                por revisar", the whole phrase — the column was left so narrow on
+                a phone that the title broke one word per line. It says the count
+                and nothing else now, like the reimbursements block beside it; the
+                title next to it already names what is being counted. */}
             {instances.length > 0 ? (
               <Text className="shrink-0 overflow-hidden rounded-full bg-warning-bg px-2.5 py-1 text-[12px] font-bold text-warning">
                 {t('recurrences.pending.count', { count: instances.length })}

@@ -1712,7 +1712,7 @@
     },
     "pending": {
       "title": "Occurrences to review",
-      "count": "{count, plural, one {# occurrence to review} other {# occurrences to review}}",
+      "count": "{count} to review",
       "close_notice": "Close notice",
       "edit_aria": "Edit before confirming",
       "cancel_edit_aria": "Cancel editing",
@@ -1728,7 +1728,7 @@
       "skip": "Skip",
       "confirmed_success": "Transaction confirmed.",
       "skipped_success": "Transaction skipped.",
-      "subtitle": "We do not know yet whether you paid them: review them and decide on each one",
+      "subtitle": "We do not know yet whether you paid them",
       "all_clear": "You have no occurrences to review.",
       "overdue": "{count, plural, one {Overdue by # day} other {Overdue by # days}}",
       "due_today": "Due today",

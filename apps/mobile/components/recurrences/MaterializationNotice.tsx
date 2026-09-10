@@ -95,7 +95,7 @@ function MaterializationNotice({
   // names what pressing it does, and neither survives being squeezed into half a
   // phone width — the label would clip inside the button's fixed height and the
   // sentence would run four lines deep. The action sits under its own sentence,
-  // full width, where it cannot be cut off.
+  // where it cannot be cut off.
   return (
     <View style={noticeStyle(false)}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -104,17 +104,22 @@ function MaterializationNotice({
           {t('recurrences.materialization.remaining', { count: outcome.count })}
         </Text>
       </View>
-      <Button
-        variant="ghost"
-        size="sm"
-        onPress={run}
-        disabled={running}
-        title={
-          running
-            ? t('recurrences.materialization.running')
-            : t('recurrences.materialization.continue')
-        }
-      />
+      {/* Right-aligned, sized to its label: full width the action reads like a
+          second card rather than a button. Fixed width because `Button` is
+          `w-full`, so an auto-width parent would have nothing to resolve against. */}
+      <View style={{ alignSelf: 'flex-end', width: 200 }}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onPress={run}
+          disabled={running}
+          title={
+            running
+              ? t('recurrences.materialization.running')
+              : t('recurrences.materialization.continue')
+          }
+        />
+      </View>
     </View>
   )
 }

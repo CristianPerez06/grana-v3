@@ -1712,7 +1712,7 @@
     },
     "pending": {
       "title": "Vencimientos por revisar",
-      "count": "{count, plural, one {# vencimiento por revisar} other {# vencimientos por revisar}}",
+      "count": "{count} por revisar",
       "close_notice": "Cerrar aviso",
       "edit_aria": "Editar antes de confirmar",
       "cancel_edit_aria": "Cancelar edición",
@@ -1728,7 +1728,7 @@
       "skip": "Omitir",
       "confirmed_success": "Movimiento confirmado.",
       "skipped_success": "Movimiento omitido.",
-      "subtitle": "Todavía no sabemos si los pagaste: revisalos y decidí qué hacer con cada uno",
+      "subtitle": "Todavía no sabemos si los pagaste",
       "all_clear": "No tenés vencimientos por revisar.",
       "overdue": "{count, plural, one {Vencido hace # día} other {Vencido hace # días}}",
       "due_today": "Vence hoy",
