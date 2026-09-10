@@ -78,7 +78,9 @@ export const CommittedBody = ({ summary, groups }: Props) => {
                 {group.icon}
               </View>
               <View className="min-w-0 flex-1">
-                <Text className="text-[12.5px] font-extrabold text-text">{group.label}</Text>
+                <Text numberOfLines={1} className="text-[12.5px] font-extrabold text-text">
+                  {group.label}
+                </Text>
                 <Text numberOfLines={1} className="text-[10.5px] font-semibold text-text-soft">
                   {group.sub}
                 </Text>

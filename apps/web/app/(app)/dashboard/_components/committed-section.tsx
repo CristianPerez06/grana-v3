@@ -81,7 +81,12 @@ export const CommittedSection = ({ initialData }: Props) => {
   const header = (
     <CardHeader className="flex-row items-center justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="truncate text-lg font-semibold tracking-tight text-text">{title}</h2>
+        {/* El título ENVUELVE, no trunca: "Compromisos del pró…" no nombra
+            nada, y en dos líneas entra cómodo. Truncar se reserva para lo
+            secundario (la bajada, el rótulo de un grupo), donde el principio de
+            la cadena ya identifica el ítem. El link sigue sin envolver ni
+            achicarse. */}
+        <h2 className="text-lg font-semibold tracking-tight text-text">{title}</h2>
         <p className="text-[12.5px] font-semibold text-text-soft">{subtitle}</p>
       </div>
       <Link
