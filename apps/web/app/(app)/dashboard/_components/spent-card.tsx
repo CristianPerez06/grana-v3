@@ -179,7 +179,7 @@ export const SpentCard = ({ otherName }: Props) => {
           resource on air. Header and content step down together so the title
           stays flush with the tiles. */}
       <CardHeader className="flex-row items-center justify-between gap-3 px-4 sm:px-6">
-        <h2 className="min-w-0 truncate text-lg font-semibold tracking-tight text-text">
+        <h2 className="min-w-0 text-lg font-semibold tracking-tight text-text">
           {t('title')}
         </h2>
         <Link

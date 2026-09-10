@@ -20,7 +20,7 @@ export const SpentCardSkeleton = async () => {
   return (
     <Card className="flex flex-col" aria-busy="true" aria-label={t('loading')}>
       <CardHeader className="flex-row items-center justify-between gap-3 px-4 sm:px-6">
-        <h2 className="min-w-0 truncate text-lg font-semibold tracking-tight text-text">
+        <h2 className="min-w-0 text-lg font-semibold tracking-tight text-text">
           {t('title')}
         </h2>
         <Link
