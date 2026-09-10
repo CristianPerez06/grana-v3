@@ -138,6 +138,15 @@ describe('the native materialization notice clears the status bar', () => {
     expect(source).toContain('bg-navy')
   })
 
+  // Sitting on navy has a second consequence, found on the next QA round: the
+  // failure notice was painted with a 6%-alpha red, which is another way of
+  // writing "the surface behind me is light". On the navy band the card went
+  // dark and its title — `--text`, which IS the navy — vanished into it. Every
+  // surface in this notice has to carry its own color.
+  it('does not let the ground it sits on show through', () => {
+    expect(read(NATIVE_NOTICE)).not.toMatch(/backgroundColor:[^,\n]*rgba\(/)
+  })
+
   it.each([
     'apps/mobile/components/ui/PageHeader.tsx',
     'apps/mobile/components/dashboard/DashboardHeader.tsx',

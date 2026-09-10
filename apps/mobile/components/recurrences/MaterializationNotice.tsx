@@ -175,7 +175,14 @@ const noticeStyle = (isFailure: boolean) =>
     borderRadius: 12,
     borderWidth: 1,
     borderColor: isFailure ? colors.error : colors.border,
-    backgroundColor: isFailure ? 'rgba(197, 75, 60, 0.06)' : colors.borderSoft,
+    // OPAQUE, both of them. The failure used to be a 6%-alpha red, which is the
+    // same thing as "the page behind me is light" — and since the notice moved
+    // onto the navy band, the page behind it is navy: the card went dark and its
+    // title, in `--text`, disappeared into it. The body survived only because
+    // `--text-soft` is a mid grey. This is that same red composited over the
+    // card once, so it looks identical on a white surface and stays readable on
+    // navy.
+    backgroundColor: isFailure ? '#FCF4F3' : colors.borderSoft,
     paddingHorizontal: 14,
     paddingVertical: 12,
   }) as const
