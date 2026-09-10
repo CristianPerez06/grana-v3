@@ -37,7 +37,9 @@ export function RecurrenceFailureNotice({
         <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{title}</Text>
         <Text style={{ fontSize: 12, color: colors.textSoft }}>{body}</Text>
       </View>
-      <View style={{ width: 104 }}>
+      {/* Wide enough for the RETRYING label, not just for "Reintentar": at 104
+          "Actualizando…" did not fit the button's fixed height and got cut. */}
+      <View style={{ width: 140 }}>
         <Button
           variant="ghost"
           size="sm"
@@ -89,25 +91,30 @@ function MaterializationNotice({
     )
   }
 
+  // Stacked, not side by side: the sentence names what was found and the button
+  // names what pressing it does, and neither survives being squeezed into half a
+  // phone width — the label would clip inside the button's fixed height and the
+  // sentence would run four lines deep. The action sits under its own sentence,
+  // full width, where it cannot be cut off.
   return (
     <View style={noticeStyle(false)}>
-      {running ? <ActivityIndicator size="small" color={colors.textSoft} /> : null}
-      <Text style={{ flex: 1, minWidth: 0, fontSize: 12, color: colors.textSoft }}>
-        {t('recurrences.materialization.remaining', { count: outcome.count })}
-      </Text>
-      <View style={{ width: 152 }}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={run}
-          disabled={running}
-          title={
-            running
-              ? t('recurrences.materialization.running')
-              : t('recurrences.materialization.continue')
-          }
-        />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        {running ? <ActivityIndicator size="small" color={colors.textSoft} /> : null}
+        <Text style={{ flex: 1, minWidth: 0, fontSize: 12, color: colors.textSoft }}>
+          {t('recurrences.materialization.remaining', { count: outcome.count })}
+        </Text>
       </View>
+      <Button
+        variant="ghost"
+        size="sm"
+        onPress={run}
+        disabled={running}
+        title={
+          running
+            ? t('recurrences.materialization.running')
+            : t('recurrences.materialization.continue')
+        }
+      />
     </View>
   )
 }
@@ -155,9 +162,11 @@ export function MaterializationNoticeSlot({ children }: { children: ReactNode })
 
 const noticeStyle = (isFailure: boolean) =>
   ({
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    // The failure keeps its icon + text + retry on one row; the pending notice
+    // stacks its own row over the action, so this only fixes the gap and skin.
+    flexDirection: isFailure ? 'row' : 'column',
+    alignItems: isFailure ? 'center' : 'stretch',
+    gap: isFailure ? 12 : 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: isFailure ? colors.error : colors.border,

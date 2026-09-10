@@ -795,8 +795,12 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
       `edges`. Va por `edges` y no por los insets: `SafeAreaView` es una vista nativa y no lee
       `SafeAreaInsetsContext`. Delta en el spec `page-header`.
       **(c) el aviso no habla de reconstrucción.** "Faltan reconstruir 29 vencimientos" es
-      vocabulario interno —el usuario preguntó literalmente qué era—. Dice qué debe la app, no qué
-      debe el usuario: "Nos faltan traer 29 vencimientos anteriores", acción "Traer ahora".
+      vocabulario interno —el usuario preguntó literalmente qué era—. Queda "Encontramos 29
+      vencimientos anteriores para revisar", con la acción "Mostrar los siguientes": la frase dice
+      qué hay y el botón dice qué hace apretarlo, sin nombrar el mecanismo.
+      **(d) la acción entra entera.** Con la etiqueta larga, frase y botón lado a lado se dejaban
+      media pantalla cada uno y lo que se cortaba era el botón. El aviso apila: la frase arriba, la
+      acción abajo a lo ancho —en nativo siempre, en web por debajo de `sm`—.
 - [ ] 4.8 Recorrer los **seis** comportamientos de `proposal.md` en web y en nativo antes de cerrar,
       terminando en la prueba de aceptación: varios vencimientos visibles, ninguno trabando al
       siguiente, sin duplicados, resolubles por separado y en cualquier orden.

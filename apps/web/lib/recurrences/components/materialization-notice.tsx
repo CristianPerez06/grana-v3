@@ -72,17 +72,22 @@ export const MaterializationNotice = ({ className }: { className?: string }) => 
   }
 
   return (
+    // Stacks under `sm`: on a phone-width viewport the sentence and the action
+    // side by side leave each other a few characters, and the label is the half
+    // that gets clipped. Same shape as native, for the same reason.
     <div
-      className={`flex items-center gap-3 rounded-xl border border-border bg-surface-soft px-4 py-3 ${className ?? ''}`}
+      className={`flex flex-col items-stretch gap-2 rounded-xl border border-border bg-surface-soft px-4 py-3 sm:flex-row sm:items-center sm:gap-3 ${className ?? ''}`}
     >
-      <RefreshCw
-        className={`size-4 shrink-0 text-text-soft ${running ? 'animate-spin' : ''}`}
-        aria-hidden
-      />
-      <p className="min-w-0 flex-1 text-[12px] text-text-soft">
-        {t('remaining', { count: outcome.count })}
-      </p>
-      <Button size="sm" variant="ghost" onClick={run} disabled={running}>
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <RefreshCw
+          className={`size-4 shrink-0 text-text-soft ${running ? 'animate-spin' : ''}`}
+          aria-hidden
+        />
+        <p className="min-w-0 flex-1 text-[12px] text-text-soft">
+          {t('remaining', { count: outcome.count })}
+        </p>
+      </div>
+      <Button className="shrink-0" size="sm" variant="ghost" onClick={run} disabled={running}>
         {running ? t('running') : t('continue')}
       </Button>
     </div>
