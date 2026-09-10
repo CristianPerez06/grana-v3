@@ -826,6 +826,19 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
       después de aplicar `2.8`, sobre datos reales, sabiendo que a partir de la primera corrida del
       generador el rollback ya no está disponible.
 
+      **Dónde quedó el recorrido nativo (10-sep, cuenta de prueba, `0064`/`0065` aplicadas):**
+      verificado — el aviso de materialización con la banda navy continua y sin inset duplicado; el
+      encabezado del bloque legible; una corrida sin red que termina en error con Reintentar (F1) y
+      un reintento con red que la limpia y devuelve el aviso a su conteo (F1b). Con el wifi del host
+      apagado el fallo llega en segundos: el SO sabe que no hay ruta y no cuelga, así que el plazo de
+      15 s es el techo del caso feo (red que no responde), no la espera habitual.
+      Pendiente — confirmar que una lectura fallida SIN caché muestra "No pudimos leer tus
+      vencimientos" en el lugar del bloque (F2a: recargar con `r` sin red levanta un contexto nuevo,
+      así que la caché arranca vacía) y que CON filas cacheadas las conserva avisando que pueden estar
+      desactualizadas (F2b); reanudar la regla pausada y ver que vuelve con su próximo vencimiento
+      (segunda mitad de E). Nada de esto bloquea la activación: son los cinco primeros
+      comportamientos, y el sexto sigue siendo indemostrable hasta `2.8`.
+
 ## 4b. Activación — va última
 
 Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en web y en nativo.
