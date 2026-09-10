@@ -1119,6 +1119,7 @@
         "expense": "Gasto",
         "installments": "Gasto en {count} cuotas",
         "shared": "Gasto compartido entre {count} personas",
+        "shared_installments": "Gasto compartido en {count} cuotas",
         "reimbursement": "Gasto con reintegro",
         "recurrence": "Gasto recurrente",
         "income": "Ingreso",
