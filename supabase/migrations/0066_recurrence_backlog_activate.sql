@@ -41,14 +41,19 @@
 -- AFTER applying, on real data. Reading condition 3 as "test everything first"
 -- is what makes the plan look circular; it never included that one.
 --
--- ═══ THE ROLLBACK EXPIRES ALMOST AT ONCE ═══
+-- ═══ THE WAY BACK IS FORWARD ═══
 --
 -- The line at the end of this file only works while no rule holds two pending
 -- occurrences — and the first generator run after the activation is what creates
--- them, which happens the first time anybody opens the app. So the window in
--- which "put the index back" is still an option is measured in minutes, not days.
--- If a snapshot is wanted, it has to be taken BEFORE applying, not after
--- noticing something.
+-- them, which happens the first time anybody opens the app. So "put the index
+-- back" stops being an option within minutes, and after that recreating it would
+-- mean deleting those rows first, deliberately, knowing which occurrence of each
+-- rule is being thrown away.
+--
+-- A BACKUP IS NOT THAT ROLLBACK. Restoring a snapshot rewinds the whole
+-- database, so it also erases every legitimate movement recorded since it was
+-- taken. It is recovery from a disaster, not a way to undo this migration. Have
+-- one confirmed before applying — and treat fixing forward as the normal path.
 --
 -- Condition 1 is the only one the database can see, and the part it can see is
 -- checked below: the index is not dropped if the new model is not there. The

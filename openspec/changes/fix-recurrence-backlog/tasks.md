@@ -831,10 +831,21 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       que trata todo el change— no se puede ejercitar antes de esta migración en ninguna base,
       porque el índice es justamente lo que lo impide: se verifica inmediatamente después, sobre
       datos reales.
-      **Y el rollback vence casi enseguida**: la línea del final solo sirve mientras ninguna regla
-      tenga dos pendientes, y la primera corrida del generador después de activar es la que las crea
-      —o sea, la primera vez que alguien abre la app—. Si se quiere un snapshot, se toma **antes** de
-      aplicar, no cuando aparezca algo raro.
+      **Y el camino de vuelta es hacia adelante**: la línea de rollback del final solo sirve mientras
+      ninguna regla tenga dos pendientes, y la primera corrida del generador después de activar es la
+      que las crea —o sea, la primera vez que alguien abre la app—. Pasado eso, recrear el índice
+      exigiría borrar antes esas filas a conciencia, decidiendo cuál ocurrencia de cada regla se tira.
+      **Un backup no es ese rollback**: restaurar rebobina la base entera, así que también borra todo
+      movimiento legítimo cargado desde que se tomó. Es recuperación ante un desastre, no una forma
+      de deshacer esta migración. Se tiene uno confirmado antes de aplicar, y se corrige hacia
+      adelante.
+      **Checklist de cutover**, en orden:
+      1. Ventana de bajo tráfico.
+      2. Un usuario controlado con atraso conocido.
+      3. Backup/PITR confirmado.
+      4. Aplicar `0066` y correr `validate_schema.sql`.
+      5. Abrir web y nativo con ese usuario, inmediatamente.
+      6. Verificar el sexto comportamiento y revisar los errores de materialización.
       **Se niega a correr fuera de orden.** Lo único de las tres condiciones que la base puede ver es
       si el modelo nuevo está: aborta sin `due_date`, sin el índice de identidad
       `recurrence_instances_one_per_rule_due_date` —que una vez retirado el otro es lo ÚNICO que
