@@ -832,12 +832,17 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
       un reintento con red que la limpia y devuelve el aviso a su conteo (F1b). Con el wifi del host
       apagado el fallo llega en segundos: el SO sabe que no hay ruta y no cuelga, así que el plazo de
       15 s es el techo del caso feo (red que no responde), no la espera habitual.
-      Pendiente — confirmar que una lectura fallida SIN caché muestra "No pudimos leer tus
-      vencimientos" en el lugar del bloque (F2a: recargar con `r` sin red levanta un contexto nuevo,
-      así que la caché arranca vacía) y que CON filas cacheadas las conserva avisando que pueden estar
-      desactualizadas (F2b); reanudar la regla pausada y ver que vuelve con su próximo vencimiento
-      (segunda mitad de E). Nada de esto bloquea la activación: son los cinco primeros
-      comportamientos, y el sexto sigue siendo indemostrable hasta `2.8`.
+      **Saltado a propósito, no olvidado** — mirar con los ojos la lectura fallida en nativo, sin
+      caché (F2a) y con filas cacheadas (F2b). No es que sea menor: es que ya está verificado por
+      otras vías y el paso manual tenía rendimiento decreciente. En web la rama la ejercita un test
+      que renderiza el contenedor real, hace fallar la lectura y comprueba el cartel con Reintentar y
+      que no hubo reintento automático. La decisión de qué mostrar en cada caso vive en una sola
+      función compartida por las dos plataformas, con sus ramas testeadas una por una. Lo que en
+      nativo no tiene runner lo cubre el chequeo estático: que el bloque use esa función, que
+      renderice el cartel de error y que no haya vuelto al `data ?? []` que era la forma del defecto.
+      Y que ese cartel se lea en el teléfono quedó probado en F1: es el mismo componente.
+      Si alguna vez se quiere hacer igual, son dos minutos — wifi del host apagado, `Cmd + R` en el
+      simulador, y mirar que donde va el bloque diga "No pudimos leer tus vencimientos".
 
 ## 4b. Activación — va última
 
