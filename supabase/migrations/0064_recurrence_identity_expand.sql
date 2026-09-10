@@ -192,8 +192,11 @@ begin
 end $$;
 
 -- `due_date` is NOT NOT NULL: historical confirmed rows hold null on purpose.
--- The index is PARTIAL for the same reason — an unknown identity cannot reserve
--- the slot of a known one.
+-- The index is PARTIAL for the same reason — a row with no identity has no
+-- business in the index that enforces identity. Not because a NULL would reserve
+-- a known date's slot: Postgres treats NULLs as distinct in a unique index, so a
+-- full one would admit any number of them and enforce nothing about them either.
+-- Keeping them out is what makes the index mean what it says.
 create unique index recurrence_instances_one_per_rule_due_date
   on public.recurrence_instances (recurrence_id, due_date)
   where due_date is not null;

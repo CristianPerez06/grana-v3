@@ -784,6 +784,12 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
 - [ ] 4.8 Recorrer los **seis** comportamientos de `proposal.md` en web y en nativo antes de cerrar,
       terminando en la prueba de aceptación: varios vencimientos visibles, ninguno trabando al
       siguiente, sin duplicados, resolubles por separado y en cualquier orden.
+      **Se parte en dos, porque hay una sola base** (Supabase online-only, proyecto único). Los
+      **cinco** primeros se recorren en la ventana de transición, con `0064`/`0065` aplicadas, la app
+      desplegada y el índice viejo todavía en pie. El **sexto** —varios vencimientos a la vez— es
+      indemostrable ahí por definición: el índice es lo que lo impide. Se verifica inmediatamente
+      después de aplicar `2.8`, sobre datos reales, sabiendo que a partir de la primera corrida del
+      generador el rollback ya no está disponible.
 
 ## 4b. Activación — va última
 
@@ -817,6 +823,18 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       orden ya desplegados** —generador, reads, dashboard, cursor y superficies de web y nativo—, más
       la verificación de 2.8b: elimina `recurrence_instances_one_pending_per_rule`. Desde acá existe
       el backlog. Las constraints de `resolution_kind` ya entraron en la expansión (tarea 1.4b).
+      **Hay una sola base**: Supabase es online-only y el proyecto es único (`AGENTS.md`), así que
+      aplicar esta migración **es** el release; no existe una copia de QA donde probarla antes. Eso
+      no hace circular el plan, pero obliga a decir qué se prueba cuándo: los **cinco**
+      comportamientos que no necesitan el atraso se recorren en la ventana de transición
+      —`0064`/`0065` aplicadas, esta no—, y el **sexto** —varios vencimientos a la vez, que es de lo
+      que trata todo el change— no se puede ejercitar antes de esta migración en ninguna base,
+      porque el índice es justamente lo que lo impide: se verifica inmediatamente después, sobre
+      datos reales.
+      **Y el rollback vence casi enseguida**: la línea del final solo sirve mientras ninguna regla
+      tenga dos pendientes, y la primera corrida del generador después de activar es la que las crea
+      —o sea, la primera vez que alguien abre la app—. Si se quiere un snapshot, se toma **antes** de
+      aplicar, no cuando aparezca algo raro.
       **Se niega a correr fuera de orden.** Lo único de las tres condiciones que la base puede ver es
       si el modelo nuevo está: aborta sin `due_date`, sin el índice de identidad
       `recurrence_instances_one_per_rule_due_date` —que una vez retirado el otro es lo ÚNICO que

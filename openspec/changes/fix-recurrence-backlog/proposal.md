@@ -226,9 +226,15 @@ importes—:
 2. **Código**: generador con tandas continuables, versiones de cronograma y pausas, reads adaptados,
    dashboard y proyección leyendo las ocurrencias existentes, dejar de escribir el cursor, superficies
    de web y nativo, copy, error de materialización visible.
-3. **Verificar que no queda ningún cliente nativo anterior en uso** (tarea 2.8b). No es software: es
+3. **Recorrer en la ventana los cinco comportamientos que no necesitan el atraso**, en web y en
+   nativo, con `validate_schema_transition.sql` como gate. Hay una sola base —Supabase es
+   online-only y el proyecto es único—, así que esta ventana es el único "antes" que existe.
+4. **Verificar que no queda ningún cliente nativo anterior en uso** (tarea 2.8b). No es software: es
    una comprobación, y es la condición para el paso siguiente.
-4. **Migración de activación**, al final: retira `recurrence_instances_one_pending_per_rule`.
+5. **Migración de activación**: retira `recurrence_instances_one_pending_per_rule`. Aplicarla **es**
+   el release. El sexto comportamiento —varios vencimientos a la vez— se verifica recién acá, porque
+   el índice es lo que impedía probarlo, y el rollback deja de ser posible en cuanto la primera
+   corrida del generador crea una segunda pendiente.
 
 Los pasos 1 y 2 comparten **una sola ventana de producción**: la verificación transaccional de `0064`
 corre una única vez, y una edición hecha entre ambos despliegues podría desfasar el dato después de

@@ -574,8 +574,11 @@ begin
   end loop;
 
   -- (3) Indexes. The identity index is PARTIAL on purpose: a historical
-  --     confirmed row holds `due_date IS NULL`, and an unknown identity must not
-  --     reserve the slot of a known one.
+  --     confirmed row has no identity to enforce, so it stays out of the index
+  --     that enforces identity. (Not because a NULL would block a known date:
+  --     Postgres treats NULLs as distinct, so a full index would admit any
+  --     number of them.) Whether the predicate is the right one is asserted by
+  --     the SHARED CONTRACT block, against a canonical definition.
   for missing in
     select ix from unnest(array['recurrence_instances_one_per_rule_due_date',
                                 'recurrence_schedule_versions_one_per_date',
@@ -926,11 +929,16 @@ begin
     raise exception 'occurrence identity: the index covers (%), not (recurrence_id, due_date) — it would not stop a duplicated occurrence', array_to_string(v_columns, ', ');
   end if;
 
-  -- Partial on purpose: a historical `confirmed` row holds `due_date NULL` and
-  -- competes for no identity. A full index would let one unknown row block a
-  -- real occurrence, which is the trap 0064 was built to avoid.
+  -- Partial on purpose. NOT because a NULL would block a known date — Postgres
+  -- treats NULLs as distinct in a unique index, so a full index would admit any
+  -- number of them. The reason is the other way round: a historical `confirmed`
+  -- row has NO identity to enforce, so it has no business in the index that
+  -- enforces identity. Keeping it out is what makes "every row here holds an
+  -- exact vencimiento" true of the index itself, and what stops a later change
+  -- — a NULLS NOT DISTINCT index, a backfill that guesses a date — from turning
+  -- unknown rows into competitors for a slot they were never given.
   if v_predicate is null then
-    raise exception 'occurrence identity: the index is not partial — a row with an unknown due_date would compete for an identity it does not have';
+    raise exception 'occurrence identity: the index is not partial — rows with an unknown due_date have no identity and must not take part in the index that enforces it';
   end if;
 
   -- The canonical predicate, deparsed by this server from the definition 0064

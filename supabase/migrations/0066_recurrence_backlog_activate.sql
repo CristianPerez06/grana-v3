@@ -12,7 +12,15 @@
 -- exist in the database and therefore does not exist on any screen. Without it a
 -- rule may owe several, and each is resolved on its own, in any order.
 --
--- ═══ DO NOT APPLY UNTIL ALL THREE CONDITIONS HOLD ═══
+-- ═══ THERE IS ONE DATABASE. APPLYING THIS IS A PRODUCTION CHANGE ═══
+--
+-- Supabase is online-only here and there is a single project (AGENTS.md):
+-- migrations are pasted into the dashboard of the database real people use.
+-- There is no QA copy to try this on, so "apply it in QA first" is not an option
+-- that exists — applying it IS the release.
+--
+-- That makes the order matter more, not less, and it makes one of the checks
+-- unrunnable beforehand. Before applying:
 --
 --   1. Web and native deployed with the new model: batched generator, reads
 --      that return collections, dashboard and projection reading the existing
@@ -23,12 +31,28 @@
 --      alive for that user — now with nothing containing it. Today this holds
 --      because there are no distributed native builds; it is RE-VERIFIED at
 --      apply time, never assumed.
---   3. Manual QA of the six behaviours, against an environment where this
---      migration is already applied: the central one — several vencimientos at
---      once — cannot be exercised while the index is alive.
+--   3. The five behaviours that do NOT need the backlog, walked on web and on
+--      native during the transition window (0064/0065 applied, this one not):
+--      `validate_schema_transition.sql` is the gate for that window.
+--
+-- The sixth behaviour — SEVERAL unresolved occurrences at once, which is what
+-- the whole change is about — cannot be exercised before this migration, on any
+-- database, because the index is what prevents it. It is verified immediately
+-- AFTER applying, on real data. Reading condition 3 as "test everything first"
+-- is what makes the plan look circular; it never included that one.
+--
+-- ═══ THE ROLLBACK EXPIRES ALMOST AT ONCE ═══
+--
+-- The line at the end of this file only works while no rule holds two pending
+-- occurrences — and the first generator run after the activation is what creates
+-- them, which happens the first time anybody opens the app. So the window in
+-- which "put the index back" is still an option is measured in minutes, not days.
+-- If a snapshot is wanted, it has to be taken BEFORE applying, not after
+-- noticing something.
 --
 -- Condition 1 is the only one the database can see, and the part it can see is
--- checked below: the index is not dropped if the new model is not there.
+-- checked below: the index is not dropped if the new model is not there. The
+-- other two are decisions a person makes; this file cannot make them.
 --
 -- ═══ WHAT IT DOES NOT DO ═══
 --
@@ -148,11 +172,16 @@ begin
     raise exception 'occurrence identity: the index covers (%), not (recurrence_id, due_date) — it would not stop a duplicated occurrence', array_to_string(v_columns, ', ');
   end if;
 
-  -- Partial on purpose: a historical `confirmed` row holds `due_date NULL` and
-  -- competes for no identity. A full index would let one unknown row block a
-  -- real occurrence, which is the trap 0064 was built to avoid.
+  -- Partial on purpose. NOT because a NULL would block a known date — Postgres
+  -- treats NULLs as distinct in a unique index, so a full index would admit any
+  -- number of them. The reason is the other way round: a historical `confirmed`
+  -- row has NO identity to enforce, so it has no business in the index that
+  -- enforces identity. Keeping it out is what makes "every row here holds an
+  -- exact vencimiento" true of the index itself, and what stops a later change
+  -- — a NULLS NOT DISTINCT index, a backfill that guesses a date — from turning
+  -- unknown rows into competitors for a slot they were never given.
   if v_predicate is null then
-    raise exception 'occurrence identity: the index is not partial — a row with an unknown due_date would compete for an identity it does not have';
+    raise exception 'occurrence identity: the index is not partial — rows with an unknown due_date have no identity and must not take part in the index that enforces it';
   end if;
 
   -- The canonical predicate, deparsed by this server from the definition 0064

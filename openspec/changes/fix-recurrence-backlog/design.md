@@ -698,9 +698,13 @@ Septiembre desaparece. Exactamente el bloqueo que este change existe para elimin
 
 `scheduled_date` conserva el único dato legado disponible durante la transición, sin pretender que
 sea un vencimiento. El índice de identidad es **parcial** (`WHERE due_date IS NOT NULL`) y el
-generador deduplica **solo** contra vencimientos exactos, así que una identidad desconocida nunca
-reserva el lugar de una conocida. Si algún día el usuario corrige el histórico a mano, se completa
-`due_date` y la fila deja de ser desconocida.
+generador deduplica **solo** contra vencimientos exactos, así que una fila sin identidad no
+participa de la identidad de nadie. La parcialidad no es porque un `NULL` bloquearía una fecha
+conocida —Postgres trata los `NULL` como distintos en un índice único, así que uno completo
+admitiría cualquier cantidad—: es que una fila sin identidad no tiene nada que hacer en el índice que
+la impone. Lo que **sí** bloquearía es una fecha *aproximada*, y por eso no se aproxima ninguna. Si
+algún día el usuario corrige el histórico a mano, se completa `due_date` y la fila deja de ser
+desconocida.
 
 Un `CHECK` mantiene los dos campos en acuerdo: `(due_date is null) = due_date_is_unknown`.
 
