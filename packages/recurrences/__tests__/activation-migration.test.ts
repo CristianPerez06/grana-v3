@@ -448,6 +448,31 @@ describe('validate_schema_transition.sql — the window', () => {
     }
   }, 120_000)
 
+  it('does not depend on the real table being convenient to insert into', async () => {
+    // THE BUG THIS PINS, found by applying the file to the real database. The
+    // probe copies `recurrence_instances` and inserts one row into the copy; in
+    // production `amount` is NOT NULL with no default, so the insert died on a
+    // column that has nothing to do with the guards under test. The harness
+    // missed it because its fixture gives `amount` a default, which the copy
+    // inherited.
+    //
+    // Reproduced by making the fixture match production, and the fix is generic:
+    // the block drops every NOT NULL from the copy instead of naming columns.
+    const db = await createRecurrenceIdentityDb()
+    try {
+      await db.exec(`
+        alter table public.recurrence_instances alter column amount        drop default;
+        alter table public.recurrence_instances alter column currency_code drop default;
+        alter table public.recurrence_instances add column extra_required  text not null default 'x';
+        alter table public.recurrence_instances alter column extra_required drop default;
+      `)
+
+      await expect(db.exec(readSql('validate_schema_transition.sql'))).resolves.toBeDefined()
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
   it('is a GATE: an incomplete expansion does not pass it', async () => {
     // What it used to miss. Each of these leaves the phase intact — the old
     // index is there, no rule holds two pending rows — while removing something

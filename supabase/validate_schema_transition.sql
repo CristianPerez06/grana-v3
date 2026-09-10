@@ -416,18 +416,37 @@ declare
   v_check_def  text;
   v_check_canon text;
   v_status     text;
+  v_column     text;
   v_due        date;
   v_accepted   boolean;
 begin
   -- A copy of the real table: same columns, same types, no constraints and no
   -- indexes. Everything below is built and probed on THIS, so no production row
   -- is read or written.
-  -- `including defaults` matters: without it the copy keeps every NOT NULL and
-  -- loses the defaults that satisfy them, so an insert fails on `id` instead of
-  -- on the rule under test.
+  -- `including defaults` keeps whatever defaults the real columns have; the loop
+  -- then drops every NOT NULL from the copy. Both are needed, and for the same
+  -- reason: the only thing under test here is the identity contract, and a probe
+  -- row must not have to satisfy every unrelated column of the real table.
+  -- Without the loop this block fails on `amount` — NOT NULL with no default in
+  -- production — which says nothing about the guards it exists to check.
+  --
+  -- Written as a loop over the catalog rather than a list of column names on
+  -- purpose: a list goes stale the next time a column is added, and it goes
+  -- stale silently, in a file nobody runs until the day it matters.
   create temp table identity_probe (
     like public.recurrence_instances including defaults
   ) on commit drop;
+
+  for v_column in
+    select a.attname
+      from pg_attribute a
+     where a.attrelid = 'identity_probe'::regclass
+       and a.attnum > 0
+       and not a.attisdropped
+       and a.attnotnull
+  loop
+    execute format('alter table identity_probe alter column %I drop not null', v_column);
+  end loop;
 
   -- ── 1 · The identity index ──────────────────────────────────────────────
   -- Structure first: right schema, right table, unique, valid, ready, and the
