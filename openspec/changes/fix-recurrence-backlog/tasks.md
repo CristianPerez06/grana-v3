@@ -816,7 +816,7 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
       revisar"— el título quedaba en una columna de ~60px y se cortaba una palabra por renglón. La
       píldora dice el conteo y nada más ("2 por revisar", como el bloque de reintegros al lado), y el
       subtítulo se acorta a lo que aporta: "Todavía no sabemos si los pagaste".
-- [ ] 4.8 Recorrer los **seis** comportamientos de `proposal.md` en web y en nativo antes de cerrar,
+- [x] 4.8 Recorrer los **seis** comportamientos de `proposal.md` en web y en nativo antes de cerrar,
       terminando en la prueba de aceptación: varios vencimientos visibles, ninguno trabando al
       siguiente, sin duplicados, resolubles por separado y en cualquier orden.
       **Se parte en dos, porque hay una sola base** (Supabase online-only, proyecto único). Los
@@ -844,6 +844,24 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
       Si alguna vez se quiere hacer igual, son dos minutos — wifi del host apagado, `Cmd + R` en el
       simulador, y mirar que donde va el bloque diga "No pudimos leer tus vencimientos".
 
+      **CUTOVER APLICADO — 10-sep-2026, ~16:00 AR.** Orden real: inventario mínimo previo
+      (`release_safety.recurrence_instances_pre_0066_20260910`, 117 filas / 117 ids), re-corrida de
+      `validate_schema_transition.sql` en verde, `0066`, `validate_schema.sql` —que falló por el
+      hallazgo 4.9, ajeno al #96—, `0067`, y `validate_schema.sql` de nuevo, completo y sin errores.
+      No hubo backup ni PITR: el proyecto es Free y no los incluye. Se aceptó a conciencia porque
+      `0066` no escribe filas, solo retira un índice; el inventario es referencia para comparar, no
+      un backup ni una reversión automática.
+      **El sexto comportamiento, verificado sobre datos reales:** una regla ("Comida", cada 3 días)
+      quedó con **veinte** ocurrencias sin resolver a la vez —16-jun, 19-jun, 22-jun … 8-sep, sin una
+      sola fecha repetida—, más "Freelance" con las suyas. El atraso entero (30) se materializó en
+      **una sola corrida** —la tanda es de 50— y el aviso se apagó solo al llegar a cero. Prueba de
+      aceptación: confirmando una del MEDIO (12-ago) el contador bajó 32 → 31, las otras diecinueve
+      quedaron intactas, la fecha resuelta NO reapareció al recargar, y el movimiento se creó fechado
+      **12 de agosto**, el vencimiento, no el día de la confirmación.
+      **De yapa quedó verificada la vigencia de un cambio de cronograma**: "Freelance", editada de
+      mensual a quincenal ese mismo día, conserva sus ocurrencias viejas del día 4 y estrena la nueva
+      frecuencia desde la vigencia, sin fabricar quincenales hacia atrás.
+
 - [x] 4.9 **Hallazgo del cutover, ajeno al #96 y arreglado acá:** `validate_schema.sql`, corrida justo
       después de aplicar `0066`, falló con `COBERTURA RLS: anon conserva EXECUTE sobre
       public.card_period_pending`. No lo causó la activación —`0066` solo borra un índice—: `0055`
@@ -866,7 +884,7 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
 
 Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en web y en nativo.
 
-- [ ] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo
+- [x] 2.8b **Requisito para activar**, no una mejora: un usuario que solo conserve el cliente viejo
       nunca ejecuta el generador nuevo, así que su atraso no se materializa y el #96 sigue vivo para
       él — ahora sin el índice que lo contenía.
       **Un gate de versión mínima en el cliente NO lo resuelve, y por eso se revirtió** (estaba
