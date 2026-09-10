@@ -49,10 +49,21 @@ export type InstanceSnapshot = Pick<
   | 'category_id'
   | 'subcategory_id'
   | 'description'
-  | 'scheduled_date'
   | 'household_id'
   | 'split'
->
+> & {
+  /**
+   * The date the confirmed movement will carry: the occurrence's vencimiento,
+   * unless the user picked another one while resolving it.
+   *
+   * It used to be the instance's `scheduled_date` field, name and all, which is
+   * how the legacy column ended up deciding the movement's date. On a row a
+   * previous client resolved, `scheduled_date` holds the day it was PAID, not
+   * the day it fell due — so naming this after it invited exactly the confusion
+   * it caused.
+   */
+  date: string
+}
 
 type SplitEntry = { user_id: string; percentage: number }
 
@@ -85,7 +96,7 @@ export function mapInstanceToConfirmPlan(
 ): ConfirmInstancePlan {
   const { movementType, accountType } = context
   const amount = toAmountNumber(instance.amount)
-  const date = instance.scheduled_date
+  const date = instance.date
 
   if (movementType === 'transfer') {
     if (!instance.transfer_destination_account_id) {

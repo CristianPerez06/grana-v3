@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Link } from 'expo-router'
 import type { PageHeaderProps } from '@grana/ui-contracts'
+import { useHeaderEdges } from '../../lib/top-inset'
 
 // `onBackPress` overrides the back-link's navigation with a custom handler
 // (e.g. `router.back()` to pop the stack instead of navigating to a fixed
@@ -17,8 +18,12 @@ export function PageHeader({
   actions,
   onBackPress,
 }: MobilePageHeaderProps) {
+  // Normally `['top']`: the header is the top-most thing on screen and paints
+  // the status bar navy for the whole app. When a global notice above it already
+  // did that, clearing the inset a second time leaves a tall empty navy band.
+  const edges = useHeaderEdges()
   return (
-    <SafeAreaView edges={['top']} className="bg-navy">
+    <SafeAreaView edges={edges} className="bg-navy">
       <View className="flex-col gap-3 px-6 pb-4 pt-3">
         {backLink ? (
           <View className="flex-row items-center">

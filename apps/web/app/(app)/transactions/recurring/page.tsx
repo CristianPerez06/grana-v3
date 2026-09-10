@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
 import { RecurringTabs } from './_components/recurring-tabs'
 import { UpcomingRecurrences } from './_components/upcoming-recurrences'
-import { RecurrenceGenerationTrigger } from './_components/recurrence-generation-trigger'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -46,7 +45,6 @@ const RecurringPage = async () => {
 
   return (
     <>
-      <RecurrenceGenerationTrigger />
 
       <PendingRecurrencesBlock
         pending={pendingRecurrences}

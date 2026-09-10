@@ -134,8 +134,9 @@ export type CommittedCurrency = {
    * paid by a credit card — those land in that card's statement and are paid
    * when it comes due, so counting them here too would count them twice. Both
    * sources feed it: instances the generator already created for the window and
-   * still unresolved, plus the projected occurrences of the active rules (the
-   * projection advances from `last_generated_date`, so the two never overlap).
+   * still unresolved, plus the projected occurrences of the active rules. The two
+   * do not overlap because the projection subtracts every occurrence that already
+   * exists in the window, in any state.
    */
   recurringExpense: number
   /** Active `income` recurrences projected into the window (context for "Ya entra", never summed). */

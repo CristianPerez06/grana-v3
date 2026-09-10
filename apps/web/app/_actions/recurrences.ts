@@ -7,7 +7,10 @@ import {
 } from './_helpers'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateDueRecurrenceInstances } from '@/lib/recurrences/queries'
+import {
+  generateDueRecurrenceInstances,
+  type GenerationResult,
+} from '@/lib/recurrences/queries'
 import { getHousehold } from '@grana/shared'
 import {
   type AcceptRecurrenceSuggestionInput,
@@ -51,9 +54,10 @@ export async function createRecurrenceFromMovement(
     input,
   })
   if (result.ok) {
-    // Eagerly materialize the first due instance so the "por confirmar" aviso
-    // appears without a manual refresh (the lazy on-mount trigger only runs when
-    // the page remounts). Idempotent via the one-pending-per-rule unique index.
+    // Eagerly materialize what the new rule already owes, so the "por revisar"
+    // block appears without a manual refresh (the lazy on-mount trigger only runs
+    // when the page remounts). Idempotent: the generator derives what is owed
+    // from the calendar minus the occurrences that already exist.
     await generateDueRecurrenceInstances(supabase)
     revalidateAfterRecurrenceMutation()
   }
@@ -212,10 +216,15 @@ export async function dismissRecurrenceSuggestion(
 
 // ── generateDueRecurrenceInstancesAction ──────────────────────────────────────
 // Lazy materialization of due recurrence instances, fired-and-forgotten from the
-// /transactions shell on mount (web-data-access spec: writes never block the read
-// path). The caller invalidates pending-recurrences + movements when
-// `created > 0` so the new instance appears without a reload.
+// shell on mount (web-data-access spec: writes never block the read path). The
+// caller invalidates pending-recurrences + movements when `created > 0` so the
+// new occurrences appear without a reload.
+//
+// It also returns `remaining` and `error`, which the shell needs and must not
+// drop: `remaining > 0` is what offers continuing the reconstruction, and a
+// non-null `error` is what keeps a failed run from being drawn as "nothing to
+// review".
 
-export async function generateDueRecurrenceInstancesAction(): Promise<{ created: number }> {
+export async function generateDueRecurrenceInstancesAction(): Promise<GenerationResult> {
   return generateDueRecurrenceInstances(await createClient())
 }

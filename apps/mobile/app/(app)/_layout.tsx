@@ -5,6 +5,8 @@ import { StatusBar } from 'expo-status-bar'
 import { supabase } from '../../lib/supabase'
 import { hasRecoveryClaim } from '../../lib/recovery'
 import { PreferencesProvider } from '../../lib/preferences-context'
+import { RecurrenceMaterializationProvider } from '../../lib/recurrences/materialization-context'
+import { MaterializationNoticeSlot } from '../../components/recurrences/MaterializationNotice'
 import { AppMenu } from '../../components/layout/AppMenu'
 import { TabBar } from '../../components/layout/TabBar'
 
@@ -43,6 +45,10 @@ export default function AppLayout() {
 
   return (
     <PreferencesProvider>
+      {/* Materialization runs HERE, not on the recurrences hub: tying it there
+          meant the feed showed occurrences it never produced, so a user who only
+          opened the feed depended on having visited the hub. */}
+      <RecurrenceMaterializationProvider>
       <StatusBar style="light" />
       <Modal
         visible={menuOpen}
@@ -58,6 +64,11 @@ export default function AppLayout() {
         </View>
       </Modal>
 
+      {/* The notice sits above every screen, so it — not the header — owns the
+          top inset while it is there. The slot wraps the navigator because that
+          is what it has to tell: see `MaterializationNoticeSlot`. Renders
+          nothing, and takes nothing, when there is nothing to say. */}
+      <MaterializationNoticeSlot>
       <Tabs
         screenOptions={{ headerShown: false }}
         tabBar={(props) => (
@@ -77,6 +88,8 @@ export default function AppLayout() {
         <Tabs.Screen name="accounts" options={{ href: null }} />
         <Tabs.Screen name="settings" options={{ href: null }} />
       </Tabs>
+      </MaterializationNoticeSlot>
+      </RecurrenceMaterializationProvider>
     </PreferencesProvider>
   )
 }

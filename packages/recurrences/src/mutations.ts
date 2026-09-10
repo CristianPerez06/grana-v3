@@ -85,11 +85,18 @@ async function assertAccountUsable(
 }
 
 // ── createRecurrence ──────────────────────────────────────────────────────────
-// Crea una regla recurrente desde cero, sin movimiento de origen. A diferencia
-// de createRecurrenceFromMovement no hay transacción semilla, así que
-// last_generated_date queda en null: el generador produce la PRIMERA instancia
-// para start_date (ver decideRecurrenceInstance). created_from_transaction_id es
-// siempre null. No crea ninguna transacción real ni instancia en este momento.
+// Creates a recurrence rule from scratch, with no originating movement. Unlike
+// createRecurrenceFromMovement there is no seed transaction, so
+// `last_generated_date` stays null and the generator produces the FIRST
+// occurrence for `start_date`.
+//
+// THAT WRITE IS NOT A CURSOR. On insert, 0064's trigger derives the floor
+// `reconstruct_from` from it — null ⇒ `start_date - 1`, and the generator emits
+// strictly after the floor — so it is what declares where the rule starts owing
+// from. Confirm and skip stopped writing this column (task 1.5); this one stays
+// on purpose.
+// `created_from_transaction_id` is always null. Creates no real transaction and
+// no instance at this point.
 // El `household` (para reglas compartidas) lo inyecta el shell.
 
 export async function createRecurrence(
@@ -210,7 +217,8 @@ export async function createRecurrence(
       max_occurrences: data.max_occurrences ?? null,
       start_date: data.start_date,
       end_date: data.end_date ?? null,
-      // No hay ocurrencia semilla: la primera instancia se genera para start_date.
+      // No seed occurrence: the first instance is generated for start_date. Null
+      // here is what puts the floor at `start_date - 1` (0064's trigger).
       last_generated_date: null,
       status: 'active',
       created_from_transaction_id: null,
@@ -236,12 +244,18 @@ export async function createRecurrence(
 }
 
 // ── confirmRecurrenceInstance ─────────────────────────────────────────────────
-// Confirma una instancia pendiente. Crea la transacción real delegando en los
-// thin creates de @grana/transactions-mutations según el tipo de movimiento.
-// Aplica D6: si el usuario cambia el monto al confirmar, propaga ese monto a la
-// regla recurrente. La cuenta, en cambio, es un override SOLO de la instancia:
-// la familia de la cuenta efectiva (cash/bank vs credit) decide qué movimiento
-// se crea, pero la regla conserva la suya.
+// Registers the payment of one occurrence, delegating the real movement to the
+// thin creates in @grana/transactions-mutations according to its type.
+//
+// EVERY adjustment the user makes belongs to THAT occurrence and to nothing else.
+// The amount used to propagate back to the rule (the old D6) and no longer does
+// (task 1.4c): with several occurrences resolvable in any order, three corrected
+// amounts would leave the rule holding whichever was written last — a result that
+// depends on execution order. The account was always an instance-level override;
+// the effective account's family (cash/bank vs credit) decides which movement is
+// created, and the rule keeps its own.
+//
+// Nothing here writes the rule at all — see the note further down on the cursor.
 
 export async function confirmRecurrenceInstance(
   supabase: GranaSupabaseClient,
@@ -262,7 +276,7 @@ export async function confirmRecurrenceInstance(
   const { data: instance, error: instanceError } = await supabase
     .from('recurrence_instances')
     .select(
-      'id, recurrence_id, status, scheduled_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, split',
+      'id, recurrence_id, status, scheduled_date, due_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, split',
     )
     .eq('id', instanceId)
     .eq('user_id', userId)
@@ -274,6 +288,22 @@ export async function confirmRecurrenceInstance(
 
   if (instance.status !== 'pending') {
     return { ok: false, formError: 'Esta instancia ya fue resuelta.' }
+  }
+
+  // NO VENCIMIENTO, NO CONFIRMATION. This is unreachable through any write this
+  // code makes — the backfill filled it, the compatibility trigger derives it on
+  // insert, the immutability guard refuses to clear it and 0064's CHECK rejects
+  // the one transition that could reintroduce a NULL. It is checked anyway
+  // because the alternative is silent: falling back to `scheduled_date`, a date
+  // the spec itself declares of uncertain meaning, would file the movement in
+  // whatever month that column happens to hold. A visible refusal on data that
+  // should not exist beats a wrong number in the ledger.
+  if (instance.due_date == null) {
+    return {
+      ok: false,
+      formError:
+        'Esta ocurrencia no tiene fecha de vencimiento y no se puede registrar. Escribinos para revisarla.',
+    }
   }
 
   const { data: rule, error: ruleError } = await supabase
@@ -290,10 +320,10 @@ export async function confirmRecurrenceInstance(
     return { ok: false, formError: 'La regla recurrente fue eliminada.' }
   }
 
-  // Cuenta efectiva: la de la instancia, o la que el usuario eligió al confirmar
-  // ("este mes lo pagué con otra tarjeta"). El override es de la instancia y NO
-  // se propaga a la regla — a diferencia del monto (D6): usar otro medio de pago
-  // una vez no redefine el medio por defecto de la regla.
+  // Effective account: the instance's, or the one the user picked at confirm time
+  // ("this month I paid it with another card"). Like the amount, it is an
+  // override of THIS occurrence and is not propagated: paying once by another
+  // means does not redefine the rule's default.
   const overrodeAccount =
     payload.account_id != null && payload.account_id !== instance.account_id
   const effectiveAccountId = payload.account_id ?? instance.account_id
@@ -351,7 +381,11 @@ export async function confirmRecurrenceInstance(
     transfer_destination_account_id: instance.transfer_destination_account_id,
     currency_code: instance.currency_code as RecurrenceCurrencyCode,
     amount: payload.amount ?? Number(instance.amount),
-    scheduled_date: payload.date ?? instance.scheduled_date,
+    // THE VENCIMIENTO IS THE DEFAULT DATE, and there is no fallback to
+    // `scheduled_date`: a missing `due_date` was refused above rather than
+    // approximated. The date the user picks still wins — the vencimiento is the
+    // default, not a lock.
+    date: payload.date ?? instance.due_date,
     category_id:
       payload.category_id !== undefined ? payload.category_id : instance.category_id,
     subcategory_id:
@@ -414,7 +448,10 @@ export async function confirmRecurrenceInstance(
       confirmed_transaction_id: transactionId,
       resolved_at: new Date().toISOString(),
       amount: effective.amount,
-      scheduled_date: effective.scheduled_date,
+      // `scheduled_date` is NOT written. It used to be overwritten with the date
+      // the user picked at confirm time, and that cost the occurrence its due
+      // date: the payment date lives on the movement (`transactions.date`), the
+      // due date in `due_date`, and they are different facts.
       // La cuenta con la que REALMENTE se confirmó, no la de la regla: el
       // historial de instancias tiene que coincidir con el movimiento creado.
       account_id: effective.account_id,
@@ -437,24 +474,35 @@ export async function confirmRecurrenceInstance(
     }
   }
 
-  // D6: si el usuario cambió el monto al confirmar, propagá a la regla.
-  // last_generated_date usa el scheduled_date ORIGINAL (no la override), para
-  // que la siguiente generación mantenga el ritmo de la regla.
-  const ruleUpdates: { last_generated_date: string; amount?: number } = {
-    last_generated_date: instance.scheduled_date,
-  }
-  if (payload.amount !== undefined && payload.amount !== Number(rule.amount)) {
-    ruleUpdates.amount = payload.amount
-  }
-  await supabase.from('recurrences').update(ruleUpdates).eq('id', rule.id)
+  // The amount the user adjusts when resolving applies to THIS occurrence only
+  // and does NOT rewrite the rule's. It used to propagate (the old D6), which
+  // passed for convenient while a rule could only have one pending occurrence;
+  // with bulk resolution it is wrong: resolving June, July and August with
+  // different amounts would leave the rule holding whichever was written last —
+  // a result that depends on EXECUTION ORDER. Updating the rule is a separate,
+  // explicit action ("use this amount from now on"), applied once.
+  //
+  // THE CURSOR IS NOT WRITTEN, and that is what makes resolving in any order
+  // safe. `last_generated_date` said "everything up to here is done", which is a
+  // claim a single write cannot make once a rule holds several unresolved
+  // occurrences: resolving August moved it past July, and July — still owed —
+  // stopped existing for every reader. That is #96.
+  //
+  // Nothing reads it any more. The generator derives what a rule owes from its
+  // calendar minus the occurrences that already exist; the dashboard, the
+  // "próximo", the projection and the undo all read those same occurrences. The
+  // column survives only so a client that predates this change keeps working
+  // during the transition; migration C retires it.
 
   return { ok: true, transactionId }
 }
 
 // ── skipRecurrenceInstance ────────────────────────────────────────────────────
-// Marca una instancia pendiente como omitida. No crea transacción. Avanza el
-// cursor de la regla (last_generated_date) para que la generación pase a la
-// siguiente fecha y no vuelva a generar la misma instancia.
+// Marks a pending occurrence as skipped. Creates no transaction, touches no
+// balance and MOVES NO CURSOR: what keeps that date from being generated again
+// is that the occurrence EXISTS, whatever its state. A skipped one does not come
+// back — and, unlike the cursor, it does not bury the earlier ones that are
+// still unresolved either.
 
 export async function skipRecurrenceInstance(
   supabase: GranaSupabaseClient,
@@ -494,12 +542,6 @@ export async function skipRecurrenceInstance(
         updateError?.message ?? 'La instancia fue resuelta por otro proceso.',
     }
   }
-
-  await supabase
-    .from('recurrences')
-    .update({ last_generated_date: instance.scheduled_date })
-    .eq('id', instance.recurrence_id)
-    .eq('user_id', userId)
 
   return { ok: true }
 }
@@ -635,11 +677,15 @@ export async function updateRecurrence(
 }
 
 // ── pauseRecurrence / resumeRecurrence ─────────────────────────────────────────
-// Pausar detiene futuras generaciones (que solo procesan status='active'). No
-// toca instancias pendientes ya generadas — el usuario puede confirmarlas u
-// omitirlas. Reanudar simplemente vuelve a 'active'; la próxima generación se
-// computa desde last_generated_date como siempre (D8). Los errores de Postgres
-// viajan por `errorCode` para que el shell los localice.
+// Pausing stops future generation (which only processes status='active'). It does
+// not touch occurrences already materialized — the user can confirm or skip them,
+// and they are still theirs after resuming.
+//
+// Resuming goes back to 'active'. What resuming does NOT do is recover the paused
+// period: 0064's trigger closes the interval in `recurrence_pauses`, and the
+// generator subtracts that interval from the calendar. Pausing does not accrue
+// (decision 16). Postgres errors travel through `errorCode` so the shell can
+// localize them.
 
 export async function pauseRecurrence(
   supabase: GranaSupabaseClient,
@@ -801,10 +847,15 @@ export async function deleteMovementResolvingRecurrence(args: {
 }
 
 // ── acceptRecurrenceSuggestion ─────────────────────────────────────────────────
-// Acepta una sugerencia y crea la regla activa con los valores propuestos.
-// start_date = última fecha vista por la detección, last_generated_date = misma
-// fecha, para que la generación produzca la próxima instancia en la siguiente
-// fecha esperada (en el futuro).
+// Accepts a suggestion and creates the active rule with the proposed values.
+// `start_date` is the last date the detection saw, and `last_generated_date` is
+// that same date because the movement the detection saw ALREADY EXISTS: on
+// insert, 0064's trigger turns that value into the floor `reconstruct_from`, so
+// the rule starts owing from the following date and does not propose the gasto
+// that gave rise to it a second time.
+//
+// It is a creation-time write, not a cursor advance: removing it would make the
+// rule materialize an occurrence for a movement the user already has.
 
 export async function acceptRecurrenceSuggestion(
   supabase: GranaSupabaseClient,

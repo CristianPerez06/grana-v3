@@ -19,6 +19,7 @@ import { useTranslations } from "next-intl";
 import { logoutAction } from "@/app/_actions/logout";
 import { setSidebarCollapsed as setSidebarCollapsedAction } from "@/app/_actions/preferences";
 import { GranaIsotype, GranaLogo } from "@/components/ui/grana-logo";
+import { MaterializationNotice } from '@/lib/recurrences/components/materialization-notice'
 import { MovementDrawerLoader } from "@/app/(app)/transactions/_components/movement-drawer-loader";
 import { AppMenu } from "./app-menu";
 import { ProfileBlock } from "./profile-block";
@@ -120,6 +121,13 @@ export const AppShell = ({
               The bottom padding clears the fixed tab bar, which is out of flow
               and would otherwise sit on top of the last rows of content. */}
           <div className="mx-auto w-full max-w-5xl px-4 pt-5 pb-[calc(1.25rem+var(--tab-bar-inset,0px))] md:px-8 md:py-8">
+            {/* The materialization notice belongs to the SHELL, not to a route.
+                Generation runs on every screen now, so its failure — and a
+                rebuild that still owes occurrences — can happen while the user is
+                in Cuentas, Tarjetas or Ahorros. Rendering it only on Inicio and
+                Movimientos meant the error was invisible exactly where it had
+                just occurred. It renders nothing when there is nothing to say. */}
+            <MaterializationNotice className="mb-4" />
             {children}
           </div>
         </MovementDrawerLoader>

@@ -2,6 +2,13 @@ import { useState } from 'react'
 import { Alert, Pressable, Text, View } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, Clock, X } from 'lucide-react-native'
+import { formatDateISO, getTodayAR } from '@grana/money-logic'
+import {
+  resolutionPreview,
+  reviewFeedState,
+  reviewUrgency,
+  shouldOpenReviewBlock,
+} from '@grana/recurrences'
 import type { PendingRecurrenceInstance } from '@grana/recurrences'
 import { getPendingRecurrences } from '../../lib/recurrences/queries'
 import {
@@ -15,17 +22,28 @@ import { colors } from '../../lib/colors'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
 import { amountSign, amountToneClass, categoryName, movementLabel } from './format'
 import { Card } from '../ui/Card'
+import { RecurrenceFailureNotice } from './MaterializationNotice'
 
 type DoneAction = 'confirmed' | 'skipped'
+
+// Spelled out rather than interpolated, so a renamed message key still turns up
+// in a grep and in the i18n key suite.
+const WILL_CREATE_KEY = {
+  expense: 'recurrences.pending.will_create.expense',
+  income: 'recurrences.pending.will_create.income',
+  transfer: 'recurrences.pending.will_create.transfer',
+} as const
 
 // The row reports WHICH action succeeded and nothing else: the success notice is
 // owned by the block, because a notice living in the row would unmount with the
 // row exactly when the list empties — which is the moment it exists to explain.
 function PendingRow({
   instance,
+  today,
   onDone,
 }: {
   instance: PendingRecurrenceInstance
+  today: string
   onDone: (action: DoneAction) => void
 }) {
   const t = useT()
@@ -36,6 +54,21 @@ function PendingRow({
   const type = instance.recurrence.movement_type
   const title =
     instance.description || categoryName(instance.category, t) || movementLabel(type, t)
+  const amount = fmtMoney(Number(instance.amount), instance.currency_code, showCents)
+  const urgency = reviewUrgency(instance.due_date, today)
+  const urgencyLabel =
+    urgency.kind === 'due_today'
+      ? t('recurrences.pending.due_today')
+      : t(
+          urgency.kind === 'overdue'
+            ? 'recurrences.pending.overdue'
+            : 'recurrences.pending.due_in',
+          { count: urgency.days },
+        )
+  // WHAT RESOLVING IT WILL DO, spelled out — the same sentence web shows. The
+  // native row used to stop at title, date and amount, so confirming meant
+  // guessing which movement, on which date, in which account.
+  const preview = resolutionPreview(instance)
 
   const run = async (action: 'confirm' | 'skip') => {
     setBusy(true)
@@ -66,12 +99,27 @@ function PendingRow({
             ) : null}
           </View>
           <Text className="text-[12px] text-text-muted">
-            {formatShortDate(instance.scheduled_date, locale)}
+            {formatShortDate(instance.due_date, locale)}
+          </Text>
+          <Text
+            className={`mt-0.5 text-[11px] font-extrabold uppercase ${
+              urgency.kind === 'due_in' ? 'text-warning' : 'text-negative'
+            }`}
+          >
+            {urgencyLabel}
+          </Text>
+          <Text className="mt-1 text-[12px] text-text-soft">
+            {t(WILL_CREATE_KEY[preview.kind], {
+              amount,
+              date: formatShortDate(preview.date, locale),
+              account: preview.account ?? '—',
+              destination: preview.destination ?? '—',
+            })}
           </Text>
         </View>
         <Text className={`text-[15px] font-extrabold ${amountToneClass(type)}`}>
           {amountSign(type)}
-          {fmtMoney(Number(instance.amount), instance.currency_code, showCents)}
+          {amount}
         </Text>
       </View>
 
@@ -116,9 +164,14 @@ export function PendingRecurrencesBlock() {
   const t = useT()
   const queryClient = useQueryClient()
 
+  // NO AUTO-RETRY. The read carries a 15s deadline of its own (`withReadTimeout`),
+  // and the client's default retries once — which on a dead network is thirty
+  // seconds of a screen that looks exactly like having nothing to review. The
+  // retry here is the user's, on the button, once we have told them.
   const query = useQuery({
     queryKey: ['recurrences', 'pending'] as const,
     queryFn: getPendingRecurrences,
+    retry: false,
   })
 
   const [notice, setNotice] = useState<string | null>(null)
@@ -128,10 +181,43 @@ export function PendingRecurrencesBlock() {
   // refetch-on-focus. Deriving does both: follow the data until the user picks.
   const [openOverride, setOpenOverride] = useState<boolean | null>(null)
 
-  const instances = query.data ?? []
-  const isOpen = openOverride ?? instances.length <= 1
+  // A FAILED READ IS NOT AN EMPTY LIST. `query.data ?? []` made the block
+  // disappear on error, which tells the user they have nothing to review when
+  // the truth is that nobody knows — the same defect as a swallowed
+  // materialization error, one layer up. `reviewFeedState` is shared with web so
+  // the two platforms cannot answer this differently.
+  const feed = reviewFeedState(query)
+  const instances = feed.kind === 'list' ? (query.data ?? []) : []
+  const todayISO = formatDateISO(getTodayAR())
+  const isOpen = openOverride ?? shouldOpenReviewBlock(instances, todayISO)
+
+  if (feed.kind === 'unreadable') {
+    return (
+      <RecurrenceFailureNotice
+        title={t('recurrences.materialization.read_failed_title')}
+        body={t('recurrences.materialization.read_failed_body')}
+        onRetry={() => void query.refetch()}
+        retrying={query.isFetching}
+      />
+    )
+  }
 
   if (instances.length === 0 && !notice) return null
+
+  // Rows are already on screen and a refresh failed. They stay: making
+  // vencimientos the user was looking at vanish over a transient failure is a
+  // worse answer than showing them slightly stale and saying so.
+  const staleNotice =
+    feed.kind === 'list' && feed.refreshFailed ? (
+      <View className="mb-3">
+        <RecurrenceFailureNotice
+          title={t('recurrences.materialization.refresh_failed_title')}
+          body={t('recurrences.materialization.refresh_failed_body')}
+          onRetry={() => void query.refetch()}
+          retrying={query.isFetching}
+        />
+      </View>
+    ) : null
 
   const onDone = (action: DoneAction) => {
     setNotice(
@@ -144,79 +230,88 @@ export function PendingRecurrencesBlock() {
     invalidateAfterRecurrenceConfirm(queryClient)
   }
 
+  // RN has no `spread` on shadows, so web's 4px gold halo becomes a real ring:
+  // an outer view painted `warning-bg` with the card inset by 1. The ring is
+  // also what carries the gold accent — overriding the `Card`'s own border
+  // color from `className` would be a coin flip, since two `border-*`
+  // utilities resolve by their order in Tailwind's output, not in the string.
   return (
-    // RN has no `spread` on shadows, so web's 4px gold halo becomes a real ring:
-    // an outer view painted `warning-bg` with the card inset by 1. The ring is
-    // also what carries the gold accent — overriding the `Card`'s own border
-    // color from `className` would be a coin flip, since two `border-*`
-    // utilities resolve by their order in Tailwind's output, not in the string.
-    <View className="rounded-2xl bg-warning-bg p-1">
-      <Card className="overflow-hidden">
-        <Pressable
-          onPress={() => setOpenOverride(!isOpen)}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: isOpen }}
-          className="flex-row items-center gap-3 px-4 py-4 active:bg-page"
-        >
-          <View className="h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-warning-bg">
-            <Clock size={20} color={colors.warning} />
-          </View>
-          <View className="min-w-0 flex-1">
-            <Text className="text-[15px] font-extrabold text-text">
-              {t('recurrences.pending.title')}
-            </Text>
-            <Text className="mt-0.5 text-[12px] font-medium text-text-muted">
-              {t('recurrences.pending.subtitle')}
-            </Text>
-          </View>
-          {instances.length > 0 ? (
-            <Text className="shrink-0 overflow-hidden rounded-full bg-warning-bg px-2.5 py-1 text-[12px] font-bold text-warning">
-              {t('recurrences.pending.count', { count: instances.length })}
-            </Text>
-          ) : null}
-          <ChevronDown
-            size={20}
-            color={colors.textMuted}
-            style={{ transform: [{ rotate: isOpen ? '0deg' : '-90deg' }] }}
-          />
-        </Pressable>
-
-        {isOpen && notice ? (
-          <View className="mx-4 mb-3 flex-row items-center justify-between gap-2 rounded-xl border border-emerald/30 bg-emerald-soft px-3 py-2">
-            <View className="min-w-0 flex-1 flex-row items-center gap-2">
-              <Check size={16} color={colors.emeraldDeep} />
-              <Text className="min-w-0 flex-1 text-[13px] font-medium text-emerald-deep">
-                {notice}
+    <>
+      {staleNotice}
+      <View className="rounded-2xl bg-warning-bg p-1">
+        <Card className="overflow-hidden">
+          <Pressable
+            onPress={() => setOpenOverride(!isOpen)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isOpen }}
+            className="flex-row items-center gap-3 px-4 py-4 active:bg-page"
+          >
+            <View className="h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-warning-bg">
+              <Clock size={20} color={colors.warning} />
+            </View>
+            <View className="min-w-0 flex-1">
+              <Text className="text-[15px] font-extrabold text-text">
+                {t('recurrences.pending.title')}
+              </Text>
+              <Text className="mt-0.5 text-[12px] font-medium text-text-muted">
+                {t('recurrences.pending.subtitle')}
               </Text>
             </View>
-            <Pressable
-              onPress={() => setNotice(null)}
-              accessibilityRole="button"
-              accessibilityLabel={t('recurrences.pending.close_notice')}
-              hitSlop={10}
-            >
-              <X size={14} color={colors.emeraldDeep} />
-            </Pressable>
-          </View>
-        ) : null}
-
-        {isOpen ? (
-          instances.length === 0 ? (
-            <View className="flex-row items-center gap-3 border-t border-border-soft px-4 py-5">
-              <Check size={20} color={colors.emeraldDeep} />
-              <Text className="min-w-0 flex-1 text-[14px] font-semibold text-emerald-deep">
-                {t('recurrences.pending.all_clear')}
+            {/* The pill is `shrink-0`, so whatever it says it takes from the
+                title column first. With the old sentence in it — "2 vencimientos
+                por revisar", the whole phrase — the column was left so narrow on
+                a phone that the title broke one word per line. It says the count
+                and nothing else now, like the reimbursements block beside it; the
+                title next to it already names what is being counted. */}
+            {instances.length > 0 ? (
+              <Text className="shrink-0 overflow-hidden rounded-full bg-warning-bg px-2.5 py-1 text-[12px] font-bold text-warning">
+                {t('recurrences.pending.count', { count: instances.length })}
               </Text>
-            </View>
-          ) : (
-            instances.map((instance) => (
-              <View key={instance.id} className="border-t border-border-soft">
-                <PendingRow instance={instance} onDone={onDone} />
+            ) : null}
+            <ChevronDown
+              size={20}
+              color={colors.textMuted}
+              style={{ transform: [{ rotate: isOpen ? '0deg' : '-90deg' }] }}
+            />
+          </Pressable>
+
+          {isOpen && notice ? (
+            <View className="mx-4 mb-3 flex-row items-center justify-between gap-2 rounded-xl border border-emerald/30 bg-emerald-soft px-3 py-2">
+              <View className="min-w-0 flex-1 flex-row items-center gap-2">
+                <Check size={16} color={colors.emeraldDeep} />
+                <Text className="min-w-0 flex-1 text-[13px] font-medium text-emerald-deep">
+                  {notice}
+                </Text>
               </View>
-            ))
-          )
-        ) : null}
-      </Card>
-    </View>
+              <Pressable
+                onPress={() => setNotice(null)}
+                accessibilityRole="button"
+                accessibilityLabel={t('recurrences.pending.close_notice')}
+                hitSlop={10}
+              >
+                <X size={14} color={colors.emeraldDeep} />
+              </Pressable>
+            </View>
+          ) : null}
+
+          {isOpen ? (
+            instances.length === 0 ? (
+              <View className="flex-row items-center gap-3 border-t border-border-soft px-4 py-5">
+                <Check size={20} color={colors.emeraldDeep} />
+                <Text className="min-w-0 flex-1 text-[14px] font-semibold text-emerald-deep">
+                  {t('recurrences.pending.all_clear')}
+                </Text>
+              </View>
+            ) : (
+              instances.map((instance) => (
+                <View key={instance.id} className="border-t border-border-soft">
+                  <PendingRow instance={instance} today={todayISO} onDone={onDone} />
+                </View>
+              ))
+            )
+          ) : null}
+        </Card>
+      </View>
+    </>
   )
 }

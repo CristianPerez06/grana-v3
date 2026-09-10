@@ -40,10 +40,32 @@ const monthlyRule = (over: Partial<RuleRow> = {}): RuleRow => ({
 })
 
 // Records what the mutation wrote, so the tests can assert the repair.
-type Recorder = { updates: Record<string, unknown>[]; deletedTx: boolean }
+type Recorder = {
+  updates: Record<string, unknown>[]
+  deletedTx: boolean
+  /** Arguments of every `delete_movement_unlinking_seed` call. */
+  rpcCalls: Array<{ name: string; args: Record<string, unknown> }>
+}
 
-function stubClient(rule: RuleRow | null, rec: Recorder): GranaSupabaseClient {
+type Failures = {
+  failRpc?: { code: string }
+  failTxDelete?: { code: string }
+}
+
+function stubClient(
+  rule: RuleRow | null,
+  rec: Recorder,
+  fail: Failures = {},
+): GranaSupabaseClient {
   return {
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      rec.rpcCalls.push({ name, args })
+      if (fail.failRpc) return { data: null, error: fail.failRpc }
+      // The function unlinks, releases the floor and deletes the movement in one
+      // transaction; from the client all that is observable is that it succeeded.
+      rec.deletedTx = true
+      return { data: null, error: null }
+    },
     from(table: string) {
       if (table === 'transactions') {
         return {
@@ -57,6 +79,7 @@ function stubClient(rule: RuleRow | null, rec: Recorder): GranaSupabaseClient {
           delete: () => ({
             eq: () => ({
               eq: async () => {
+                if (fail.failTxDelete) return { error: fail.failTxDelete }
                 rec.deletedTx = true
                 return { error: null }
               },
@@ -93,7 +116,7 @@ function stubClient(rule: RuleRow | null, rec: Recorder): GranaSupabaseClient {
   } as unknown as GranaSupabaseClient
 }
 
-const recorder = (): Recorder => ({ updates: [], deletedTx: false })
+const recorder = (): Recorder => ({ updates: [], deletedTx: false, rpcCalls: [] })
 
 describe('deleteTransaction — seeded recurrence guard', () => {
   it('deletes normally when the movement seeded no rule', async () => {
@@ -128,10 +151,19 @@ describe('deleteTransaction — seeded recurrence guard', () => {
     expect(rec.updates).toEqual([])
   })
 
-  it('unlink repairs the cursor when it covered the future seed being deleted', async () => {
+  it('unlink hands the whole repair to one transaction', async () => {
     // The exact production shape: rule created 31-jul from a movement dated
-    // 7-ago. Deleting that movement without clearing the cursor would make the
-    // rule skip August entirely.
+    // 7-ago. Deleting that movement without putting anything in its place makes
+    // the rule skip August entirely.
+    //
+    // WHAT the repair does — unlink, release the reconstruction floor by one day,
+    // delete the movement — lives in `delete_movement_unlinking_seed` (0065) and
+    // is pinned against the real database in
+    // `packages/recurrences/__tests__/future-seed-repair.test.ts`. What this
+    // asserts is that the client hands it over as ONE call instead of issuing the
+    // writes itself, because a partial outcome here duplicates a gasto or loses
+    // an occurrence and cannot be compensated: 0064's guard lets the floor move
+    // one way only.
     const rec = recorder()
     const result = await deleteTransaction(
       stubClient(monthlyRule({ start_date: '2026-08-07', last_generated_date: '2026-08-07' }), rec),
@@ -141,10 +173,33 @@ describe('deleteTransaction — seeded recurrence guard', () => {
     )
 
     expect(result.ok).toBe(true)
-    expect(rec.updates).toEqual([
-      { created_from_transaction_id: null, last_generated_date: null },
+    expect(rec.rpcCalls).toEqual([
+      { name: 'delete_movement_unlinking_seed', args: { p_transaction_id: TX } },
     ])
+    // No write of its own: nothing to come apart from the delete.
+    expect(rec.updates).toEqual([])
     expect(rec.deletedTx).toBe(true)
+  })
+
+  it('surfaces a failure of the repair instead of reporting success', async () => {
+    // Whatever fails inside — the guard, RLS, the temporal guard on the delete —
+    // the transaction rolls the whole thing back, so there is nothing to undo and
+    // nothing partial left behind. The caller only has to be told.
+    const rec = recorder()
+    const client = stubClient(
+      monthlyRule({ start_date: '2026-08-07', last_generated_date: '2026-08-07' }),
+      rec,
+      { failRpc: { code: 'GRN01' } },
+    )
+
+    const result = await deleteTransaction(client, USER, TX, {
+      today: '2026-08-04',
+      seedResolution: 'unlink',
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.ok === false && result.errorCode).toBe('GRN01')
+    expect(rec.deletedTx).toBe(false)
   })
 
   it('unlink leaves an already-advanced cursor alone', async () => {
@@ -160,11 +215,12 @@ describe('deleteTransaction — seeded recurrence guard', () => {
     )
 
     expect(result.ok).toBe(true)
-    expect(rec.updates).toEqual([{ created_from_transaction_id: null }])
+    expect(rec.rpcCalls).toHaveLength(1)
+    expect(rec.updates).toEqual([])
     expect(rec.deletedTx).toBe(true)
   })
 
-  it('unlink leaves a past cursor equal to start_date alone', async () => {
+  it('unlink of a past start_date goes through the same single call', async () => {
     // Cursor = start_date but already in the past: the occurrence happened, the
     // user deleted its movement on purpose. Repairing would re-propose it.
     const rec = recorder()
@@ -176,7 +232,8 @@ describe('deleteTransaction — seeded recurrence guard', () => {
     )
 
     expect(result.ok).toBe(true)
-    expect(rec.updates).toEqual([{ created_from_transaction_id: null }])
+    expect(rec.rpcCalls).toHaveLength(1)
+    expect(rec.updates).toEqual([])
   })
 
   it('auto-unlinks a soft-deleted rule without asking', async () => {
@@ -195,7 +252,8 @@ describe('deleteTransaction — seeded recurrence guard', () => {
     )
 
     expect(result.ok).toBe(true)
-    expect(rec.updates).toEqual([{ created_from_transaction_id: null }])
+    expect(rec.rpcCalls).toHaveLength(1)
+    expect(rec.updates).toEqual([])
     expect(rec.deletedTx).toBe(true)
   })
 })

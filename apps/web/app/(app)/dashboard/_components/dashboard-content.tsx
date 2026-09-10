@@ -9,6 +9,7 @@ import { SharedStripContainer } from './shared-strip-container'
 import { SpentCardContainer } from './spent-card-container'
 import { SpentCardSkeleton } from './spent-card-skeleton'
 import { SaveSuggestionStrip } from '@/lib/savings/components/save-suggestion-strip'
+import { PendingRecurrencesBlockContainer } from '@/lib/recurrences/components/pending-recurrences-block-container'
 
 // Dashboard composition (design handoff `docs/design/dashboard-home/`), four
 // blocks in fixed order: "Saldo disponible total" (full width) → "Cuánto
@@ -31,6 +32,12 @@ export const DashboardContent = async () => {
             "acabás de cobrar", y se resuelve entera en el cliente: si no
             corresponde ofrecerla no renderiza nada y la fila 1 sube sola. No es
             una tarea pendiente — sin badge, sin contador, sin bloquear nada. */}
+        {/* Vencimientos por revisar. Va en el INICIO porque es donde empieza la
+            sesión: vivía solo en Movimientos y en el hub, así que un usuario
+            podía tener vencimientos sin revisar y no enterarse nunca. Arriba de
+            todo, porque es lo único de esta pantalla que espera una decisión. */}
+        <PendingRecurrencesBlockContainer />
+
         <SaveSuggestionStrip year={currentYear} month={currentMonth} />
 
         {/* Fila 1 — "Saldo disponible total" a ancho completo: el total, la

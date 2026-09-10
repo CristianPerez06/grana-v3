@@ -1,19 +1,16 @@
 import { getTranslations } from 'next-intl/server'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import type { PendingRecurrenceInstance } from '@/lib/recurrences/types'
+import { formatShortDate } from '@/lib/date'
+import type { EnrichedRecurrenceInstance } from '@/lib/recurrences/types'
 
 type Props = {
-  instances: PendingRecurrenceInstance[]
+  /**
+   * The whole history, so `due_date` may be NULL — an occurrence resolved before
+   * 0064 has no recoverable vencimiento. This list renders `scheduled_date`,
+   * which is what it has for those rows.
+   */
+  instances: EnrichedRecurrenceInstance[]
   currencyCode: 'ARS' | 'USD'
-}
-
-const formatDate = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
 }
 
 const statusClass: Record<string, string> = {
@@ -50,7 +47,7 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
             >
               <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="text-sm font-semibold text-text">
-                  {formatDate(instance.scheduled_date)}
+                  {formatShortDate(instance.scheduled_date)}
                 </span>
                 {instance.description && (
                   <span className="truncate text-xs text-text-muted">

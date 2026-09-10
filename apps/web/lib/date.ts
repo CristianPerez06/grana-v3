@@ -22,3 +22,20 @@ export function parseISODate(iso: string | null | undefined): Date | undefined {
 export function todayISO(): string {
   return formatDateISO(getTodayAR())
 }
+
+/**
+ * An accounting date as a person reads it: `10 de sept de 2026`.
+ *
+ * Takes the ISO string apart rather than going through `new Date(iso)`, for the
+ * same reason `parseISODate` does: the spec parses a bare `YYYY-MM-DD` as UTC,
+ * which lands on the previous day in AR.
+ */
+export function formatShortDate(iso: string): string {
+  const parsed = parseISODate(iso)
+  if (!parsed) return iso
+  return parsed.toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}

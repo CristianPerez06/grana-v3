@@ -10,6 +10,7 @@ import {
   skipRecurrenceInstance as skipRecurrenceInstanceImpl,
   updateRecurrence as updateRecurrenceImpl,
   type RecurrenceHousehold,
+  type GenerationResult,
 } from '@grana/recurrences'
 import { supabase } from '../supabase'
 import { getHousehold } from '../shared/queries'
@@ -91,10 +92,12 @@ async function recurrenceHousehold(): Promise<RecurrenceHousehold> {
 }
 
 // Lazy materialization of due instances (fire-and-forget from the hub on focus).
-// Returns { created } so the caller can invalidate only when something appeared.
-export async function generateDueInstances(): Promise<{ created: number }> {
+// `created` tells the caller whether to invalidate; `remaining` and `error` are
+// what the screen needs in order to offer continuing the reconstruction and to
+// avoid rendering a failure as "nothing to review".
+export async function generateDueInstances(): Promise<GenerationResult> {
   const userId = await currentUserId()
-  if (!userId) return { created: 0 }
+  if (!userId) return { created: 0, remaining: 0, error: null }
   return generateDueRecurrenceInstances(supabase, userId)
 }
 

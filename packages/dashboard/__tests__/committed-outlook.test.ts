@@ -89,21 +89,67 @@ type Db = {
  * whatever predicates the query asks for, so the test pins the behaviour and
  * not the particular set of filters the implementation happens to use today.
  */
-function makeSupabase(db: Db) {
+function makeSupabase(db: Db, options: { maxRows?: number } = {}) {
   const rules = db.recurrences ?? []
+  const maxRows = options.maxRows ?? 1000
 
   function builder(table: string) {
     const eq: Record<string, unknown> = {}
     const inFilters: Record<string, unknown[]> = {}
     const gte: Record<string, string> = {}
     const lte: Record<string, string> = {}
+    const notNull: string[] = []
+    let orGroups: string[][] | null = null
+    let orderBy: string[] = []
+    let window: { from: number; to: number } | null = null
 
-    const keep = <T extends Record<string, unknown>>(rows: T[]): T[] =>
-      rows
+    // `and(due_date.gte.X,due_date.lte.Y)` — the slice of PostgREST's filter
+    // grammar these reads use. A row passes the `or` if ANY group passes.
+    const matchesTerm = (row: Record<string, unknown>, term: string): boolean => {
+      const [column, operator, ...rest] = term.split('.')
+      const value = rest.join('.')
+      const cell = row[column]
+      switch (operator) {
+        case 'gte':
+          return cell != null && String(cell) >= value
+        case 'lte':
+          return cell != null && String(cell) <= value
+        case 'is':
+          return value === 'null' ? cell == null : String(cell) === value
+        case 'eq':
+          return String(cell) === value
+        default:
+          throw new Error(`unexpected filter operator: ${operator}`)
+      }
+    }
+
+    const keep = <T extends Record<string, unknown>>(rows: T[]): T[] => {
+      let out = rows
         .filter((r) => Object.entries(eq).every(([c, v]) => r[c] === v))
         .filter((r) => Object.entries(inFilters).every(([c, v]) => v.includes(r[c])))
         .filter((r) => Object.entries(gte).every(([c, v]) => String(r[c]) >= v))
         .filter((r) => Object.entries(lte).every(([c, v]) => String(r[c]) <= v))
+        .filter((r) => notNull.every((c) => r[c] != null))
+
+      if (orGroups != null) {
+        const groups = orGroups
+        out = out.filter((r) => groups.some((terms) => terms.every((t) => matchesTerm(r, t))))
+      }
+      if (orderBy.length > 0) {
+        out = [...out].sort((a, b) => {
+          for (const column of orderBy) {
+            const left = String(a[column] ?? '')
+            const right = String(b[column] ?? '')
+            if (left !== right) return left < right ? -1 : 1
+          }
+          return 0
+        })
+      }
+      // PostgREST caps every response at `db-max-rows`, window or no window.
+      const capped = Math.min(window == null ? maxRows : window.to - window.from + 1, maxRows)
+      const offset = window?.from ?? 0
+      return out.slice(offset, offset + capped)
+    }
 
     const run = () => {
       switch (table) {
@@ -151,7 +197,7 @@ function makeSupabase(db: Db) {
                 interval_count: 1,
                 interval_unit: 'month',
                 max_occurrences: null,
-                last_generated_date: null,
+                created_from_transaction_id: null,
                 status: 'active',
                 category: null,
                 subcategory: null,
@@ -162,7 +208,16 @@ function makeSupabase(db: Db) {
           }
         case 'recurrence_instances':
           return {
-            data: keep(db.recurrence_instances ?? []).map((i) => ({
+            data: keep(
+              (db.recurrence_instances ?? []).map((i, index) => ({
+                id: `i-${index}`,
+                // The generator writes both: `due_date` is the identity and
+                // `scheduled_date` mirrors it until an old client overwrites it
+                // on confirm. A fixture that only sets one means the other.
+                due_date: i.scheduled_date,
+                ...i,
+              })),
+            ).map((i) => ({
               ...i,
               category: null,
               subcategory: null,
@@ -192,6 +247,43 @@ function makeSupabase(db: Db) {
       },
       lte: (c: string, v: string) => {
         lte[c] = v
+        return b
+      },
+      or: (filter: string) => {
+        // Split on commas that are not inside an `and(...)` group.
+        const groups: string[][] = []
+        let depth = 0
+        let current = ''
+        for (const char of filter) {
+          if (char === '(') depth += 1
+          if (char === ')') depth -= 1
+          if (char === ',' && depth === 0) {
+            groups.push(current)
+            current = ''
+            continue
+          }
+          current += char
+        }
+        groups.push(current)
+        orGroups = groups.map((group) => {
+          const inner = group.startsWith('and(') ? group.slice(4, -1) : group
+          return inner.split(',').filter(Boolean)
+        })
+        return b
+      },
+      order: (c: string) => {
+        orderBy = [...orderBy, c]
+        return b
+      },
+      range: (from: number, to: number) => {
+        window = { from, to }
+        return b
+      },
+      not: (c: string, operator: string, value: unknown) => {
+        if (operator !== 'is' || value !== null) {
+          throw new Error(`unexpected not(${operator})`)
+        }
+        notNull.push(c)
         return b
       },
       then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
@@ -367,8 +459,6 @@ describe('getCommittedOutlookForMonth — fixed expenses in the window', () => {
           currency_code: 'ARS',
           description: 'Alquiler',
           start_date: '2026-01-05',
-          // The generator already produced September's occurrence.
-          last_generated_date: '2026-09-05',
         },
       ],
       recurrence_instances: [
@@ -387,6 +477,258 @@ describe('getCommittedOutlookForMonth — fixed expenses in the window', () => {
     const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
     expect(out.ARS.recurringExpense).toBe(500_000)
     expect(out.ARS.topRecurring).toHaveLength(1)
+  })
+
+  it('#118: an UNRESOLVED occurrence is not counted twice', async () => {
+    // The exact shape of #118, and the reason it survived: generating a pending
+    // occurrence never advanced `last_generated_date` — only resolving one did.
+    // So the cursor stayed at August while September sat unresolved, the
+    // instances read counted it, and the projection walking from August emitted
+    // it again. Half a million pesos of rent, twice, for precisely the user who
+    // had not caught up.
+    //
+    // An earlier version of the test above hid this by setting the cursor to the
+    // generated date, which the generator never did.
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [
+        {
+          id: 'r-alquiler',
+          movement_type: 'expense',
+          account_id: 'bank',
+          amount: 500_000,
+          currency_code: 'ARS',
+          description: 'Alquiler',
+          start_date: '2026-01-05',
+        },
+      ],
+      recurrence_instances: [
+        {
+          recurrence_id: 'r-alquiler',
+          account_id: 'bank',
+          amount: 500_000,
+          currency_code: 'ARS',
+          description: 'Alquiler',
+          scheduled_date: '2026-09-05',
+          status: 'pending',
+        },
+      ],
+    })
+
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
+
+    expect(out.ARS.recurringExpense).toBe(500_000)
+    expect(out.ARS.topRecurring).toHaveLength(1)
+  })
+
+  it('places a cuota in the month it fell due, not in the month it was paid', async () => {
+    // Window = August (snapshot lens, so a confirmed occurrence counts). The rent
+    // fell due 2026-08-10 and was paid on 2026-09-15.
+    //
+    // Filtering the instance by `scheduled_date` — the PAYMENT date — dropped it
+    // out of August, while its `due_date` still covered August's occurrence and
+    // blocked the projection. August showed $0: the rent vanished from the month
+    // it belonged to, and turned up in September on top of September's own.
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [
+        {
+          id: 'r-alquiler',
+          movement_type: 'expense',
+          account_id: 'bank',
+          amount: 500_000,
+          currency_code: 'ARS',
+          description: 'Alquiler',
+          start_date: '2026-01-10',
+        },
+      ],
+      recurrence_instances: [
+        {
+          recurrence_id: 'r-alquiler',
+          account_id: 'bank',
+          amount: 500_000,
+          currency_code: 'ARS',
+          description: 'Alquiler',
+          due_date: '2026-08-10',
+          scheduled_date: '2026-09-15',
+          status: 'confirmed',
+        },
+      ],
+    })
+
+    const out = await getCommittedOutlookForMonth(supabase, PREVIOUS_MONTH)
+
+    expect(out.ARS.recurringExpense).toBe(500_000)
+    expect(out.ARS.topRecurring).toHaveLength(1)
+  })
+
+  it('places a legacy occurrence with no vencimiento by the only date it has', async () => {
+    // Resolved before 0064: `due_date` is null and unrecoverable. The fallback is
+    // stated rather than implied — `scheduled_date` is the only date there is, so
+    // the row is placed by it instead of disappearing from every window.
+    //
+    // The rule itself ended in July, so this isolates PLACEMENT: the only thing
+    // in the window is the historical payment. What such a row must NOT do —
+    // cover a calendar date — is the next test.
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [
+        {
+          id: 'r-legacy',
+          movement_type: 'expense',
+          account_id: 'bank',
+          amount: 300_000,
+          currency_code: 'ARS',
+          description: 'Expensas',
+          start_date: '2026-01-10',
+          end_date: '2026-07-31',
+        },
+      ],
+      recurrence_instances: [
+        {
+          recurrence_id: 'r-legacy',
+          account_id: 'bank',
+          amount: 300_000,
+          currency_code: 'ARS',
+          description: 'Expensas',
+          due_date: null,
+          scheduled_date: '2026-08-10',
+          status: 'confirmed',
+        },
+      ],
+    })
+
+    const out = await getCommittedOutlookForMonth(supabase, PREVIOUS_MONTH)
+
+    expect(out.ARS.recurringExpense).toBe(300_000)
+  })
+
+  it('reads every occurrence when the server truncates the response', async () => {
+    // Window = August, and every occurrence is ALREADY DUE — the generator never
+    // materializes a future date, so a fixture of future rows would be testing a
+    // state the system cannot reach. Six rules of five days each get past a
+    // server capped at 5 rows.
+    //
+    // They are `skipped`: money the user said is NOT owed, and each covers its
+    // own date. Read unpaged, the ones past the cut stop covering theirs, so the
+    // projection re-emits them and commitment appears out of nothing — #118
+    // coming back through the read layer.
+    const ruleIds = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6']
+    const skippedDaily = ruleIds.flatMap((ruleId, r) =>
+      Array.from({ length: 5 }, (_, i) => ({
+        recurrence_id: ruleId,
+        account_id: 'bank',
+        amount: 1_000,
+        currency_code: 'ARS',
+        description: 'Diario',
+        scheduled_date: `2026-08-${String(r * 5 + i + 1).padStart(2, '0')}`,
+        status: 'skipped' as const,
+      })),
+    )
+    const supabase = makeSupabase(
+      {
+        accounts: [bank],
+        recurrences: ruleIds.map((id, r) => ({
+          id,
+          movement_type: 'expense' as const,
+          account_id: 'bank',
+          amount: 1_000,
+          currency_code: 'ARS',
+          description: 'Diario',
+          start_date: `2026-08-${String(r * 5 + 1).padStart(2, '0')}`,
+          end_date: `2026-08-${String(r * 5 + 5).padStart(2, '0')}`,
+          interval_count: 1,
+          interval_unit: 'day',
+        })),
+        recurrence_instances: skippedDaily,
+      },
+      { maxRows: 5 },
+    )
+
+    const out = await getCommittedOutlookForMonth(supabase, PREVIOUS_MONTH)
+
+    expect(out.ARS.recurringExpense).toBe(0)
+  })
+
+  it('a historical occurrence with an unknown vencimiento does not block a real one', async () => {
+    // Window = August. A payment registered on 2026-08-10 for an occurrence whose
+    // vencimiento was overwritten before 0064 — `due_date` is null and
+    // unrecoverable — and the rule's REAL occurrence also falls on 2026-08-10.
+    //
+    // Placing the historical row by `scheduled_date` is right; letting that date
+    // COVER the calendar is not. An uncertain date occupying a real one is the
+    // shape of #96, and 0064 refuses to do it at the database level for exactly
+    // this reason. Both belong in the window: the payment that happened, and the
+    // occurrence that is still owed.
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [
+        {
+          id: 'r-expensas',
+          movement_type: 'expense',
+          account_id: 'bank',
+          amount: 300_000,
+          currency_code: 'ARS',
+          description: 'Expensas',
+          start_date: '2026-08-10',
+          end_date: '2026-08-31',
+        },
+      ],
+      recurrence_instances: [
+        {
+          recurrence_id: 'r-expensas',
+          account_id: 'bank',
+          amount: 300_000,
+          currency_code: 'ARS',
+          description: 'Expensas',
+          due_date: null,
+          scheduled_date: '2026-08-10',
+          status: 'confirmed',
+        },
+      ],
+    })
+
+    const out = await getCommittedOutlookForMonth(supabase, PREVIOUS_MONTH)
+
+    // The historical payment (300.000) plus the occurrence the rule still owes
+    // for 2026-08-10, which the unknown row must not have swallowed.
+    expect(out.ARS.recurringExpense).toBe(600_000)
+  })
+
+  it('does not re-commit an occurrence the user said did not apply', async () => {
+    // `skipped` means "this period does not correspond". It never counts as a
+    // commitment — and it must not come back as a projected one either, which is
+    // what happens the moment the projection stops looking at what exists.
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [
+        {
+          id: 'r-gimnasio',
+          movement_type: 'expense',
+          account_id: 'bank',
+          amount: 80_000,
+          currency_code: 'ARS',
+          description: 'Gimnasio',
+          start_date: '2026-01-05',
+        },
+      ],
+      recurrence_instances: [
+        {
+          recurrence_id: 'r-gimnasio',
+          account_id: 'bank',
+          amount: 80_000,
+          currency_code: 'ARS',
+          description: 'Gimnasio',
+          scheduled_date: '2026-09-05',
+          status: 'skipped',
+        },
+      ],
+    })
+
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
+
+    expect(out.ARS.recurringExpense).toBe(0)
+    expect(out.ARS.topRecurring).toHaveLength(0)
   })
 
   it('ignores a recurrence whose occurrence falls outside the window', async () => {
@@ -498,6 +840,81 @@ describe('getCommittedOutlookForMonth — recurring income', () => {
     // Income is context: it never enters the committed side.
     expect(out.ARS.recurringExpense).toBe(0)
     expect(out.ARS.debt).toBe(0)
+  })
+
+  it('counts an income occurrence that is already materialized and still pending', async () => {
+    // Once the projection subtracts what already exists, a materialized income
+    // has to be summed from the instances — otherwise "Ya entra" simply loses
+    // it. The salary is there either way; which of the two sources reports it
+    // must not change the number.
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [
+        {
+          id: 'r-sueldo',
+          movement_type: 'income',
+          account_id: 'bank',
+          amount: 2_000_000,
+          currency_code: 'ARS',
+          description: 'Sueldo',
+          start_date: '2026-01-01',
+        },
+      ],
+      recurrence_instances: [
+        {
+          recurrence_id: 'r-sueldo',
+          account_id: 'bank',
+          amount: 2_000_000,
+          currency_code: 'ARS',
+          description: 'Sueldo',
+          scheduled_date: '2026-08-01',
+          status: 'pending',
+        },
+      ],
+    })
+
+    // Window = August, and 2026-08-01 is already past: the generator only
+    // materializes dates that have arrived, so a pending occurrence in the
+    // future is a state the system cannot produce.
+    const out = await getCommittedOutlookForMonth(supabase, PREVIOUS_MONTH)
+
+    // Once — not twice, and not zero.
+    expect(out.ARS.recurringIncome).toBe(2_000_000)
+  })
+
+  it('does not count a confirmed or skipped income as still coming', async () => {
+    // A confirmed income is money already in the account; a skipped one is not
+    // expected at all. Neither belongs in "Ya entra".
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [
+        {
+          id: 'r-sueldo',
+          movement_type: 'income',
+          account_id: 'bank',
+          amount: 2_000_000,
+          currency_code: 'ARS',
+          description: 'Sueldo',
+          start_date: '2026-08-01',
+          end_date: '2026-08-31',
+        },
+      ],
+      recurrence_instances: [
+        {
+          recurrence_id: 'r-sueldo',
+          account_id: 'bank',
+          amount: 2_000_000,
+          currency_code: 'ARS',
+          description: 'Sueldo',
+          scheduled_date: '2026-08-01',
+          status: 'confirmed',
+        },
+      ],
+    })
+
+    const out = await getCommittedOutlookForMonth(supabase, PREVIOUS_MONTH)
+
+    expect(out.ARS.recurringIncome).toBe(0)
   })
 })
 

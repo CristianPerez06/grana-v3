@@ -6,6 +6,7 @@ import { dateLineVariants, reachableMonths } from '@grana/dashboard'
 import { colors } from '../../lib/colors'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useProfileFirstName } from '../../lib/dashboard/queries'
+import { useHeaderEdges } from '../../lib/top-inset'
 import { useDashboardMonth } from './DashboardMonthContext'
 import { FittingText } from './FittingText'
 import { MonthSheet } from './MonthSheet'
@@ -27,9 +28,13 @@ export const DashboardHeader = ({ todayISO }: Props) => {
 
   const { selected, current, isCurrent, goToMonth } = useDashboardMonth()
   const [sheetOpen, setSheetOpen] = useState(false)
+  // Normally `['top']`: the header is the top-most thing on screen and paints
+  // the status bar navy for the whole app. When a global notice above it already
+  // did that, clearing the inset a second time leaves a tall empty navy band.
+  const edges = useHeaderEdges()
 
   return (
-    <SafeAreaView edges={['top']} className="bg-navy">
+    <SafeAreaView edges={edges} className="bg-navy">
       <View className="px-6 pb-4 pt-3">
         <View className="h-5" />
 

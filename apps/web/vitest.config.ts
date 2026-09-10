@@ -4,7 +4,12 @@ import path from 'path'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['lib/**/__tests__/**/*.test.ts'],
+    // `.tsx` too: the recurrence review surfaces are components, and the
+    // regressions that matter there (a failed read showing as an error instead
+    // of an empty list, a materialization failure offering a retry) can only be
+    // seen by rendering. Those files opt into a DOM with a
+    // `@vitest-environment happy-dom` docblock; everything else stays on node.
+    include: ['lib/**/__tests__/**/*.test.{ts,tsx}'],
     // Las suites de migración arrancan un Postgres real compilado a WASM en un
     // `beforeAll`, y eso son segundos de arranque, no milisegundos. Con cuatro
     // suites de esas compitiendo por CPU el arranque más lento ya rozaba el
@@ -22,6 +27,7 @@ export default defineConfig({
       '@grana/validation': path.resolve(__dirname, '../../packages/validation/src/index.ts'),
       '@grana/money-logic': path.resolve(__dirname, '../../packages/money-logic/src/index.ts'),
       '@grana/ui-contracts': path.resolve(__dirname, '../../packages/ui-contracts/src/index.ts'),
+      '@grana/recurrences': path.resolve(__dirname, '../../packages/recurrences/src/index.ts'),
     },
   },
 })

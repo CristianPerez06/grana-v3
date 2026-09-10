@@ -14,9 +14,19 @@ export {
   getRecurrenceLinkedTransactionIds,
   getRecurrenceLinkForTransaction,
   generateDueRecurrenceInstances,
+  withGenerationTimeout,
+  GENERATION_TIMEOUT_MS,
+  withReadTimeout,
+  READ_TIMEOUT_MS,
+  READ_TIMEOUT_ERROR,
   getTopRecurrenceSuggestion,
   getDuplicateRulesFor,
   buildPendingInstanceInsert,
+  selectReconstructionBatch,
+  reconstructionHorizon,
+  RECONSTRUCTION_BATCH_SIZE,
+  type RuleBacklog,
+  type GenerationResult,
   type RecurrenceRuleForGeneration,
 } from './queries'
 
@@ -60,6 +70,8 @@ export type {
   RecurrenceInstance,
   RecurrenceSummary,
   RecurrenceDetail,
+  EnrichedRecurrenceInstance,
+  PendingInstance,
   PendingRecurrenceInstance,
   RecurrenceAccount,
   RecurrenceCategory,
@@ -69,3 +81,15 @@ export type {
   RecurrenceInstanceStatus,
   RecurrenceCurrencyCode,
 } from './types'
+
+export {
+  shouldOpenReviewBlock,
+  reviewUrgency,
+  resolutionPreview,
+  materializationOutcome,
+  reviewFeedState,
+  type ReviewUrgency,
+  type ResolutionPreview,
+  type MaterializationOutcome,
+  type ReviewFeedState,
+} from './review-surface'

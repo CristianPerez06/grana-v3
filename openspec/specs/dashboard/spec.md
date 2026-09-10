@@ -789,15 +789,27 @@ En consecuencia, para un resumen que al corte todavía no había cerrado la card
 La fuente SHALL componerse de dos partes gobernadas por campos distintos:
 
 - **Qué instancias materializadas cuentan** lo decide `lens`. En `lens: 'live'`, sólo las que siguen `pending`. En `lens: 'snapshot'`, las `confirmed` **y** las `pending`: al corte todas seguían sin resolver, y filtrar por `pending` haría que el monto de esa ventana **encogiera** a medida que el usuario confirma, rompiendo la estabilidad exigida más arriba. Las instancias `skipped` NO SHALL contarse en ningún caso: saltear es el usuario declarando que ese gasto no ocurrió, y esa plata nunca tuvo que salir.
+
+  **Una ocurrencia SHALL ubicarse en la ventana por su VENCIMIENTO**, y SHALL contarse con esa misma fecha. En datos legados o escritos por un cliente anterior, `scheduled_date` puede haber sido **sobrescrita al resolver**, así que ubicar por esa columna saca la ocurrencia del mes al que pertenece: una cuota que venció el 10/08 y quedó con `scheduled_date = 15/09` desaparecía de agosto —mientras su vencimiento seguía tapando la proyección de agosto— y reaparecía en septiembre encima de la de septiembre.
+
+  **Fallback explícito:** una ocurrencia resuelta antes de que el sistema distinguiera vencimiento de fecha de pago no tiene vencimiento recuperable. Esas SHALL ubicarse por `scheduled_date`, que es la única fecha que tienen y **una fecha legada de significado incierto** —no se sabe si es el vencimiento o la fecha en que se resolvió—, y NO SHALL quedar fuera de toda ventana. Ubicar aproximadamente una fila histórica es el único uso admitido de esa columna.
 - **Si la proyección aporta** lo decide `windowElapsed`. Mientras la ventana no haya terminado, las ocurrencias **proyectadas** de las reglas activas SHALL sumarse a las instancias; una vez terminada, NO SHALL proyectarse: la proyección usaría los montos actuales de las reglas, perdería las dadas de baja e inventaría las creadas después.
+
+- **Los ingresos recurrentes SHALL componerse de las mismas dos fuentes.** Las ocurrencias de ingreso ya materializadas que sigan **sin resolver** SHALL sumarse a "Ya entra", además de la proyección: una ocurrencia materializada queda restada de la proyección, así que sumar sólo la proyección la haría desaparecer de la banda. Las `confirmed` NO SHALL contarse —esa plata ya está en la cuenta— ni las `skipped`.
 
   La bajada del grupo NO SHALL llamar "pendientes" a sus filas bajo `lens: 'snapshot'`: ahí el conjunto incluye instancias `confirmed`, que es justamente lo que impide que una ventana pasada encoja, y llamarlas pendientes describe mal un gasto ya pagado. SHALL usar un rótulo neutro ("N gastos fijos"). Bajo `live` el conjunto sí es sólo `pending` y el rótulo original SHALL conservarse.
 
   Cuando `lens: 'snapshot'` y `windowElapsed: false` conviven —el mes anterior, cuya ventana es el mes en curso— la proyección se hace sobre las reglas **vigentes hoy**, de modo que una regla creada o editada después del corte aporta a esa lectura con sus valores actuales. Se acepta explícitamente: no proyectar ahí dejaría la ventana en casi cero, porque el generador todavía no materializó sus instancias, y un monto levemente desactualizado informa más que uno ausente.
 
-Las dos fuentes NO SHALL superponerse: la proyección avanza desde `last_generated_date`, de modo que nunca devuelve una ocurrencia ya generada.
+**Las dos fuentes NO SHALL superponerse, y lo que las separa SHALL ser el conjunto de ocurrencias que ya existen** en la ventana, en **cualquier** estado —pendiente, confirmada y omitida—. La proyección de una regla SHALL restar ese conjunto: una ocurrencia que ya tiene fila NO SHALL volver a anunciarse como proyectada.
 
-**La ventana bajo lente `snapshot` es un registro reconstruido, no un replay de la pantalla.** El generador materializa una sola instancia pendiente por regla y sólo cuando la fecha ya llegó, de modo que al cierre del mes seleccionado los gastos fijos de la ventana eran **proyección no persistida**. Esa proyección no se puede reconstruir: las reglas no tienen versionado histórico. La card SHALL presentar la ventana pasada como lo que efectivamente hubo que pagar, y el sistema NO SHALL prometer fidelidad a lo que la pantalla mostraba ese día.
+NO SHALL usarse `last_generated_date` para separarlas. Ese cursor sólo avanzaba cuando el usuario **resolvía** una ocurrencia, de modo que una sin resolver quedaba **antes** de él: la lectura de instancias la contaba y la proyección, caminando desde el cursor, la emitía otra vez. La misma cuota, dos veces, justo para el usuario que no se puso al día.
+
+**Sólo un vencimiento exacto SHALL tapar una fecha.** Una ocurrencia con vencimiento desconocido se muestra ubicada por la única fecha que tiene, pero NO SHALL restarse de la proyección: `scheduled_date` no es una identidad sino una fecha legada de significado incierto, y dejar que reserve un día del calendario haría que una fila histórica tapara la ocurrencia real de ese día — una fecha incierta ocupando una real, que es exactamente lo que el modelo de identidad rechaza.
+
+**Las lecturas que alimentan la card SHALL leerse completas**, paginando hasta agotarlas y ordenando por columnas que identifiquen la fila. Una respuesta truncada no es sólo una lectura incompleta: las ocurrencias que quedan afuera dejan de tapar sus propias fechas, así que la proyección las vuelve a emitir y aparece plata comprometida que nadie debe.
+
+**La ventana bajo lente `snapshot` es un registro reconstruido, no un replay de la pantalla.** El generador materializa las ocurrencias sólo cuando la fecha ya llegó, de modo que al cierre del mes seleccionado los gastos fijos de la ventana eran **proyección no persistida**. Esa proyección no se puede reconstruir: las reglas no tienen versionado histórico. La card SHALL presentar la ventana pasada como lo que efectivamente hubo que pagar, y el sistema NO SHALL prometer fidelidad a lo que la pantalla mostraba ese día.
 
 **Lo ya vencido SHALL mostrarse, marcado aparte, con UNA sola regla en las tres posiciones.** Un resumen cuyo vencimiento ya había pasado **al `snapshotDate`** y que a esa fecha seguía impago es plata que se debía y desaparecería de la pantalla si la card se limitara a su ventana: SHALL sumarse con su **propia etiqueta explícita** —nombrando que está vencido— y NO SHALL confundirse dentro del monto de la ventana.
 
@@ -876,6 +888,41 @@ Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el
 - **WHEN** el mes seleccionado es el actual, el generador ya creó la instancia de la ventana de una regla mensual y la de la siguiente todavía no
 - **THEN** la ventana cuenta esa instancia una sola vez
 - **AND** la proyección no la vuelve a agregar
+
+#### Scenario: Una ocurrencia SIN RESOLVER no se cuenta dos veces
+
+- **WHEN** una regla mensual de $500.000 tiene la ocurrencia de la ventana materializada y todavía sin resolver
+- **THEN** la card la cuenta una sola vez
+- **AND** la proyección no vuelve a emitir esa misma fecha
+
+#### Scenario: Una cuota pagada más tarde cuenta en el mes en que venció
+
+- **WHEN** una cuota vence el `2026-08-10` y se paga el `2026-09-15`
+- **THEN** cuenta en la ventana de agosto, una sola vez
+- **AND** no cuenta en la ventana de septiembre
+
+#### Scenario: Una ocurrencia sin vencimiento recuperable no desaparece
+
+- **WHEN** una ocurrencia resuelta antes de la distinción tiene su vencimiento desconocido
+- **THEN** se ubica en la ventana por la única fecha que conserva
+- **AND** cuenta una sola vez
+
+#### Scenario: Un vencimiento desconocido no tapa la ocurrencia real de esa fecha
+
+- **WHEN** un pago histórico con vencimiento desconocido quedó registrado el `2026-08-10` y la regla tiene además su ocurrencia real del `2026-08-10`
+- **THEN** la card cuenta las dos
+- **AND** la ocurrencia real sigue proyectándose
+
+#### Scenario: Un ingreso materializado sigue apareciendo en "Ya entra"
+
+- **WHEN** la ocurrencia de un ingreso recurrente ya está materializada y sigue sin resolver
+- **THEN** "Ya entra" la cuenta una sola vez
+
+#### Scenario: Una respuesta truncada no inventa compromiso
+
+- **WHEN** la ventana tiene más ocurrencias de las que el servidor devuelve en una sola respuesta
+- **THEN** la card las lee todas
+- **AND** el monto no incluye ninguna ocurrencia que ya exista
 
 #### Scenario: Gastos fijos de una ventana ya terminada
 

@@ -12,6 +12,7 @@ import { EyeMaskProvider } from '../../components/dashboard/EyeMaskContext'
 import { SharedStrip } from '../../components/dashboard/SharedStrip'
 import { SpentCard } from '../../components/dashboard/SpentCard'
 import { SaveSuggestionStrip } from '../../components/savings/SaveSuggestionStrip'
+import { PendingRecurrencesBlock } from '../../components/recurrences/PendingRecurrencesBlock'
 import { QuickAddFab } from '../../components/transactions/QuickAddFab'
 
 export default function DashboardScreen() {
@@ -76,6 +77,12 @@ export default function DashboardScreen() {
             {/* Same four blocks as web, in the same order, single column:
                 saldo → cuánto gastaste → compromisos → compartido. */}
             <View className="flex-col gap-3">
+              {/* Vencimientos por revisar. Va en el INICIO porque es donde
+                  empieza la sesión: vivía solo en Movimientos y en el hub, así
+                  que un usuario podía tener vencimientos sin revisar y no
+                  enterarse nunca. El aviso de materialización vive en el layout,
+                  porque la generación corre en cualquier pantalla. */}
+              <PendingRecurrencesBlock />
               {/* La sugerencia de guardar, arriba de la card porque su momento es
                   "acabás de cobrar". Si no corresponde ofrecerla no renderiza
                   nada y la card sube sola: no es una tarea pendiente. */}

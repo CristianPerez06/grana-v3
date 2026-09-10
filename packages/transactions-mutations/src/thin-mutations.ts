@@ -772,7 +772,7 @@ export async function deleteTransaction(
   const { data: seededRule } = await supabase
     .from('recurrences')
     .select(
-      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences, last_generated_date',
+      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences',
     )
     .eq('created_from_transaction_id', id)
     .eq('user_id', userId)
@@ -788,7 +788,6 @@ export async function deleteTransaction(
       interval_count: number
       interval_unit: IntervalUnit
       max_occurrences: number | null
-      last_generated_date: string | null
     }
     const today = options.today ?? formatDateISO(getTodayAR())
     const ruleIsLive = rule.status !== 'deleted'
@@ -800,32 +799,44 @@ export async function deleteTransaction(
         seededRecurrence: {
           id: rule.id,
           description: rule.description,
-          next_occurrence: getNextExpectedOccurrence(rule, today, rule.last_generated_date),
+          // The rule was found BY `created_from_transaction_id`, so it is seeded
+          // by definition and its `start_date` is the occurrence this very
+          // movement covers. That is the whole of what the cursor used to say
+          // here, stated directly.
+          next_occurrence: getNextExpectedOccurrence(rule, today, [rule.start_date]),
         },
       }
     }
 
-    // Unlink so the RESTRICT lets the movement go. For a live rule being kept:
-    // if the cursor sits on a FUTURE start_date, the occurrence it claims to
-    // have covered is precisely the movement being deleted — leaving it would
-    // make the rule skip that period entirely (the orphan defect 0053 repairs).
-    const cursorCoversDeletedSeed =
-      ruleIsLive &&
-      rule.last_generated_date != null &&
-      rule.last_generated_date === rule.start_date &&
-      rule.last_generated_date > today
+    // Unlink so the RESTRICT lets the movement go, release the floor when the
+    // seed was dated in the future, and delete the movement — ALL IN ONE
+    // TRANSACTION, which is what `delete_movement_unlinking_seed` is for (0065).
+    //
+    // Done as separate round trips, every partial outcome costs the user
+    // something. Unlink and release succeed but the DELETE fails and the movement
+    // still exists WHILE the rule will materialize its occurrence when the date
+    // arrives — the same gasto twice — and it cannot even be retried into shape,
+    // because the retry looks the rule up by the column the unlink just cleared.
+    // Unlink succeeds and the release fails and the occurrence is lost, which is
+    // the defect being repaired. Compensating in the client is not available
+    // either: 0064's guard lets the floor move one way only.
+    //
+    // WHY THE FLOOR AND NOT AN OCCURRENCE. It used to clear `last_generated_date`
+    // so the generator would produce `start_date` again; the generator no longer
+    // reads that column. Materializing the occurrence here instead would work but
+    // would change WHEN it appears — a yearly seed deleted today would put a
+    // vencimiento eight months away into "por revisar" this afternoon. Releasing
+    // the floor keeps the timing: the generator produces it when the date comes.
+    const { error: seededDeleteError } = await supabase.rpc(
+      'delete_movement_unlinking_seed',
+      { p_transaction_id: id },
+    )
 
-    const { error: unlinkError } = await supabase
-      .from('recurrences')
-      .update(
-        (cursorCoversDeletedSeed
-          ? { created_from_transaction_id: null, last_generated_date: null }
-          : { created_from_transaction_id: null }) as never,
-      )
-      .eq('id', rule.id)
-      .eq('user_id', userId)
-
-    if (unlinkError) return { ok: false, errorCode: unlinkError.code }
+    // GRN01 = the temporal guard (0043 + 0049): a same-currency settlement dated
+    // at/after this shared expense would rewrite a settled balance. It is raised
+    // by a trigger, so it travels out of the RPC unchanged.
+    if (seededDeleteError) return { ok: false, errorCode: seededDeleteError.code }
+    return { ok: true }
   }
 
   const { error } = await supabase

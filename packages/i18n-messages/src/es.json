@@ -1711,12 +1711,12 @@
       "fx_rate_not_allowed": "No corresponde cargar una cotización para este movimiento."
     },
     "pending": {
-      "title": "Movimientos recurrentes pendientes",
-      "count": "{count} pendientes",
+      "title": "Vencimientos por revisar",
+      "count": "{count} por revisar",
       "close_notice": "Cerrar aviso",
       "edit_aria": "Editar antes de confirmar",
       "cancel_edit_aria": "Cancelar edición",
-      "amount_changes_rule": "Si cambia, también se actualiza la regla recurrente.",
+      "amount_changes_rule": "Solo para este vencimiento: la regla sigue con su importe.",
       "account_placeholder": "Elegí con qué la pagaste",
       "account_instance_only": "Solo para esta vez: la regla sigue con su cuenta.",
       "account_none_eligible": "No tenés cuentas disponibles para esta moneda.",
@@ -1728,11 +1728,16 @@
       "skip": "Omitir",
       "confirmed_success": "Movimiento confirmado.",
       "skipped_success": "Movimiento omitido.",
-      "subtitle": "Grana espera tu acción antes de registrarlas",
-      "all_clear": "Todo al día — no hay recurrencias esperando tu confirmación.",
+      "subtitle": "Todavía no sabemos si los pagaste",
+      "all_clear": "No tenés vencimientos por revisar.",
       "overdue": "{count, plural, one {Vencido hace # día} other {Vencido hace # días}}",
       "due_today": "Vence hoy",
-      "due_in": "{count, plural, one {Vence en # día} other {Vence en # días}}"
+      "due_in": "{count, plural, one {Vence en # día} other {Vence en # días}}",
+      "will_create": {
+        "expense": "Al registrarlo: gasto de {amount} el {date} desde {account}",
+        "income": "Al registrarlo: ingreso de {amount} el {date} en {account}",
+        "transfer": "Al registrarlo: transferencia de {amount} el {date}, de {account} a {destination}"
+      }
     },
     "suggestion": {
       "title": "Parece que esto se repite",
@@ -1798,6 +1803,18 @@
     "duplicate_warning_body_untitled": "Ya tenés una regla activa con la misma cuenta, moneda y tipo, y un monto igual o casi igual. Podés crearla igual si son gastos distintos.",
     "route": {
       "form_loading": "Cargando el formulario…"
+    },
+    "materialization": {
+      "failed_title": "No pudimos actualizar tus vencimientos",
+      "failed_body": "Puede que falte alguno. Volvé a intentar.",
+      "retry": "Reintentar",
+      "remaining": "{count, plural, one {Encontramos # vencimiento anterior para revisar} other {Encontramos # vencimientos anteriores para revisar}}",
+      "continue": "Mostrar los siguientes",
+      "running": "Actualizando…",
+      "read_failed_title": "No pudimos leer tus vencimientos",
+      "read_failed_body": "No sabemos si tenés algo por revisar. Volvé a intentar.",
+      "refresh_failed_title": "Esta lista puede estar desactualizada",
+      "refresh_failed_body": "No pudimos actualizarla. Estás viendo lo último que leímos."
     }
   },
   "subcategories": {

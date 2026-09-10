@@ -96,7 +96,7 @@ describe('buildPendingInstanceInsert — shared propagation', () => {
     max_occurrences: null,
     start_date: '2026-01-15',
     end_date: null,
-    last_generated_date: null,
+    reconstruct_from: '2026-01-14',
     amount: 100000,
     account_id: 'acc-1',
     transfer_destination_account_id: null,
@@ -126,5 +126,13 @@ describe('buildPendingInstanceInsert — shared propagation', () => {
     const row = buildPendingInstanceInsert(baseRule, 'u1', '2026-01-15')
     expect(row.household_id).toBeNull()
     expect(row.split).toBeNull()
+  })
+
+  it('writes the occurrence date as due_date, and mirrors it into scheduled_date', () => {
+    // `due_date` is the identity. `scheduled_date` carries the same value only
+    // so a native client from before the transition keeps rendering the row.
+    const row = buildPendingInstanceInsert(baseRule, 'u1', '2026-03-15')
+    expect(row.due_date).toBe('2026-03-15')
+    expect(row.scheduled_date).toBe('2026-03-15')
   })
 })

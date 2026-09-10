@@ -1,13 +1,17 @@
-import type { GranaSupabaseClient } from '@grana/supabase'
+import { selectAllPages, type GranaSupabaseClient } from '@grana/supabase'
 import {
-  decideRecurrenceInstance,
+  addInterval,
+  coveredOccurrences,
   detectRecurrenceSuggestions,
   formatDateISO,
   getNextExpectedOccurrence,
   getTodayAR,
+  owedOccurrencesForRule,
   type IntervalUnit,
+  type PauseInterval,
   type RecurrenceFrequency,
   type RecurrenceSuggestion,
+  type ScheduleVersion,
   type SuggestionMovement,
 } from '@grana/money-logic'
 import {
@@ -17,10 +21,11 @@ import {
   type ExistingRuleForDuplicateCheck,
 } from './duplicates'
 import type {
+  EnrichedRecurrenceInstance,
+  PendingInstance,
   PendingRecurrenceInstance,
   Recurrence,
   RecurrenceDetail,
-  RecurrenceInstance,
   RecurrenceStatus,
   RecurrenceSummary,
 } from './types'
@@ -42,20 +47,28 @@ const INSTANCE_SELECT = `
   subcategory:subcategories(id, name, canonical_name, category_id, user_id)
 `
 
-type RecurrenceRow = Omit<RecurrenceSummary, 'pending_instance'>
+type RecurrenceRow = Omit<RecurrenceSummary, 'pending_instances' | 'covered_occurrences'>
 
 function mapRecurrenceSummary(
   recurrence: RecurrenceRow,
-  pendingByRecurrenceId: Map<string, RecurrenceInstance>,
+  pendingByRecurrenceId: Map<string, PendingInstance[]>,
+  upcomingByRecurrenceId: Map<string, string[]>,
   today: string,
 ): RecurrenceSummary {
+  const covered = coveredOccurrences({
+    startDate: recurrence.start_date,
+    seededFromMovement: recurrence.created_from_transaction_id != null,
+    existing: upcomingByRecurrenceId.get(recurrence.id) ?? [],
+  })
+
   return {
     ...recurrence,
-    pending_instance: pendingByRecurrenceId.get(recurrence.id) ?? null,
-    // Calendar "próximo": next occurrence >= today AND after the rule's cursor
-    // (last_generated_date — the last occurrence already confirmed/omitted or
-    // seeded from a movement). Independent of the pending (due) instance, whose
-    // date sits at <= today. See RecurrenceSummary.next_occurrence.
+    pending_instances: pendingByRecurrenceId.get(recurrence.id) ?? [],
+    covered_occurrences: [...covered],
+    // Calendar "próximo": the next occurrence >= today that does NOT already
+    // exist. It used to be "after the cursor", which announced as upcoming an
+    // occurrence the user already had sitting unresolved — the same date in two
+    // places at once.
     next_occurrence: getNextExpectedOccurrence(
       {
         start_date: recurrence.start_date,
@@ -65,28 +78,89 @@ function mapRecurrenceSummary(
         max_occurrences: recurrence.max_occurrences,
       },
       today,
-      recurrence.last_generated_date,
+      covered,
     ),
   }
 }
 
+/**
+ * The occurrence dates each rule already has FROM `since` ONWARD, in any state.
+ *
+ * Only the ones from today matter for the projection and for "próximo": the past
+ * is what the review block shows, not what a projection could double-count. That
+ * keeps this read to roughly one row per rule instead of a year of history.
+ */
+async function getUpcomingOccurrenceDates(
+  supabase: GranaSupabaseClient,
+  recurrenceIds: string[],
+  since: string,
+): Promise<Map<string, string[]>> {
+  const byRule = new Map<string, string[]>()
+  if (recurrenceIds.length === 0) return byRule
+
+  const { data, error } = await selectAllPages<{ recurrence_id: string; due_date: string }>(() =>
+    supabase
+      .from('recurrence_instances')
+      .select('recurrence_id, due_date')
+      .in('recurrence_id', recurrenceIds)
+      .not('due_date', 'is', null)
+      .gte('due_date', since)
+      .order('due_date')
+      .order('recurrence_id'),
+  )
+  if (error) throw error
+
+  for (const row of data) {
+    const list = byRule.get(row.recurrence_id)
+    if (list == null) byRule.set(row.recurrence_id, [row.due_date])
+    else list.push(row.due_date)
+  }
+  return byRule
+}
+
+/**
+ * The unresolved occurrences of each rule, oldest first — ALL of them, not one.
+ *
+ * This used to return `Map<string, RecurrenceInstance>` and keep whichever row
+ * arrived last, which was harmless only because the database allowed a single
+ * pending per rule. With the backlog materialized that assumption silently drops
+ * occurrences: the rule would look like it owes one thing while owing five.
+ *
+ * Paged to exhaustion over a unique order, for the same reason the generator's
+ * reads are: PostgREST truncates at `db-max-rows` without saying so, and an
+ * OFFSET window over a non-unique order can repeat or skip rows between pages.
+ *
+ * ORDERED BY `due_date`, WHICH IS THE COLUMN THE SCREENS NOW RENDER. It is the
+ * vencimiento and the occurrence's identity, and on an UNRESOLVED row it is never
+ * null — 0064 backfilled it, the compatibility trigger derives it on insert and
+ * the guard makes it immutable — so `(due_date, id)` is total with no null
+ * handling, which is what an OFFSET window needs to neither repeat nor skip a row.
+ * The history keeps sorting by `scheduled_date`, because that is what IT shows;
+ * the sort follows the display on each screen rather than being one rule for both.
+ */
 export async function getPendingInstancesByRecurrenceId(
   supabase: GranaSupabaseClient,
   recurrenceIds: string[],
-): Promise<Map<string, RecurrenceInstance>> {
-  const pendingByRecurrenceId = new Map<string, RecurrenceInstance>()
+): Promise<Map<string, PendingInstance[]>> {
+  const pendingByRecurrenceId = new Map<string, PendingInstance[]>()
   if (recurrenceIds.length === 0) return pendingByRecurrenceId
 
-  const { data, error } = await supabase
-    .from('recurrence_instances')
-    .select('*')
-    .in('recurrence_id', recurrenceIds)
-    .eq('status', 'pending')
+  const { data, error } = await selectAllPages<PendingInstance>(() =>
+    supabase
+      .from('recurrence_instances')
+      .select('*')
+      .in('recurrence_id', recurrenceIds)
+      .eq('status', 'pending')
+      .order('due_date')
+      .order('id'),
+  )
 
   if (error) throw error
 
-  for (const instance of (data ?? []) as RecurrenceInstance[]) {
-    pendingByRecurrenceId.set(instance.recurrence_id, instance)
+  for (const instance of data) {
+    const list = pendingByRecurrenceId.get(instance.recurrence_id)
+    if (list == null) pendingByRecurrenceId.set(instance.recurrence_id, [instance])
+    else list.push(instance)
   }
 
   return pendingByRecurrenceId
@@ -112,30 +186,53 @@ export async function getRecurrences(
   if (error) throw error
 
   const recurrences = (data ?? []) as unknown as RecurrenceRow[]
-  const pendingByRecurrenceId = await getPendingInstancesByRecurrenceId(
-    supabase,
-    recurrences.map((recurrence) => recurrence.id),
-  )
-
+  const ids = recurrences.map((recurrence) => recurrence.id)
   const today = formatDateISO(getTodayAR())
+
+  const [pendingByRecurrenceId, upcomingByRecurrenceId] = await Promise.all([
+    getPendingInstancesByRecurrenceId(supabase, ids),
+    getUpcomingOccurrenceDates(supabase, ids, today),
+  ])
+
   return recurrences.map((recurrence) =>
-    mapRecurrenceSummary(recurrence, pendingByRecurrenceId, today),
+    mapRecurrenceSummary(recurrence, pendingByRecurrenceId, upcomingByRecurrenceId, today),
   )
 }
 
-export async function getPendingRecurrenceInstances(
+/**
+ * Every unresolved occurrence the user has, oldest first — the feed behind the
+ * "vencimientos por revisar" block.
+ *
+ * With one pending per rule this returned at most one row per rule and neither
+ * paging nor a total order mattered. With the backlog materialized it is the list
+ * itself, so both do. It sorts by `due_date` — the vencimiento, which is what the
+ * block renders and what "oldest first" has to mean here — with `id` making the
+ * order total, which is what keeps an OFFSET window from repeating or skipping
+ * rows between pages. Every row is `pending`, so `due_date` is never null.
+ */
+export function getPendingRecurrenceInstances(
   supabase: GranaSupabaseClient,
 ): Promise<PendingRecurrenceInstance[]> {
-  const { data, error } = await supabase
-    .from('recurrence_instances')
-    .select(INSTANCE_SELECT)
-    .eq('status', 'pending')
-    .order('scheduled_date', { ascending: true })
-    .order('created_at', { ascending: true })
+  // The deadline covers the WHOLE read, pages included: what the user waits for
+  // is the list, not one request. See `withReadTimeout`.
+  return withReadTimeout(readPendingRecurrenceInstances(supabase))
+}
+
+async function readPendingRecurrenceInstances(
+  supabase: GranaSupabaseClient,
+): Promise<PendingRecurrenceInstance[]> {
+  const { data, error } = await selectAllPages<PendingRecurrenceInstance>(() =>
+    supabase
+      .from('recurrence_instances')
+      .select(INSTANCE_SELECT)
+      .eq('status', 'pending')
+      .order('due_date')
+      .order('id'),
+  )
 
   if (error) throw error
 
-  return (data ?? []) as unknown as PendingRecurrenceInstance[]
+  return data
 }
 
 export async function getRecurrenceDetail(
@@ -151,28 +248,52 @@ export async function getRecurrenceDetail(
   if (recurrenceError) throw recurrenceError
   if (!recurrence) return null
 
-  const { data: instances, error: instancesError } = await supabase
-    .from('recurrence_instances')
-    .select(INSTANCE_SELECT)
-    .eq('recurrence_id', id)
-    .order('scheduled_date', { ascending: false })
-    .order('created_at', { ascending: false })
+  // Newest first for the history list, BY `scheduled_date` — the date the list
+  // actually shows (`recurrence-instances-list.tsx`, `RecurrenceInstancesList.tsx`).
+  // Sorting by `due_date` instead breaks the screen twice: it is null for every
+  // occurrence resolved before 0064, and Postgres puts nulls FIRST in DESC, so
+  // the history would open on the oldest rows ordered by little more than their
+  // uuid; and for a resolved occurrence the two dates diverge, so an August
+  // cuota paid on 15-Sep would sit below a September one paid on the 10th — sorted
+  // by one date, displayed by another. `id` breaks ties so the OFFSET window the
+  // paging uses cannot repeat or skip a row.
+  const { data: instances, error: instancesError } = await selectAllPages<EnrichedRecurrenceInstance>(
+    () =>
+      supabase
+        .from('recurrence_instances')
+        .select(INSTANCE_SELECT)
+        .eq('recurrence_id', id)
+        .order('scheduled_date', { ascending: false })
+        .order('id', { ascending: false }),
+  )
 
   if (instancesError) throw instancesError
 
+  const pending = instances
+    .filter((instance) => instance.status === 'pending')
+    // The query above orders newest-first for the history list; the unresolved
+    // ones read oldest-first, which is the order they are reviewed in.
+    .slice()
+    .reverse()
+
+  const today = formatDateISO(getTodayAR())
   const recurrenceSummary = mapRecurrenceSummary(
     recurrence as unknown as RecurrenceRow,
-    new Map(
-      ((instances ?? []) as unknown as PendingRecurrenceInstance[])
-        .filter((instance) => instance.status === 'pending')
-        .map((instance) => [instance.recurrence_id, instance]),
-    ),
-    formatDateISO(getTodayAR()),
+    pending.length === 0 ? new Map() : new Map([[pending[0].recurrence_id, pending]]),
+    new Map([
+      [
+        id,
+        instances
+          .filter((instance) => instance.due_date != null && instance.due_date >= today)
+          .map((instance) => instance.due_date as string),
+      ],
+    ]),
+    today,
   )
 
   return {
     ...recurrenceSummary,
-    instances: ((instances ?? []) as unknown as PendingRecurrenceInstance[]).map((instance) => ({
+    instances: instances.map((instance) => ({
       ...instance,
       recurrence: recurrence as unknown as Recurrence,
     })),
@@ -250,12 +371,20 @@ export async function getRecurrenceLinkForTransaction(
 }
 
 // ── generateDueRecurrenceInstances ─────────────────────────────────────────────
-// Lazy generator. Called from the platform shell (web /transactions page load,
-// mobile hub focus). Idempotent: the unique partial index on (recurrence_id)
-// WHERE status='pending' guarantees no double-insert under race conditions; we
-// swallow that error. Generates AT MOST one pending instance per rule per call —
-// matches the design rule "one pending per rule at a time". Auth is resolved by
-// the shell and the resolved `userId` is injected.
+// Lazy generator. Called from the platform shell (web page load, mobile hub
+// focus). It materializes EVERY occurrence a rule is owed — not one — which is
+// the fix for #96: an unresolved occurrence used to stop the rule forever.
+//
+// What it is owed is derived by `owedOccurrencesForRule`, from the rule's
+// calendar over its schedule versions, minus its pause intervals, minus the
+// occurrences that already exist in ANY state. Nothing here consults
+// `last_generated_date`: a cursor that only advances when the user resolves
+// something is precisely what broke.
+//
+// Idempotent: re-running it returns the same list minus what it just created,
+// and the partial unique index on (recurrence_id, due_date) is the backstop
+// under concurrent calls. Auth is resolved by the shell and the resolved
+// `userId` is injected.
 
 export type RecurrenceRuleForGeneration = {
   id: string
@@ -265,7 +394,7 @@ export type RecurrenceRuleForGeneration = {
   max_occurrences: number | null
   start_date: string
   end_date: string | null
-  last_generated_date: string | null
+  reconstruct_from: string
   amount: number
   account_id: string
   transfer_destination_account_id: string | null
@@ -285,12 +414,16 @@ export type RecurrenceRuleForGeneration = {
 export function buildPendingInstanceInsert(
   rule: RecurrenceRuleForGeneration,
   userId: string,
-  scheduledDate: string,
+  dueDate: string,
 ) {
   return {
     recurrence_id: rule.id,
     user_id: userId,
-    scheduled_date: scheduledDate,
+    // The occurrence identity, immutable from here on. `scheduled_date` carries
+    // the same value only so old native clients keep working during the
+    // transition (see 0064 §7); it is not read as the due date any more.
+    due_date: dueDate,
+    scheduled_date: dueDate,
     status: 'pending' as const,
     amount: rule.amount,
     account_id: rule.account_id,
@@ -304,71 +437,417 @@ export function buildPendingInstanceInsert(
   }
 }
 
+/**
+ * How many occurrences one run materializes. Twelve months of a daily rule are
+ * ~365 rows: opening a screen must not fire hundreds of writes.
+ */
+export const RECONSTRUCTION_BATCH_SIZE = 50
+
+/** How far back the automatic reconstruction reaches. Registering an older payment by hand is not affected. */
+const RECONSTRUCTION_HORIZON_MONTHS = 12
+
+export type GenerationResult = {
+  created: number
+  /**
+   * Occurrences still owed after this run. Greater than zero means the UI must
+   * say so AND offer to continue: a daily rule with a year of backlog is ~8
+   * runs, and nobody is going to reopen the app eight times to see their own
+   * history.
+   */
+  remaining: number
+  /**
+   * Set when the run could not materialize what it owed. The caller MUST tell
+   * the difference between this and "nothing to review": showing an empty state
+   * on a failure is the exact opposite claim (spec: a failed materialization is
+   * not shown as "you are up to date").
+   */
+  error: string | null
+}
+
+/**
+ * Twelve months back, INCLUSIVE, with end-of-month clamping.
+ *
+ * Built by hand this used to hand `new Date` a day that does not exist in the
+ * target year: from `2028-02-29`, "same day, previous year" is `2027-02-29`,
+ * which JavaScript rolls forward to `2027-03-01` — silently moving the horizon a
+ * day late and dropping `2027-02-28` from a window the contract says includes it.
+ * `addInterval` is the same month arithmetic the calendar walker uses, and it
+ * clamps to the last valid day instead of rolling over.
+ */
+export function reconstructionHorizon(today: string): string {
+  return addInterval(today, 'month', -RECONSTRUCTION_HORIZON_MONTHS)
+}
+
+/** What a run needs to know about one rule in order to prioritize it. */
+export type RuleBacklog = {
+  /** Dates the rule is owed, ascending. Never empty for a rule that is passed in. */
+  owed: string[]
+  /**
+   * Newest occurrence the rule already has, in any state. Null when it has none.
+   * Compared against the newest owed date, it answers the question the batch
+   * turns on: is the rule's CURRENT occurrence materialized, or missing?
+   */
+  newestExisting: string | null
+  /**
+   * Whether the rule already has an unresolved occurrence. Until the activation
+   * migration drops `recurrence_instances_one_pending_per_rule`, such a rule
+   * CANNOT take another one, so spending budget on it starves rules that could
+   * have been served.
+   */
+  hasPending: boolean
+}
+
+/**
+ * Pick this run's rows out of everything the rules are owed.
+ *
+ * `batchSize` is a HARD limit: the run never writes more rows than that. An
+ * earlier version let every rule's current occurrence through "even past the
+ * budget", which with production's 61 rules would have made a declared batch of
+ * 50 write 61 — the exact thing the batch exists to prevent. What the limit costs
+ * is covered by continuation: whatever does not fit stays in `remaining`, and the
+ * next run — the next screen the user opens, or the "continue" action — takes it.
+ *
+ * WHAT IT PRIORITIZES, and why it is not just "oldest date first". Ordering by
+ * date alone starves rules across runs: with 61 rules and a batch of 50, the 50
+ * served in run one come back to run two owing dates that are now OLDER than
+ * before — their current occurrence was the newest thing they owed, and it just
+ * got written — so they win again, and the other 11 never get in. That is #96's
+ * shape between rules instead of within one, and it does not resolve itself.
+ *
+ * So the run is filled in three tiers:
+ *
+ *   1. rules whose CURRENT occurrence is missing AND that can take one —
+ *      most overdue first. Serving one moves it out of this tier for good;
+ *   2. rules whose current is missing but that already hold an unresolved
+ *      occurrence. Until the activation these cannot take another, so they go
+ *      after the rules that can actually be written. They are still attempted.
+ *      The tier does NOT disappear once the index is dropped — `hasPending` goes
+ *      on being true for exactly the same rules — but it stops costing anything:
+ *      what disappears is the constraint that made their insert fail, so being
+ *      second in line no longer means being skipped;
+ *   3. the rest of the backlog, oldest first, so history rebuilds in order.
+ */
+export function selectReconstructionBatch(
+  backlogByRule: Map<string, RuleBacklog>,
+  batchSize: number = RECONSTRUCTION_BATCH_SIZE,
+): Map<string, string[]> {
+  const picked = new Map<string, string[]>()
+  if (batchSize <= 0) return picked
+
+  const servable: Array<{ ruleId: string; date: string }> = []
+  const blocked: Array<{ ruleId: string; date: string }> = []
+  const rest: Array<{ ruleId: string; date: string }> = []
+
+  for (const [ruleId, backlog] of backlogByRule) {
+    const { owed, newestExisting, hasPending } = backlog
+    if (owed.length === 0) continue
+
+    const current = owed[owed.length - 1]
+    // The rule's current occurrence is materialized when something NEWER than
+    // everything it is owed already exists. Otherwise the newest owed date is the
+    // current one, and the rule has nothing standing in for today.
+    const currentIsMissing = newestExisting == null || newestExisting < current
+
+    if (currentIsMissing) {
+      ;(hasPending ? blocked : servable).push({ ruleId, date: current })
+      for (const date of owed.slice(0, -1)) rest.push({ ruleId, date })
+    } else {
+      for (const date of owed) rest.push({ ruleId, date })
+    }
+  }
+
+  let budget = batchSize
+  const take = (entries: Array<{ ruleId: string; date: string }>) => {
+    entries.sort((a, b) => a.date.localeCompare(b.date) || a.ruleId.localeCompare(b.ruleId))
+    for (const { ruleId, date } of entries) {
+      if (budget <= 0) return
+      const dates = picked.get(ruleId)
+      if (dates == null) picked.set(ruleId, [date])
+      else dates.push(date)
+      budget -= 1
+    }
+  }
+
+  take(servable)
+  take(blocked)
+  take(rest)
+
+  for (const dates of picked.values()) dates.sort()
+  return picked
+}
+
+/** Postgres unique-violation SQLSTATE. */
+const UNIQUE_VIOLATION = '23505'
+
+type WriteError = { message: string; code?: string; details?: string }
+
+const mentions = (error: WriteError, index: string) =>
+  `${error.message} ${error.details ?? ''}`.includes(index)
+
+/**
+ * The single-pending index, alive until the activation migration drops it. A
+ * violation of THIS one is the expected transition state: the rule is owed more
+ * than one occurrence and the database still allows one.
+ */
+const isSinglePendingViolation = (error: WriteError | null) =>
+  error != null &&
+  error.code === UNIQUE_VIOLATION &&
+  mentions(error, 'recurrence_instances_one_pending_per_rule')
+
+/**
+ * The occurrence identity index. A violation means somebody else already created
+ * that exact occurrence — a second generator running concurrently, which is
+ * normal — so the row is not ours to create and nothing is wrong.
+ */
+const isDuplicateOccurrence = (error: WriteError | null) =>
+  error != null &&
+  error.code === UNIQUE_VIOLATION &&
+  mentions(error, 'recurrence_instances_one_per_rule_due_date')
+
 export async function generateDueRecurrenceInstances(
   supabase: GranaSupabaseClient,
   userId: string,
-): Promise<{ created: number }> {
-  const today = formatDateISO(getTodayAR())
+  options: {
+    /**
+     * The day the run treats as today. Defaults to the Argentine financial date;
+     * pass it to keep a multi-run reconstruction anchored to one day, and to let
+     * tests assert on fixed dates instead of on the clock.
+     */
+    today?: string
+  } = {},
+): Promise<GenerationResult> {
+  const today = options.today ?? formatDateISO(getTodayAR())
+  const horizon = reconstructionHorizon(today)
 
-  const { data: rules, error: rulesError } = await supabase
-    .from('recurrences')
-    .select(
-      'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, last_generated_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
-    )
-    .eq('user_id', userId)
-    .eq('status', 'active')
+  const { data: rules, error: rulesError } = await selectAllPages<RecurrenceRuleForGeneration>(() =>
+    supabase
+      .from('recurrences')
+      .select(
+        'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, reconstruct_from, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
+      )
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('id'),
+  )
 
-  if (rulesError || !rules || rules.length === 0) return { created: 0 }
+  if (rulesError) return { created: 0, remaining: 0, error: rulesError.message }
+  if (rules.length === 0) return { created: 0, remaining: 0, error: null }
 
-  const typedRules = rules as unknown as RecurrenceRuleForGeneration[]
+  const typedRules = rules
   const ruleIds = typedRules.map((rule) => rule.id)
 
-  // Fetch every instance (any status) for these rules so we can: (a) skip rules
-  // that already have a pending instance, and (b) enforce `max_occurrences`.
-  const { data: instances } = await supabase
-    .from('recurrence_instances')
-    .select('recurrence_id, status')
-    .eq('user_id', userId)
-    .in('recurrence_id', ruleIds)
+  // Nothing older than this can ever be owed — an occurrence is filtered out if it
+  // is before the horizon OR at/before its rule's floor — so it does not need
+  // reading. The floor CAN sit before the horizon, which is why this is the
+  // minimum of both and not just the horizon.
+  const oldestFloor = typedRules.reduce(
+    (oldest, rule) => (rule.reconstruct_from < oldest ? rule.reconstruct_from : oldest),
+    horizon,
+  )
 
-  const rulesWithPending = new Set<string>()
-  const materializedByRule = new Map<string, number>()
-  for (const row of instances ?? []) {
+  // The three histories the calendar is composed from. A failure in any of them
+  // is NOT recoverable by carrying on: walking today's schedule over a stretch
+  // whose versions we failed to read would fabricate occurrences the rule never
+  // produced, and ignoring pauses would bill a paused rule. Better no run than a
+  // wrong one. All three are paged to exhaustion, because a truncated page is not
+  // a slow generator: it is a generator that thinks an occurrence is missing and
+  // creates it again.
+  const [versionsResult, pausesResult, instancesResult] = await Promise.all([
+    selectAllPages<{
+      recurrence_id: string
+      effective_from: string
+      interval_count: number
+      interval_unit: string
+      anchor_date: string
+    }>(() =>
+      supabase
+        .from('recurrence_schedule_versions')
+        .select('recurrence_id, effective_from, interval_count, interval_unit, anchor_date')
+        .eq('user_id', userId)
+        .in('recurrence_id', ruleIds)
+        // Unique by `recurrence_schedule_versions_one_per_date`.
+        .order('recurrence_id')
+        .order('effective_from'),
+    ),
+    selectAllPages<{ recurrence_id: string; paused_from: string; resumed_at: string | null }>(() =>
+      supabase
+        .from('recurrence_pauses')
+        .select('recurrence_id, paused_from, resumed_at')
+        .eq('user_id', userId)
+        .in('recurrence_id', ruleIds)
+        // (recurrence_id, paused_from) is NOT unique — only ONE OPEN pause per
+        // rule is enforced — so `id` is what makes the order total.
+        .order('recurrence_id')
+        .order('paused_from')
+        .order('id'),
+    ),
+    // Every state, not just pending: what decides is that the occurrence EXISTS,
+    // not how it ended. A skipped one must not come back and a confirmed one must
+    // not be created twice.
+    selectAllPages<{ recurrence_id: string; due_date: string; status: string }>(() =>
+      supabase
+        .from('recurrence_instances')
+        .select('recurrence_id, due_date, status')
+        .eq('user_id', userId)
+        .in('recurrence_id', ruleIds)
+        .not('due_date', 'is', null)
+        .gte('due_date', oldestFloor)
+        // Unique by `recurrence_instances_one_per_rule_due_date`.
+        .order('due_date')
+        .order('recurrence_id'),
+    ),
+  ])
+
+  const readError = versionsResult.error ?? pausesResult.error ?? instancesResult.error
+  if (readError) return { created: 0, remaining: 0, error: readError.message }
+
+  const versionsByRule = new Map<string, ScheduleVersion[]>()
+  for (const row of versionsResult.data) {
+    const list = versionsByRule.get(row.recurrence_id as string) ?? []
+    list.push({
+      effective_from: row.effective_from as string,
+      interval_count: row.interval_count as number,
+      interval_unit: row.interval_unit as IntervalUnit,
+      anchor_date: row.anchor_date as string,
+    })
+    versionsByRule.set(row.recurrence_id as string, list)
+  }
+
+  const pausesByRule = new Map<string, PauseInterval[]>()
+  for (const row of pausesResult.data) {
+    const list = pausesByRule.get(row.recurrence_id as string) ?? []
+    list.push({
+      paused_from: row.paused_from as string,
+      resumed_at: row.resumed_at as string | null,
+    })
+    pausesByRule.set(row.recurrence_id as string, list)
+  }
+
+  const existingByRule = new Map<string, { dates: string[]; newest: string | null; hasPending: boolean }>()
+  for (const row of instancesResult.data) {
     const ruleId = row.recurrence_id as string
-    materializedByRule.set(ruleId, (materializedByRule.get(ruleId) ?? 0) + 1)
-    if (row.status === 'pending') rulesWithPending.add(ruleId)
+    const dueDate = row.due_date as string
+    const entry = existingByRule.get(ruleId) ?? { dates: [], newest: null, hasPending: false }
+    entry.dates.push(dueDate)
+    if (entry.newest == null || dueDate > entry.newest) entry.newest = dueDate
+    if (row.status === 'pending') entry.hasPending = true
+    existingByRule.set(ruleId, entry)
   }
 
-  let created = 0
-
+  const backlogByRule = new Map<string, RuleBacklog>()
+  let totalOwed = 0
   for (const rule of typedRules) {
-    const decision = decideRecurrenceInstance(
-      {
-        start_date: rule.start_date,
-        end_date: rule.end_date,
-        last_generated_date: rule.last_generated_date,
-        interval_count: rule.interval_count,
-        interval_unit: rule.interval_unit,
-        max_occurrences: rule.max_occurrences,
-      },
+    const existing = existingByRule.get(rule.id)
+    const owed = owedOccurrencesForRule({
+      versions: versionsByRule.get(rule.id) ?? [],
+      pauses: pausesByRule.get(rule.id) ?? [],
+      endDate: rule.end_date,
+      maxOccurrences: rule.max_occurrences,
+      reconstructFrom: rule.reconstruct_from,
+      horizon,
       today,
-      rulesWithPending.has(rule.id),
-      materializedByRule.get(rule.id) ?? 0,
-    )
-
-    if (!decision.generate) continue
-
-    const { error: insertError } = await supabase
-      .from('recurrence_instances')
-      .insert(
-        buildPendingInstanceInsert(rule, userId, decision.scheduled_date) as never,
-      )
-
-    if (!insertError) created += 1
-    // Unique-index violation under concurrent calls is expected; ignore silently.
+      existing: existing?.dates ?? [],
+    })
+    if (owed.length === 0) continue
+    backlogByRule.set(rule.id, {
+      owed,
+      newestExisting: existing?.newest ?? null,
+      hasPending: existing?.hasPending ?? false,
+    })
+    totalOwed += owed.length
   }
 
-  return { created }
+  if (totalOwed === 0) return { created: 0, remaining: 0, error: null }
+
+  const batch = selectReconstructionBatch(backlogByRule)
+  const rulesById = new Map(typedRules.map((rule) => [rule.id, rule]))
+  const rows = [...batch.entries()].flatMap(([ruleId, dates]) => {
+    const rule = rulesById.get(ruleId)
+    return rule == null ? [] : dates.map((date) => buildPendingInstanceInsert(rule, userId, date))
+  })
+
+  const { created, error } = await insertReconstructedInstances(supabase, batch, rows, rulesById, userId)
+
+  return { created, remaining: totalOwed - created, error }
+}
+
+/**
+ * Write the batch, degrading ONLY as far as the database actually forces.
+ *
+ * One statement is the healthy path. Until the activation migration drops
+ * `recurrence_instances_one_pending_per_rule`, a rule owed more than one
+ * occurrence violates that index — and a violation rejects the WHOLE statement,
+ * so a single batch would materialize nothing at all. Hence the two fallbacks:
+ * per rule, then the current occurrence alone.
+ *
+ * The fallbacks fire on that violation and on NOTHING ELSE. An earlier version
+ * retried on any failure, which turned a permission error, a constraint on the
+ * payload or a dropped connection into "compatibility, carry on" — and if a later
+ * insert happened to succeed, the run reported `error: null`. A failure the user
+ * is not told about is the defect this generator exists to remove, one level up.
+ *
+ * A violation of the occurrence-identity index is a third case: it means a
+ * concurrent run already created that occurrence. Nothing is wrong and nothing is
+ * ours to create, so it counts as neither created nor failed.
+ */
+async function insertReconstructedInstances(
+  supabase: GranaSupabaseClient,
+  batch: Map<string, string[]>,
+  rows: ReturnType<typeof buildPendingInstanceInsert>[],
+  rulesById: Map<string, RecurrenceRuleForGeneration>,
+  userId: string,
+): Promise<{ created: number; error: string | null }> {
+  if (rows.length === 0) return { created: 0, error: null }
+
+  const insert = async (payload: unknown[]): Promise<WriteError | null> => {
+    const { error } = await supabase.from('recurrence_instances').insert(payload as never)
+    return (error as WriteError | null) ?? null
+  }
+
+  const batchError = await insert(rows)
+  if (batchError == null) return { created: rows.length, error: null }
+
+  // The batch is one statement, so its failure wrote nothing at all — whatever
+  // the reason. Retrying rule by rule is therefore always safe, and it is what
+  // keeps ONE bad rule from blocking every healthy one. The batch error itself is
+  // not reported: the per-rule pass below is the authority on what actually
+  // failed, and a rule that goes through on retry had no failure to report.
+  let created = 0
+  let failure: string | null = null
+
+  for (const [ruleId, dates] of batch) {
+    const rule = rulesById.get(ruleId)
+    if (rule == null) continue
+
+    const ruleError = await insert(
+      dates.map((date) => buildPendingInstanceInsert(rule, userId, date)),
+    )
+    if (ruleError == null) {
+      created += dates.length
+      continue
+    }
+    if (isDuplicateOccurrence(ruleError)) continue
+    if (!isSinglePendingViolation(ruleError)) {
+      // Not the transition state: a real failure for this rule. Recorded, and the
+      // run carries on so the other rules still get materialized.
+      failure ??= ruleError.message
+      continue
+    }
+
+    // The current occurrence is the one that must exist: without it the user is
+    // looking at a screen that hides what falls due today.
+    const current = dates[dates.length - 1]
+    const singleError = await insert([buildPendingInstanceInsert(rule, userId, current)])
+    if (singleError == null) created += 1
+    else if (!isDuplicateOccurrence(singleError) && !isSinglePendingViolation(singleError)) {
+      failure ??= singleError.message
+    }
+  }
+
+  // Any unexpected failure is reported, even when other rules went through: a
+  // partially failed run is still a failed run for the rules that failed, and
+  // hiding it behind a non-zero `created` is how a silent error looks.
+  return { created, error: failure }
 }
 
 // ── getTopRecurrenceSuggestion ─────────────────────────────────────────────────
@@ -549,7 +1028,7 @@ export async function getDuplicateRulesFor(
   const { data, error } = await supabase
     .from('recurrences')
     .select(
-      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, last_generated_date',
+      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id',
     )
     .eq('status', 'active')
   if (error) throw error
@@ -562,16 +1041,120 @@ export async function getDuplicateRulesFor(
       interval_count: number
       interval_unit: IntervalUnit
       max_occurrences: number | null
-      last_generated_date: string | null
+      created_from_transaction_id: string | null
     }
   >
+
+  const upcoming = await getUpcomingOccurrenceDates(
+    supabase,
+    rules.map((rule) => rule.id),
+    today,
+  )
 
   return findDuplicateRules(
     candidate,
     rules.map((rule) => ({
       ...rule,
-      next_occurrence: getNextExpectedOccurrence(rule, today, rule.last_generated_date),
+      next_occurrence: getNextExpectedOccurrence(
+        rule,
+        today,
+        coveredOccurrences({
+          startDate: rule.start_date,
+          seededFromMovement: rule.created_from_transaction_id != null,
+          existing: upcoming.get(rule.id) ?? [],
+        }),
+      ),
     })),
     options,
   )
+}
+
+/**
+ * How long a materialization run may take before the UI stops waiting for it.
+ *
+ * Not a network setting: it is how long a person will stare at a spinner before
+ * the app owes them an answer.
+ */
+export const GENERATION_TIMEOUT_MS = 15_000
+
+/**
+ * A materialization run that always comes back.
+ *
+ * WITHOUT THIS, A DEAD NETWORK IS WORSE THAN A FAILURE. `fetch` does not reject
+ * when there is no route to the host — it hangs, and how long it hangs is up to
+ * the operating system: on an iPhone with the network off it took well over a
+ * minute. The whole time the notice reads "Actualizando…" with its retry
+ * DISABLED, because a run is in flight. So the one screen whose job is to say "we
+ * could not update your vencimientos" says nothing and offers nothing, which is
+ * the failure mode the change exists to remove — arrived at from the other side.
+ *
+ * The losing promise is not cancelled: there is no abort signal threaded through
+ * the client, and adding one buys little. A run that lands after the deadline
+ * has still written whatever it wrote, and materialization is idempotent — what
+ * an occurrence owes is derived from its calendar minus what already exists — so
+ * the next run reconciles. The cost of the race is a run reported as failed that
+ * actually succeeded; the cost of no timeout is a spinner with no way out.
+ */
+export function withGenerationTimeout(
+  run: Promise<GenerationResult>,
+  timeoutMs: number = GENERATION_TIMEOUT_MS,
+): Promise<GenerationResult> {
+  let timer: ReturnType<typeof setTimeout>
+  const deadline = new Promise<GenerationResult>((resolve) => {
+    timer = setTimeout(
+      () => resolve({ created: 0, remaining: 0, error: 'generation_timeout' }),
+      timeoutMs,
+    )
+  })
+  return Promise.race([run, deadline]).finally(() => clearTimeout(timer))
+}
+
+/**
+ * How long the pending read may take before the UI stops waiting for it.
+ *
+ * Same number as the materialization's, for the same reason: it is how long a
+ * person will look at a screen with nothing on it before the app owes them an
+ * answer.
+ */
+export const READ_TIMEOUT_MS = 15_000
+
+/** What `withReadTimeout` rejects with. Never shown: the surfaces have their own copy. */
+export const READ_TIMEOUT_ERROR = 'read_timeout'
+
+/**
+ * A read that always comes back — as data or as a failure, never as silence.
+ *
+ * THE BLANK SCREEN IS THE BUG. `fetch` does not reject when there is no route to
+ * the host: it hangs, for as long as the operating system feels like (on an
+ * iPhone with the network off, about a minute — and the query layer's one retry
+ * doubled it). Until it gives up, the feed is in `loading`, which renders
+ * nothing, and a screen with nothing on it is exactly what somebody with no
+ * vencimientos sees. So the read spends a minute making the claim the whole
+ * change exists to prevent: "no tenés nada por revisar", asserted while nobody
+ * knows.
+ *
+ * It REJECTS, unlike the generation timeout, which resolves to a failed result.
+ * The difference is what the caller does with it: the generator's outcome is a
+ * value the notice reads, while the read feeds `useQuery`, and an error is how
+ * that layer is told the data is not there. That is also what keeps the cached
+ * rows on screen — `reviewFeedState` shows them with "puede estar
+ * desactualizada" rather than replacing them with an empty list.
+ *
+ * The losing read is not cancelled: there is no abort signal threaded through the
+ * client, and a read has nothing to undo. It resolves into a promise nobody is
+ * holding; `Promise.race` has already handled it, so a late rejection raises no
+ * unhandled error.
+ *
+ * The deadline is only half the fix — the call sites must not auto-retry it. One
+ * retry on a 15s deadline is 30 seconds of the same silence.
+ */
+export function withReadTimeout<T>(
+  read: Promise<T>,
+  timeoutMs: number = READ_TIMEOUT_MS,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(READ_TIMEOUT_ERROR)), timeoutMs)
+  })
+  return Promise.race([read, deadline]).finally(() => clearTimeout(timer))
 }

@@ -11,6 +11,7 @@ export type {
   RecurrenceSubcategory,
   Recurrence,
   RecurrenceInstance,
+  EnrichedRecurrenceInstance,
   PendingRecurrenceInstance,
   RecurrenceSummary,
   RecurrenceDetail,

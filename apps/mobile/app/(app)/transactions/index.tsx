@@ -430,7 +430,6 @@ export default function MovimientosScreen() {
         )}
 
         <ActiveFilterChips chips={chips} />
-
         <PendingRecurrencesBlock />
         <PendingReimbursementsBlock todayISO={todayISO} />
         <RecurrenceSuggestionBanner />

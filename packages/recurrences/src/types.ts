@@ -52,7 +52,13 @@ export type RecurrenceInstance = Omit<
   currency_code: RecurrenceCurrencyCode
 }
 
-export type PendingRecurrenceInstance = RecurrenceInstance & {
+/**
+ * An instance plus the embeds the screens need — ANY instance, whatever its
+ * status. `due_date` stays nullable here, because for an occurrence resolved
+ * before 0064 the vencimiento is unrecoverable and the row carries `NULL` +
+ * `due_date_is_unknown`. The history list renders exactly these.
+ */
+export type EnrichedRecurrenceInstance = RecurrenceInstance & {
   recurrence: Recurrence
   account: RecurrenceAccount | null
   destination_account: RecurrenceAccount | null
@@ -60,21 +66,78 @@ export type PendingRecurrenceInstance = RecurrenceInstance & {
   subcategory: RecurrenceSubcategory | null
 }
 
+/**
+ * What it means for an occurrence to be STILL AWAITING A DECISION.
+ *
+ * Both halves are narrowings, and they belong together: `due_date: string`
+ * without `status: 'pending'` is a promise about resolved rows too, which is
+ * false — a `confirmed` occurrence from before 0064 has no recoverable
+ * vencimiento. Read as one shape, the type says exactly what the database
+ * enforces.
+ *
+ * An unresolved occurrence always has an exact vencimiento: 0064's backfill set
+ * `pending` and `skipped` rows exactly, its compatibility trigger derives it on
+ * insert for any client that only writes `scheduled_date`, the immutability
+ * guard refuses to clear it, and `chk_recurrence_instances_unresolved_has_due_date`
+ * rejects the one transition that could reintroduce a NULL (a historical
+ * `confirmed` row updated back to `pending`). `validate_schema.sql` checks the
+ * same invariant over existing data.
+ *
+ * Narrowing it is what lets every surface read the vencimiento instead of
+ * `scheduled_date` — which on a resolved row is a legacy date of uncertain
+ * meaning and was never the occurrence's identity. Anything that also holds
+ * history takes the un-narrowed type instead: claiming a non-null `due_date` for
+ * a confirmed 2023 occurrence would be a lie the compiler helps spread.
+ */
+type Unresolved = {
+  status: 'pending'
+  due_date: string
+}
+
+/** An unresolved occurrence with no embeds — what the per-rule read returns. */
+export type PendingInstance = RecurrenceInstance & Unresolved
+
+/** An unresolved occurrence plus its embeds — the review feed rows. */
+export type PendingRecurrenceInstance = EnrichedRecurrenceInstance & Unresolved
+
 export type RecurrenceSummary = Recurrence & {
   account: RecurrenceAccount | null
   destination_account: RecurrenceAccount | null
   category: RecurrenceCategory | null
   subcategory: RecurrenceSubcategory | null
-  pending_instance: RecurrenceInstance | null
+  /**
+   * Every occurrence of this rule still awaiting a decision, oldest first.
+   *
+   * A COLLECTION, not one row. The single-pending invariant is what turned an
+   * unreviewed occurrence into a permanent stop (#96), so a rule can now hold
+   * several at once and a surface that renders `[0]` shows one of many rather
+   * than the only one. Empty when the rule is up to date.
+   */
+  pending_instances: PendingInstance[]
+  /**
+   * Occurrences of this rule that ALREADY EXIST from today onward, plus its seed
+   * date when the rule was created from a movement — everything a projection has
+   * to subtract so it does not announce as upcoming something that already is.
+   *
+   * Bounded by construction: occurrences are only materialized up to today, so
+   * this holds today's at most, and a future `start_date` for a seeded rule.
+   * A plain array, not a Set, because it crosses the server/client boundary.
+   */
+  covered_occurrences: string[]
   /**
    * Next scheduled occurrence on or after today (the calendar "próximo"), or null
    * if the rule has no further occurrence. Computed from start_date — NOT from
-   * `pending_instance`, whose date is the DUE occurrence awaiting confirmation and
-   * is always <= today.
+   * `pending_instances`, whose dates are the DUE occurrences awaiting a decision
+   * and are always <= today.
    */
   next_occurrence: string | null
 }
 
 export type RecurrenceDetail = RecurrenceSummary & {
-  instances: PendingRecurrenceInstance[]
+  /**
+   * The rule's whole history, newest first — `confirmed` and `skipped` included,
+   * so `due_date` may be NULL. NOT `PendingRecurrenceInstance[]`: that type
+   * promises an exact vencimiento, which only an unresolved occurrence has.
+   */
+  instances: EnrichedRecurrenceInstance[]
 }
