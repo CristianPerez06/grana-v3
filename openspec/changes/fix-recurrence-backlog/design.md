@@ -64,7 +64,8 @@ indican, para que el change que lo tome no empiece de cero):
 - Crear movimientos históricos automáticamente, o reconstruir vencimientos anteriores al horizonte.
   Ver decisión 7.
 - **Retirar `scheduled_date`.** Se conserva escribiéndose en paralelo; su eliminación es una entrega
-  posterior, cuando ya no queden clientes nativos instalados que lo usen. Ver decisión 17.
+  posterior, con su propia verificación: hay que sacar antes las ramas de compatibilidad del trigger
+  y las lecturas que todavía la muestran. Ver decisión 17b.
 No es non-goal, aunque una versión anterior lo listaba como tal: **el doble conteo de Compromisos
 (#118) se cierra en esta entrega**. El arreglo es el mismo código —que el dashboard, el "próximo" y la
 proyección lean los vencimientos existentes en vez de proyectarlos desde el cursor, tarea `2.2b`—, así
@@ -533,7 +534,8 @@ La expansión instala triggers en `recurrences` que mantienen las dos tablas:
 **El dueño de estas escrituras es la base, no la app.** El código nuevo NO debe insertar en
 `recurrence_schedule_versions` ni en `recurrence_pauses`: duplicaría lo que hacen los triggers. Vivir
 en la base las hace además atómicas con la escritura de la regla, sin depender de que cada cliente se
-acuerde — que es exactamente el problema durante una transición con clientes viejos instalados. La migración crea una fila
+acuerde — que es exactamente el problema durante una transición, en la que la base tiene que sostener
+los dos modelos a la vez. La migración crea una fila
 abierta para cada regla hoy pausada, con `paused_from` desconocido — se usa la fecha de la migración,
 y se acepta: son pocas reglas y el efecto es que su período pausado previo no se descarta, que es el
 comportamiento actual.
@@ -555,8 +557,10 @@ La expansión son dos migraciones que viajan juntas, y recién después el despl
 | **C · Retiro** | entrega posterior | Retira `scheduled_date` y las **ramas de compatibilidad** del trigger | — |
 
 **"Nativo desplegado" no significa "todos actualizaron".** Una app instalada no se actualiza porque
-apliquemos una migración, y los clientes viejos dependen de `last_generated_date` y de una pendiente
-singular. Dos mecanismos, complementarios:
+apliquemos una migración, y un cliente anterior depende de `last_generated_date` y de una pendiente
+singular. Hoy no hay ninguno en uso (decisión 17, "el cliente viejo"), pero el esquema no puede
+apoyarse en eso: entre la migración y el despliegue pasa tiempo, y en cuanto haya una app publicada
+la distancia entre una y otra deja de ser cero. Dos mecanismos, complementarios:
 
 - **Compatibilidad por trigger (obligatorio).** La expansión instala un `BEFORE INSERT OR UPDATE` en
   `recurrence_instances` que, cuando el cliente no los provee, deriva `due_date` de `scheduled_date`
@@ -583,9 +587,13 @@ singular. Dos mecanismos, complementarios:
 
 ### Decisión 17b · Retirar `scheduled_date` es gradual, no parte de esta entrega
 
-`scheduled_date` no se puede borrar en esta migración: **hay clientes nativos instalados** que siguen
-leyéndolo y escribiéndolo, y una app móvil no se actualiza cuando se aplica una migración. La
-secuencia segura, y lo que entra en cada tramo:
+`scheduled_date` no se puede borrar en esta migración, por dos razones que no dependen de que hoy
+haya o no clientes anteriores en uso. La primera es el **despliegue gradual**: entre aplicar la
+migración y tener el código nuevo corriendo en web y en nativo pasa tiempo, y durante ese tiempo la
+columna sigue siendo la que se escribe. La segunda es que **retirarla es otra entrega**: hay que
+sacar antes las ramas de compatibilidad del trigger y las lecturas que todavía la muestran —el
+historial, sin ir más lejos—, y eso es trabajo con su propia verificación. La secuencia segura, y lo
+que entra en cada tramo:
 
 | Paso | Qué | ¿En esta entrega? |
 |---|---|---|
@@ -841,8 +849,9 @@ Las constraints de `resolution_kind` ya entraron en la expansión, después del 
 
 ### C · Retiro — entrega posterior
 
-Retirar `scheduled_date` y `last_generated_date` cuando ya no queden clientes nativos instalados que
-los usen.
+Retirar `scheduled_date` y `last_generated_date` una vez consolidado el modelo nuevo: sin ramas de
+compatibilidad en el trigger, sin lecturas que todavía las muestren —el historial ordena y muestra
+`scheduled_date`— y sin clientes que las escriban.
 
 **El trigger NO se elimina entero, y conviene dejarlo escrito antes de que alguien lo intente.** Su
 nombre —`trg_recurrence_instance_compat`— engaña: además de la compatibilidad temporal, contiene una

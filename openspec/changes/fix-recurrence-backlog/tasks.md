@@ -24,7 +24,7 @@ contra el harness local no depende de él.
 | 4 | Dashboard, "próximo", proyección y deshacer leen los vencimientos existentes | 2.2b |
 | 5 | Dejar de escribir `last_generated_date` + test real de orden | 1.5, 1.8 |
 | 6 | Superficies: materialización y bloque "por revisar" en web y nativo, copy, error visible | 4.1–4.5b, 2.6 |
-| 7 | **Gate de versión mínima** en el cliente nativo | 2.8b |
+| 7 | **Verificar que no quede ningún cliente nativo anterior en uso** — comprobación, no software | 2.8b |
 | 8 | Migración de **activación**: retira el índice de pendiente única | 2.8 |
 
 `0065` es aditiva y no cambia comportamiento por sí sola —crea una función que nadie llama todavía—,
@@ -66,9 +66,11 @@ superficies soporten varias pendientes.
 
 ## 1. Cimientos: modelo persistente
 
-Ver "Modelo persistente" en `design.md`. El orden es **`0064` + `0065` → código → activación**
+Ver "Modelo persistente" en `design.md`. El orden es
+**`0064` + `0065` → código → verificar que no quede cliente nativo anterior → activación**
 (decisión 17): las dos migraciones de expansión viajan en la misma ventana y son aditivas —no cambian
-el comportamiento—, y la activación —tarea 2.8— es la que habilita el backlog.
+el comportamiento—, la verificación —tarea 2.8b— es la condición para el último paso, y la activación
+—tarea 2.8— es la que habilita el backlog.
 
 - [x] 1.1 Migración: agregar `recurrence_instances.due_date` (**nullable**) y `due_date_is_unknown`.
       `pending` y `skipped` conservan un vencimiento exacto; las `confirmed` históricas quedan en
@@ -319,8 +321,9 @@ el comportamiento—, y la activación —tarea 2.8— es la que habilita el bac
       que no puede es ir después del código: desde el paso 5 `deleteTransaction` la invoca, y sin la
       función borrar un movimiento que sembró una recurrencia falla para todos.
 - [ ] 1.9 **`scheduled_date` NO se elimina en esta entrega** (decisión 17): se sigue escribiendo en
-      paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior, cuando
-      no queden clientes nativos instalados que lo usen.
+      paralelo como columna legada de compatibilidad. Su retiro es una entrega posterior: hay que
+      sacar antes las ramas de compatibilidad del trigger y las lecturas que todavía la muestran —el
+      historial la ordena y la muestra—, y eso tiene su propia verificación.
       **No es una tarea de código sino una condición permanente de toda la etapa**, y por eso queda
       abierta hasta que la entrega cierre: se verifica al final, comprobando que nada la haya violado
       en el camino. Cuenta igual en el inventario: tras cerrar `1.7` y `1.10b` con la auditoría, las
