@@ -478,4 +478,3 @@ Este requirement cubre las **raíces** de sección. Las rutas hijas ya están cu
 - **WHEN** el mismo header se renderiza en un viewport de 1280px
 - **THEN** el back-link sigue presente
 - **AND** el sidebar también, sin que ninguno de los dos invalide al otro
-
