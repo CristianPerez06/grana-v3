@@ -1,4 +1,5 @@
 import { ActivityIndicator, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AlertTriangle } from 'lucide-react-native'
 import { materializationOutcome } from '@grana/recurrences'
 import { useT } from '../../lib/locale-context'
@@ -66,6 +67,15 @@ export function RecurrenceFailureNotice({
 export function MaterializationNotice() {
   const t = useT()
   const state = useRecurrenceMaterialization()
+  // The notice sits ABOVE every screen's `PageHeader`, so it is the top-most
+  // thing on screen and nothing else is clearing the status bar for it. Without
+  // this it renders under the notch: unreadable text and a half-covered button.
+  //
+  // The inset lives HERE and not in the layout that mounts it, because the
+  // notice renders nothing most of the time — padding applied one level up
+  // would leave a permanent gap at the top of the app for a notice that is not
+  // there.
+  const insets = useSafeAreaInsets()
 
   if (!state) return null
   const { running, run } = state
@@ -74,33 +84,37 @@ export function MaterializationNotice() {
 
   if (outcome.kind === 'failed') {
     return (
-      <RecurrenceFailureNotice
-        title={t('recurrences.materialization.failed_title')}
-        body={t('recurrences.materialization.failed_body')}
-        onRetry={run}
-        retrying={running}
-      />
+      <View style={{ paddingTop: insets.top }}>
+        <RecurrenceFailureNotice
+          title={t('recurrences.materialization.failed_title')}
+          body={t('recurrences.materialization.failed_body')}
+          onRetry={run}
+          retrying={running}
+        />
+      </View>
     )
   }
 
   return (
-    <View style={noticeStyle(false)}>
-      {running ? <ActivityIndicator size="small" color={colors.textSoft} /> : null}
-      <Text style={{ flex: 1, minWidth: 0, fontSize: 12, color: colors.textSoft }}>
-        {t('recurrences.materialization.remaining', { count: outcome.count })}
-      </Text>
-      <View style={{ width: 152 }}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={run}
-          disabled={running}
-          title={
-            running
-              ? t('recurrences.materialization.running')
-              : t('recurrences.materialization.continue')
-          }
-        />
+    <View style={{ paddingTop: insets.top }}>
+      <View style={noticeStyle(false)}>
+        {running ? <ActivityIndicator size="small" color={colors.textSoft} /> : null}
+        <Text style={{ flex: 1, minWidth: 0, fontSize: 12, color: colors.textSoft }}>
+          {t('recurrences.materialization.remaining', { count: outcome.count })}
+        </Text>
+        <View style={{ width: 152 }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onPress={run}
+            disabled={running}
+            title={
+              running
+                ? t('recurrences.materialization.running')
+                : t('recurrences.materialization.continue')
+            }
+          />
+        </View>
       </View>
     </View>
   )

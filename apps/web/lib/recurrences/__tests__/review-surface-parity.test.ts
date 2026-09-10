@@ -105,3 +105,26 @@ describe('the "al registrarlo" line reads as a date, not as an ISO string', () =
     expect(source).toMatch(/date: formatShortDate\(/)
   })
 })
+
+describe('the native materialization notice clears the status bar', () => {
+  // Caught in QA on an iPhone with a Dynamic Island: the notice is mounted in
+  // the app layout ABOVE every screen's `PageHeader`, so it is the top-most
+  // thing on screen and nothing else was clearing the notch for it — the text
+  // rendered under the island and the button came out half-covered.
+  //
+  // The inset belongs to the notice, not to the layout that mounts it: the
+  // notice renders nothing most of the time, and padding applied one level up
+  // would leave a permanent gap at the top of the app for a notice that is not
+  // there.
+  const NATIVE_NOTICE = 'apps/mobile/components/recurrences/MaterializationNotice.tsx'
+
+  it('applies the top safe-area inset itself', () => {
+    const source = read(NATIVE_NOTICE)
+    expect(source).toContain('useSafeAreaInsets')
+    expect(source).toMatch(/paddingTop: insets\.top/)
+  })
+
+  it('does not push the inset up into the layout, where it would always apply', () => {
+    expect(read('apps/mobile/app/(app)/_layout.tsx')).not.toContain('useSafeAreaInsets')
+  })
+})
