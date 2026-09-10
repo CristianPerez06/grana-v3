@@ -84,44 +84,49 @@ async function dueDatesByRule(): Promise<Map<string, string[]>> {
 }
 
 describe('61 stuck rules, before and after the activation', () => {
-  it('WHILE THE INDEX LIVES: every rule stays stuck on its old occurrence', async () => {
-    // This is the bug, reproduced at production's size. Not one of the 61 gets
-    // its current vencimiento, however many times the generator runs — the row
-    // it would have to write is the one the index forbids.
-    const first = await generateDueRecurrenceInstances(client(), U_A, { today: TODAY })
-    const second = await generateDueRecurrenceInstances(client(), U_A, { today: TODAY })
+  // ONE test, not four. This is a SEQUENCE — the same database walked from the
+  // transition into the activation — and splitting it into separate `it`s made
+  // the later ones silently depend on an earlier one having run: on their own
+  // they never saw the activation at all. A staged single case says out loud
+  // that the order is the subject, and `it.only` on it still reproduces the
+  // whole story.
+  it('walks from stuck to fully materialized, and only the activation moves it', async () => {
+    // ── Stage 1 · while the index lives ────────────────────────────────────
+    // The bug, at production's size. Not one of the 61 gets its current
+    // vencimiento, however many times the generator runs — the row it would
+    // have to write is the one the index forbids.
+    const stuckFirst = await generateDueRecurrenceInstances(client(), U_A, { today: TODAY })
+    const stuckSecond = await generateDueRecurrenceInstances(client(), U_A, { today: TODAY })
 
     // No error: the run degrades on the compatibility violation rather than
     // reporting a failure it cannot do anything about.
-    expect(first.error).toBeNull()
-    expect(second.error).toBeNull()
-    expect(first.created + second.created).toBe(0)
+    expect(stuckFirst.error).toBeNull()
+    expect(stuckSecond.error).toBeNull()
+    expect(stuckFirst.created + stuckSecond.created).toBe(0)
 
-    const byRule = await dueDatesByRule()
+    let byRule = await dueDatesByRule()
     expect(byRule.size).toBe(RULES)
     for (const [ruleId, dates] of byRule) {
       expect({ ruleId, dates }).toEqual({ ruleId, dates: ['2026-06-23'] })
     }
 
     // And it says so instead of looking finished.
-    expect(second.remaining).toBeGreaterThan(0)
-  }, 180_000)
+    expect(stuckSecond.remaining).toBeGreaterThan(0)
 
-  it('AFTER THE ACTIVATION: two runs give all 61 their current vencimiento', async () => {
+    // ── Stage 2 · the activation, and two runs ─────────────────────────────
     await applyActivation(db)
 
     const first = await generateDueRecurrenceInstances(client(), U_A, { today: TODAY })
     const second = await generateDueRecurrenceInstances(client(), U_A, { today: TODAY })
-
     expect(first.error).toBeNull()
     expect(second.error).toBeNull()
 
-    const byRule = await dueDatesByRule()
+    byRule = await dueDatesByRule()
     expect(byRule.size).toBe(RULES)
 
-    // THE ASSERTION THIS FILE EXISTS FOR: not one rule left behind. A batch
-    // that served the same rules twice would leave the rest exactly as they
-    // were — which is what starvation looks like from the outside.
+    // THE ASSERTION THIS FILE EXISTS FOR: not one rule left behind. A batch that
+    // served the same rules twice would leave the rest exactly as they were —
+    // which is what starvation looks like from the outside.
     const withoutCurrent = [...byRule.entries()]
       .filter(([, dates]) => !dates.includes('2026-08-23'))
       .map(([ruleId]) => ruleId)
@@ -130,15 +135,14 @@ describe('61 stuck rules, before and after the activation', () => {
     // The occurrence nobody reviewed is still there, untouched: materializing
     // the backlog resolves nothing on its own.
     for (const dates of byRule.values()) expect(dates).toContain('2026-06-23')
-  }, 180_000)
 
-  it('a third run finishes the older backlog without duplicating anything', async () => {
-    // 61 rules × one missing July each, and a run caps at 50: the leftovers have
-    // to come out of the next run, not be forgotten.
+    // ── Stage 3 · the older backlog, without duplicating anything ──────────
+    // 61 rules × one missing July each, and a run caps at 50: the leftovers
+    // have to come out of the next run, not be forgotten.
     await generateDueRecurrenceInstances(client(), U_A, { today: TODAY })
     const final = await generateDueRecurrenceInstances(client(), U_A, { today: TODAY })
 
-    const byRule = await dueDatesByRule()
+    byRule = await dueDatesByRule()
     for (const [ruleId, dates] of byRule) {
       expect({ ruleId, dates }).toEqual({
         ruleId,
@@ -148,9 +152,8 @@ describe('61 stuck rules, before and after the activation', () => {
 
     // Nothing owed and nothing written: the reconstruction is over.
     expect(final.remaining).toBe(0)
-  }, 180_000)
 
-  it('the rules now hold several unresolved occurrences at once — the point of it all', async () => {
+    // ── Stage 4 · what 0011 made impossible ────────────────────────────────
     const { rows } = await db.query<{ n: number }>(
       `select count(*)::int as n
          from public.recurrence_instances
@@ -159,8 +162,9 @@ describe('61 stuck rules, before and after the activation', () => {
         having count(*) > 1`,
     )
 
-    // 0011's index made this row impossible. That impossibility WAS #96.
+    // Every rule now holds three unresolved occurrences at once. That row was
+    // impossible under the single-pending index, and that impossibility WAS #96.
     expect(rows).toHaveLength(RULES)
     expect(rows.every((row) => row.n === 3)).toBe(true)
-  })
+  }, 300_000)
 })

@@ -825,11 +825,25 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       "exitosa" y el #96 intacto. Es idempotente y lleva el rollback escrito, con su límite dicho —
       recrear el índice falla en cuanto una regla acumuló dos pendientes, y por eso el orden no es
       negociable.
-      **`validate_schema.sql` 8.1J (4) cambió de exigencia a informe.** Antes exigía que el índice de
-      pendiente única siguiera vivo y su propio mensaje admitía que quedaría obsoleto tras la
-      activación; quedó obsoleto. Como los checks (1) a (3) ya abortan si falta cualquier parte del
-      modelo nuevo, los dos estados son legítimos y lo único útil es decir en cuál está: TRANSITION o
-      ACTIVATED. Un archivo que falla cuando el change termina enseña a ignorarlo.
+      **La verificación del índice de identidad es ESTRUCTURAL, no por nombre**: esquema `public`,
+      tabla `recurrence_instances`, único, válido y listo, columnas exactamente
+      `(recurrence_id, due_date)` y predicado parcial sobre `due_date is not null`. Un índice que
+      solo responde al nombre no protege nada —puede estar en otro esquema, sobre otra tabla, no ser
+      único, ser un resto inválido de un build concurrente fallido o cubrir otras columnas—, y
+      retirar la protección vieja confiando en eso es cómo una migración informa éxito y deja la
+      tabla sin defensa. Exige además que `chk_recurrence_instances_unresolved_has_due_date` exista y
+      esté **validada**: agregada `NOT VALID` obliga a las filas nuevas y deja sin mirar todo lo ya
+      guardado, que son justamente las filas de las que trata la activación.
+      **`validate_schema.sql` exige la activación aplicada.** Dos versiones anteriores estuvieron mal
+      en direcciones opuestas: la primera exigía que el índice de pendiente única siguiera VIVO —y su
+      propio mensaje admitía que quedaría obsoleto—, y la segunda aceptaba los dos estados
+      informando cuál era, que se lee como "los dos están bien" y deja pasar una activación sin
+      aplicar. Ahora aborta mientras el índice exista: con él en pie, el #96 sigue intacto por más
+      modelo nuevo que haya. La ventana intermedia es legítima pero no es el asunto de ese archivo, y
+      tiene el suyo: **`validate_schema_transition.sql`**, que se corre solo entre las dos
+      migraciones y empieza a fallar a propósito en cuanto `0066` se aplica —la señal para volver al
+      otro—. Verifica además que los dos modelos convivan: ninguna pendiente sin vencimiento, y
+      ninguna regla con dos pendientes mientras el índice viejo esté.
 - [x] 2.8c **Regresión que solo se puede escribir con la activación**: `activation-backlog.test.ts`.
       61 reglas, **cada una con una pendiente vieja sin resolver** —la forma exacta del #96, al
       tamaño de producción—, y el mismo archivo mide los dos lados. **Con el índice vivo**: dos
@@ -842,8 +856,16 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       La activación se aplica **desde el archivo publicado** (`applyActivation`), nunca con un `drop
       index` escrito a mano: la migración se niega a correr si el modelo nuevo no está, y soltar el
       índice por afuera probaría el generador en un estado que la migración no habría producido.
-      Más `activation-migration.test.ts`: las dos negativas, la idempotencia, que sigue rechazando la
-      MISMA ocurrencia dos veces, y que dos pendientes de una regla pasan a ser posibles.
+      **Es un solo `it` con etapas, no cuatro casos**: es una secuencia sobre la misma base —de la
+      ventana intermedia a la activación—, y partirla hacía que los casos posteriores dependieran en
+      silencio de que otro hubiera corrido antes; sueltos nunca veían la activación.
+      Más `activation-migration.test.ts` (14 casos): las negativas —sin expansión, sin índice de
+      identidad, con un índice **impostor** que solo tiene el nombre (no único, columnas
+      equivocadas, no parcial, sobre otra tabla), sin el `CHECK` y con el `CHECK` `NOT VALID`—, la
+      idempotencia, que sigue rechazando la MISMA ocurrencia dos veces, que dos pendientes de una
+      regla pasan a ser posibles, y los dos archivos de validación **ejecutados**: la rama de
+      `validate_schema.sql` que exige la activación se extrae y se corre de verdad, y
+      `validate_schema_transition.sql` se corre entero en los tres estados.
 
 ## 5. Cierre
 

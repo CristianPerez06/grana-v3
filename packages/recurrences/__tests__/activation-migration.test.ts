@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import type { PGlite } from '@electric-sql/pglite'
 import { describe, expect, it } from 'vitest'
 import {
@@ -51,7 +53,90 @@ describe('migration 0066 — activation', () => {
     try {
       await db.exec(`drop index public.${IDENTITY};`)
 
-      await expect(applyActivation(db)).rejects.toThrow(/identidad/)
+      await expect(applyActivation(db)).rejects.toThrow(/is missing, or is not a valid UNIQUE index/)
+      expect(await indexExists(db, ONE_PENDING)).toBe(true)
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
+  it('refuses an identity index that only has the right NAME', async () => {
+    // The whole reason the check is structural. Each of these answers to
+    // `recurrence_instances_one_per_rule_due_date` and none of them protects
+    // anything: a name match would let the migration retire the old index and
+    // report success over an unprotected table.
+    const impostors: { why: string; ddl: string; expected: RegExp }[] = [
+      {
+        why: 'not unique',
+        ddl: `create index ${IDENTITY} on public.recurrence_instances (recurrence_id, due_date) where due_date is not null;`,
+        expected: /is not a valid UNIQUE index/,
+      },
+      {
+        why: 'the wrong columns',
+        ddl: `create unique index ${IDENTITY} on public.recurrence_instances (recurrence_id, scheduled_date) where due_date is not null;`,
+        expected: /covers \(recurrence_id, scheduled_date\)/,
+      },
+      {
+        why: 'not partial, so an unknown identity blocks a known one',
+        ddl: `create unique index ${IDENTITY} on public.recurrence_instances (recurrence_id, due_date);`,
+        expected: /not partial/,
+      },
+      {
+        why: 'sitting on another table',
+        ddl: `create table public.decoy (recurrence_id uuid, due_date date);
+              create unique index ${IDENTITY} on public.decoy (recurrence_id, due_date) where due_date is not null;`,
+        expected: /is missing, or is not a valid UNIQUE index/,
+      },
+    ]
+
+    for (const impostor of impostors) {
+      const db = await createRecurrenceIdentityDb()
+      try {
+        await db.exec(`drop index public.${IDENTITY};`)
+        await db.exec(impostor.ddl)
+
+        await expect(applyActivation(db), impostor.why).rejects.toThrow(impostor.expected)
+        // And the old protection is untouched, which is the thing that matters.
+        expect(await indexExists(db, ONE_PENDING), impostor.why).toBe(true)
+      } finally {
+        await db.close()
+      }
+    }
+  }, 300_000)
+
+  it('refuses when the due-date CHECK is missing', async () => {
+    // Without it a `pending` row can lose its vencimiento, and a row with no
+    // identity is a row the unique index above does not cover.
+    const db = await createRecurrenceIdentityDb()
+    try {
+      await db.exec(
+        'alter table public.recurrence_instances drop constraint chk_recurrence_instances_unresolved_has_due_date;',
+      )
+
+      await expect(applyActivation(db)).rejects.toThrow(
+        /chk_recurrence_instances_unresolved_has_due_date is missing or NOT VALID/,
+      )
+      expect(await indexExists(db, ONE_PENDING)).toBe(true)
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
+  it('refuses a due-date CHECK that was added NOT VALID', async () => {
+    // `NOT VALID` enforces new rows and leaves everything already stored
+    // unexamined — so the constraint exists, reads as protection, and the rows
+    // the activation is about were never looked at.
+    const db = await createRecurrenceIdentityDb()
+    try {
+      await db.exec(`
+        alter table public.recurrence_instances
+          drop constraint chk_recurrence_instances_unresolved_has_due_date;
+        alter table public.recurrence_instances
+          add constraint chk_recurrence_instances_unresolved_has_due_date
+          check (status = 'confirmed' or due_date is not null) not valid;
+      `)
+
+      await expect(applyActivation(db)).rejects.toThrow(/is missing or NOT VALID/)
       expect(await indexExists(db, ONE_PENDING)).toBe(true)
     } finally {
       await db.close()
@@ -153,6 +238,89 @@ describe('migration 0066 — activation', () => {
 
       expect(await indexExists(db, ONE_PENDING)).toBe(false)
       expect(await indexExists(db, IDENTITY)).toBe(true)
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+})
+
+// ── The two validation files ────────────────────────────────────────────────
+// `validate_schema.sql` validates the FINAL state and must REFUSE a schema whose
+// activation is still pending: while the single-pending index stands, #96 is
+// live however much of the new model is installed. The transition window is a
+// legitimate state, so it gets its own file — accepting both in one would mean
+// signing off on the unfixed schema.
+
+const SUPABASE = resolve(__dirname, '../../../supabase')
+const readSql = (file: string) => readFileSync(resolve(SUPABASE, file), 'utf-8')
+
+/**
+ * The one branch of `validate_schema.sql` that concerns the activation, lifted
+ * out and RUN. The rest of that file needs the whole production schema, which
+ * this harness does not have; this block needs only `pg_indexes`, so it can be
+ * executed for real instead of grepped.
+ */
+function activationBranchOfValidateSchema(): string {
+  const sql = readSql('validate_schema.sql')
+  const start = sql.indexOf('  -- (4) THE ACTIVATION IS APPLIED.')
+  if (start < 0) throw new Error('the activation check moved: update this extraction')
+  const end = sql.indexOf('end if;', sql.indexOf('raise exception', start))
+  return `do $$\nbegin\n${sql.slice(start, end)}end if;\nend $$;`
+}
+
+describe('validate_schema.sql — final state', () => {
+  it('REFUSES a schema whose activation is still pending', async () => {
+    // The defect this replaces: a version that accepted either state and only
+    // reported which one, so an unapplied activation passed final validation.
+    const db = await createRecurrenceIdentityDb()
+    try {
+      await expect(db.exec(activationBranchOfValidateSchema())).rejects.toThrow(
+        /still exists: the activation \(0066\) was not applied/,
+      )
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
+  it('accepts it once the activation is applied', async () => {
+    const db = await createRecurrenceIdentityDb()
+    try {
+      await applyActivation(db)
+      await expect(db.exec(activationBranchOfValidateSchema())).resolves.toBeDefined()
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+})
+
+describe('validate_schema_transition.sql — the window', () => {
+  it('passes while the expansion is applied and the activation is not', async () => {
+    const db = await createRecurrenceIdentityDb()
+    try {
+      await expect(db.exec(readSql('validate_schema_transition.sql'))).resolves.toBeDefined()
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
+  it('refuses once the activation is applied — that is the signal to switch files', async () => {
+    const db = await createRecurrenceIdentityDb()
+    try {
+      await applyActivation(db)
+      await expect(db.exec(readSql('validate_schema_transition.sql'))).rejects.toThrow(
+        /validate_schema\.sql instead/,
+      )
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
+  it('refuses before the expansion: that is not the window either', async () => {
+    const db = await createRecurrenceIdentityDb({ applyMigration: false })
+    try {
+      await expect(db.exec(readSql('validate_schema_transition.sql'))).rejects.toThrow(
+        /the expansion \(0064\) is not applied/,
+      )
     } finally {
       await db.close()
     }

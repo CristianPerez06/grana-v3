@@ -474,18 +474,19 @@ end $$;
 
 
 -- =============================================================================
--- 8.1J — INVARIANT: the recurrence occurrence-identity model (migration 0064).
+-- 8.1J — INVARIANT: the recurrence occurrence-identity model (migrations 0064-0066).
 --
 -- Comments in English per AGENTS.md; the rest of this file predates that rule.
 --
--- This is the EXPAND half of an expand/activate pair, and the checks below are
--- shaped by that: they assert the new model is fully installed, and then REPORT
--- which side of the activation (0066) the schema is on. Dropping
--- `recurrence_instances_one_pending_per_rule` before web and native ship the new
--- model would leave the database piling up backlog while the app still shows a
--- single occurrence — invisible, and worse than the bug the change removes; the
--- part of that the database can see is checked here, and the rest is the deploy
--- order in `openspec/changes/fix-recurrence-backlog/`.
+-- This file validates the FINAL state of the schema, so the checks below demand
+-- the whole change: the new model installed (0064/0065) AND the activation
+-- applied (0066). While `recurrence_instances_one_pending_per_rule` exists, a
+-- rule can still hold only one unresolved occurrence — which is #96, untouched.
+--
+-- The INTERMEDIATE window — expansion applied, activation not yet — is a real
+-- and legitimate state, but it is not this file's subject: validating both here
+-- would mean accepting the unfixed schema as correct. It has its own file,
+-- `validate_schema_transition.sql`, meant to be run during that window only.
 -- =============================================================================
 
 do $$
@@ -585,23 +586,22 @@ begin
     raise exception 'recurrence_instances_one_per_rule_due_date is no longer partial: an unknown identity can now block a known one';
   end if;
 
-  -- (4) WHICH PHASE. An earlier version of this check demanded that the old
-  -- single-pending index still exist, and said in its own error message that it
-  -- would go stale after the activation. It did: 0066 retires that index ON
-  -- PURPOSE, and a file that fails once the change is finished trains people to
-  -- ignore it.
+  -- (4) THE ACTIVATION IS APPLIED. The single-pending index has to be gone: it
+  -- is the constraint that turns an unreviewed occurrence into a permanent stop,
+  -- and while it stands the fix is not in production however much of the new
+  -- model is.
   --
-  -- What it was really guarding is that the index is not dropped while the new
-  -- model is missing — and by the time execution reaches here, checks (1) to (3)
-  -- have already raised if any part of that model were absent. So both states
-  -- are legitimate and the only useful thing left is to say which one this is.
+  -- Two earlier versions of this check were wrong in opposite directions. The
+  -- first demanded the index still EXIST, and said in its own message that it
+  -- would go stale after the activation — it did. The second accepted either
+  -- state and only reported which one, which reads as "both are fine" and lets
+  -- an unapplied activation pass final validation. During the window between
+  -- the two migrations, run `validate_schema_transition.sql` instead.
   if exists (
     select 1 from pg_indexes
      where schemaname = 'public' and indexname = 'recurrence_instances_one_pending_per_rule'
   ) then
-    raise notice '· 8.1J — TRANSITION: expansion applied, single-pending index still alive (0066 not applied yet)';
-  else
-    raise notice '· 8.1J — ACTIVATED: the backlog exists; a rule may owe several unresolved occurrences (0066 applied)';
+    raise exception 'recurrence_instances_one_pending_per_rule still exists: the activation (0066) was not applied and #96 is still live. If the expansion is deployed and the activation is deliberately pending, run validate_schema_transition.sql for that window';
   end if;
 
   -- (5) Constraints.
@@ -827,7 +827,7 @@ begin
     raise exception 'authenticated cannot execute public.delete_movement_unlinking_seed (migration 0065)';
   end if;
 
-  raise notice '✓ 8.1J — occurrence identity (0064): columns, tables, indexes, composite FKs, triggers and sole ownership OK; the single-pending index is still alive; the atomic seed repair (0065) is in place';
+  raise notice '✓ 8.1J — occurrence identity (0064): columns, tables, indexes, composite FKs, triggers and sole ownership OK; the atomic seed repair (0065) is in place; the backlog is ACTIVATED (0066), so a rule may owe several unresolved occurrences';
 end $$;
 
 
