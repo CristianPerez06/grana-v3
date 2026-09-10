@@ -23,9 +23,9 @@ type Props = {
 const FIELD_BG = '#FAFBFC'
 
 // Edit drawer for a recurring rule. Edits only the mutable field set —
-// amount / frequency / end_date / description. Account, category and movement
-// type are fixed at creation and intentionally absent here (see the
-// recurrence-detail-rework design). On a successful save the drawer closes and
+// amount / frequency / reference date / end_date / description. Account,
+// category and movement type are fixed at creation and intentionally absent
+// here (see the recurrence-detail-rework design). On a successful save the drawer closes and
 // the RSC page is refreshed so the read-only summary reflects the new values.
 export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
   const router = useRouter()
@@ -36,6 +36,10 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
 
   const [amount, setAmount] = useState(String(rule.amount))
   const [frequency, setFrequency] = useState<FrequencyValue>(rule.frequency as FrequencyValue)
+  // The rule's calendar anchor. A rule created from a movement inherits that
+  // movement's date, and that date can be off — a salary that landed on the 8th
+  // because the 10th was a holiday anchors the rule to the 8th forever.
+  const [startDate, setStartDate] = useState(rule.start_date)
   const [endDate, setEndDate] = useState(rule.end_date ?? '')
   const [description, setDescription] = useState(rule.description ?? '')
 
@@ -53,6 +57,7 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
       const result = await updateRecurrence(rule.id, {
         amount: parsedAmount,
         frequency,
+        start_date: startDate,
         end_date: endDate || null,
         description: description || null,
       })
@@ -118,6 +123,23 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="start_date" className={labelClass}>
+            {t('labels.reference_date')}
+          </label>
+          <DatePicker
+            id="start_date"
+            value={startDate}
+            onChange={setStartDate}
+            label={t('labels.reference_date')}
+          />
+          {/* What the user cannot deduce: the change rules from here on, and the
+              occurrences that already exist keep their own date — an old one
+              sitting on the old day is not a bug. It deliberately does NOT say
+              what to do with it: confirming or skipping it is the user's call. */}
+          <p className="text-[12px] text-text-soft">{t('reference_date_hint')}</p>
         </div>
 
         <div className="flex flex-col gap-1.5">

@@ -178,3 +178,22 @@ describe('the pending read comes back, one way or another', () => {
     expect(read(file)).toContain('retry: false')
   })
 })
+
+describe('correcting the reference date exists on both platforms', () => {
+  // #121. Native has no test runner, so the field's presence there is checked
+  // statically — the same reason this file exists. What it guards is the half
+  // that silently goes missing: a form that renders the picker but never puts
+  // it in the payload looks finished and changes nothing.
+  const WEB_EDIT = 'apps/web/app/(app)/transactions/recurring/[id]/_components/recurrence-edit-drawer.tsx'
+  const NATIVE_EDIT = 'apps/mobile/components/recurrences/RecurrenceEditForm.tsx'
+
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s offers the field and sends it', (file) => {
+    const source = read(file)
+    expect(source).toContain('labels.reference_date')
+    expect(source).toMatch(/start_date:\s*startDate/)
+  })
+
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s explains what happens to what already exists', (file) => {
+    expect(read(file)).toContain('reference_date_hint')
+  })
+})

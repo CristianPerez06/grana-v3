@@ -1668,6 +1668,7 @@
     "labels": {
       "amount": "Amount",
       "frequency": "Frequency",
+      "reference_date": "Reference date",
       "end_date": "End date",
       "description": "Description",
       "account": "Account",
@@ -1816,7 +1817,8 @@
       "read_failed_body": "We do not know whether you have anything to review. Try again.",
       "refresh_failed_title": "This list may be out of date",
       "refresh_failed_body": "We couldn't refresh it. You're seeing the last version we read."
-    }
+    },
+    "reference_date_hint": "We use this date to work out the next occurrences. The ones that already exist keep their own."
   },
   "subcategories": {
     "supermercado": "Supermarket",

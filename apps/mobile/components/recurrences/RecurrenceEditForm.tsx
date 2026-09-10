@@ -26,8 +26,8 @@ type Props = {
 }
 
 /**
- * Edit a recurring rule's mutable fields — amount / frequency / end date /
- * description. Account, category and movement type are fixed at creation (the
+ * Edit a recurring rule's mutable fields — amount / frequency / reference date /
+ * end date / description. Account, category and movement type are fixed at creation (the
  * instance is a snapshot of the rule) and intentionally absent here; frequency
  * offers only the presets (no custom) — parity with web's edit drawer. Rendered
  * as the panel content of a `Drawer`. On save it invalidates the detail + hub
@@ -39,6 +39,10 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
 
   const [amount, setAmount] = useState(String(rule.amount))
   const [frequency, setFrequency] = useState<RecurrenceFrequency>(rule.frequency)
+  // The rule's calendar anchor. A rule created from a movement inherits that
+  // movement's date, and that date can be off — a salary that landed on the 8th
+  // because the 10th was a holiday anchors the rule to the 8th forever.
+  const [startDate, setStartDate] = useState(rule.start_date)
   const [endDate, setEndDate] = useState(rule.end_date ?? '')
   const [description, setDescription] = useState(rule.description ?? '')
   const [formError, setFormError] = useState<string | null>(null)
@@ -57,6 +61,7 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
       {
         amount: parsedAmount,
         frequency,
+        start_date: startDate,
         end_date: endDate || null,
         description: description || null,
       },
@@ -115,6 +120,23 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
               )
             })}
           </View>
+        </View>
+
+        {/* Reference date — the rule's calendar anchor */}
+        <View className="flex-col gap-1.5">
+          <Label>{t('recurrences.labels.reference_date')}</Label>
+          <DateField
+            value={startDate}
+            onChange={setStartDate}
+            placeholder={t('common.pick_date')}
+          />
+          {/* What the user cannot deduce: the change rules from here on, and the
+              occurrences that already exist keep their own date — an old one
+              sitting on the old day is not a bug. It deliberately does NOT say
+              what to do with it: confirming or skipping it is the user's call. */}
+          <Text className="text-[12px] text-text-soft">
+            {t('recurrences.reference_date_hint')}
+          </Text>
         </View>
 
         {/* End date (optional) */}

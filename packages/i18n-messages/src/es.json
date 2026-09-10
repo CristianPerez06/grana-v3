@@ -1668,6 +1668,7 @@
     "labels": {
       "amount": "Monto",
       "frequency": "Frecuencia",
+      "reference_date": "Fecha de referencia",
       "end_date": "Fecha de fin",
       "description": "Descripción",
       "account": "Cuenta",
@@ -1816,7 +1817,8 @@
       "read_failed_body": "No sabemos si tenés algo por revisar. Volvé a intentar.",
       "refresh_failed_title": "Esta lista puede estar desactualizada",
       "refresh_failed_body": "No pudimos actualizarla. Estás viendo lo último que leímos."
-    }
+    },
+    "reference_date_hint": "Usamos esta fecha para calcular los próximos vencimientos. Los que ya existen conservan su fecha."
   },
   "subcategories": {
     "supermercado": "Supermercado",

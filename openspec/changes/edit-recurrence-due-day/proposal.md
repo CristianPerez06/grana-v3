@@ -14,7 +14,8 @@ Falta únicamente el campo en las dos UIs.
 
 ## What Changes
 
-- El drawer de edición de una regla suma un campo **día de vencimiento**, que edita el ancla del calendario (`start_date`). Va en web y en nativo, en el mismo commit, por la política de paridad.
+- El drawer de edición de una regla suma un campo **Fecha de referencia**, que edita el ancla del calendario (`start_date`). Va en web y en nativo, en el mismo commit, por la política de paridad.
+- La etiqueta es "Fecha de referencia" y no "Día de vencimiento": para una regla semanal o cada N días no hay un "día" del mes, y el nombre sería incorrecto justo en los casos donde el campo más se necesita.
 - El formulario dice qué va a pasar antes de guardar: el cambio rige desde acá, y las ocurrencias que ya existen conservan su vencimiento.
 - El spec de `transactions` deja de fijar el field set mutable en cuatro campos y pasa a cinco, con las tres reglas del cambio escritas: rige desde el cambio, no reconstruye el pasado, y funciona con la regla activa o pausada.
 
@@ -26,7 +27,7 @@ Falta únicamente el campo en las dos UIs.
 
 ### Alternativa descartada
 
-**Reescribir las ocurrencias pendientes al nuevo día.** Es lo que el usuario podría esperar —"corregí la regla, corregime también lo que está por revisar"— pero rompe la identidad de la ocurrencia, que es justamente lo que `fix-recurrence-backlog` acaba de establecer: una ocurrencia es única por `(regla, vencimiento)` y ese vencimiento no se mueve. Si una pendiente quedó en el día equivocado, el camino es omitirla, no editarla en silencio. La advertencia del formulario existe para que esa decisión sea del usuario.
+**Reescribir las ocurrencias pendientes al nuevo día.** Es lo que el usuario podría esperar —"corregí la regla, corregime también lo que está por revisar"— pero rompe la identidad de la ocurrencia, que es justamente lo que `fix-recurrence-backlog` acaba de establecer: una ocurrencia es única por `(regla, vencimiento)` y ese vencimiento no se mueve. Qué hacer con una pendiente que quedó en la fecha vieja es **decisión del usuario**: puede confirmarla u omitirla por separado, cuando quiera. La ayuda del formulario existe para que sepa que va a seguir ahí, no para empujarlo a resolverla de una manera.
 
 ## Capabilities
 

@@ -8,15 +8,15 @@ La vista read-only SHALL mostrar el monto como protagonista junto al tipo y, en 
 
 Las acciones SHALL vivir en el header del detalle como icon-buttons directos (no un dropdown): **Editar**, **Pausar/Reactivar** (un único control que togglea según el estado de la regla) y **Eliminar**. La acción Editar SHALL abrir un drawer; la acción Eliminar SHALL pedir confirmación mediante un diálogo (no un `confirm()` nativo).
 
-El drawer de edición SHALL editar únicamente el field set mutable de la regla — monto, frecuencia, **día de vencimiento**, fecha de fin y descripción. La cuenta, la categoría y el tipo de movimiento se fijan al crear la regla y NO SHALL ser editables desde el detalle.
+El drawer de edición SHALL editar únicamente el field set mutable de la regla — monto, frecuencia, **fecha de referencia**, fecha de fin y descripción. La cuenta, la categoría y el tipo de movimiento se fijan al crear la regla y NO SHALL ser editables desde el detalle.
 
-**El día de vencimiento es el ancla del calendario de la regla**, no una fecha histórica. Una regla creada a partir de un movimiento hereda su fecha, y esa fecha puede ser atípica —un sueldo que un mes se acreditó antes por un feriado deja la regla anclada a ese día, y el recordatorio llega desfasado todos los meses—. Sin este campo la única salida es borrar la regla y recrearla, perdiendo su historial.
+**La fecha de referencia es el ancla del calendario de la regla**, no una fecha histórica. SHALL llamarse así y no "día de vencimiento": una regla semanal o cada N días no tiene un día del mes, y ese nombre sería incorrecto justo en los casos donde el campo más hace falta. Una regla creada a partir de un movimiento hereda su fecha, y esa fecha puede ser atípica —un sueldo que un mes se acreditó antes por un feriado deja la regla anclada a ese día, y el recordatorio llega desfasado todos los meses—. Sin este campo la única salida es borrar la regla y recrearla, perdiendo su historial.
 
 Cambiarlo SHALL regir **desde el cambio hacia adelante** y NO SHALL reinterpretar el pasado:
 
-- Las ocurrencias **ya materializadas conservan su vencimiento**, resueltas o sin resolver. El vencimiento es inmutable —requirement "Cada ocurrencia recurrente tiene una identidad estable"—, así que una regla movida del 8 al 10 puede mostrar una ocurrencia vieja en el 8 y las siguientes en el 10. Eso es correcto y el formulario SHALL decirlo antes de guardar, en vez de dejar que el usuario lo descubra.
+- Las ocurrencias **ya materializadas conservan su vencimiento**, resueltas o sin resolver. El vencimiento es inmutable —requirement "Cada ocurrencia recurrente tiene una identidad estable"—, así que una regla movida del 8 al 10 puede mostrar una ocurrencia vieja en el 8 y las siguientes en el 10. El formulario SHALL decirlo antes de guardar, en vez de dejar que el usuario lo descubra. NO SHALL decir qué hacer con esa ocurrencia: sigue disponible y el usuario la confirma u omite por separado, cuando decida.
 - NO SHALL materializarse ninguna ocurrencia con fecha anterior al cambio. Mover el ancla no es reconstruir historial: el sistema ya distingue desde cuándo rige cada versión del cronograma.
-- La regla SHALL poder editarse esté **activa o pausada**. Una pausa no congela el calendario, solo suspende lo que cae dentro de ella, y obligar a reactivar para corregir una fecha agregaría un paso sin ninguna razón de dominio.
+- La regla SHALL poder editarse esté **activa o pausada**. Una pausa evita generar vencimientos durante ese intervalo, pero no debe impedir corregir el calendario que va a regir al reanudar.
 
 Esta pantalla NO SHALL introducir mutaciones nuevas: reusa las operaciones existentes de actualizar, pausar, reactivar y eliminar reglas recurrentes.
 
@@ -29,7 +29,7 @@ Esta pantalla NO SHALL introducir mutaciones nuevas: reusa las operaciones exist
 #### Scenario: Editar abre el drawer con el field set reducido
 
 - **WHEN** el usuario activa la acción Editar en el header
-- **THEN** se abre un drawer con los campos editables (monto, frecuencia, día de vencimiento, fecha de fin, descripción)
+- **THEN** se abre un drawer con los campos editables (monto, frecuencia, fecha de referencia, fecha de fin, descripción)
 - **AND** no se ofrecen controles para cambiar la cuenta, la categoría ni el tipo de movimiento
 - **AND** al guardar con éxito, el drawer se cierra y el detalle refleja los nuevos valores
 
@@ -63,7 +63,8 @@ Esta pantalla NO SHALL introducir mutaciones nuevas: reusa las operaciones exist
 - **WHEN** una regla anclada al día 8 tiene una ocurrencia sin resolver del 8 y su día se corrige al 10
 - **THEN** esa ocurrencia sigue venciendo el 8 y se puede resolver como estaba
 - **AND** las ocurrencias siguientes vencen el 10
-- **AND** el formulario advirtió del desfase antes de guardar
+- **AND** el formulario avisó antes de guardar que las que ya existen conservan su fecha
+- **AND** esa ocurrencia se puede confirmar u omitir por separado, como cualquier otra
 
 #### Scenario: Una regla pausada también se puede corregir
 

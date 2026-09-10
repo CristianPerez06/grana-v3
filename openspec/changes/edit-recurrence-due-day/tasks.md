@@ -4,25 +4,31 @@ Cierra **#121**. Entrega chica y aislada: un campo, dos plataformas, sin migraci
 
 ## 1. El campo
 
-- [ ] 1.1 Agregar el campo **día de vencimiento** al drawer de edición web, precargado con el `start_date`
+- [x] 1.1 Agregar el campo **día de vencimiento** al drawer de edición web, precargado con el `start_date`
       actual, y mandarlo en el `updateRecurrence` que el drawer ya arma.
-- [ ] 1.2 Mismo campo en el formulario nativo, en el **mismo commit** — es la política de paridad, no una
+- [x] 1.2 Mismo campo en el formulario nativo, en el **mismo commit** — es la política de paridad, no una
       tarea de seguimiento. Usa el date field nativo que ya usan los otros formularios.
-- [ ] 1.3 Etiqueta y ayuda en `es.json` y `en.json`. La etiqueta nombra el efecto ("día de vencimiento"),
-      no la columna ("fecha de inicio"), que suena a un dato histórico que no se puede tocar.
-- [ ] 1.4 La ayuda dice lo que el usuario no puede deducir: el cambio rige desde acá y lo que ya está por
-      revisar conserva su fecha. Sin esa línea, una ocurrencia vieja en el día viejo parece un bug.
+- [x] 1.3 Etiqueta y ayuda en `es.json` y `en.json`. Queda **"Fecha de referencia"**, no "día de
+      vencimiento" ni "fecha de inicio": lo primero sería incorrecto para una regla semanal o cada N
+      días —no hay un día del mes— y lo segundo suena a un dato histórico que no se puede tocar.
+- [x] 1.4 La ayuda dice lo que el usuario no puede deducir: "Usamos esta fecha para calcular los próximos
+      vencimientos. Los que ya existen conservan su fecha." Sin esa línea, una ocurrencia vieja en el
+      día viejo parece un bug. Y NO dice qué hacer con ella: confirmarla u omitirla es decisión del
+      usuario, no una instrucción del formulario.
 
 ## 2. Que no se rompa lo que ya está
 
-- [ ] 2.1 Regresión: cambiar el ancla de una regla mensual del 8 al 10 mueve la próxima fecha al 10 y
+- [x] 2.1 Regresión: cambiar el ancla de una regla mensual del 8 al 10 mueve la próxima fecha al 10 y
       **no** materializa nada anterior al cambio.
-- [ ] 2.2 Regresión: una ocurrencia sin resolver del día viejo conserva su vencimiento después del cambio
+- [x] 2.2 Regresión: una ocurrencia sin resolver del día viejo conserva su vencimiento después del cambio
       —el vencimiento es inmutable— y las siguientes salen en el día nuevo.
-- [ ] 2.3 Regresión: la edición funciona con la regla **pausada**, y no la reactiva.
-- [ ] 2.4 Verificar contra la base real (PGlite con el SQL de `0064` tal cual) que el trigger hace lo que
+- [x] 2.3 Regresión: la edición funciona con la regla **pausada**, y no la reactiva.
+- [x] 2.4 Verificar contra la base real (PGlite con el SQL de `0064` tal cual) que el trigger hace lo que
       el proposal afirma: versión nueva con `effective_from = greatest(hoy, start_date)`. Si el trigger no
       se comportara así, el campo no se expone hasta arreglarlo.
+      **Verificado**, y con dos comprobaciones que el ticket no pedía: la versión vieja **sobrevive**
+      para el tramo que gobernó —borrarla reinterpretaría meses que ya pasaron— y `reconstruct_from`
+      **no baja**, así que corregir una fecha por dos días no puede fabricar un año de ocurrencias.
 
 ## 3. Cierre
 
