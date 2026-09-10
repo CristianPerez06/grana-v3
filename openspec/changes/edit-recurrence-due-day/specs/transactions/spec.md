@@ -12,7 +12,13 @@ El drawer de edición SHALL editar únicamente el field set mutable de la regla 
 
 **La fecha de referencia es el ancla del calendario de la regla**, no una fecha histórica. SHALL llamarse así y no "día de vencimiento": una regla semanal o cada N días no tiene un día del mes, y ese nombre sería incorrecto justo en los casos donde el campo más hace falta. Una regla creada a partir de un movimiento hereda su fecha, y esa fecha puede ser atípica —un sueldo que un mes se acreditó antes por un feriado deja la regla anclada a ese día, y el recordatorio llega desfasado todos los meses—. Sin este campo la única salida es borrar la regla y recrearla, perdiendo su historial.
 
-Cambiarlo SHALL regir **desde el cambio hacia adelante** y NO SHALL reinterpretar el pasado:
+**Al cambiarla, el sistema SHALL preguntar desde qué vencimiento rige** y NO SHALL inferirlo. La pregunta SHALL ofrecer las **dos primeras fechas del cronograma nuevo** —la primera que cae hoy o después, y la siguiente— y SHALL nombrarlas como fechas concretas.
+
+La razón es que la ambigüedad no se puede resolver por cálculo. Un ciclo cuyo vencimiento **ya se resolvió** no debe ganar otro con la fecha corregida —serían dos veces el mismo sueldo—, pero un ciclo **todavía sin resolver** sí debe pasar a la fecha nueva. Desde la base las dos situaciones son idénticas: dos fechas distintas de una misma regla. Y razonar por "período" no es una salida: una regla cada N días no tiene ninguno. Quien sabe si el vencimiento del ciclo ya está saldado es el usuario.
+
+La elección SHALL persistirse como la vigencia de la versión nueva. Y el sistema SHALL poder **cortar la versión anterior antes** de que empiece la nueva: si la vigencia elegida es la fecha lejana, el cronograma viejo NO SHALL producir ninguna ocurrencia más en el intervalo intermedio —de otro modo el duplicado reaparece corrido un ciclo, con la fecha vieja del ciclo siguiente—. El hueco entre una versión y la que sigue NO SHALL producir nada.
+
+Cambiarlo SHALL regir **desde el vencimiento elegido hacia adelante** y NO SHALL reinterpretar el pasado:
 
 - Las ocurrencias **ya materializadas conservan su vencimiento**, resueltas o sin resolver. El vencimiento es inmutable —requirement "Cada ocurrencia recurrente tiene una identidad estable"—, así que una regla movida del 8 al 10 puede mostrar una ocurrencia vieja en el 8 y las siguientes en el 10. El formulario SHALL decirlo antes de guardar, en vez de dejar que el usuario lo descubra. NO SHALL decir qué hacer con esa ocurrencia: sigue disponible y el usuario la confirma u omite por separado, cuando decida.
 - NO SHALL materializarse ninguna ocurrencia con fecha anterior al cambio. Mover el ancla no es reconstruir historial: el sistema ya distingue desde cuándo rige cada versión del cronograma.
@@ -71,3 +77,28 @@ Esta pantalla NO SHALL introducir mutaciones nuevas: reusa las operaciones exist
 - **WHEN** el usuario abre el drawer de edición de una regla pausada y cambia su día de vencimiento
 - **THEN** el cambio se guarda
 - **AND** la regla sigue pausada
+
+#### Scenario: El ciclo en curso ya se resolvió
+
+- **WHEN** una regla mensual anclada al 8 tiene el vencimiento del 8 de septiembre ya confirmado, y el 10 de septiembre el usuario corrige la referencia al día 10 eligiendo **el 10 de octubre** como primer vencimiento nuevo
+- **THEN** no se materializa ninguna ocurrencia del 10 de septiembre
+- **AND** tampoco una del 8 de octubre, que es la que produciría el cronograma viejo si siguiera vigente
+- **AND** el próximo vencimiento es el 10 de octubre
+
+#### Scenario: El ciclo en curso todavía no se resolvió
+
+- **WHEN** una regla mensual anclada al 8 no tiene aún el vencimiento de septiembre, y el 5 de septiembre el usuario corrige la referencia al día 10 eligiendo **el 10 de septiembre**
+- **THEN** el vencimiento de septiembre es el 10
+- **AND** no se materializa uno del 8 de septiembre
+
+#### Scenario: Una regla con atraso conserva las fechas viejas del atraso
+
+- **WHEN** una regla mensual anclada al 8 debe julio y agosto sin resolver, y se corrige la referencia al día 10
+- **THEN** las ocurrencias de julio y agosto se materializan el día 8, como correspondía cuando vencieron
+- **AND** solo las posteriores a la vigencia elegida usan el día 10
+
+#### Scenario: Una regla cada N días también se corrige por fechas
+
+- **WHEN** una regla cada 3 días se corre un día y el usuario elige entre las dos fechas que ofrece el formulario
+- **THEN** el sistema aplica el cronograma nuevo desde la fecha elegida
+- **AND** la pregunta no menciona meses ni períodos, porque esta regla no tiene ninguno

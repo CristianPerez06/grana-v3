@@ -12,16 +12,41 @@ El backend ya lo soporta. Lo verificamos, no lo suponemos:
 
 Falta únicamente el campo en las dos UIs.
 
+## El borde que apareció en QA, y que cambió el alcance
+
+Corregir el ancla a mitad de un ciclo puede **duplicar el vencimiento del ciclo en curso**. Reproducido con datos reales el 10/9: una regla de sueldo anclada al 8, con el del 8 de septiembre ya confirmado, corregida al día 10 → el generador materializó **también** el 10 de septiembre. Dos sueldos el mismo mes.
+
+No es un defecto del generador. La identidad de una ocurrencia es `(regla, vencimiento)`, y el 8 y el 10 de septiembre son dos fechas distintas: **ninguna aritmética de fechas puede saber que son el mismo sueldo.** Se probaron cuatro fórmulas de vigencia automática —`hoy + 1`, "un intervalo después de la última existente", "desde la próxima ocurrencia vieja", "desde el próximo período"— y cada una resuelve dos de estos tres casos y rompe el tercero:
+
+| | Situación | Qué tiene que pasar |
+|---|---|---|
+| **A** | El vencimiento del ciclo ya se resolvió | El cambio rige desde el siguiente. El ciclo en curso NO gana un segundo vencimiento. |
+| **B** | Se corrige antes de que llegue el del ciclo | El ciclo en curso vence en la fecha nueva, y NO también en la vieja. |
+| **C** | La regla tiene atraso sin resolver | El atraso conserva las fechas viejas —el pasado no se reinterpreta— y el cambio rige de acá en adelante. |
+
+Tampoco sirve razonar por "mes" o "período": una regla cada 3 días no tiene ninguno.
+
+**Entonces la ambigüedad la resuelve el usuario, con fechas concretas.** Al cambiar la fecha de referencia, el formulario pregunta **"¿Cuál querés que sea el primer vencimiento con la nueva referencia?"** y ofrece las **dos primeras fechas del cronograma nuevo** —para el sueldo, `10 de septiembre` y `10 de octubre`—. Funciona igual para una regla semanal o cada N días, porque no nombra períodos: nombra días.
+
+### Por qué esto obliga a una migración
+
+La elección **se persiste**, no se infiere. Y hay una trampa que la hace imposible con el modelo actual: si el usuario elige octubre, **no alcanza** con abrir la versión nueva el 10/10. El cronograma viejo gobierna hasta el día anterior a la versión siguiente, así que produciría el **8 de octubre** antes de que la nueva empiece — el duplicado vuelve, corrido un mes.
+
+Hace falta que una versión pueda **dejar de producir antes** de que arranque la siguiente. Hoy no existe forma de decir eso: el fin de una versión se deriva del comienzo de la otra.
+
 ## What Changes
 
 - El drawer de edición de una regla suma un campo **Fecha de referencia**, que edita el ancla del calendario (`start_date`). Va en web y en nativo, en el mismo commit, por la política de paridad.
+- Al cambiarla, el formulario **pregunta desde qué vencimiento rige**, ofreciendo las dos primeras fechas del cronograma nuevo. La respuesta viaja con la mutación; no se adivina.
+- **Migración `0068`**: `recurrence_schedule_versions` suma `effective_until` —el último día en que una versión puede producir—, y el trigger deja de inferir la vigencia: la recibe. `NULL` conserva el comportamiento actual, así que las versiones que ya existen no cambian de significado.
+- El walker compartido (`owedOccurrencesForRule`) respeta ese corte: una versión termina en `effective_until` cuando lo tiene, y el hueco hasta la versión siguiente **no produce nada**.
 - La etiqueta es "Fecha de referencia" y no "Día de vencimiento": para una regla semanal o cada N días no hay un "día" del mes, y el nombre sería incorrecto justo en los casos donde el campo más se necesita.
 - El formulario dice qué va a pasar antes de guardar: el cambio rige desde acá, y las ocurrencias que ya existen conservan su vencimiento.
 - El spec de `transactions` deja de fijar el field set mutable en cuatro campos y pasa a cinco, con las tres reglas del cambio escritas: rige desde el cambio, no reconstruye el pasado, y funciona con la regla activa o pausada.
 
 ### Lo que NO cambia
 
-- **Ninguna migración.** Esta entrega no toca la base: la validación, la mutación y el trigger ya existen.
+- **Las ocurrencias existentes.** Ninguna se mueve, se borra ni se re-fecha: el vencimiento es inmutable, y esta entrega no lo toca ni siquiera para "corregir" el duplicado que ya se produjo en QA. Esa limpieza es dirigida, verificable y aparte.
 - **Ninguna ocurrencia se mueve.** El vencimiento es inmutable por requirement; una regla corregida del 8 al 10 puede quedar con una ocurrencia vieja en el 8 y las siguientes en el 10, y eso es lo correcto.
 - **No se reconstruye historial.** Mover el ancla no materializa nada hacia atrás.
 
@@ -43,5 +68,7 @@ _Ninguna._
 
 - `apps/web/app/(app)/transactions/recurring/[id]/_components/recurrence-edit-drawer.tsx` — el campo nuevo.
 - `apps/mobile/components/recurrences/RecurrenceEditForm.tsx` — su espejo nativo.
-- `packages/i18n-messages` — la etiqueta y la advertencia, en `es.json` y `en.json`.
-- Sin cambios en `packages/validation`, `packages/recurrences` ni `supabase/migrations`.
+- `packages/i18n-messages` — la etiqueta, la ayuda y la pregunta, en `es.json` y `en.json`.
+- `supabase/migrations/0068_schedule_version_effective_until.sql` — la columna y el trigger que recibe la vigencia. Número elegido contra `main`.
+- `packages/money-logic` — el walker respeta `effective_until`.
+- `packages/validation` y `packages/recurrences` — el campo nuevo de la mutación, validado contra el cronograma: la fecha elegida SHALL ser una ocurrencia real del cronograma nuevo, no una fecha cualquiera.
