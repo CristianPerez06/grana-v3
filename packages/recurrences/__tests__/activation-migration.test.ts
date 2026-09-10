@@ -88,13 +88,29 @@ describe('migration 0066 — activation', () => {
         why: 'a predicate that reads right and covers no unresolved occurrence',
         ddl: `create unique index ${IDENTITY} on public.recurrence_instances (recurrence_id, due_date)
                 where due_date is not null and status = 'confirmed';`,
-        expected: /does not cover pending occurrences/,
+        expected: /the index predicate is/,
       },
       {
         why: 'a predicate that leaves out skipped rows, which still hold their due date',
         ddl: `create unique index ${IDENTITY} on public.recurrence_instances (recurrence_id, due_date)
                 where due_date is not null and status <> 'skipped';`,
-        expected: /does not cover skipped occurrences/,
+        expected: /the index predicate is/,
+      },
+      {
+        // The one no finite probe can catch: every sample date a test picks is
+        // either inside the range or outside it, and the predicate abandons
+        // every occurrence on the other side.
+        why: 'a predicate bounded by a date range',
+        ddl: `create unique index ${IDENTITY} on public.recurrence_instances (recurrence_id, due_date)
+                where due_date >= date '2026-01-01';`,
+        expected: /the index predicate is/,
+      },
+      {
+        why: 'a predicate narrowed to one rule',
+        ddl: `create unique index ${IDENTITY} on public.recurrence_instances (recurrence_id, due_date)
+                where due_date is not null
+                  and recurrence_id = '00000000-0000-0000-0000-0000000000aa';`,
+        expected: /the index predicate is/,
       },
       {
         why: 'sitting on another table',
@@ -159,7 +175,7 @@ describe('migration 0066 — activation', () => {
         `)
 
         await expect(applyActivation(db), why).rejects.toThrow(
-          /the CHECK accepts a pending row with no due_date/,
+          /the CHECK accepts a pending row with due_date null and must not/,
         )
         expect(await indexExists(db, ONE_PENDING), why).toBe(true)
       } finally {
@@ -168,10 +184,49 @@ describe('migration 0066 — activation', () => {
     }
   }, 300_000)
 
-  it('refuses a due-date CHECK that also rejects a historical confirmed row', async () => {
-    // Over-strict is a defect too: 0064 leaves `due_date` null on everything
-    // resolved before the distinction existed, on purpose. A constraint that
-    // refuses those describes a table this database does not have.
+  it('refuses a due-date CHECK that turns away legitimate occurrences', async () => {
+    // Over-strict is a defect too, and it passes every test that only looks at
+    // what a constraint REJECTS.
+    const bodies = [
+      {
+        // 0064 leaves `due_date` null on everything resolved before the
+        // distinction existed, on purpose.
+        why: 'refuses the historical confirmed rows',
+        body: 'check (due_date is not null)',
+        expected: /rejects a confirmed row with due_date null/,
+      },
+      {
+        // Rejects `pending`/null and `skipped`/null, accepts `confirmed`/null —
+        // and stops any pending occurrence from being created at all.
+        why: 'lets nothing but confirmed exist',
+        body: "check (status = 'confirmed')",
+        expected: /rejects a pending row with due_date 1999-01-01/,
+      },
+    ]
+
+    for (const { why, body, expected } of bodies) {
+      const db = await createRecurrenceIdentityDb()
+      try {
+        await db.exec(`
+          alter table public.recurrence_instances
+            drop constraint chk_recurrence_instances_unresolved_has_due_date;
+          alter table public.recurrence_instances
+            add constraint chk_recurrence_instances_unresolved_has_due_date ${body};
+        `)
+
+        await expect(applyActivation(db), why).rejects.toThrow(expected)
+        expect(await indexExists(db, ONE_PENDING), why).toBe(true)
+      } finally {
+        await db.close()
+      }
+    }
+  }, 300_000)
+
+  it('refuses a due-date CHECK that behaves right but is spelled differently', async () => {
+    // A false RED, and deliberately so: the rule is the same, the text is not,
+    // and blessing "close enough" is how the comparison stops meaning anything.
+    // It stops a deploy instead of blessing an unprotected table, and the fix is
+    // one `alter table`.
     const db = await createRecurrenceIdentityDb()
     try {
       await db.exec(`
@@ -179,12 +234,10 @@ describe('migration 0066 — activation', () => {
           drop constraint chk_recurrence_instances_unresolved_has_due_date;
         alter table public.recurrence_instances
           add constraint chk_recurrence_instances_unresolved_has_due_date
-          check (due_date is not null);
+          check (due_date is not null or status = 'confirmed');
       `)
 
-      await expect(applyActivation(db)).rejects.toThrow(
-        /rejects a historical confirmed row with no due_date/,
-      )
+      await expect(applyActivation(db)).rejects.toThrow(/If it is an equivalent rewrite/)
       expect(await indexExists(db, ONE_PENDING)).toBe(true)
     } finally {
       await db.close()
@@ -388,7 +441,7 @@ describe('validate_schema_transition.sql — the window', () => {
     const db = await createRecurrenceIdentityDb({ applyMigration: false })
     try {
       await expect(db.exec(readSql('validate_schema_transition.sql'))).rejects.toThrow(
-        /the expansion \(0064\) is not applied/,
+        /recurrence_instances\.due_date is missing/,
       )
     } finally {
       await db.close()
@@ -404,17 +457,17 @@ describe('validate_schema_transition.sql — the window', () => {
       {
         why: 'the identity index deleted',
         sql: 'drop index public.recurrence_instances_one_per_rule_due_date;',
-        expected: /is missing, or is not a valid UNIQUE index/,
+        expected: /recurrence_instances_one_per_rule_due_date does not exist/,
       },
       {
         why: 'the schedule versions gone',
         sql: 'drop table public.recurrence_schedule_versions cascade;',
-        expected: /recurrence_schedule_versions is missing/,
+        expected: /recurrence_schedule_versions/,
       },
       {
         why: 'the pauses gone',
         sql: 'drop table public.recurrence_pauses cascade;',
-        expected: /recurrence_pauses is missing/,
+        expected: /recurrence_pauses/,
       },
       {
         why: 'the compatibility trigger gone',
@@ -432,12 +485,27 @@ describe('validate_schema_transition.sql — the window', () => {
         expected: /delete_movement_unlinking_seed\(p_transaction_id uuid\) is missing/,
       },
       {
+        // The reviewer's case for name-only checks: everything about the
+        // trigger is intact except that it does not run.
+        why: 'the compatibility trigger disabled rather than dropped',
+        sql: 'alter table public.recurrence_instances disable trigger trg_recurrence_instance_compat;',
+        expected: /trg_recurrence_instance_compat is missing/,
+      },
+      {
+        why: 'a homonym trigger moved onto another table',
+        sql: `drop trigger trg_recurrence_reconstruct_from_guard on public.recurrences;
+              create trigger trg_recurrence_reconstruct_from_guard
+                before insert or update on public.recurrence_instances
+                for each row execute function public.recurrence_reconstruct_from_guard();`,
+        expected: /trg_recurrence_reconstruct_from_guard is missing/,
+      },
+      {
         why: 'the due-date CHECK reduced to `true`',
         sql: `alter table public.recurrence_instances
                 drop constraint chk_recurrence_instances_unresolved_has_due_date;
               alter table public.recurrence_instances
                 add constraint chk_recurrence_instances_unresolved_has_due_date check (true);`,
-        expected: /the CHECK accepts a pending row with no due_date/,
+        expected: /the CHECK accepts a pending row with due_date null/,
       },
     ]
 
@@ -464,21 +532,37 @@ describe('the shared occurrence-identity contract', () => {
   const OPEN = '-- ┌── SHARED CONTRACT · occurrence identity'
   const CLOSE = '-- └── END SHARED CONTRACT'
 
-  const extract = (file: string): string => {
+  const extract = (file: string, open: string, close: string): string => {
     const sql = readSql(file)
-    const start = sql.indexOf(OPEN)
-    const end = sql.indexOf(CLOSE)
-    if (start < 0 || end < 0) throw new Error(`${file} no longer carries the shared contract block`)
+    const start = sql.indexOf(open)
+    const end = sql.indexOf(close)
+    if (start < 0 || end < 0) throw new Error(`${file} no longer carries ${open.slice(7)}`)
     return sql.slice(start, end)
   }
 
   it('is byte-identical in the three files that rely on it', () => {
-    const fromMigration = extract('migrations/0066_recurrence_backlog_activate.sql')
+    const fromMigration = extract(
+      'migrations/0066_recurrence_backlog_activate.sql',
+      OPEN,
+      CLOSE,
+    )
 
     // The contract cannot be weaker where it is only inspected than where it is
     // acted upon, and it cannot be weaker before QA than at the moment the old
     // protection is retired.
-    expect(extract('validate_schema.sql')).toBe(fromMigration)
-    expect(extract('validate_schema_transition.sql')).toBe(fromMigration)
+    expect(extract('validate_schema.sql', OPEN, CLOSE)).toBe(fromMigration)
+    expect(extract('validate_schema_transition.sql', OPEN, CLOSE)).toBe(fromMigration)
+  })
+
+  it('carries the same expansion inventory into the transition window', () => {
+    // The other shared block. The window is when the QA that decides the
+    // activation happens, so checking the expansion shallower there than in the
+    // final validation is checking it where it matters least.
+    const INV_OPEN = '-- ┌── SHARED BLOCK · expansion inventory'
+    const INV_CLOSE = '-- └── END SHARED BLOCK · expansion inventory'
+
+    expect(extract('validate_schema_transition.sql', INV_OPEN, INV_CLOSE)).toBe(
+      extract('validate_schema.sql', INV_OPEN, INV_CLOSE),
+    )
   })
 })

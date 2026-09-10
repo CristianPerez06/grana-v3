@@ -825,22 +825,34 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       "exitosa" y el #96 intacto. Es idempotente y lleva el rollback escrito, con su límite dicho —
       recrear el índice falla en cuanto una regla acumuló dos pendientes, y por eso el orden no es
       negociable.
-      **Las dos guardas se verifican POR COMPORTAMIENTO**, en un bloque de contrato compartido.
-      Estructura primero —esquema `public`, tabla `recurrence_instances`, único, válido y listo,
-      columnas exactamente `(recurrence_id, due_date)`, parcial—, y después la regla: el predicado
-      del índice y la definición del `CHECK` se copian a **tablas temporales** y se prueban ahí, sin
-      tocar una sola fila de producción. Ni el nombre ni una subcadena prueban nada: un predicado
-      `due_date is not null and status = 'confirmed'` contiene las palabras correctas y no cubre
-      ninguna pendiente, y un `CHECK` con el nombre correcto puede decir `true`. Comparar el texto
-      renderizado exacto atajaría las dos y se rompería ante cualquier reescritura equivalente, o
-      ante un Postgres que renderice distinto del que se usó para escribirlo. El `CHECK` tiene que
-      estar además **validado**: agregado `NOT VALID` obliga a las filas nuevas y deja sin mirar todo
-      lo ya guardado, que son justamente las filas de las que trata la activación.
+      **Las dos guardas se comparan contra una definición CANÓNICA construida y renderizada por ese
+      mismo Postgres**, en un bloque de contrato compartido. Estructura primero —esquema `public`,
+      tabla `recurrence_instances`, único, válido y listo, columnas exactamente
+      `(recurrence_id, due_date)`, parcial—, y después el texto exacto del predicado y del `CHECK`
+      contra el que genera el propio servidor a partir de la definición que `0064` publica.
+      **Tres enfoques más débiles dejaron pasar algo cada uno**: por NOMBRE —un índice en otro
+      esquema, sobre otra tabla, no único o inválido responde igual—; por SUBCADENA —`due_date is
+      not null and status = 'confirmed'` tiene todas las palabras y no cubre ninguna pendiente—; y
+      por MUESTRA —probar una fecha y un uuid deja pasar `due_date >= date '2026-01-01'`, que
+      abandona todo lo anterior; una muestra finita no prueba una regla universal—. Construir el lado
+      canónico ahí mismo es lo que hace segura la comparación exacta: los dos textos salen del
+      deparser del mismo servidor, así que ninguna versión de Postgres renderiza uno distinto del
+      otro. El precio es que una **reescritura equivalente** se rechaza; es un rojo falso, no un
+      verde falso, y se arregla con un `alter table`.
+      El `CHECK` lleva además su **tabla de verdad completa** —las seis filas que el dominio permite,
+      no una muestra— porque rechazar de más también es un defecto: `check (status = 'confirmed')`
+      rechaza `pending/null` y `skipped/null`, pasa cualquier prueba que solo mire lo que rechaza, e
+      impide crear toda pendiente legítima. Y tiene que estar **validado**: agregado `NOT VALID`
+      obliga a las filas nuevas y deja sin mirar todo lo ya guardado.
       **El bloque es byte a byte idéntico en tres archivos** —`0066`, `validate_schema.sql` y
       `validate_schema_transition.sql`—: el SQL que se aplica a mano no tiene `include`, así que las
       copias se mantienen iguales a propósito y un test las compara. El contrato no puede ser más
       débil donde solo se inspecciona que donde se actúa, ni más débil antes del QA que en el momento
-      de retirar la protección vieja.
+      de retirar la protección vieja. **Hay un segundo bloque compartido**, el inventario de la
+      expansión: la sección 8.1J de `validate_schema.sql` se partió en inventario —columnas, tablas,
+      índices, constraints, FKs compuestas, triggers por tabla/función/eventos/timing/nivel y
+      `tgenabled`, dueño único, políticas, invariantes de datos y la función de `0065` por firma— y
+      fase, y el inventario viaja también al archivo de transición.
       **`validate_schema.sql` exige la activación aplicada.** Dos versiones anteriores estuvieron mal
       en direcciones opuestas: la primera exigía que el índice de pendiente única siguiera VIVO —y su
       propio mensaje admitía que quedaría obsoleto—, y la segunda aceptaba los dos estados
@@ -850,13 +862,13 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       tiene el suyo: **`validate_schema_transition.sql`**, que se corre solo entre las dos
       migraciones y empieza a fallar a propósito en cuanto `0066` se aplica —la señal para volver al
       otro—.
-      **Ese archivo es un gate, no un informe de fase.** Una versión anterior solo miraba de qué lado
-      de la activación estaba el esquema, así que daba verde con el índice de identidad borrado, o
-      sin las tablas de versiones y pausas, o sin los triggers, o sin la función de `0065` — todo
-      aquello de lo que la activación está por depender. Ahora verifica la expansión entera (columnas,
-      tablas, los tres triggers, la función por firma y el contrato compartido) y recién después la
-      fase: ninguna pendiente sin vencimiento y ninguna regla con dos pendientes mientras el índice
-      viejo esté.
+      **Ese archivo es un gate, no un informe de fase.** Una primera versión solo miraba de qué lado
+      de la activación estaba el esquema; una segunda comprobaba unos pocos objetos por NOMBRE, así
+      que un trigger deshabilitado —o el mismo nombre sobre otra tabla— pasaba como instalado. Ahora
+      corre **el mismo inventario que la validación final**, sin recortes, y recién después la fase:
+      ninguna pendiente sin vencimiento y ninguna regla con dos pendientes mientras el índice viejo
+      esté. La ventana es cuando ocurre el QA que decide la activación, así que verificar ahí menos
+      profundo que al final es verificar menos donde más importa.
 - [x] 2.8c **Regresión que solo se puede escribir con la activación**: `activation-backlog.test.ts`.
       61 reglas, **cada una con una pendiente vieja sin resolver** —la forma exacta del #96, al
       tamaño de producción—, y el mismo archivo mide los dos lados. **Con el índice vivo**: dos
@@ -876,14 +888,17 @@ Nada de esta etapa se aplica hasta que las etapas 2 y 4 estén desplegadas en we
       identidad, con un índice **impostor** que solo tiene el nombre (no único, columnas
       equivocadas, no parcial, sobre otra tabla), sin el `CHECK` y con el `CHECK` `NOT VALID`—, la
       idempotencia, que sigue rechazando la MISMA ocurrencia dos veces, y que dos pendientes de una
-      regla pasan a ser posibles. Los impostores incluyen los dos que solo el chequeo por
-      comportamiento distingue: el predicado `due_date is not null and status = 'confirmed'` y el
-      `CHECK (true)` con el nombre correcto; también el `CHECK` demasiado estricto, que rechazaría
-      las confirmadas históricas que `0064` deja en `NULL` a propósito.
+      regla pasan a ser posibles. Seis impostores de índice —no único, columnas equivocadas, no
+      parcial, `due_date is not null and status = 'confirmed'`, acotado por rango de fechas, acotado
+      a un uuid— y cinco de `CHECK`: `true`, la regla equivocada, `check (due_date is not null)` que
+      rechaza las confirmadas históricas, `check (status = 'confirmed')` que impide toda pendiente,
+      y `NOT VALID`. Más el rojo falso deliberado: una reescritura equivalente se rechaza pidiendo la
+      forma canónica.
       Los dos archivos de validación se **ejecutan**: la rama de `validate_schema.sql` que exige la
       activación se extrae y se corre de verdad, `validate_schema_transition.sql` se corre entero en
-      los tres estados y contra siete formas de expansión incompleta, y un test compara las tres
-      copias del contrato compartido.
+      los tres estados y contra nueve formas de expansión incompleta —incluidos un trigger
+      deshabilitado y un homónimo mudado a otra tabla—, y sendos tests comparan las copias de los dos
+      bloques compartidos.
 
 ## 5. Cierre
 

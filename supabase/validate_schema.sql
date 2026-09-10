@@ -489,6 +489,18 @@ end $$;
 -- `validate_schema_transition.sql`, meant to be run during that window only.
 -- =============================================================================
 
+-- ┌── SHARED BLOCK · expansion inventory (0064 + 0065) ─────────────────────┐
+-- │ BYTE-IDENTICAL in `validate_schema.sql` and                             │
+-- │ `validate_schema_transition.sql`. SQL applied by hand has no include, so │
+-- │ the copies are kept identical on purpose and a test compares them.       │
+-- │                                                                          │
+-- │ It is shared because the transition window needs exactly the same depth  │
+-- │ as the final state: objects checked by NAME alone let a trigger on       │
+-- │ another table, a disabled one, or a table missing half its columns pass  │
+-- │ as installed — and the window is when the QA that decides the activation │
+-- │ happens. What differs between the two files is the PHASE, and only that: │
+-- │ it lives outside this block in each of them.                             │
+-- └──────────────────────────────────────────────────────────────────────────┘
 do $$
 declare
   missing   text;
@@ -582,24 +594,6 @@ begin
   -- It used to be `indexdef like '%WHERE (due_date IS NOT NULL)%'`, which a
   -- predicate of `due_date is not null and status = 'confirmed'` satisfies while
   -- covering no unresolved occurrence at all.
-
-  -- (4) THE ACTIVATION IS APPLIED. The single-pending index has to be gone: it
-  -- is the constraint that turns an unreviewed occurrence into a permanent stop,
-  -- and while it stands the fix is not in production however much of the new
-  -- model is.
-  --
-  -- Two earlier versions of this check were wrong in opposite directions. The
-  -- first demanded the index still EXIST, and said in its own message that it
-  -- would go stale after the activation — it did. The second accepted either
-  -- state and only reported which one, which reads as "both are fine" and lets
-  -- an unapplied activation pass final validation. During the window between
-  -- the two migrations, run `validate_schema_transition.sql` instead.
-  if exists (
-    select 1 from pg_indexes
-     where schemaname = 'public' and indexname = 'recurrence_instances_one_pending_per_rule'
-  ) then
-    raise exception 'recurrence_instances_one_pending_per_rule still exists: the activation (0066) was not applied and #96 is still live. If the expansion is deployed and the activation is deliberately pending, run validate_schema_transition.sql for that window';
-  end if;
 
   -- (5) Constraints.
   for missing in
@@ -824,6 +818,30 @@ begin
     raise exception 'authenticated cannot execute public.delete_movement_unlinking_seed (migration 0065)';
   end if;
 
+end $$;
+-- └── END SHARED BLOCK · expansion inventory ───────────────────────────────┘
+
+-- ── 8.1J · phase: the activation is applied ────────────────────────────────
+do $$
+begin
+  -- (4) THE ACTIVATION IS APPLIED. The single-pending index has to be gone: it
+  -- is the constraint that turns an unreviewed occurrence into a permanent stop,
+  -- and while it stands the fix is not in production however much of the new
+  -- model is.
+  --
+  -- Two earlier versions of this check were wrong in opposite directions. The
+  -- first demanded the index still EXIST, and said in its own message that it
+  -- would go stale after the activation — it did. The second accepted either
+  -- state and only reported which one, which reads as "both are fine" and lets
+  -- an unapplied activation pass final validation. During the window between
+  -- the two migrations, run `validate_schema_transition.sql` instead.
+  if exists (
+    select 1 from pg_indexes
+     where schemaname = 'public' and indexname = 'recurrence_instances_one_pending_per_rule'
+  ) then
+    raise exception 'recurrence_instances_one_pending_per_rule still exists: the activation (0066) was not applied and #96 is still live. If the expansion is deployed and the activation is deliberately pending, run validate_schema_transition.sql for that window';
+  end if;
+
   raise notice '✓ 8.1J — occurrence identity (0064): columns, tables, indexes, composite FKs, triggers and sole ownership OK; the atomic seed repair (0065) is in place; the backlog is ACTIVATED (0066), so a rule may owe several unresolved occurrences';
 end $$;
 
@@ -833,30 +851,54 @@ end $$;
 -- │ the copies are kept identical on purpose and a test compares them; edit  │
 -- │ one and that test tells you which others to bring along.                 │
 -- │                                                                          │
--- │ It checks the two guards BY BEHAVIOUR, not by the text they happen to be │
--- │ spelled with. A name proves nothing and neither does a substring: an     │
--- │ index predicate reading `due_date is not null and status = 'confirmed'`  │
--- │ contains all the right words and protects no unresolved occurrence, and  │
--- │ a correctly named CHECK may say `true`. Comparing the rendered text      │
--- │ exactly would catch both and break on any equivalent rewrite — and on a  │
--- │ Postgres that renders the same expression differently from the one this  │
--- │ was written against.                                                     │
+-- │ It checks the two guards that the activation is about to lean on, and it │
+-- │ does so by comparing them against a CANONICAL definition built and       │
+-- │ rendered by this same Postgres.                                          │
 -- │                                                                          │
--- │ So each guard is copied onto a TEMPORARY table and probed there. No      │
--- │ production row is touched, and what gets asserted is the rule.           │
+-- │ Three weaker approaches were tried and each let something through:       │
+-- │   · by NAME — an index in another schema, on another table, non-unique   │
+-- │     or invalid answers to the same name and protects nothing;            │
+-- │   · by SUBSTRING — `due_date is not null and status = 'confirmed'`       │
+-- │     contains every right word and covers no unresolved occurrence;       │
+-- │   · by SAMPLE — probing one date and one uuid passes a predicate reading │
+-- │     `due_date >= date '2026-01-01'`, which abandons everything older.    │
+-- │     A sample cannot prove a rule that has to hold universally.           │
+-- │                                                                          │
+-- │ Comparing rendered text exactly is what proves it, and building the      │
+-- │ canonical side HERE is what makes that safe: both sides come out of the  │
+-- │ same server's deparser, so no Postgres version renders one differently   │
+-- │ from the other. The temporary table is `like` the real one, so column    │
+-- │ names and types — and therefore any cast the deparser prints — match.    │
+-- │                                                                          │
+-- │ The price is that an equivalent REWRITE is rejected (`not (due_date is   │
+-- │ null)` is the same rule, spelled differently). That is a false red, not  │
+-- │ a false green: it stops a deploy instead of blessing an unprotected      │
+-- │ table, and the fix is to re-create the object in the canonical form.     │
 -- └──────────────────────────────────────────────────────────────────────────┘
 do $$
 declare
-  v_predicate text;
-  v_columns   text[];
-  v_check_def text;
-  v_status    text;
-  v_rid       uuid := '00000000-0000-0000-0000-0000000000aa';
+  v_predicate  text;
+  v_canonical  text;
+  v_columns    text[];
+  v_check_def  text;
+  v_check_canon text;
+  v_status     text;
+  v_due        date;
+  v_accepted   boolean;
 begin
+  -- A copy of the real table: same columns, same types, no constraints and no
+  -- indexes. Everything below is built and probed on THIS, so no production row
+  -- is read or written.
+  -- `including defaults` matters: without it the copy keeps every NOT NULL and
+  -- loses the defaults that satisfy them, so an insert fails on `id` instead of
+  -- on the rule under test.
+  create temp table identity_probe (
+    like public.recurrence_instances including defaults
+  ) on commit drop;
+
   -- ── 1 · The identity index ──────────────────────────────────────────────
   -- Structure first: right schema, right table, unique, valid, ready, and the
-  -- two columns that make an occurrence. An index that merely answers to the
-  -- name could be any of those things and protect nothing.
+  -- two columns that make an occurrence.
   select array(
            select a.attname
              from unnest(i.indkey) with ordinality as k(attnum, ord)
@@ -891,33 +933,24 @@ begin
     raise exception 'occurrence identity: the index is not partial — a row with an unknown due_date would compete for an identity it does not have';
   end if;
 
-  create temp table identity_probe (
-    recurrence_id uuid,
-    due_date      date,
-    status        text
-  ) on commit drop;
+  -- The canonical predicate, deparsed by this server from the definition 0064
+  -- ships. Anything else — narrower, wider, or merely different — is refused.
+  -- There is no probe here because no set of probes would do: a predicate is a
+  -- rule over every row that could ever exist, and any finite sample of dates
+  -- and uuids passes `due_date >= date '2026-01-01'` while abandoning every
+  -- occurrence older than that.
+  create unique index identity_probe_canonical
+      on identity_probe (recurrence_id, due_date)
+   where due_date is not null;
 
-  execute format(
-    'create unique index identity_probe_ix on identity_probe (recurrence_id, due_date) where %s',
-    v_predicate
-  );
+  select pg_get_expr(i.indpred, i.indrelid)
+    into v_canonical
+    from pg_index i
+   where i.indexrelid = 'identity_probe_canonical'::regclass;
 
-  -- Every status that OCCUPIES a due date has to be covered. `pending` and
-  -- `skipped` are unresolved or resolved-without-a-movement and both hold their
-  -- vencimiento; a `confirmed` row written after 0064 holds an exact one too.
-  -- A predicate that excludes any of them lets the generator write the same
-  -- occurrence twice, which is the duplicate this index exists to refuse.
-  for v_status in select unnest(array['pending', 'skipped', 'confirmed']) loop
-    begin
-      insert into identity_probe (recurrence_id, due_date, status)
-      values (v_rid, date '2026-06-23', v_status),
-             (v_rid, date '2026-06-23', v_status);
-      raise exception 'occurrence identity: the index predicate (%) does not cover % occurrences — the same vencimiento could be materialized twice', v_predicate, v_status;
-    exception
-      when unique_violation then
-        null;  -- what has to happen
-    end;
-  end loop;
+  if v_predicate is distinct from v_canonical then
+    raise exception 'occurrence identity: the index predicate is %, not % — it does not cover the same occurrences. If it is an equivalent rewrite, re-create the index in the canonical form', v_predicate, v_canonical;
+  end if;
 
   -- ── 2 · The due-date CHECK ──────────────────────────────────────────────
   -- It has to exist AND be validated: one added `NOT VALID` enforces new rows
@@ -935,34 +968,75 @@ begin
     raise exception 'unresolved due date: chk_recurrence_instances_unresolved_has_due_date is missing or NOT VALID (0064) — a pending row with no due_date would have no identity';
   end if;
 
-  create temp table check_probe (
-    status   text,
-    due_date date
-  ) on commit drop;
+  -- The REAL rule, copied onto the probe table and then exercised over its whole
+  -- domain. `chk_recurrence_instances_status` (0011) limits `status` to three
+  -- values and `due_date` is either known or not, so the six rows below are
+  -- every case there is — an exhaustive truth table, not an example.
+  --
+  -- Both halves matter. A CHECK that refuses too much passes any test that only
+  -- looks at what it rejects: `check (status = 'confirmed')` turns away a
+  -- pending row with no vencimiento, and every legitimate pending occurrence
+  -- along with it.
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'public.recurrence_instances'::regclass
+       and conname  = 'chk_recurrence_instances_status'
+       and contype  = 'c'
+       and convalidated
+  ) then
+    raise exception 'unresolved due date: chk_recurrence_instances_status is missing (0011) — status is unbounded, so the cases below would not be exhaustive';
+  end if;
 
-  execute format('alter table check_probe add %s', v_check_def);
+  execute format('alter table identity_probe add %s', v_check_def);
 
-  -- An UNRESOLVED occurrence with no vencimiento has to be refused. A CHECK
-  -- with the right name and the body `true` passes every test that looks at
-  -- names, states and stored rows, and stops nothing from here on.
-  for v_status in select unnest(array['pending', 'skipped']) loop
+  for v_status, v_due, v_accepted in
+    select * from (values
+      -- An unresolved occurrence with no vencimiento has no identity: refused.
+      ('pending',   null::date,        false),
+      ('skipped',   null::date,        false),
+      -- A historical confirmed row: 0064 leaves its due_date null on purpose.
+      ('confirmed', null::date,        true),
+      -- And everything WITH a vencimiento is legitimate, however old or far off.
+      -- Two distant dates, because one would pass a rule bounded by a range.
+      ('pending',   date '1999-01-01', true),
+      ('skipped',   date '2099-12-31', true),
+      ('confirmed', date '2026-06-23', true)
+    ) as cases(status, due_date, accepted)
+  loop
     begin
-      insert into check_probe (status, due_date) values (v_status, null);
-      raise exception 'unresolved due date: the CHECK accepts a % row with no due_date, so its rule does not match its name (%)', v_status, v_check_def;
+      insert into identity_probe (recurrence_id, user_id, scheduled_date, due_date, status)
+      values (gen_random_uuid(), gen_random_uuid(),
+              coalesce(v_due, date '2026-06-23'), v_due, v_status);
+      if not v_accepted then
+        raise exception 'unresolved due date: the CHECK accepts a % row with due_date % and must not (%)', v_status, coalesce(v_due::text, 'null'), v_check_def;
+      end if;
     exception
       when check_violation then
-        null;  -- what has to happen
+        if v_accepted then
+          raise exception 'unresolved due date: the CHECK rejects a % row with due_date %, which is a legitimate occurrence (%)', v_status, coalesce(v_due::text, 'null'), v_check_def;
+        end if;
     end;
   end loop;
 
-  -- And a historical `confirmed` row with no vencimiento has to be ACCEPTED:
-  -- 0064 leaves those null on purpose, because the date is unrecoverable.
-  begin
-    insert into check_probe (status, due_date) values ('confirmed', null);
-  exception
-    when check_violation then
-      raise exception 'unresolved due date: the CHECK rejects a historical confirmed row with no due_date (%) — 0064 leaves those null on purpose', v_check_def;
-  end;
+  -- And then the same exact-text argument as the index, on a clean copy: the
+  -- truth table above covers every case the current schema allows, and the
+  -- comparison is what keeps that claim true if a fourth status is ever added.
+  create temp table canonical_probe (
+    like public.recurrence_instances including defaults
+  ) on commit drop;
+
+  alter table canonical_probe
+    add constraint chk_canonical check (status = 'confirmed' or due_date is not null);
+
+  select pg_get_constraintdef(oid)
+    into v_check_canon
+    from pg_constraint
+   where conrelid = 'canonical_probe'::regclass
+     and conname  = 'chk_canonical';
+
+  if v_check_def is distinct from v_check_canon then
+    raise exception 'unresolved due date: the CHECK is %, not % — its rule is not the one its name claims. If it is an equivalent rewrite, re-create it in the canonical form', v_check_def, v_check_canon;
+  end if;
 end $$;
 -- └── END SHARED CONTRACT ───────────────────────────────────────────────────┘
 
