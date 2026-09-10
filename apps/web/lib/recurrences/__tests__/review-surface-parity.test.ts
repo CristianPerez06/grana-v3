@@ -127,4 +127,45 @@ describe('the native materialization notice clears the status bar', () => {
   it('does not push the inset up into the layout, where it would always apply', () => {
     expect(read('apps/mobile/app/(app)/_layout.tsx')).not.toContain('useSafeAreaInsets')
   })
+
+  // And the second half, which the first QA round missed: taking the inset is
+  // not enough if the header below takes it AGAIN. That left a navy band the
+  // height of the notch between the notice and the title, with the status bar's
+  // white clock stranded on a page-colored strip above it.
+  it('paints the inset navy and says it took it', () => {
+    const source = read(NATIVE_NOTICE)
+    expect(source).toContain('TopInsetTakenProvider')
+    expect(source).toContain('bg-navy')
+  })
+
+  it.each([
+    'apps/mobile/components/ui/PageHeader.tsx',
+    'apps/mobile/components/dashboard/DashboardHeader.tsx',
+  ])('%s clears the inset only when nothing above it did', (file) => {
+    const source = read(file)
+    expect(source).toContain('useHeaderEdges')
+    // The literal is what the double band was: `edges` decided at the call site
+    // rather than read from whoever is above.
+    expect(source).not.toMatch(/edges=\{\['top'\]\}/)
+  })
+})
+
+describe('the pending read comes back, one way or another', () => {
+  // A read that hangs is not an empty list, but for as long as it hangs the feed
+  // is in `loading` and renders NOTHING — which is what somebody with no
+  // vencimientos sees. `fetch` does not reject when there is no route to the
+  // host, so without a deadline that state lasted as long as the OS felt like.
+  const SHARED_READ = 'packages/recurrences/src/queries.ts'
+
+  it('the shared read carries the deadline, so both platforms get it', () => {
+    expect(read(SHARED_READ)).toContain('withReadTimeout(readPendingRecurrenceInstances(')
+  })
+
+  // The deadline is only half of it: one automatic retry on top of 15 seconds is
+  // thirty seconds of the same silence, and the user never asked for the second
+  // attempt. Native has no test runner, so this stands in for it there; web's is
+  // exercised for real in `pending-review-feed.test.tsx`.
+  it.each([WEB_FEED, NATIVE_BLOCK])('%s does not retry it behind the user', (file) => {
+    expect(read(file)).toContain('retry: false')
+  })
 })

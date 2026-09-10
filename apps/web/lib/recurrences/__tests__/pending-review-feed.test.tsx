@@ -44,9 +44,9 @@ const { PendingRecurrencesBlockContainer } = await import(
   '@/lib/recurrences/components/pending-recurrences-block-container'
 )
 
-const renderContainer = () => {
+const renderContainer = (defaultRetry: number | boolean = false) => {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: defaultRetry } },
   })
   return render(
     <QueryClientProvider client={queryClient}>
@@ -93,5 +93,20 @@ describe('pending review feed', () => {
     renderContainer()
     const block = await screen.findByTestId('pending-block')
     expect(block.textContent).toBe('i1i2')
+  })
+
+  it('does not retry the read behind the user', async () => {
+    // The read carries its own 15s deadline. A client-level retry on top of it
+    // is thirty seconds of a page that looks exactly like having nothing to
+    // review — the state this whole surface exists to keep off the screen. So
+    // the container opts out of the default, and this renders with a client that
+    // DOES retry: without the opt-out the read runs twice and the error takes
+    // twice as long to appear.
+    readPending.mockRejectedValue(new Error('read_timeout'))
+    renderContainer(1)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('recurrences.materialization.read_failed_title')
+    expect(readPending).toHaveBeenCalledTimes(1)
   })
 })

@@ -164,9 +164,14 @@ export function PendingRecurrencesBlock() {
   const t = useT()
   const queryClient = useQueryClient()
 
+  // NO AUTO-RETRY. The read carries a 15s deadline of its own (`withReadTimeout`),
+  // and the client's default retries once — which on a dead network is thirty
+  // seconds of a screen that looks exactly like having nothing to review. The
+  // retry here is the user's, on the button, once we have told them.
   const query = useQuery({
     queryKey: ['recurrences', 'pending'] as const,
     queryFn: getPendingRecurrences,
+    retry: false,
   })
 
   const [notice, setNotice] = useState<string | null>(null)

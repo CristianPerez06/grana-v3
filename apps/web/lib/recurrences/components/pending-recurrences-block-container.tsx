@@ -34,6 +34,11 @@ export function PendingRecurrencesBlockContainer() {
       {
         queryKey: QUERY_KEYS.recurrencesPendingInstances,
         queryFn: () => getPendingRecurrenceInstances(createClient()),
+        // NO AUTO-RETRY: the read has a 15s deadline of its own
+        // (`withReadTimeout`), and a retry on top of it is thirty seconds of a
+        // page that looks exactly like having nothing to review. The retry is
+        // the user's, on the button, once we have told them.
+        retry: false,
       },
       // Accounts are needed only when there's a pending instance, but we leave
       // the query enabled unconditionally — `accountsList` has a 5min

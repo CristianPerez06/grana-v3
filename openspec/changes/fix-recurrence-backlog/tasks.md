@@ -801,6 +801,16 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
       **(d) la acción entra entera.** Con la etiqueta larga, frase y botón lado a lado se dejaban
       media pantalla cada uno y lo que se cortaba era el botón. El aviso apila: la frase arriba, la
       acción abajo —en nativo siempre, en web por debajo de `sm`—.
+      **(a2) la lectura también tiene plazo.** El mismo defecto que (a), una capa más arriba y peor:
+      mientras la lectura cuelga el feed está en `loading`, que no dibuja nada, y una pantalla vacía
+      es exactamente lo que ve alguien que no tiene vencimientos. O sea que la lectura pasaba un
+      minuto afirmando "no tenés nada por revisar" sin que nadie lo supiera. `withReadTimeout` (15 s,
+      en la lectura compartida, así que web y nativo lo heredan) la corta. **Rechaza**, a diferencia
+      del plazo de la generación, que resuelve un resultado fallido: acá el consumidor es `useQuery`,
+      y un error es cómo se le dice a esa capa que el dato no está — y es lo que conserva las filas
+      cacheadas con el aviso de "puede estar desactualizada" en vez de reemplazarlas por una lista
+      vacía. La otra mitad es que los dos call sites NO reintentan solos: un reintento sobre 15
+      segundos son 30 segundos del mismo silencio, y el usuario no pidió el segundo intento.
       **(e) el encabezado del bloque no se parte.** La píldora del contador es `shrink-0`, así que lo
       que diga se lo saca a la columna del título: con la frase entera adentro —"2 vencimientos por
       revisar"— el título quedaba en una columna de ~60px y se cortaba una palabra por renglón. La

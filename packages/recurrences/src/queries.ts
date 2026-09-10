@@ -210,7 +210,15 @@ export async function getRecurrences(
  * order total, which is what keeps an OFFSET window from repeating or skipping
  * rows between pages. Every row is `pending`, so `due_date` is never null.
  */
-export async function getPendingRecurrenceInstances(
+export function getPendingRecurrenceInstances(
+  supabase: GranaSupabaseClient,
+): Promise<PendingRecurrenceInstance[]> {
+  // The deadline covers the WHOLE read, pages included: what the user waits for
+  // is the list, not one request. See `withReadTimeout`.
+  return withReadTimeout(readPendingRecurrenceInstances(supabase))
+}
+
+async function readPendingRecurrenceInstances(
   supabase: GranaSupabaseClient,
 ): Promise<PendingRecurrenceInstance[]> {
   const { data, error } = await selectAllPages<PendingRecurrenceInstance>(() =>
@@ -1099,4 +1107,54 @@ export function withGenerationTimeout(
     )
   })
   return Promise.race([run, deadline]).finally(() => clearTimeout(timer))
+}
+
+/**
+ * How long the pending read may take before the UI stops waiting for it.
+ *
+ * Same number as the materialization's, for the same reason: it is how long a
+ * person will look at a screen with nothing on it before the app owes them an
+ * answer.
+ */
+export const READ_TIMEOUT_MS = 15_000
+
+/** What `withReadTimeout` rejects with. Never shown: the surfaces have their own copy. */
+export const READ_TIMEOUT_ERROR = 'read_timeout'
+
+/**
+ * A read that always comes back — as data or as a failure, never as silence.
+ *
+ * THE BLANK SCREEN IS THE BUG. `fetch` does not reject when there is no route to
+ * the host: it hangs, for as long as the operating system feels like (on an
+ * iPhone with the network off, about a minute — and the query layer's one retry
+ * doubled it). Until it gives up, the feed is in `loading`, which renders
+ * nothing, and a screen with nothing on it is exactly what somebody with no
+ * vencimientos sees. So the read spends a minute making the claim the whole
+ * change exists to prevent: "no tenés nada por revisar", asserted while nobody
+ * knows.
+ *
+ * It REJECTS, unlike the generation timeout, which resolves to a failed result.
+ * The difference is what the caller does with it: the generator's outcome is a
+ * value the notice reads, while the read feeds `useQuery`, and an error is how
+ * that layer is told the data is not there. That is also what keeps the cached
+ * rows on screen — `reviewFeedState` shows them with "puede estar
+ * desactualizada" rather than replacing them with an empty list.
+ *
+ * The losing read is not cancelled: there is no abort signal threaded through the
+ * client, and a read has nothing to undo. It resolves into a promise nobody is
+ * holding; `Promise.race` has already handled it, so a late rejection raises no
+ * unhandled error.
+ *
+ * The deadline is only half the fix — the call sites must not auto-retry it. One
+ * retry on a 15s deadline is 30 seconds of the same silence.
+ */
+export function withReadTimeout<T>(
+  read: Promise<T>,
+  timeoutMs: number = READ_TIMEOUT_MS,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(READ_TIMEOUT_ERROR)), timeoutMs)
+  })
+  return Promise.race([read, deadline]).finally(() => clearTimeout(timer))
 }
