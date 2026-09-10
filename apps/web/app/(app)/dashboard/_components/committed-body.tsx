@@ -97,12 +97,17 @@ export const CommittedBody = ({ summary, groups }: Props) => {
                 pendingFocus.current = 'back'
                 setOpenKey(group.key)
               }}
-              className="flex min-h-11 flex-1 items-center gap-3 rounded-2xl border border-border px-3.5 py-3 text-left transition-colors hover:bg-border-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              // El rótulo compite con el monto por el ancho de la fila, y a
+              // ~360px pierde por unos pocos píxeles ("Gastos fijos" entra en
+              // 85px y le quedaban 89). Padding, gap, ícono y monto ceden un
+              // poco cada uno SOLO en angosto; el monto no trunca nunca, pero
+              // sí puede bajar un punto de escala.
+              className="flex min-h-11 flex-1 items-center gap-2.5 rounded-2xl border border-border px-3 py-3 text-left transition-colors hover:bg-border-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:gap-3 sm:px-3.5"
             >
               <span
                 aria-hidden
                 className={cn(
-                  'flex size-9 shrink-0 items-center justify-center rounded-xl',
+                  'flex size-8 shrink-0 items-center justify-center rounded-xl sm:size-9',
                   group.iconClassName,
                 )}
               >
@@ -122,7 +127,7 @@ export const CommittedBody = ({ summary, groups }: Props) => {
                 </span>
               </span>
               <span className="shrink-0 text-right">
-                <span className="block text-[16.5px] font-extrabold tracking-tight text-text">
+                <span className="block text-[15px] font-extrabold tracking-tight text-text sm:text-[16.5px]">
                   <MaskedAmount amount={group.ars} currency="ARS" />
                 </span>
                 {group.usd !== 0 && (
