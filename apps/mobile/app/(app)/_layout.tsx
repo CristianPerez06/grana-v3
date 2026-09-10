@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { hasRecoveryClaim } from '../../lib/recovery'
 import { PreferencesProvider } from '../../lib/preferences-context'
 import { RecurrenceMaterializationProvider } from '../../lib/recurrences/materialization-context'
-import { MaterializationNotice } from '../../components/recurrences/MaterializationNotice'
+import { MaterializationNoticeSlot } from '../../components/recurrences/MaterializationNotice'
 import { AppMenu } from '../../components/layout/AppMenu'
 import { TabBar } from '../../components/layout/TabBar'
 
@@ -64,16 +64,11 @@ export default function AppLayout() {
         </View>
       </Modal>
 
-      {/* The notice belongs to the LAYOUT, not to a screen. Generation runs on
-          every screen now, so its failure — and a rebuild that still owes
-          occurrences — can happen while the user is in Cuentas, Tarjetas or
-          Ahorros. Rendering it only on Inicio and Movimientos meant the error was
-          invisible exactly where it had just occurred. Renders nothing when there
-          is nothing to say. */}
-      <View style={{ paddingHorizontal: 16 }}>
-        <MaterializationNotice />
-      </View>
-
+      {/* The notice sits above every screen, so it — not the header — owns the
+          top inset while it is there. The slot wraps the navigator because that
+          is what it has to tell: see `MaterializationNoticeSlot`. Renders
+          nothing, and takes nothing, when there is nothing to say. */}
+      <MaterializationNoticeSlot>
       <Tabs
         screenOptions={{ headerShown: false }}
         tabBar={(props) => (
@@ -93,6 +88,7 @@ export default function AppLayout() {
         <Tabs.Screen name="accounts" options={{ href: null }} />
         <Tabs.Screen name="settings" options={{ href: null }} />
       </Tabs>
+      </MaterializationNoticeSlot>
       </RecurrenceMaterializationProvider>
     </PreferencesProvider>
   )

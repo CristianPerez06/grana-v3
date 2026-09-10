@@ -781,6 +781,22 @@ alcanza —un gate en el cliente frena builds futuros, no los ya instalados—; 
       transitoria es peor respuesta que mostrarlos algo viejos y decirlo. Solo una falla sin nada que
       mostrar —incluida una lista cacheada vacía, porque "no tenés nada por revisar" es una
       afirmación que una lectura fallida no sostiene— se muestra como error.
+- [x] 4.5c Lo que encontró el QA nativo del aviso, y que el QA no podía encontrar antes:
+      **(a) la corrida tiene plazo.** Sin red, `fetch` no rechaza: cuelga, y cuánto cuelga lo decide
+      el sistema operativo —en un iPhone en modo avión, más de un minuto—. Todo ese rato el aviso
+      dice "Actualizando…" con el reintento DESHABILITADO, así que la única pantalla que existe para
+      avisar de una falla no avisa nada. `withGenerationTimeout` (15 s, en el paquete compartido, web
+      y nativo) la lleva al estado de error con el reintento habilitado. La corrida perdedora no se
+      cancela a propósito: la materialización es idempotente, la siguiente reconcilia.
+      **(b) el inset se pinta una sola vez.** El aviso se monta por encima de las pantallas, así que
+      es él —no el header— lo primero que toca el borde del dispositivo. Con los dos despejando el
+      inset quedaba una banda navy vacía del alto del notch. Ahora el aviso pinta el inset en navy y
+      lo declara por contexto; `PageHeader` y `DashboardHeader` leen esa declaración en su prop
+      `edges`. Va por `edges` y no por los insets: `SafeAreaView` es una vista nativa y no lee
+      `SafeAreaInsetsContext`. Delta en el spec `page-header`.
+      **(c) el aviso no habla de reconstrucción.** "Faltan reconstruir 29 vencimientos" es
+      vocabulario interno —el usuario preguntó literalmente qué era—. Dice qué debe la app, no qué
+      debe el usuario: "Nos faltan traer 29 vencimientos anteriores", acción "Traer ahora".
 - [ ] 4.8 Recorrer los **seis** comportamientos de `proposal.md` en web y en nativo antes de cerrar,
       terminando en la prueba de aceptación: varios vencimientos visibles, ninguno trabando al
       siguiente, sin duplicados, resolubles por separado y en cualquier orden.

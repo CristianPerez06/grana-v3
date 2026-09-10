@@ -1,9 +1,12 @@
+import type { ReactNode } from 'react'
 import { ActivityIndicator, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AlertTriangle } from 'lucide-react-native'
 import { materializationOutcome } from '@grana/recurrences'
+import type { MaterializationOutcome } from '@grana/recurrences'
 import { useT } from '../../lib/locale-context'
 import { useRecurrenceMaterialization } from '../../lib/recurrences/materialization-context'
+import { TopInsetTakenProvider } from '../../lib/top-inset'
 import { colors } from '../../lib/colors'
 import { Button } from '../ui/Button'
 
@@ -58,65 +61,95 @@ export function RecurrenceFailureNotice({
  * screen. A failure used to be swallowed, leaving the user with a screen
  * identical to somebody with nothing to review — the opposite claim to the true
  * one. A run that still owes occurrences says so and offers to continue, because
- * a year of daily backlog takes several runs and nobody is going to reopen the
- * app eight times to see their own history.
+ * a year of backlog takes several runs and nobody is going to reopen the app
+ * eight times to see their own history.
  *
  * The three-way decision itself lives in `materializationOutcome`, shared with
  * web, so the two platforms cannot answer it differently.
  */
-export function MaterializationNotice() {
+function MaterializationNotice({
+  outcome,
+  running,
+  run,
+}: {
+  outcome: Exclude<MaterializationOutcome, { kind: 'quiet' }>
+  running: boolean
+  run: () => void
+}) {
   const t = useT()
-  const state = useRecurrenceMaterialization()
-  // The notice sits ABOVE every screen's `PageHeader`, so it is the top-most
-  // thing on screen and nothing else is clearing the status bar for it. Without
-  // this it renders under the notch: unreadable text and a half-covered button.
-  //
-  // The inset lives HERE and not in the layout that mounts it, because the
-  // notice renders nothing most of the time — padding applied one level up
-  // would leave a permanent gap at the top of the app for a notice that is not
-  // there.
-  const insets = useSafeAreaInsets()
-
-  if (!state) return null
-  const { running, run } = state
-  const outcome = materializationOutcome(state)
-  if (outcome.kind === 'quiet') return null
 
   if (outcome.kind === 'failed') {
     return (
-      <View style={{ paddingTop: insets.top }}>
-        <RecurrenceFailureNotice
-          title={t('recurrences.materialization.failed_title')}
-          body={t('recurrences.materialization.failed_body')}
-          onRetry={run}
-          retrying={running}
-        />
-      </View>
+      <RecurrenceFailureNotice
+        title={t('recurrences.materialization.failed_title')}
+        body={t('recurrences.materialization.failed_body')}
+        onRetry={run}
+        retrying={running}
+      />
     )
   }
 
   return (
-    <View style={{ paddingTop: insets.top }}>
-      <View style={noticeStyle(false)}>
-        {running ? <ActivityIndicator size="small" color={colors.textSoft} /> : null}
-        <Text style={{ flex: 1, minWidth: 0, fontSize: 12, color: colors.textSoft }}>
-          {t('recurrences.materialization.remaining', { count: outcome.count })}
-        </Text>
-        <View style={{ width: 152 }}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={run}
-            disabled={running}
-            title={
-              running
-                ? t('recurrences.materialization.running')
-                : t('recurrences.materialization.continue')
-            }
-          />
-        </View>
+    <View style={noticeStyle(false)}>
+      {running ? <ActivityIndicator size="small" color={colors.textSoft} /> : null}
+      <Text style={{ flex: 1, minWidth: 0, fontSize: 12, color: colors.textSoft }}>
+        {t('recurrences.materialization.remaining', { count: outcome.count })}
+      </Text>
+      <View style={{ width: 152 }}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onPress={run}
+          disabled={running}
+          title={
+            running
+              ? t('recurrences.materialization.running')
+              : t('recurrences.materialization.continue')
+          }
+        />
       </View>
     </View>
+  )
+}
+
+/**
+ * The notice's place in the app, above every screen — and the top inset that
+ * comes with standing there.
+ *
+ * The notice belongs to the LAYOUT, not to a screen: generation runs on every
+ * screen now, so its failure — and a rebuild that still owes occurrences — can
+ * happen while the user is in Cuentas, Tarjetas or Ahorros. Rendering it only on
+ * Inicio and Movimientos meant the error was invisible exactly where it had just
+ * occurred.
+ *
+ * THE NAVY IS NOT DECORATION. The status bar is drawn `light` (white clock, white
+ * wifi) because everything says it sits on the navy header band. Pushing that
+ * band down with a page-colored strip put white text on a near-white background
+ * and made the notice look detached from the app. So the notice paints the inset
+ * navy itself — the band simply starts higher — and tells the headers below, via
+ * `TopInsetTakenProvider`, that the inset is already dealt with. Without that
+ * second half each `PageHeader` clears it a SECOND time, which is the tall empty
+ * navy band QA found.
+ *
+ * Renders nothing, and takes nothing, when there is nothing to say: the decision
+ * is made once, here, and the padding lives with the notice rather than in the
+ * layout, where it would leave a permanent gap at the top of the app for a
+ * notice that is not there.
+ */
+export function MaterializationNoticeSlot({ children }: { children: ReactNode }) {
+  const state = useRecurrenceMaterialization()
+  const insets = useSafeAreaInsets()
+  const outcome = state == null ? null : materializationOutcome(state)
+
+  if (state == null || outcome == null || outcome.kind === 'quiet') return <>{children}</>
+
+  return (
+    <TopInsetTakenProvider value>
+      <View className="bg-navy px-4 pb-3" style={{ paddingTop: insets.top + 8 }}>
+        <MaterializationNotice outcome={outcome} running={state.running} run={state.run} />
+      </View>
+      {children}
+    </TopInsetTakenProvider>
   )
 }
 
