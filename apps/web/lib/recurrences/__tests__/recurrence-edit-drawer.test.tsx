@@ -362,3 +362,39 @@ describe('a rule with no occurrences left', () => {
     expect(updateRecurrence).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('a rule with a custom frequency', () => {
+  // The spec admits `frequency: 'custom'` — a rule every three days has no
+  // preset. `presetToInterval` only knows the four, so asking it about a custom
+  // rule returns nothing and the form throws before it renders: the user cannot
+  // open the screen at all.
+  const everyThreeDays = {
+    ...(rule as unknown as Record<string, unknown>),
+    frequency: 'custom',
+    interval_count: 3,
+    interval_unit: 'day',
+  } as unknown as Parameters<typeof RecurrenceEditDrawer>[0]['rule']
+
+  const renderCustom = () =>
+    render(<RecurrenceEditDrawer rule={everyThreeDays} open onClose={() => {}} />)
+
+  it('opens', () => {
+    renderCustom()
+    expect(screen.getByTestId('start_date').getAttribute('value')).toBe('2026-06-08')
+  })
+
+  it('says it is custom instead of showing one of the four presets', () => {
+    renderCustom()
+    expect((document.getElementById('frequency') as HTMLSelectElement).value).toBe('custom')
+  })
+
+  it('offers the dates of the interval the rule actually has', async () => {
+    // Every three days from 11/06; today is 10/09. 11/06 + 90 days is 09/09, so
+    // the next two are 12/09 and 15/09. Read as a preset it would offer monthly
+    // dates, which the server — recomputing from the rule's real interval —
+    // refuses.
+    renderCustom()
+    await setField('start_date', '2026-06-11')
+    expect(offered()).toEqual(['2026-09-12', '2026-09-15'])
+  })
+})

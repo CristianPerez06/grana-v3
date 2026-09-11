@@ -8,6 +8,7 @@ import { parseMoneyInput } from '@grana/validation'
 import { referenceDateChoice } from '@grana/recurrences'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { presetToInterval } from '@grana/money-logic'
+import type { IntervalUnit } from '@grana/money-logic'
 import { formatShortDate } from '@/lib/date'
 import { Drawer } from '@/components/ui/drawer'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
@@ -15,8 +16,16 @@ import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover
 import { DatePicker } from '@/components/ui/date-picker'
 import type { RecurrenceDetail } from '@/lib/recurrences/types'
 
-type FrequencyValue = 'weekly' | 'biweekly' | 'monthly' | 'annual'
-const FREQUENCY_VALUES: FrequencyValue[] = ['weekly', 'biweekly', 'monthly', 'annual']
+// `custom` is one of them: the spec admits a rule every N days, which no preset
+// describes. It is offered as a value the select can HOLD, never as one the user
+// can pick — switching to it would need an interval this form does not edit.
+type FrequencyValue = 'weekly' | 'biweekly' | 'monthly' | 'annual' | 'custom'
+const FREQUENCY_VALUES: Exclude<FrequencyValue, 'custom'>[] = [
+  'weekly',
+  'biweekly',
+  'monthly',
+  'annual',
+]
 
 type Props = {
   rule: RecurrenceDetail
@@ -53,7 +62,15 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
   // dates it will accept from the patch, so a form that offers dates from the
   // stored frequency offers dates the server refuses — which is what happens the
   // moment somebody changes the frequency and the reference date in one pass.
-  const interval = presetToInterval(frequency)
+  //
+  // `custom` has no preset to derive: the mutation leaves the rule's interval
+  // untouched when the label stays custom, so the calendar being saved is the
+  // one the rule already has. Asking `presetToInterval` about it returns nothing
+  // and the form throws before it can render.
+  const interval =
+    frequency === 'custom'
+      ? { count: rule.interval_count, unit: rule.interval_unit as IntervalUnit }
+      : presetToInterval(frequency)
   const choice = referenceDateChoice(
     {
       status: rule.status,
@@ -170,6 +187,16 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
             className={fieldClass}
             style={{ backgroundColor: FIELD_BG }}
           >
+            {/* Only while the rule IS custom, and disabled: without it the
+                select holds a value none of its options carries and the browser
+                shows the first preset instead — "Semanal" on a rule that fires
+                every three days. It is not a choice, it is the truth about
+                where the rule stands. */}
+            {frequency === 'custom' && (
+              <option value="custom" disabled>
+                {t('frequencies.custom')}
+              </option>
+            )}
             {FREQUENCY_VALUES.map((value) => (
               <option key={value} value={value}>
                 {t(`frequencies.${value}`)}

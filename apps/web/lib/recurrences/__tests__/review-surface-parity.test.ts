@@ -221,6 +221,15 @@ describe('correcting the reference date exists on both platforms', () => {
     expect(source).not.toMatch(/interval_unit:\s*rule\.interval_unit/)
   })
 
+  // `custom` is a value the column really holds (0021), and no preset describes
+  // it. Handing it to `presetToInterval` returns nothing and the form throws
+  // before it renders — the screen simply does not open for a rule every three
+  // days. Web has this as a behaviour test; native is guarded here.
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s survives a rule with a custom frequency', (file) => {
+    const source = read(file)
+    expect(source).toMatch(/frequency === 'custom'/)
+  })
+
   it.each([WEB_EDIT, NATIVE_EDIT])('%s drops an answer that is no longer offered', (file) => {
     const source = read(file)
     expect(source).toMatch(/options\.includes\(effectiveFrom\)/)

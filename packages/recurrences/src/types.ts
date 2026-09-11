@@ -1,5 +1,5 @@
 import type { Database } from '@grana/supabase'
-import type { RecurrenceFrequency } from '@grana/money-logic'
+import type { RecurrenceFrequencyLabel } from '@grana/money-logic'
 
 type Tables<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Row']
@@ -39,7 +39,7 @@ export type Recurrence = Omit<
   'movement_type' | 'frequency' | 'status' | 'currency_code'
 > & {
   movement_type: RecurrenceMovementType
-  frequency: RecurrenceFrequency
+  frequency: RecurrenceFrequencyLabel
   status: RecurrenceStatus
   currency_code: RecurrenceCurrencyCode
 }

@@ -5,7 +5,7 @@ import { X } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { parseMoneyInput } from '@grana/validation'
 import { formatDateISO, getTodayAR, presetToInterval } from '@grana/money-logic'
-import type { RecurrenceFrequency } from '@grana/money-logic'
+import type { IntervalUnit, RecurrenceFrequency, RecurrenceFrequencyLabel } from '@grana/money-logic'
 import { referenceDateChoice } from '@grana/recurrences'
 import type { RecurrenceDetail } from '@grana/recurrences'
 import { Label } from '../ui/Label'
@@ -42,7 +42,7 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
   const queryClient = useQueryClient()
 
   const [amount, setAmount] = useState(String(rule.amount))
-  const [frequency, setFrequency] = useState<RecurrenceFrequency>(rule.frequency)
+  const [frequency, setFrequency] = useState<RecurrenceFrequencyLabel>(rule.frequency)
   // The rule's calendar anchor. A rule created from a movement inherits that
   // movement's date, and that date can be off — a salary that landed on the 8th
   // because the 10th was a holiday anchors the rule to the 8th forever.
@@ -58,7 +58,15 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
   // dates it will accept from the patch, so a form that offers dates from the
   // stored frequency offers dates the server refuses — which is what happens the
   // moment somebody changes the frequency and the reference date in one pass.
-  const interval = presetToInterval(frequency)
+  //
+  // `custom` has no preset to derive: the mutation leaves the rule's interval
+  // untouched when the label stays custom, so the calendar being saved is the
+  // one the rule already has. Asking `presetToInterval` about it returns nothing
+  // and the form throws before it can render.
+  const interval =
+    frequency === 'custom'
+      ? { count: rule.interval_count, unit: rule.interval_unit as IntervalUnit }
+      : presetToInterval(frequency)
   const choice = referenceDateChoice(
     {
       status: rule.status,

@@ -2,6 +2,17 @@
 
 export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly' | 'annual'
 
+/**
+ * What a rule's `frequency` column can actually hold.
+ *
+ * `RecurrenceFrequency` is the set of PRESETS — the ones `presetToInterval`
+ * knows. Since 0021 the column also holds `custom`, for a rule every N days that
+ * no preset describes, and typing the row as presets-only made that value
+ * invisible to the compiler: a form that asked `presetToInterval` about it got
+ * `undefined` back and threw before rendering, and nothing said so.
+ */
+export type RecurrenceFrequencyLabel = RecurrenceFrequency | 'custom'
+
 // Custom recurrences are modelled as a generic interval: `count` units of
 // `interval_unit`. The four named frequencies above are presets of this same
 // model (see presetToInterval), so date math has a single code path.

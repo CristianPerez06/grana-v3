@@ -215,6 +215,24 @@ se queda corto **en silencio**, que es la forma en que un tope deja de ser un to
       desarrolla la app. Pasaba en UTC y al este de UTC: exactamente la forma de un bug que sobrevive
       a CI. Verificado ahora en UTC, Buenos Aires, Auckland y Los Ángeles.
 
+## 2h. Sexta vuelta — `frequency = 'custom'`
+
+- [x] 2h.1 **Las recurrencias custom rompían el formulario, y fue una regresión mía.** Al cerrar 2c.6
+      pasé a derivar el intervalo con `presetToInterval(frequency)`, que sólo conoce los cuatro
+      presets. El spec admite `custom` desde 0021 —una regla cada N días que ningún preset describe—,
+      y ahí la función no devuelve nada: los dos formularios **fallan antes de renderizar**. El usuario
+      no puede ni abrir la pantalla.
+  - [x] `custom` no deriva de un preset: la mutación deja el intervalo de la regla intacto cuando la
+        etiqueta sigue siendo custom, así que el calendario que se va a guardar es el que ya tiene.
+  - [x] **La causa de raíz era de tipos.** `Recurrence.frequency` estaba tipado como los cuatro
+        presets mientras la columna guarda cinco, así que `custom` era invisible para el compilador.
+        Ahora existe `RecurrenceFrequencyLabel` y el compilador nombró los cinco lugares que asumían
+        cuatro — todos en nativo, todos reales: `frequencyLabel` no aceptaba `custom` aunque
+        `recurrences.frequencies.custom` es un mensaje que existe.
+  - [x] El `<select>` de web muestra `custom` como opción deshabilitada mientras la regla lo sea: sin
+        eso el control tiene un valor que ninguna de sus opciones lleva y el browser dibuja el primer
+        preset — "Semanal" sobre una regla que vence cada tres días.
+
 ## 2g. Quinta vuelta — el offset no es el total
 
 - [x] 2g.1 **El backfill contaba la semilla dos veces.** `schedule_positions_before` no significa "lo
