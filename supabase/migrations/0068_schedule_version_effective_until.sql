@@ -174,9 +174,6 @@ alter table public.recurrences
   add constraint chk_recurrences_seed_pair
   CHECK (created_from_transaction_id is null or seed_occurrence_date is not null);
 
-commit;
-
-begin;
 
 -- ── 2c · The guard, keyed on the seed occurrence instead of the anchor ─────
 --
@@ -351,9 +348,6 @@ revoke all on function public.delete_movement_unlinking_seed(UUID) from public;
 revoke all on function public.delete_movement_unlinking_seed(UUID) from anon;
 grant execute on function public.delete_movement_unlinking_seed(UUID) to authenticated;
 
-commit;
-
-begin;
 
 -- ── 2e · How many positions of its calendar a rule has spent ───────────────
 --
@@ -623,9 +617,6 @@ revoke all on function public.recurrence_positions_spent(uuid, date) from public
 revoke all on function public.recurrence_positions_spent(uuid, date) from anon;
 grant execute on function public.recurrence_positions_spent(uuid, date) to authenticated;
 
-commit;
-
-begin;
 
 -- Backfill, now that the function exists. Exact for every existing row: before
 -- this migration an anchor could not move, so a rule's calendar reaches back to
@@ -835,9 +826,6 @@ begin
   return NEW;
 end $$;
 
-commit;
-
-begin;
 
 -- ── 5 · The two dates the user chooses between ────────────────────────────
 --

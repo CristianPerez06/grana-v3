@@ -858,6 +858,7 @@ declare
   v_orphans   int;
   v_body      text;
   v_default   text;
+  v_check_canon text;
 begin
   if not exists (
     select 1 from information_schema.columns
@@ -892,8 +893,29 @@ begin
   if v_check_def is null then
     raise exception 'chk_schedule_versions_effective_range is missing: a version could end before it starts';
   end if;
-  if v_check_def not like '%effective_until%effective_from%' then
-    raise exception 'chk_schedule_versions_effective_range does not compare the two ends: %', v_check_def;
+  -- BY THE CANONICAL DEFINITION, not by substring. `%effective_until%effective_from%`
+  -- is satisfied by `(effective_until is null or effective_until >= effective_from
+  -- or true)`, which contains every right word and rejects nothing — a CHECK that
+  -- validates as present and enforces NOTHING. Both sides are rendered by this
+  -- same server's deparser, from a temp table `like` the real one, so no Postgres
+  -- version prints one differently from the other.
+  --
+  -- The price is the one this file already takes for the identity contract: an
+  -- equivalent REWRITE is rejected. That is a false red — it stops a deploy — not
+  -- a false green, and the fix is to re-create the constraint in canonical form.
+  create temp table versions_constraint_probe (
+    like public.recurrence_schedule_versions including defaults
+  ) on commit drop;
+  alter table versions_constraint_probe
+    add constraint chk_canon
+    CHECK (effective_until is null or effective_until >= effective_from);
+  select pg_get_constraintdef(c.oid) into v_check_canon
+    from pg_constraint c
+   where c.conrelid = 'versions_constraint_probe'::regclass and c.conname = 'chk_canon';
+
+  if v_check_def is distinct from v_check_canon then
+    raise exception 'chk_schedule_versions_effective_range is not the canonical rule. found: % / expected: %',
+      v_check_def, v_check_canon;
   end if;
 
   -- No version may already violate it, whatever the CHECK says today.
@@ -961,8 +983,32 @@ begin
        and tgname = 'trg_recurrence_resolve_schedule_effective_from'
        and not tgisinternal
        and tgenabled <> 'D'
+       -- AND CALLING THE RIGHT FUNCTION. A name is a label: a trigger of this
+       -- name wired to something else satisfies every other question here and
+       -- maintains nothing.
+       and tgfoid = 'public.recurrence_resolve_schedule_effective_from()'::regprocedure
+       -- BEFORE, and per row: an AFTER trigger cannot set `NEW`, so the column
+       -- would keep whatever the client sent — which is the thing this trigger
+       -- exists to discard.
+       and (tgtype & 2) = 2
+       and (tgtype & 1) = 1
   ) then
-    raise exception 'trg_recurrence_resolve_schedule_effective_from is missing or disabled: the floor would be whatever a client sends';
+    raise exception 'trg_recurrence_resolve_schedule_effective_from is missing, disabled, or not a BEFORE ... FOR EACH ROW trigger on recurrence_resolve_schedule_effective_from: the floor would be whatever a client sends';
+  end if;
+
+  -- The guard that keeps the seed occurrence and the link immutable, asked the
+  -- same way and for the same reason.
+  if not exists (
+    select 1 from pg_trigger
+     where tgrelid = 'public.recurrences'::regclass
+       and tgname = 'trg_recurrence_reconstruct_from_guard'
+       and not tgisinternal
+       and tgenabled <> 'D'
+       and tgfoid = 'public.recurrence_reconstruct_from_guard()'::regprocedure
+       and (tgtype & 2) = 2
+       and (tgtype & 1) = 1
+  ) then
+    raise exception 'trg_recurrence_reconstruct_from_guard is missing, disabled, or not a BEFORE ... FOR EACH ROW trigger on recurrence_reconstruct_from_guard: the reconstruction floor and the seed occurrence stop being immutable';
   end if;
 
   -- NOT NULL at the column, not merely "no NULLs today". Without it the next
@@ -1047,8 +1093,22 @@ begin
   if v_check_def is null then
     raise exception 'chk_recurrences_seed_pair is missing: a linked rule with no seed date is a row every reader of the covered set misreads';
   end if;
-  if v_check_def not like '%created_from_transaction_id%seed_occurrence_date%' then
-    raise exception 'chk_recurrences_seed_pair does not relate the link to the seed date: %', v_check_def;
+  -- Same reason, same method: a CHECK naming both columns and enforcing nothing
+  -- passes a substring test and lets a linked rule with no seed date into the
+  -- table, which is the row every reader of the covered set misreads.
+  create temp table seed_pair_constraint_probe (
+    like public.recurrences including defaults
+  ) on commit drop;
+  alter table seed_pair_constraint_probe
+    add constraint chk_canon
+    CHECK (created_from_transaction_id is null or seed_occurrence_date is not null);
+  select pg_get_constraintdef(c.oid) into v_check_canon
+    from pg_constraint c
+   where c.conrelid = 'seed_pair_constraint_probe'::regclass and c.conname = 'chk_canon';
+
+  if v_check_def is distinct from v_check_canon then
+    raise exception 'chk_recurrences_seed_pair is not the canonical rule. found: % / expected: %',
+      v_check_def, v_check_canon;
   end if;
   if exists (
     select 1 from public.recurrences

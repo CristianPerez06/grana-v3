@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { PGlite } from '@electric-sql/pglite'
 import { SCHEDULE_NEVER_RULES } from '@grana/money-logic'
 import {
+  MIGRATION_0068,
   actAs,
   actAsAdmin,
   applyEffectiveUntil,
@@ -420,6 +421,49 @@ function scheduleGapBranchOfValidateSchema(): string {
   const end = sql.indexOf('end $$;', from)
   return sql.slice(from, end + 'end $$;'.length)
 }
+
+describe('0068 is one transaction', () => {
+  it('leaves NOTHING behind when it fails on its last statement', async () => {
+    // It used to be five. A failure in the third left the first two applied, and
+    // the database sat in a shape no version of the app is written against: the
+    // columns installed, the triggers that maintain them missing. Nobody would
+    // see it until a write went wrong.
+    //
+    // The failure is injected at the END on purpose — an abort in the first
+    // section rolls back under either shape and would prove nothing.
+    const db2 = await createRecurrenceIdentityDb({ scheduleGap: false })
+    try {
+      const sabotaged = MIGRATION_0068.replace(
+        /\ncommit;\s*$/,
+        "\ndo $sabotage$ begin raise exception 'sabotage'; end $sabotage$;\ncommit;\n",
+      )
+      expect(sabotaged).toContain('sabotage')
+      await expect(db2.exec(sabotaged)).rejects.toThrow(/sabotage/)
+      await db2.exec('rollback;').catch(() => undefined)
+
+      // The very first thing the migration does, and it is gone.
+      const { rows } = await db2.query<{ n: number }>(
+        `select count(*)::int as n from information_schema.columns
+          where table_schema = 'public'
+            and (table_name, column_name) in (
+              ('recurrence_schedule_versions', 'effective_until'),
+              ('recurrences', 'schedule_effective_from'),
+              ('recurrences', 'seed_occurrence_date'),
+              ('recurrences', 'schedule_positions_before'))`,
+      )
+      expect(rows[0].n).toBe(0)
+    } finally {
+      await db2.close()
+    }
+  }, 60_000)
+
+  it('says so in the file, with one begin and one commit', () => {
+    // The structural half. A section added later with its own `commit;` would
+    // reopen the window without failing anything above.
+    expect(MIGRATION_0068.match(/^begin;$/gm)).toHaveLength(1)
+    expect(MIGRATION_0068.match(/^commit;$/gm)).toHaveLength(1)
+  })
+})
 
 describe('validate_schema.sql · 8.1K', () => {
   it('passes against a database that has 0068', async () => {

@@ -155,9 +155,17 @@ mismo dato incorrecto.
       así que una segunda edición durante un hueco extiende una versión ya cerrada hasta hoy y vuelve
       a producir fechas que la primera edición había excluido. Falta la regresión de "editar otra vez
       durante el hueco". `0068:227`.
-- [ ] 2c.4 **La migración está partida en tres transacciones.** Si falla la segunda o la tercera, la
-      primera ya quedó aplicada, y existe una ventana donde la columna está instalada sin sus
-      triggers. Tiene que ser una sola.
+- [x] 2c.4 **La migración estaba partida en tres transacciones** —cinco, en realidad, para cuando la
+      conté. Si fallaba la tercera, las dos primeras ya quedaban aplicadas, y la base quedaba en una
+      forma contra la que no está escrita ninguna versión de la app: las columnas instaladas y los
+      triggers que las mantienen ausentes. Nadie lo vería hasta que una escritura saliera mal. Ahora
+      es un `begin` y un `commit`; nada en el archivo necesitaba transacción propia (no hay
+      `CONCURRENTLY` ni `ALTER TYPE`).
+  - [x] La regresión inyecta el fallo en la ÚLTIMA sentencia y comprueba que no sobrevive ninguna de
+        las cuatro columnas. Un aborto en la primera sección se revierte con cualquiera de las dos
+        formas y no probaría nada: con el archivo viejo, este caso deja **cuatro** columnas puestas.
+  - [x] Y la mitad estructural: el archivo tiene exactamente un `begin` y un `commit`, porque una
+        sección agregada después con el suyo reabriría la ventana sin romper nada de lo de arriba.
 - [x] 2c.5 **`max_occurrences` se cuenta por filas**, y la semántica que cerró el #96 es por posiciones
       del calendario: una ocurrencia semilla no tiene fila, y una posición gastada puede no tenerla.
       Está mal en los dos lados —cliente y SQL— y por eso la paridad no lo detecta.
@@ -302,7 +310,7 @@ se queda corto **en silencio**, que es la forma en que un tope deja de ser un to
       cuyo ancla se mueve: el usuario leía una promesa y recibía un error. Una regla sin vencimientos
       por delante no tiene fecha que pueda ser la primera bajo una referencia nueva, así que el
       formulario lo dice y no intenta el guardado. El resto de los campos se sigue guardando.
-- [ ] 2c.9 Endurecer además: exigir una elección vigente en vez de tomar la primera en silencio;
+- [x] 2c.9 Endurecer además: exigir una elección vigente en vez de tomar la primera en silencio;
       `schedule_effective_from` como invariante persistente (`NOT NULL` con un default fail-closed que
       el trigger pise); y `validate_schema.sql`, que hoy acepta un `CHECK` equivalente a `... OR true`
       y un trigger deshabilitado o apuntando a otra función.
@@ -318,7 +326,18 @@ se queda corto **en silencio**, que es la forma en que un tope deja de ser un to
         El formulario ya no toma la primera opción en silencio: nada viene premarcado, la respuesta
         tiene que ser una de las que están en pantalla, y guardar sin contestar muestra la pregunta en
         vez de inventar la respuesta. Adivinar mal es el segundo sueldo en un mes que originó el #96.
-  - [ ] Falta: el `CHECK` equivalente a `... OR true`.
+  - [x] **El `CHECK` equivalente a `... OR true`** — cerrado. `%effective_until%effective_from%` lo
+        satisface `(… or true)`, que tiene todas las palabras correctas y no rechaza nada: un CHECK
+        que valida como presente y no exige NADA. Los dos CHECKs se comparan ahora contra la
+        definición canónica, construida sobre una tabla temporal `like` la real y renderizada por el
+        MISMO deparser, como ya hace el contrato de identidad de este archivo. El precio es el mismo
+        que ese contrato acepta: una reescritura equivalente da rojo, que es un rojo falso —frena un
+        deploy— y no un verde falso.
+  - [x] **Y el trigger "apuntando a otra función"** — el último ítem de la lista. Un nombre es una
+        etiqueta: un trigger llamado así y cableado a otra cosa satisfacía todo lo demás y no
+        mantenía nada. Se pinea `tgfoid`, y además que sea `BEFORE ... FOR EACH ROW`, porque un
+        AFTER no puede escribir `NEW` y la columna conservaría lo que mandó el cliente — justo lo que
+        el trigger existe para descartar. Vale para los dos triggers de `recurrences`.
 
 ## 2d. La identidad de la ocurrencia semilla (revisión del 11/9, segunda vuelta)
 
