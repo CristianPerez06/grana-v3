@@ -665,6 +665,27 @@ export async function updateRecurrence(
 
   if (Object.keys(patch).length === 0) return { ok: true }
 
+  // MOVING THE ANCHOR GOES THROUGH THE RPC, always. The patch and the date the
+  // user chose as the first occurrence of the corrected schedule have to land in
+  // ONE transaction: an anchor moved without an effective date is the defect that
+  // duplicated a salary in QA, and the database refuses it — this is not the
+  // client being polite, it is the only door.
+  //
+  // The RPC also RECOMPUTES the two dates and rejects anything else. What the
+  // form offers is drawn from the same calendar (`referenceDateChoice`), so the
+  // two agree; if they ever stop agreeing, the write fails loudly instead of
+  // opening a schedule version on a day off the calendar.
+  const movesAnchor = patch.start_date != null && patch.start_date !== current.start_date
+  if (movesAnchor) {
+    const { error: rpcError } = await supabase.rpc('update_recurrence_schedule', {
+      p_id: id,
+      p_patch: patch as never,
+      p_schedule_effective_from: updates.schedule_effective_from ?? null,
+    })
+    if (rpcError) return { ok: false, formError: rpcError.message }
+    return { ok: true }
+  }
+
   const { error: updateError } = await supabase
     .from('recurrences')
     .update(patch as never)

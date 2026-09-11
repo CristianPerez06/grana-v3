@@ -33,7 +33,7 @@ una pregunta en el formulario. El detalle está en `proposal.md`; acá va el tra
       produzca una ocurrencia más en el hueco: el `8 de octubre` que reaparecería si la versión nueva
       simplemente empezara el `10 de octubre`.
       El comportamiento para un cambio **solo de frecuencia** no cambia.
-- [ ] 1b.2b **RPC**: la vigencia y el patch de la regla viajan en **una sola transacción**. Un `update`
+- [x] 1b.2b **RPC**: la vigencia y el patch de la regla viajan en **una sola transacción**. Un `update`
       suelto de `start_date` ya no es un camino válido, y la base es la que lo garantiza — no la
       buena voluntad del cliente. Con su `revoke` a `anon` y su `grant` a `authenticated`, como enseñó
       `0067`.
@@ -48,10 +48,10 @@ una pregunta en el formulario. El detalle está en `proposal.md`; acá va el tra
       vencimiento que la base decidió que no existe. Es una brecha **preexistente** —el generador y las
       pantallas derivan el calendario de fuentes distintas— que este change cierra porque el hueco la
       vuelve visible.
-- [ ] 1b.4 La mutación acepta la fecha elegida y la **valida contra el cronograma nuevo**: SHALL ser una
+- [x] 1b.4 La mutación acepta la fecha elegida y la **valida contra el cronograma nuevo**: SHALL ser una
       ocurrencia real de ese cronograma y no anterior a hoy. Una fecha cualquiera abriría una vigencia
       que el calendario nunca produce.
-- [ ] 1b.5 El formulario pregunta **"¿Cuál querés que sea el primer vencimiento con la nueva referencia?"**
+- [x] 1b.5 El formulario pregunta **"¿Cuál querés que sea el primer vencimiento con la nueva referencia?"**
       con las dos primeras fechas del cronograma nuevo, en web y en nativo. Sin la palabra "mes" ni
       "período": una regla cada N días no tiene ninguno.
 
@@ -116,6 +116,26 @@ una pregunta en el formulario. El detalle está en `proposal.md`; acá va el tra
       sección va **fuera del bloque compartido**: ese bloque describe la expansión y el validador de
       transición lo corre en una ventana donde `0068` todavía no existe. Y se **ejecuta** en un test,
       porque un validador que nadie corre se desalinea — el de 8.1J estuvo mal dos veces.
+
+## 1d. Lo último que pidió la revisión
+
+- [x] 1d.1 **Sin fallback a "la versión más nueva".** Si ninguna versión describe el cronograma que la
+      regla tiene hoy, la migración **aborta nombrando la regla**: ese estado es deriva —las dos
+      mitades del modelo no coinciden— y elegir otra versión lo escondería congelando un piso falso
+      en una columna que toda lectura cree.
+- [x] 1d.2 **Una regla pausada no se pregunta.** Sus dos candidatas caerían dentro de la pausa, y
+      llamar "primer vencimiento" a cualquiera de las dos sería una promesa que el calendario no va a
+      cumplir. El cronograma corregido rige desde hoy, la pausa se mantiene, y el formulario dice
+      "Usaremos esta referencia cuando reanudes la regla". La base lo hace cumplir: a una regla
+      pausada le rechaza una fecha elegida, y a una activa le exige una.
+- [x] 1d.3 **Las candidatas respetan `end_date` y `max_occurrences`.** Una fecha que la aritmética
+      produce pero el fin o el tope excluyen no es un vencimiento posible, y ofrecerla sería poner
+      delante del usuario una promesa que el calendario rechaza.
+- [x] 1d.4 **El cliente dibuja, el servidor decide — y no pueden divergir.** Las candidatas se calculan
+      en TypeScript para la pregunta y en SQL para la validación, así que hay una prueba que enfrenta
+      las dos implementaciones sobre catorce cronogramas: fin de mes, febrero, un año bisiesto, cada N
+      días, topes y fechas de fin. Si divergen, el formulario ofrecería una fecha que el servidor
+      rechaza y corregir la referencia sería imposible justo en esos casos.
 
 ## 3. Cierre
 

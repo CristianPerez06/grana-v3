@@ -24,6 +24,12 @@ vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) =>
     namespace ? `${namespace}.${key}` : key,
 }))
+// Fixed, because the candidates are computed from it: a suite that walked the
+// real calendar would assert different dates every day it runs.
+vi.mock('@grana/money-logic', async () => {
+  const actual = await vi.importActual<typeof import('@grana/money-logic')>('@grana/money-logic')
+  return { ...actual, getTodayAR: () => new Date('2026-09-10T12:00:00Z') }
+})
 // The drawer is a portal with focus traps; the fields are the subject.
 vi.mock('@/components/ui/drawer', () => ({
   Drawer: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
@@ -58,9 +64,15 @@ const rule = {
   id: 'r1',
   amount: 100000,
   frequency: 'monthly',
+  status: 'active',
+  interval_count: 1,
+  interval_unit: 'month',
+  max_occurrences: null,
   start_date: '2026-06-08',
   end_date: null,
   description: null,
+  // The drawer counts them to know how much of the cap is left.
+  instances: [{ id: 'i1' }, { id: 'i2' }, { id: 'i3' }],
 } as unknown as Parameters<typeof RecurrenceEditDrawer>[0]['rule']
 
 const renderDrawer = () =>
@@ -120,5 +132,69 @@ describe('the reference date field', () => {
       )
     })
     expect(updateRecurrence.mock.calls[0][1]).toMatchObject({ start_date: '2026-06-08' })
+  })
+})
+
+describe('the question the calendar cannot answer', () => {
+  const moveAnchorTo = async (value: string) => {
+    const field = screen.getByTestId('start_date') as HTMLInputElement
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value',
+      )!.set!
+      setter.call(field, value)
+      field.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+  }
+
+  it('is not asked while the anchor has not moved', () => {
+    renderDrawer()
+    expect(screen.queryByText('recurrences.reference_date_question')).toBeNull()
+  })
+
+  it('offers the two next occurrences once it moves', async () => {
+    renderDrawer()
+    await moveAnchorTo('2026-06-10')
+    expect(screen.getByText('recurrences.reference_date_question')).toBeTruthy()
+    const options = screen
+      .getAllByRole('radio')
+      .map((input) => (input as HTMLInputElement).value)
+    expect(options).toEqual(['2026-09-10', '2026-10-10'])
+  })
+
+  it('sends the one the user picked', async () => {
+    const { container } = renderDrawer()
+    await moveAnchorTo('2026-06-10')
+    await act(async () => {
+      const later = screen
+        .getAllByRole('radio')
+        .find((input) => (input as HTMLInputElement).value === '2026-10-10')!
+      ;(later as HTMLInputElement).click()
+    })
+    await act(async () => {
+      container.querySelector('form')!.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      )
+    })
+    expect(updateRecurrence.mock.calls[0][1]).toMatchObject({
+      start_date: '2026-06-10',
+      schedule_effective_from: '2026-10-10',
+    })
+  })
+
+  it('defaults to the first when the user does not choose', async () => {
+    // Not an empty payload: the database refuses an anchor that moves without an
+    // effective date, so the form always carries one.
+    const { container } = renderDrawer()
+    await moveAnchorTo('2026-06-10')
+    await act(async () => {
+      container.querySelector('form')!.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      )
+    })
+    expect(updateRecurrence.mock.calls[0][1]).toMatchObject({
+      schedule_effective_from: '2026-09-10',
+    })
   })
 })

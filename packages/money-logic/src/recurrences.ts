@@ -731,6 +731,56 @@ export function getNextExpectedOccurrence(
   return null
 }
 
+/**
+ * The dates a user is offered when correcting a rule's reference date.
+ *
+ * The first occurrence of the corrected schedule that falls on or after `from`,
+ * and the one after it. Two, because the ambiguity has exactly two answers: the
+ * cycle in flight, or the next one. Fewer when the calendar has fewer to give —
+ * a rule past its `end_date` or with its cap spent has no next occurrence at
+ * all, and offering a date it will never produce is a promise the calendar does
+ * not keep.
+ *
+ * This DRAWS the question; it does not settle it. The database recomputes the
+ * same two dates and refuses anything else, because a date that arrives
+ * unverified opens a schedule version on a day off the calendar and every
+ * occurrence after it lands on the wrong phase. `candidate-dates-parity` pins
+ * the two implementations against each other.
+ */
+export function candidateEffectiveDates(
+  schedule: {
+    anchor_date: string
+    interval_count: number
+    interval_unit: IntervalUnit
+    end_date?: string | null
+    /** Occurrences the cap still allows, or null when there is no cap. */
+    remaining?: number | null
+  },
+  from: string,
+): string[] {
+  const remaining = schedule.remaining
+  if (remaining != null && remaining <= 0) return []
+
+  const walk = walkOccurrences(
+    {
+      start_date: schedule.anchor_date,
+      end_date: schedule.end_date ?? null,
+      interval_count: schedule.interval_count,
+      interval_unit: schedule.interval_unit,
+      max_occurrences: null,
+    },
+    { from },
+  )
+
+  const wanted = remaining == null ? 2 : Math.min(2, remaining)
+  const out: string[] = []
+  for (const date of walk) {
+    out.push(date)
+    if (out.length === wanted) break
+  }
+  return out
+}
+
 // Flatten every rule's in-window occurrences into a single date-sorted list.
 export function projectUpcomingOccurrences(
   rules: RuleForProjection[],

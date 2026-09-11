@@ -254,6 +254,100 @@ describe('the deployment window', () => {
   })
 })
 
+describe('the edges where there is nothing to choose between', () => {
+  it('a paused rule takes no chosen date, and stays paused', async () => {
+    // Both candidates would fall inside the pause: offering them as "the first
+    // occurrence" is a promise the calendar will not keep. The corrected schedule
+    // rules from today and waits.
+    const rule = await seedRule()
+    await actAsAdmin(db)
+    await db.exec(`update public.recurrences set status = 'paused' where id = '${rule}'`)
+    await actAs(db, U_A)
+
+    const now = await today()
+    await db.exec(`
+      select public.update_recurrence_schedule('${rule}'::uuid,
+        jsonb_build_object('start_date', '2026-06-10'), null);
+    `)
+
+    expect(await floorOf(rule)).toBe(now)
+    await actAsAdmin(db)
+    const { rows } = await db.query<{ status: string }>(
+      `select status from public.recurrences where id = '${rule}'`,
+    )
+    await actAs(db, U_A)
+    expect(rows[0].status).toBe('paused')
+  })
+
+  it('refuses a chosen date for a paused rule', async () => {
+    const rule = await seedRule()
+    await actAsAdmin(db)
+    await db.exec(`update public.recurrences set status = 'paused' where id = '${rule}'`)
+    await actAs(db, U_A)
+    const [immediate] = await candidatesFor('2026-06-10')
+    const state = await sqlstateOf(
+      db,
+      `select public.update_recurrence_schedule('${rule}'::uuid,
+         jsonb_build_object('start_date', '2026-06-10'), '${immediate}'::date)`,
+    )
+    expect(state).toBe('23514')
+  })
+
+  it('offers nothing when the cap is already spent', async () => {
+    // `max_occurrences` reached: the rule has no next occurrence, so there is no
+    // date that could be "the first with the new reference".
+    const rule = await seedRule()
+    await actAsAdmin(db)
+    await db.exec(`update public.recurrences set max_occurrences = 1 where id = '${rule}'`)
+    await db.exec(`
+      insert into public.recurrence_instances
+        (id, recurrence_id, user_id, scheduled_date, due_date, status)
+      values ('00000000-0000-4000-8000-00000000d101', '${rule}', '${U_A}',
+              '2026-06-08', '2026-06-08', 'pending');
+    `)
+    await actAs(db, U_A)
+
+    const [immediate] = await candidatesFor('2026-06-10')
+    const state = await sqlstateOf(
+      db,
+      `select public.update_recurrence_schedule('${rule}'::uuid,
+         jsonb_build_object('start_date', '2026-06-10'), '${immediate}'::date)`,
+    )
+    expect(state).toBe('23514')
+  })
+
+  it('offers nothing past end_date', async () => {
+    const { rows } = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.recurrence_candidate_effective_dates(
+         '2026-06-10'::date, 1, 'month',
+         ((now() at time zone 'America/Argentina/Buenos_Aires')::date),
+         '2020-01-01'::date, null)`,
+    )
+    expect(rows[0].n).toBe(0)
+  })
+})
+
+describe('a database whose model drifted', () => {
+  it('aborts the migration naming the rule instead of guessing a floor', async () => {
+    // No version describes the schedule the rule has: the two halves of the model
+    // disagree. Picking the newest version would freeze a false floor into a
+    // column every read trusts.
+    const drifted = await createRecurrenceIdentityDb()
+    try {
+      await drifted.exec(`
+        insert into public.recurrences (id, user_id, start_date, interval_count, interval_unit, status)
+        values ('00000000-0000-4000-8000-00000000e901', '${U_A}', '2026-06-08', 1, 'month', 'active');
+        update public.recurrence_schedule_versions
+           set anchor_date = '2020-01-01'
+         where recurrence_id = '00000000-0000-4000-8000-00000000e901';
+      `)
+      await expect(applyEffectiveUntil(drifted)).rejects.toThrow(/the model drifted/)
+    } finally {
+      await drifted.close()
+    }
+  })
+})
+
 /**
  * The section of `validate_schema.sql` that pins this migration, LIFTED AND RUN.
  * A validator nobody executes is a validator that drifts: 8.1J's check was wrong

@@ -196,4 +196,14 @@ describe('correcting the reference date exists on both platforms', () => {
   it.each([WEB_EDIT, NATIVE_EDIT])('%s explains what happens to what already exists', (file) => {
     expect(read(file)).toContain('reference_date_hint')
   })
+
+  // The ambiguity the calendar cannot resolve: both forms ask it, both use the
+  // SHARED decision, and neither hands the answer over without it.
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s asks which occurrence comes first', (file) => {
+    const source = read(file)
+    expect(source).toContain('referenceDateChoice')
+    expect(source).toContain('reference_date_question')
+    expect(source).toContain('reference_date_paused')
+    expect(source).toMatch(/schedule_effective_from:/)
+  })
 })

@@ -85,22 +85,32 @@ comment on column public.recurrences.schedule_effective_from is
 -- Correlated subqueries rather than a lateral join: in an UPDATE the FROM list
 -- cannot reference the target row, and the choice depends on it.
 update public.recurrences r
-   set schedule_effective_from = coalesce(
-     (select v.effective_from
-        from public.recurrence_schedule_versions v
-       where v.recurrence_id = r.id
-         and v.interval_count = r.interval_count
-         and v.interval_unit  = r.interval_unit
-         and v.anchor_date    = r.start_date
-       order by v.effective_from desc
-       limit 1),
-     (select v.effective_from
-        from public.recurrence_schedule_versions v
-       where v.recurrence_id = r.id
-       order by v.effective_from desc
-       limit 1),
-     r.start_date
+   set schedule_effective_from = (
+     select v.effective_from
+       from public.recurrence_schedule_versions v
+      where v.recurrence_id = r.id
+        and v.interval_count = r.interval_count
+        and v.interval_unit  = r.interval_unit
+        and v.anchor_date    = r.start_date
+      order by v.effective_from desc
+      limit 1
    );
+
+-- NO FALLBACK. A rule with no version describing the schedule it currently has
+-- is DRIFT: the two halves of the model disagree about what the rule does.
+-- Picking the newest version instead would hide that and freeze a false floor
+-- into a column every read trusts. Better to stop here, with the rule named, and
+-- look at it.
+DO $floor$
+declare
+  v_orphan uuid;
+begin
+  for v_orphan in
+    select id from public.recurrences where schedule_effective_from is null order by id
+  loop
+    raise exception '0068 aborted: recurrence % has no schedule version matching its current schedule — the model drifted and the floor cannot be derived', v_orphan;
+  end loop;
+end $floor$;
 
 commit;
 
@@ -275,7 +285,9 @@ create or replace function public.recurrence_candidate_effective_dates(
   p_anchor         date,
   p_interval_count int,
   p_interval_unit  text,
-  p_from           date
+  p_from           date,
+  p_end_date       date default null,
+  p_remaining      int  default null
 )
 returns table (effective_from date)
 language plpgsql
@@ -310,13 +322,21 @@ begin
     end - 1
   );
 
+  -- A rule that has already spent its cap has no next occurrence at all, and a
+  -- date past `end_date` is not one either. Offering them would put a promise in
+  -- front of the user that the calendar refuses to keep.
+  if p_remaining is not null and p_remaining <= 0 then
+    return;
+  end if;
+
   return query
     select d
       from generate_series(v_skip, v_skip + 40) as n,
            lateral (select (p_anchor + (v_step * n))::date as d) x
      where d >= p_from
+       and (p_end_date is null or d <= p_end_date)
      order by d
-     limit 2;
+     limit least(2, coalesce(p_remaining, 2));
 end $$;
 
 -- ── 6 · The only way to move an anchor ─────────────────────────────────────
@@ -336,7 +356,7 @@ end $$;
 create or replace function public.update_recurrence_schedule(
   p_id                      uuid,
   p_patch                   jsonb,
-  p_schedule_effective_from date
+  p_schedule_effective_from date default null
 )
 returns void
 language plpgsql
@@ -346,8 +366,10 @@ as $$
 declare
   v_rule    public.recurrences%rowtype;
   v_next    public.recurrences%rowtype;
-  v_today   date := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
-  v_ok      boolean;
+  v_today     date := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
+  v_effective date;
+  v_remaining int;
+  v_ok        boolean;
 begin
   -- Locked for the whole decision: the candidates are computed from the rule's
   -- own schedule, and a concurrent edit between reading it and writing would
@@ -360,18 +382,45 @@ begin
   -- The patch, merged over the current row, is what the new schedule WILL be.
   v_next := jsonb_populate_record(v_rule, p_patch);
 
-  select exists (
-    select 1 from public.recurrence_candidate_effective_dates(
-      v_next.start_date, v_next.interval_count, v_next.interval_unit, v_today
-    ) c where c.effective_from = p_schedule_effective_from
-  ) into v_ok;
+  if v_rule.status = 'paused' then
+    -- A PAUSED RULE HAS NO NEXT OCCURRENCE to choose between: both candidates
+    -- would fall inside the pause, and offering them as "the first one" would be
+    -- a promise the calendar is not going to keep. The corrected schedule simply
+    -- starts ruling now and waits — what the user is told is that it will be used
+    -- when they resume.
+    if p_schedule_effective_from is not null then
+      raise exception 'a paused rule takes no chosen effective date: its schedule rules from today and waits for the rule to resume'
+        using errcode = 'check_violation';
+    end if;
+    v_effective := greatest(v_today, v_next.start_date);
+  else
+    if p_schedule_effective_from is null then
+      raise exception 'moving the anchor of an active rule needs the effective date the user chose'
+        using errcode = 'check_violation';
+    end if;
 
-  if not v_ok then
-    raise exception 'the effective date % is not one of the next two occurrences of that schedule', p_schedule_effective_from
-      using errcode = 'check_violation';
+    -- How much of the cap is left. A rule that already spent it has no next
+    -- occurrence, so it has nothing to offer and nothing to validate against.
+    select case when v_next.max_occurrences is null then null
+                else v_next.max_occurrences - count(*)::int end
+      into v_remaining
+      from public.recurrence_instances where recurrence_id = p_id;
+
+    select exists (
+      select 1 from public.recurrence_candidate_effective_dates(
+        v_next.start_date, v_next.interval_count, v_next.interval_unit, v_today,
+        v_next.end_date, v_remaining
+      ) c where c.effective_from = p_schedule_effective_from
+    ) into v_ok;
+
+    if not v_ok then
+      raise exception 'the effective date % is not one of the next occurrences of that schedule', p_schedule_effective_from
+        using errcode = 'check_violation';
+    end if;
+    v_effective := p_schedule_effective_from;
   end if;
 
-  perform set_config('grana.schedule_effective_from', p_schedule_effective_from::text, true);
+  perform set_config('grana.schedule_effective_from', v_effective::text, true);
 
   update public.recurrences r
      set (amount, frequency, interval_count, interval_unit, start_date, end_date,
@@ -394,9 +443,9 @@ revoke execute on function public.update_recurrence_schedule(uuid, jsonb, date) 
 revoke execute on function public.update_recurrence_schedule(uuid, jsonb, date) from anon;
 grant  execute on function public.update_recurrence_schedule(uuid, jsonb, date) to authenticated;
 
-revoke execute on function public.recurrence_candidate_effective_dates(date, int, text, date) from public;
-revoke execute on function public.recurrence_candidate_effective_dates(date, int, text, date) from anon;
-grant  execute on function public.recurrence_candidate_effective_dates(date, int, text, date) to authenticated;
+revoke execute on function public.recurrence_candidate_effective_dates(date, int, text, date, date, int) from public;
+revoke execute on function public.recurrence_candidate_effective_dates(date, int, text, date, date, int) from anon;
+grant  execute on function public.recurrence_candidate_effective_dates(date, int, text, date, date, int) to authenticated;
 
 -- ── Self-check ─────────────────────────────────────────────────────────────
 DO $check$
@@ -422,7 +471,7 @@ begin
   end if;
 
   if has_function_privilege('anon', 'public.update_recurrence_schedule(uuid, jsonb, date)', 'EXECUTE')
-     or has_function_privilege('anon', 'public.recurrence_candidate_effective_dates(date, int, text, date)', 'EXECUTE') then
+     or has_function_privilege('anon', 'public.recurrence_candidate_effective_dates(date, int, text, date, date, int)', 'EXECUTE') then
     raise exception '0068 failed: anon can execute one of the new functions';
   end if;
 

@@ -258,6 +258,15 @@ export const updateRecurrenceSchema = yup
       .oneOf(RECURRENCE_FREQUENCIES),
     ...recurrenceIntervalFields,
     start_date: yup.string().label('start_date').optional(),
+    // The date the user picked as the first occurrence of the corrected
+    // schedule. `null` is the paused rule's answer — no date to pick, the
+    // schedule rules from today and waits — and it is not the same as absent,
+    // which means the anchor is not moving at all.
+    schedule_effective_from: yup
+      .string()
+      .label('schedule_effective_from')
+      .nullable()
+      .optional(),
     end_date: yup.string().label('end_date').nullable().optional(),
   })
   .strict()

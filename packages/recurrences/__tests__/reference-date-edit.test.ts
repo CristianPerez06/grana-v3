@@ -3,6 +3,7 @@ import type { PGlite } from '@electric-sql/pglite'
 import {
   actAs,
   actAsAdmin,
+  applyEffectiveUntil,
   createRecurrenceIdentityDb,
   U_A,
 } from './support/recurrence-identity-db'
@@ -23,6 +24,7 @@ let db: PGlite
 
 beforeAll(async () => {
   db = await createRecurrenceIdentityDb()
+  await applyEffectiveUntil(db)
   await actAs(db, U_A)
 })
 
@@ -43,6 +45,25 @@ const anchoredOnThe8th = async (status: 'active' | 'paused' = 'active'): Promise
   return id
 }
 
+/**
+ * Moving the anchor, the only way there is: the RPC carries the patch and the
+ * date the user chose in one transaction, and the database refuses a bare update.
+ * The chosen date comes from the same function the RPC validates against, so the
+ * test does not depend on what day of the month it runs.
+ */
+const moveAnchor = async (ruleId: string, anchor: string, which: 0 | 1 = 0) => {
+  const { rows } = await db.query<{ effective_from: string }>(
+    `select effective_from::text from public.recurrence_candidate_effective_dates(
+       '${anchor}'::date, 1, 'month',
+       ((now() at time zone 'America/Argentina/Buenos_Aires')::date))`,
+  )
+  await db.exec(`
+    select public.update_recurrence_schedule('${ruleId}'::uuid,
+      jsonb_build_object('start_date', '${anchor}'), '${rows[which].effective_from}'::date);
+  `)
+  return rows[which].effective_from
+}
+
 const versionsOf = async (ruleId: string) => {
   await actAsAdmin(db)
   const { rows } = await db.query<{ effective_from: string; anchor_date: string }>(
@@ -55,15 +76,24 @@ const versionsOf = async (ruleId: string) => {
   return rows
 }
 
+/**
+ * Today IN ARGENTINA, which is the only "today" this module has. Asking Postgres
+ * for `current_date` returns the container's UTC day, and between 21:00 and
+ * midnight in Buenos Aires those are two different dates — a suite that passed
+ * all afternoon starts failing at nine at night, for three hours, with an
+ * assertion that looks correct.
+ */
 const today = async (): Promise<string> => {
-  const { rows } = await db.query<{ d: string }>(`select current_date::text as d`)
+  const { rows } = await db.query<{ d: string }>(
+    `select ((now() at time zone 'America/Argentina/Buenos_Aires')::date)::text as d`,
+  )
   return rows[0].d
 }
 
 describe('moving the anchor rules from the change forward', () => {
   it('opens a version effective today, anchored on the new date', async () => {
     const rule = await anchoredOnThe8th()
-    await db.exec(`update public.recurrences set start_date = '2026-06-10' where id = '${rule}'`)
+    await moveAnchor(rule, '2026-06-10')
 
     const versions = await versionsOf(rule)
     const newest = versions[versions.length - 1]
@@ -78,7 +108,7 @@ describe('moving the anchor rules from the change forward', () => {
     // owed on the 8th, and stays owed on the 8th. Dropping the old version would
     // reinterpret months that already happened.
     const rule = await anchoredOnThe8th()
-    await db.exec(`update public.recurrences set start_date = '2026-06-10' where id = '${rule}'`)
+    await moveAnchor(rule, '2026-06-10')
 
     const versions = await versionsOf(rule)
     expect(versions.length).toBeGreaterThan(1)
@@ -97,7 +127,7 @@ describe('moving the anchor rules from the change forward', () => {
     )
     await actAs(db, U_A)
 
-    await db.exec(`update public.recurrences set start_date = '2026-06-10' where id = '${rule}'`)
+    await moveAnchor(rule, '2026-06-10')
 
     await actAsAdmin(db)
     const after = await db.query<{ floor: string }>(
@@ -124,7 +154,7 @@ describe('what the correction must not touch', () => {
     `)
     await actAs(db, U_A)
 
-    await db.exec(`update public.recurrences set start_date = '2026-06-10' where id = '${rule}'`)
+    await moveAnchor(rule, '2026-06-10')
 
     await actAsAdmin(db)
     const { rows } = await db.query<{ due_date: string; status: string }>(
@@ -139,7 +169,11 @@ describe('what the correction must not touch', () => {
     // A pause stops occurrences from being generated inside its interval; it does
     // not freeze the calendar that will rule when the rule resumes.
     const rule = await anchoredOnThe8th('paused')
-    await db.exec(`update public.recurrences set start_date = '2026-06-10' where id = '${rule}'`)
+    // A paused rule takes no chosen date: its schedule rules from today and waits.
+    await db.exec(`
+      select public.update_recurrence_schedule('${rule}'::uuid,
+        jsonb_build_object('start_date', '2026-06-10'), null);
+    `)
 
     await actAsAdmin(db)
     const { rows } = await db.query<{ status: string; start_date: string }>(

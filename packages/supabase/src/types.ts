@@ -1353,6 +1353,25 @@ export type Database = {
         Args: { p_account_id: string; p_date: string; p_settlement_id: string }
         Returns: undefined
       }
+      recurrence_candidate_effective_dates: {
+        Args: {
+          p_anchor: string
+          p_interval_count: number
+          p_interval_unit: string
+          p_from: string
+          p_end_date?: string | null
+          p_remaining?: number | null
+        }
+        Returns: { effective_from: string }[]
+      }
+      update_recurrence_schedule: {
+        Args: {
+          p_id: string
+          p_patch: Json
+          p_schedule_effective_from?: string | null
+        }
+        Returns: undefined
+      }
       delete_movement_unlinking_seed: {
         Args: { p_transaction_id: string }
         Returns: undefined

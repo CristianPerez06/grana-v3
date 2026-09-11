@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { updateRecurrence } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
+import { referenceDateChoice } from '@grana/recurrences'
+import { formatDateISO, getTodayAR } from '@grana/money-logic'
+import type { IntervalUnit } from '@grana/money-logic'
+import { formatShortDate } from '@/lib/date'
 import { Drawer } from '@/components/ui/drawer'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
@@ -40,8 +44,25 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
   // movement's date, and that date can be off — a salary that landed on the 8th
   // because the 10th was a holiday anchors the rule to the 8th forever.
   const [startDate, setStartDate] = useState(rule.start_date)
+  const [effectiveFrom, setEffectiveFrom] = useState<string | null>(null)
   const [endDate, setEndDate] = useState(rule.end_date ?? '')
   const [description, setDescription] = useState(rule.description ?? '')
+
+  const anchorMoved = startDate !== rule.start_date
+  const choice = referenceDateChoice(
+    {
+      status: rule.status,
+      interval_count: rule.interval_count,
+      // The row carries it as text; the calendar is the one that narrows it, and
+      // the database CHECK is what guarantees the four values.
+      interval_unit: rule.interval_unit as IntervalUnit,
+      end_date: endDate || null,
+      max_occurrences: rule.max_occurrences,
+      occurrenceCount: rule.instances.length,
+    },
+    startDate,
+    formatDateISO(getTodayAR()),
+  )
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,6 +79,10 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
         amount: parsedAmount,
         frequency,
         start_date: startDate,
+        // Only meaningful when the anchor moves; the mutation ignores it
+        // otherwise. `null` is the paused rule's answer — from today, waiting —
+        // and the database refuses a date there.
+        schedule_effective_from: choice.kind === 'ask' ? (effectiveFrom ?? choice.options[0]) : null,
         end_date: endDate || null,
         description: description || null,
       })
@@ -141,6 +166,38 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
               what to do with it: confirming or skipping it is the user's call. */}
           <p className="text-[12px] text-text-soft">{t('reference_date_hint')}</p>
         </div>
+
+        {/* THE AMBIGUITY IS THE USER'S TO RESOLVE, and only when the anchor
+            actually moves. The cycle in flight may already be settled — in which
+            case the corrected schedule has to rule from the NEXT one, or the
+            month gets a second salary — or it may not be, and then it rules now.
+            From the data both look the same. Two concrete dates, never the word
+            "month": a rule every three days has none. */}
+        {anchorMoved && choice.kind === 'ask' && (
+          <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-soft px-4 py-3">
+            <p className="text-[13px] font-semibold text-text">{t('reference_date_question')}</p>
+            <div className="flex flex-col gap-1.5">
+              {choice.options.map((option) => (
+                <label key={option} className="flex items-center gap-2 text-[13px] text-text">
+                  <input
+                    type="radio"
+                    name="schedule_effective_from"
+                    value={option}
+                    checked={(effectiveFrom ?? choice.options[0]) === option}
+                    onChange={() => setEffectiveFrom(option)}
+                  />
+                  {formatShortDate(option)}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+        {anchorMoved && choice.kind === 'paused' && (
+          <p className="text-[12px] text-text-soft">{t('reference_date_paused')}</p>
+        )}
+        {anchorMoved && choice.kind === 'exhausted' && (
+          <p className="text-[12px] text-text-soft">{t('reference_date_exhausted')}</p>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="end_date" className={labelClass}>

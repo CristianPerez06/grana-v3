@@ -1818,7 +1818,10 @@
       "refresh_failed_title": "This list may be out of date",
       "refresh_failed_body": "We couldn't refresh it. You're seeing the last version we read."
     },
-    "reference_date_hint": "We use this date to work out the next occurrences. The ones that already exist keep their own."
+    "reference_date_hint": "We use this date to work out the next occurrences. The ones that already exist keep their own.",
+    "reference_date_question": "Which one should be the first occurrence with the new reference?",
+    "reference_date_paused": "We will use this reference when you resume the rule.",
+    "reference_date_exhausted": "This rule has no occurrences left, so the reference is only stored."
   },
   "subcategories": {
     "supermercado": "Supermarket",

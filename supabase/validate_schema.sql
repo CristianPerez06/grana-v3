@@ -907,11 +907,11 @@ begin
   if to_regprocedure('public.update_recurrence_schedule(uuid, jsonb, date)') is null then
     raise exception 'update_recurrence_schedule is missing: an anchor could be moved without saying from when, which is what duplicated a salary in QA';
   end if;
-  if to_regprocedure('public.recurrence_candidate_effective_dates(date, int, text, date)') is null then
+  if to_regprocedure('public.recurrence_candidate_effective_dates(date, int, text, date, date, int)') is null then
     raise exception 'recurrence_candidate_effective_dates is missing: the server cannot recompute the dates it validates against';
   end if;
   if has_function_privilege('anon', 'public.update_recurrence_schedule(uuid, jsonb, date)', 'EXECUTE')
-     or has_function_privilege('anon', 'public.recurrence_candidate_effective_dates(date, int, text, date)', 'EXECUTE') then
+     or has_function_privilege('anon', 'public.recurrence_candidate_effective_dates(date, int, text, date, date, int)', 'EXECUTE') then
     raise exception 'COBERTURA RLS: anon conserva EXECUTE sobre las funciones de 0068';
   end if;
   if not has_function_privilege('authenticated', 'public.update_recurrence_schedule(uuid, jsonb, date)', 'EXECUTE') then
