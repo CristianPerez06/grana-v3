@@ -158,9 +158,17 @@ mismo dato incorrecto.
 - [ ] 2c.4 **La migración está partida en tres transacciones.** Si falla la segunda o la tercera, la
       primera ya quedó aplicada, y existe una ventana donde la columna está instalada sin sus
       triggers. Tiene que ser una sola.
-- [ ] 2c.5 **`max_occurrences` se cuenta por filas**, y la semántica que cerró el #96 es por posiciones
+- [x] 2c.5 **`max_occurrences` se cuenta por filas**, y la semántica que cerró el #96 es por posiciones
       del calendario: una ocurrencia semilla no tiene fila, y una posición gastada puede no tenerla.
       Está mal en los dos lados —cliente y SQL— y por eso la paridad no lo detecta.
+  - [x] El recorrido compuesto del generador se extrae a `forEachComposedOccurrence` y se expone como
+        `occurrencePositionsSpent`: una sola implementación en TS, no una segunda que contaría otra cosa.
+  - [x] `recurrence_positions_spent(uuid, date)` en SQL, que es la que usan **producción** y el RPC: el
+        formulario le pregunta a la base en vez de contar `instances.length`, así que la oferta y la
+        validación salen del mismo número y no pueden rechazarse entre sí.
+  - [x] Paridad TS↔SQL sobre doce historias —dos versiones, un hueco, pausas abierta y cerrada, tope,
+        `end_date`, cada N días, fin de mes, semanal, anual— con el valor esperado **calculado a mano**
+        y no copiado de una corrida: coincidir no alcanza, que es justamente cómo pasó este bug.
 - [ ] 2c.6 **Cambiar frecuencia y referencia juntas falla.** Los dos formularios calculan las opciones
       con `rule.interval_count/unit` —lo guardado— mientras el servidor valida contra la frecuencia
       nueva del patch, así que rechaza la fecha que el formulario ofreció.

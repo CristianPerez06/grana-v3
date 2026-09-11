@@ -1,7 +1,12 @@
 import type { PGlite } from '@electric-sql/pglite'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { getPendingRecurrenceInstances, getRecurrenceDetail } from '../src/queries'
-import { applyMigration, createRecurrenceIdentityDb, U_A } from './support/recurrence-identity-db'
+import {
+  applyEffectiveUntil,
+  applyMigration,
+  createRecurrenceIdentityDb,
+  U_A,
+} from './support/recurrence-identity-db'
 import { pglitePostgrest } from './support/pglite-postgrest'
 
 /**
@@ -152,6 +157,11 @@ describe('getRecurrenceDetail — the history list', () => {
       `)
       await applyMigration(legacyDb)
       await legacyDb.exec('drop index recurrence_instances_one_pending_per_rule;')
+      // 0068 too, because the detail read asks the database how much of the cap
+      // is spent. That is a HARD dependency, not a graceful one on purpose: the
+      // fallback would be counting rows, which is the number this release exists
+      // to stop trusting. So the migration goes in before the deploy.
+      await applyEffectiveUntil(legacyDb)
 
       const legacy = await legacyDb.query<{ due_date: string | null }>(
         'select due_date from public.recurrence_instances',

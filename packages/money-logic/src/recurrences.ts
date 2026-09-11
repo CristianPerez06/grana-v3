@@ -368,21 +368,33 @@ function subtractPauses(
   return out
 }
 
-export function owedOccurrencesForRule({
-  versions,
-  pauses,
-  endDate,
-  maxOccurrences,
-  reconstructFrom,
-  horizon,
-  today,
-  existing,
-}: OwedOccurrencesForRuleInput): string[] {
-  if (versions.length === 0) return []
+/**
+ * THE COMPOSED WALK, once.
+ *
+ * Two questions run over the same timeline: which occurrences a rule still owes,
+ * and how many positions of its calendar it has already spent. They must not be
+ * answered by two loops — `max_occurrences` counts POSITIONS, so a second
+ * implementation that counted anything else (materialized rows, say) would let
+ * the cap mean one thing to the generator and another to the form offering
+ * dates. So the walk lives here and both callers pass through it.
+ *
+ * `visit` sees every date the rule produces, in order, already counted. Returns
+ * how many positions were spent in total.
+ */
+function forEachComposedOccurrence(
+  {
+    versions,
+    pauses,
+    endDate,
+    maxOccurrences,
+    horizon,
+    today,
+  }: Omit<OwedOccurrencesForRuleInput, 'reconstructFrom' | 'existing'>,
+  visit: (date: string) => void,
+): number {
+  if (versions.length === 0) return 0
 
   const ordered = [...versions].sort((a, b) => a.effective_from.localeCompare(b.effective_from))
-  const already = new Set(existing)
-  const owed: string[] = []
 
   // How many occurrences the rule has produced SO FAR along its composed
   // timeline. `max_occurrences` counts positions on the rule's calendar from its
@@ -453,18 +465,65 @@ export function owedOccurrencesForRule({
         limit: remaining,
       })) {
         produced += 1
-        // The three reasons a date the rule produced is not owed. They are
-        // applied AFTER counting, because a date that exists — or that predates
-        // the floor or the horizon — still occupies its position on the calendar.
-        if (date <= reconstructFrom) continue
-        if (date < horizon) continue
-        if (already.has(date)) continue
-        owed.push(date)
+        visit(date)
       }
     }
   }
 
+  return produced
+}
+
+export function owedOccurrencesForRule({
+  reconstructFrom,
+  horizon,
+  existing,
+  ...walk
+}: OwedOccurrencesForRuleInput): string[] {
+  const already = new Set(existing)
+  const owed: string[] = []
+
+  forEachComposedOccurrence({ ...walk, horizon }, (date) => {
+    // The three reasons a date the rule produced is not owed. They are applied
+    // AFTER counting, because a date that exists — or that predates the floor or
+    // the horizon — still occupies its position on the calendar.
+    if (date <= reconstructFrom) return
+    if (date < horizon) return
+    if (already.has(date)) return
+    owed.push(date)
+  })
+
   return owed.sort()
+}
+
+/**
+ * How many positions of its calendar the rule has already spent, as of `today`.
+ *
+ * This is what `max_occurrences` counts, and the reason it cannot be answered by
+ * counting `recurrence_instances`: a rule created from a movement covers its
+ * first occurrence with that movement and has NO row for it, and a position the
+ * calendar produced while the rule was not being generated has none either.
+ * Counting rows says a 6-cuota rule has cuotas left when it does not, and offers
+ * a reference date for a rule that will never fire again.
+ *
+ * Saturates at the cap, because a walk that reaches it stops there.
+ */
+export function occurrencePositionsSpent(input: {
+  versions: ScheduleVersion[]
+  pauses: PauseInterval[]
+  endDate: string | null
+  maxOccurrences: number | null
+  today: string
+}): number {
+  return forEachComposedOccurrence(
+    {
+      ...input,
+      // Never clip the start: the horizon is the generator's "do not bother
+      // looking further back than this", and a position before it is spent all
+      // the same.
+      horizon: '0001-01-01',
+    },
+    () => {},
+  )
 }
 
 // ── Upcoming projection (pure) ───────────────────────────────────────────────

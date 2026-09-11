@@ -36,8 +36,16 @@ export function referenceDateChoice(
     interval_unit: IntervalUnit
     end_date: string | null
     max_occurrences: number | null
-    /** How many occurrences the rule already has, in any state. */
-    occurrenceCount: number
+    /**
+     * Positions of the rule's calendar already spent — what `max_occurrences`
+     * counts. NOT the number of `recurrence_instances`: a rule seeded by a
+     * movement has no row for its first occurrence, and a position the calendar
+     * produced while nothing was generating has none either. Counting rows tells
+     * a spent rule it still has occurrences and offers a reference date for one
+     * that will never fire again. The database computes it, and the RPC
+     * validates the chosen date against the very same number.
+     */
+    positionsSpent: number
   },
   newAnchor: string,
   today: string,
@@ -51,7 +59,7 @@ export function referenceDateChoice(
       interval_unit: rule.interval_unit,
       end_date: rule.end_date,
       remaining:
-        rule.max_occurrences == null ? null : rule.max_occurrences - rule.occurrenceCount,
+        rule.max_occurrences == null ? null : rule.max_occurrences - rule.positionsSpent,
     },
     today,
   )

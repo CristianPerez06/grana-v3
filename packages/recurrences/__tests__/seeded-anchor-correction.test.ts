@@ -1,6 +1,6 @@
 import type { PGlite } from '@electric-sql/pglite'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { generateDueRecurrenceInstances } from '../src/queries'
+import { generateDueRecurrenceInstances, getRecurrenceDetail } from '../src/queries'
 import { actAs, actAsAdmin, applyActivation, createRecurrenceIdentityDb, U_A } from './support/recurrence-identity-db'
 import { pglitePostgrest } from './support/pglite-postgrest'
 
@@ -207,6 +207,103 @@ describe('the link and the date it implies cannot come apart', () => {
       await db.exec(`alter table public.recurrences enable trigger trg_recurrence_reconstruct_from_guard;`)
       await actAs(db, U_A)
     }
+  })
+})
+
+describe('the cap counts positions, and rows are not positions', () => {
+  it('counts the occurrence the seed movement covers, which has no row', async () => {
+    // The case that makes the difference visible: a rule seeded by a movement
+    // has one occurrence and zero `recurrence_instances`. Counting rows says
+    // nothing is spent.
+    const seeded = await seededFromAFutureMovement()
+    await actAsAdmin(db)
+    const { rows: instances } = await db.query(
+      `select 1 from public.recurrence_instances where recurrence_id = '${seeded.ruleId}'`,
+    )
+    // The seed is dated ahead, so the calendar has not reached it yet: what is
+    // spent is everything up to today, and there is no row for any of it.
+    const { rows } = await db.query<{ n: number }>(
+      `select public.recurrence_positions_spent('${seeded.ruleId}'::uuid,
+         '${shift(seeded.seedDate, 1)}'::date) as n`,
+    )
+    await actAs(db, U_A)
+    expect(instances).toHaveLength(0)
+    expect(Number(rows[0].n)).toBe(1)
+  })
+
+  it('counts a position the calendar produced while nothing was generating', async () => {
+    // A rule whose dates came and went with no generator run. Every position is
+    // spent; not one has a row.
+    const idle = nextId('8')
+    await actAsAdmin(db)
+    await db.exec(`
+      insert into public.recurrences
+        (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code, movement_type)
+      values ('${idle}', '${U_A}', '2026-01-10', 1, 'month', 'active', 1000, 'ARS', 'expense');
+    `)
+    const { rows } = await db.query<{ n: number }>(
+      `select public.recurrence_positions_spent('${idle}'::uuid, '2026-04-15'::date) as n`,
+    )
+    await actAs(db, U_A)
+    // 10/01, 10/02, 10/03 and 10/04 — four positions, zero rows.
+    expect(Number(rows[0].n)).toBe(4)
+  })
+})
+
+describe('what the edit screen is handed, through its own read', () => {
+  it('carries the database\'s count and not the length of the history list', async () => {
+    // The form builds its offer from this number. Handed `instances.length` it
+    // believes a rule with a cap still has occurrences left — which is the whole
+    // defect, and it is invisible unless the read itself is exercised.
+    const idle = nextId('6')
+    await actAsAdmin(db)
+    await db.exec(`
+      insert into public.recurrences
+        (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code, movement_type)
+      values ('${idle}', '${U_A}', '2026-01-10', 1, 'month', 'active', 1000, 'ARS', 'expense');
+    `)
+    const { rows } = await db.query<{ n: number }>(
+      `select public.recurrence_positions_spent('${idle}'::uuid,
+         ((now() at time zone 'America/Argentina/Buenos_Aires')::date)) as n`,
+    )
+    await actAs(db, U_A)
+
+    const detail = await getRecurrenceDetail(supabase, idle)
+    expect(detail?.instances).toHaveLength(0)
+    expect(detail?.positions_spent).toBe(Number(rows[0].n))
+    // The two numbers must not be the same one: with no rows at all, a read that
+    // counted them would answer zero.
+    expect(detail?.positions_spent).toBeGreaterThan(0)
+  })
+})
+
+describe('the RPC validates against positions too', () => {
+  it('refuses a reference date for a rule whose cap the calendar already spent', async () => {
+    // Six cuotas anchored back in January and NOT ONE materialized: by rows the
+    // rule looks untouched and the server hands out reference dates for cuotas
+    // that will never exist. By positions it is finished.
+    const spent = nextId('7')
+    await actAsAdmin(db)
+    await db.exec(`
+      insert into public.recurrences
+        (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code,
+         movement_type, max_occurrences)
+      values ('${spent}', '${U_A}', '2026-01-10', 1, 'month', 'active', 1000, 'ARS', 'expense', 3);
+    `)
+    await actAs(db, U_A)
+
+    const { rows } = await db.query<{ effective_from: string }>(
+      `select effective_from::text from public.recurrence_candidate_effective_dates(
+         '2026-06-12'::date, 1, 'month', ((now() at time zone 'America/Argentina/Buenos_Aires')::date))`,
+    )
+    // A date the CALENDAR produces, so only the cap can be the reason it is
+    // refused: this fails for the right reason or not at all.
+    await expect(
+      db.exec(`
+        select public.update_recurrence_schedule('${spent}'::uuid,
+          jsonb_build_object('start_date', '2026-06-12'), '${rows[0].effective_from}'::date);
+      `),
+    ).rejects.toThrow(/is not one of the next occurrences/)
   })
 })
 

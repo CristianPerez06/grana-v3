@@ -401,16 +401,40 @@ export function pglitePostgrest(
   const unstableTies = options.unstableTies ?? false
   return {
     /** `select public.<fn>(args)`, the shape PostgREST turns an RPC call into. */
+    // PostgREST hands back what the function RETURNS: a scalar for a scalar
+    // function, the rows for a set-returning one. This used to answer `null`
+    // always, which is fine while every RPC returns void and silently wrong the
+    // moment one does not — a read that asks the database a question would get
+    // `null` here and pass, then get the real answer in production.
+    //
+    // `select * from f(...)` covers both shapes, and the catalog says which one
+    // it is rather than guessing from the result: a table function returning one
+    // row of one column is indistinguishable from a scalar by shape alone.
     async rpc(name: string, args: Record<string, unknown> = {}) {
       const entries = Object.entries(args)
       const params = entries.map(([, value]) => value)
       const call = entries
         .map(([key], index) => `${key} => $${index + 1}`)
         .join(', ')
-      return db
-        .query(`select public.${name}(${call})`, params)
-        .then(() => ({ data: null, error: null }))
-        .catch((error: Error) => ({ data: null, error: toPostgrestError(error) }))
+      try {
+        const { rows: meta } = await db.query<{ proretset: boolean }>(
+          `select p.proretset from pg_proc p
+             join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.proname = $1 limit 1`,
+          [name],
+        )
+        const { rows } = await db.query(`select * from public.${name}(${call})`, params)
+        const returned = rows as Record<string, unknown>[]
+        if (meta[0]?.proretset === true) return { data: returned, error: null }
+        const first = returned[0] ?? {}
+        const columns = Object.keys(first)
+        return {
+          data: columns.length === 1 ? (first[columns[0]] ?? null) : (returned[0] ?? null),
+          error: null,
+        }
+      } catch (error) {
+        return { data: null, error: toPostgrestError(error as Error) }
+      }
     },
     from(table: string) {
       return {

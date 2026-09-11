@@ -63,7 +63,7 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
       interval_unit: rule.interval_unit as IntervalUnit,
       end_date: endDate || null,
       max_occurrences: rule.max_occurrences,
-      occurrenceCount: rule.instances.length,
+      positionsSpent: rule.positions_spent,
     },
     startDate,
     formatDateISO(getTodayAR()),

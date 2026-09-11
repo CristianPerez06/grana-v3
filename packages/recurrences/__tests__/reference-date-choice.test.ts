@@ -13,7 +13,7 @@ const monthlyRule = (over: Partial<Parameters<typeof referenceDateChoice>[0]> = 
   interval_unit: 'month' as const,
   end_date: null,
   max_occurrences: null,
-  occurrenceCount: 3,
+  positionsSpent: 3,
   ...over,
 })
 
@@ -58,7 +58,7 @@ describe('a rule with nothing left is not asked either', () => {
   it('has no candidate once the cap is spent', () => {
     expect(
       referenceDateChoice(
-        monthlyRule({ max_occurrences: 3, occurrenceCount: 3 }),
+        monthlyRule({ max_occurrences: 3, positionsSpent: 3 }),
         '2026-06-10',
         TODAY,
       ),
@@ -68,7 +68,7 @@ describe('a rule with nothing left is not asked either', () => {
   it('offers only one when only one is left', () => {
     expect(
       referenceDateChoice(
-        monthlyRule({ max_occurrences: 4, occurrenceCount: 3 }),
+        monthlyRule({ max_occurrences: 4, positionsSpent: 3 }),
         '2026-06-10',
         TODAY,
       ),

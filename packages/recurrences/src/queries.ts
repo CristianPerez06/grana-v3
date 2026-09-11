@@ -281,6 +281,20 @@ export async function getRecurrenceDetail(
     .reverse()
 
   const today = formatDateISO(getTodayAR())
+
+  // How much of `max_occurrences` is already spent, asked to the DATABASE and
+  // not counted from `instances` above. The cap counts POSITIONS of the
+  // calendar: a rule seeded by a movement has no row for its first occurrence,
+  // and a position produced while nothing was generating has none either, so
+  // `instances.length` says a spent rule still has occurrences left. The server
+  // validates the chosen reference date against this same function, so asking it
+  // is also what keeps the form from offering a date the RPC will refuse.
+  const { data: positionsSpent, error: spentError } = await supabase.rpc(
+    'recurrence_positions_spent',
+    { p_id: id, p_today: today },
+  )
+  if (spentError) throw spentError
+
   const recurrenceSummary = mapRecurrenceSummary(
     recurrence as unknown as RecurrenceRow,
     pending.length === 0 ? new Map() : new Map([[pending[0].recurrence_id, pending]]),
@@ -301,6 +315,7 @@ export async function getRecurrenceDetail(
       ...instance,
       recurrence: recurrence as unknown as Recurrence,
     })),
+    positions_spent: positionsSpent ?? 0,
   }
 }
 

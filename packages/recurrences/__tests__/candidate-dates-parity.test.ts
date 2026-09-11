@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { PGlite } from '@electric-sql/pglite'
-import { candidateEffectiveDates } from '@grana/money-logic'
-import { applyEffectiveUntil, createRecurrenceIdentityDb } from './support/recurrence-identity-db'
+import { candidateEffectiveDates, occurrencePositionsSpent } from '@grana/money-logic'
+import { applyEffectiveUntil, createRecurrenceIdentityDb, U_A } from './support/recurrence-identity-db'
 
 /**
  * The client draws the question; the database refuses anything else. That only
@@ -88,4 +88,215 @@ describe('the same two dates, in TypeScript and in SQL', () => {
     )
     expect(js).toEqual(sql)
   })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// The other number both sides compute: how much of the cap is spent.
+//
+// `max_occurrences` counts POSITIONS of the calendar. Both sides used to count
+// `recurrence_instances` rows instead, and agreed — which is why the parity
+// above never caught it: two implementations sharing the same wrong input agree
+// perfectly. So the cases below are built so that rows and positions DIFFER, and
+// each is run through the generator's own walk in TypeScript and through the
+// function the RPC validates with in SQL.
+// ═══════════════════════════════════════════════════════════════════════════
+
+type Version = {
+  effective_from: string
+  effective_until?: string | null
+  anchor_date: string
+  interval_count: number
+  interval_unit: 'day' | 'week' | 'month' | 'year'
+}
+
+let parityRule = 0
+
+const spentBothWays = async (setup: {
+  versions: Version[]
+  pauses?: Array<{ paused_from: string; resumed_at: string | null }>
+  endDate?: string | null
+  maxOccurrences?: number | null
+  today: string
+}): Promise<{ ts: number; sql: number }> => {
+  const id = `00000000-0000-4000-8000-00000000ca${(parityRule++).toString(16).padStart(2, '0')}`
+  const first = [...setup.versions].sort((a, b) => a.effective_from.localeCompare(b.effective_from))[0]
+
+  // The rule is inserted with the guards out of the way: these fixtures describe
+  // histories the triggers build over time, and rebuilding each one through the
+  // real edits would be testing the edits, not the count.
+  await db.exec(`
+    alter table public.recurrences disable trigger trg_recurrence_resolve_schedule_effective_from;
+    alter table public.recurrences disable trigger trg_recurrence_sync_schedule_and_pauses;
+    insert into public.recurrences
+      (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code,
+       movement_type, end_date, max_occurrences, schedule_effective_from)
+    values ('${id}', '${U_A}', '${first.anchor_date}', ${first.interval_count},
+            '${first.interval_unit}', 'active', 1000, 'ARS', 'expense',
+            ${setup.endDate == null ? 'null' : `'${setup.endDate}'`},
+            ${setup.maxOccurrences == null ? 'null' : setup.maxOccurrences},
+            '${first.effective_from}');
+    alter table public.recurrences enable trigger trg_recurrence_resolve_schedule_effective_from;
+    alter table public.recurrences enable trigger trg_recurrence_sync_schedule_and_pauses;
+  `)
+  for (const v of setup.versions) {
+    await db.exec(`
+      insert into public.recurrence_schedule_versions
+        (recurrence_id, user_id, effective_from, effective_until, interval_count, interval_unit,
+         anchor_date, is_assumed)
+      values ('${id}', '${U_A}', '${v.effective_from}',
+              ${v.effective_until == null ? 'null' : `'${v.effective_until}'`},
+              ${v.interval_count}, '${v.interval_unit}', '${v.anchor_date}', false)
+      on conflict (recurrence_id, effective_from) do update
+        set effective_until = excluded.effective_until,
+            interval_count  = excluded.interval_count,
+            interval_unit   = excluded.interval_unit,
+            anchor_date     = excluded.anchor_date;
+    `)
+  }
+  for (const p of setup.pauses ?? []) {
+    await db.exec(`
+      insert into public.recurrence_pauses (recurrence_id, user_id, paused_from, resumed_at)
+      values ('${id}', '${U_A}', '${p.paused_from}',
+              ${p.resumed_at == null ? 'null' : `'${p.resumed_at}'`});
+    `)
+  }
+
+  const { rows } = await db.query<{ n: number }>(
+    `select public.recurrence_positions_spent('${id}'::uuid, '${setup.today}'::date) as n`,
+  )
+  return {
+    ts: occurrencePositionsSpent({
+      versions: setup.versions.map((v) => ({ ...v, effective_until: v.effective_until ?? null })),
+      pauses: setup.pauses ?? [],
+      endDate: setup.endDate ?? null,
+      maxOccurrences: setup.maxOccurrences ?? null,
+      today: setup.today,
+    }),
+    sql: Number(rows[0].n),
+  }
+}
+
+// `expected` is worked out BY HAND from the calendar, not copied from a run.
+// Parity alone cannot catch the bug this replaces: two implementations fed the
+// same wrong idea agree perfectly. The number has to be right, not just shared.
+const spentCases: Array<{
+  name: string
+  expected: number
+  setup: Parameters<typeof spentBothWays>[0]
+}> = [
+  {
+    name: 'a monthly rule with three positions behind it',
+    expected: 4,
+    setup: {
+      versions: [{ effective_from: '2026-06-10', anchor_date: '2026-06-10', interval_count: 1, interval_unit: 'month' }],
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'a version that took effect after its own anchor',
+    expected: 9,
+    setup: {
+      versions: [{ effective_from: '2026-08-10', anchor_date: '2026-01-10', interval_count: 1, interval_unit: 'month' }],
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'a rule corrected mid-life: two versions, two anchors',
+    expected: 9,
+    setup: {
+      versions: [
+        { effective_from: '2026-01-08', effective_until: '2026-06-30', anchor_date: '2026-01-08', interval_count: 1, interval_unit: 'month' },
+        { effective_from: '2026-07-10', anchor_date: '2026-07-10', interval_count: 1, interval_unit: 'month' },
+      ],
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'a gap nobody rules, between the two',
+    expected: 6,
+    setup: {
+      versions: [
+        { effective_from: '2026-01-08', effective_until: '2026-06-30', anchor_date: '2026-01-08', interval_count: 1, interval_unit: 'month' },
+        { effective_from: '2026-10-10', anchor_date: '2026-10-10', interval_count: 1, interval_unit: 'month' },
+      ],
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'a pause that swallowed two positions',
+    expected: 6,
+    setup: {
+      versions: [{ effective_from: '2026-01-10', anchor_date: '2026-01-10', interval_count: 1, interval_unit: 'month' }],
+      pauses: [{ paused_from: '2026-04-01', resumed_at: '2026-06-15' }],
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'a pause still open',
+    expected: 6,
+    setup: {
+      versions: [{ effective_from: '2026-01-10', anchor_date: '2026-01-10', interval_count: 1, interval_unit: 'month' }],
+      pauses: [{ paused_from: '2026-07-01', resumed_at: null }],
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'the cap already spent, so the count saturates',
+    expected: 3,
+    setup: {
+      versions: [{ effective_from: '2026-01-10', anchor_date: '2026-01-10', interval_count: 1, interval_unit: 'month' }],
+      maxOccurrences: 3,
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'an end_date that stopped the calendar early',
+    expected: 4,
+    setup: {
+      versions: [{ effective_from: '2026-01-10', anchor_date: '2026-01-10', interval_count: 1, interval_unit: 'month' }],
+      endDate: '2026-04-30',
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'every three days, where no month helps',
+    expected: 14,
+    setup: {
+      versions: [{ effective_from: '2026-08-02', anchor_date: '2026-08-02', interval_count: 3, interval_unit: 'day' }],
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'monthly on the 31st, clamped through February',
+    expected: 8,
+    setup: {
+      versions: [{ effective_from: '2026-01-31', anchor_date: '2026-01-31', interval_count: 1, interval_unit: 'month' }],
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'weekly across half a year',
+    expected: 28,
+    setup: {
+      versions: [{ effective_from: '2026-03-02', anchor_date: '2026-03-02', interval_count: 1, interval_unit: 'week' }],
+      today: '2026-09-11',
+    },
+  },
+  {
+    name: 'yearly, anchored years back',
+    expected: 7,
+    setup: {
+      versions: [{ effective_from: '2020-02-29', anchor_date: '2020-02-29', interval_count: 1, interval_unit: 'year' }],
+      today: '2026-09-11',
+    },
+  },
+]
+
+describe('positions spent — TypeScript and SQL over the same history', () => {
+  for (const { name, expected, setup } of spentCases) {
+    it(name, async () => {
+      const { ts, sql } = await spentBothWays(setup)
+      expect({ ts, sql }).toEqual({ ts: expected, sql: expected })
+    })
+  }
 })

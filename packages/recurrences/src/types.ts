@@ -135,6 +135,15 @@ export type RecurrenceSummary = Recurrence & {
 
 export type RecurrenceDetail = RecurrenceSummary & {
   /**
+   * Positions of the rule's calendar already spent — what `max_occurrences`
+   * counts, and NOT `instances.length`. A seeded rule's first occurrence has no
+   * row, and neither has a position the calendar produced while nothing was
+   * generating; counting rows offers a reference date to a rule that will never
+   * fire again. Computed by the database, which is also what the RPC validates
+   * the chosen date against.
+   */
+  positions_spent: number
+  /**
    * The rule's whole history, newest first — `confirmed` and `skipped` included,
    * so `due_date` may be NULL. NOT `PendingRecurrenceInstance[]`: that type
    * promises an exact vencimiento, which only an unresolved occurrence has.

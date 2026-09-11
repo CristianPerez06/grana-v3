@@ -1356,6 +1356,13 @@ export type Database = {
         Args: { p_account_id: string; p_date: string; p_settlement_id: string }
         Returns: undefined
       }
+      recurrence_positions_spent: {
+        Args: {
+          p_id: string
+          p_today: string
+        }
+        Returns: number
+      }
       recurrence_candidate_effective_dates: {
         Args: {
           p_anchor: string

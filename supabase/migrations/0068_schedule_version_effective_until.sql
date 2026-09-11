@@ -600,6 +600,139 @@ begin
      limit least(2, coalesce(p_remaining, 2));
 end $$;
 
+-- ── 5b · How many positions of its calendar a rule has spent ───────────────
+--
+-- `max_occurrences` counts POSITIONS on the rule's calendar, not rows in
+-- `recurrence_instances`. The two are not the same number and never were:
+--
+--   · a rule created from a movement covers its first occurrence WITH that
+--     movement and has no instance row for it;
+--   · a position the calendar produced while nothing was generating has no row
+--     either, and it is still spent.
+--
+-- Counting rows tells a 6-cuota rule it has cuotas left when it does not, and
+-- offers a reference date for a rule that will never fire again.
+--
+-- THIS IS A SECOND IMPLEMENTATION OF THE GENERATOR'S WALK, and that is a cost
+-- taken deliberately, exactly as `recurrence_candidate_effective_dates` takes
+-- it: the server has to be able to refuse a date on its own, and the generator
+-- lives in TypeScript. What makes it safe is the same thing — a parity test that
+-- runs both over the same schedules and fails when they disagree. Every rule
+-- below mirrors `forEachComposedOccurrence`:
+--
+--   · the stretch a version owns ends at the EARLIEST of its own end, the day
+--     before the next version, and today;
+--   · the first version's calendar reaches back to its anchor, and the positions
+--     between the anchor and `effective_from` are already spent — counted by
+--     arithmetic, with no pause subtracted, because that stretch is not walked;
+--   · a pause covers [paused_from, resumed_at): the day it resumes, the rule is
+--     running again;
+--   · a position past `end_date` is not produced;
+--   · the count saturates at the cap, because a walk that reaches it stops.
+create or replace function public.recurrence_positions_spent(
+  p_id    uuid,
+  p_today date
+)
+returns int
+language plpgsql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  v_rule     public.recurrences;
+  v_version  record;
+  v_next     date;
+  v_to       date;
+  v_step     interval;
+  v_produced int := 0;
+  v_count    int;
+  v_span     int;
+begin
+  select * into v_rule from public.recurrences where id = p_id;
+  if not found then
+    return 0;
+  end if;
+
+  for v_version in
+    select v.*,
+           lead(v.effective_from) over (order by v.effective_from) as next_from,
+           row_number() over (order by v.effective_from)           as ord
+      from public.recurrence_schedule_versions v
+     where v.recurrence_id = p_id
+     order by v.effective_from
+  loop
+    exit when v_rule.max_occurrences is not null and v_produced >= v_rule.max_occurrences;
+
+    v_step := case v_version.interval_unit
+                when 'day'   then make_interval(days   => v_version.interval_count)
+                when 'week'  then make_interval(weeks  => v_version.interval_count)
+                when 'month' then make_interval(months => v_version.interval_count)
+                when 'year'  then make_interval(years  => v_version.interval_count)
+              end;
+    if v_step is null then
+      raise exception 'unknown schedule: % every %', v_version.interval_unit, v_version.interval_count
+        using errcode = 'check_violation';
+    end if;
+
+    -- The earliest of the three ends.
+    v_to := p_today;
+    if v_version.effective_until is not null and v_version.effective_until < v_to then
+      v_to := v_version.effective_until;
+    end if;
+    v_next := v_version.next_from;
+    if v_next is not null and (v_next - 1) < v_to then
+      v_to := v_next - 1;
+    end if;
+
+    -- How many steps could possibly fit, so the series is bounded by the rule's
+    -- own life instead of a guessed constant.
+    v_span := greatest(0, (v_to - v_version.anchor_date)) + 1;
+    v_span := case v_version.interval_unit
+                when 'day'   then v_span / v_version.interval_count
+                when 'week'  then v_span / (v_version.interval_count * 7)
+                when 'month' then v_span / (v_version.interval_count * 28)
+                when 'year'  then v_span / (v_version.interval_count * 365)
+              end + 2;
+
+    -- The positions already spent before this version took effect. Only for the
+    -- first one: later versions start where the previous stopped counting.
+    if v_version.ord = 1 then
+      select count(*) into v_produced
+        from generate_series(0, v_span) n
+       where (v_version.anchor_date + (v_step * n))::date < v_version.effective_from
+         and (v_rule.end_date is null
+              or (v_version.anchor_date + (v_step * n))::date <= v_rule.end_date);
+    end if;
+
+    continue when v_version.effective_from > v_to;
+
+    select count(*) into v_count
+      from generate_series(0, v_span) n
+      cross join lateral (select (v_version.anchor_date + (v_step * n))::date as d) x
+     where d >= v_version.effective_from
+       and d <= v_to
+       and (v_rule.end_date is null or d <= v_rule.end_date)
+       and not exists (
+         select 1 from public.recurrence_pauses ps
+          where ps.recurrence_id = p_id
+            and d >= ps.paused_from
+            and (ps.resumed_at is null or d < ps.resumed_at)
+       );
+
+    v_produced := v_produced + v_count;
+  end loop;
+
+  if v_rule.max_occurrences is not null and v_produced > v_rule.max_occurrences then
+    v_produced := v_rule.max_occurrences;
+  end if;
+  return v_produced;
+end $$;
+
+revoke all on function public.recurrence_positions_spent(uuid, date) from public;
+revoke all on function public.recurrence_positions_spent(uuid, date) from anon;
+grant execute on function public.recurrence_positions_spent(uuid, date) to authenticated;
+
 -- ── 6 · The only way to move an anchor ─────────────────────────────────────
 --
 -- The patch and the chosen effective date travel in ONE transaction, because
@@ -662,10 +795,15 @@ begin
 
     -- How much of the cap is left. A rule that already spent it has no next
     -- occurrence, so it has nothing to offer and nothing to validate against.
-    select case when v_next.max_occurrences is null then null
-                else v_next.max_occurrences - count(*)::int end
-      into v_remaining
-      from public.recurrence_instances where recurrence_id = p_id;
+    --
+    -- By POSITIONS of the calendar, not by rows: a seeded rule's first
+    -- occurrence has no row, and neither has a position the calendar produced
+    -- while nothing was generating. Counting rows here said a spent rule still
+    -- had cuotas left and accepted a reference date that will never fire.
+    v_remaining := case
+      when v_next.max_occurrences is null then null
+      else v_next.max_occurrences - public.recurrence_positions_spent(p_id, v_today)
+    end;
 
     select exists (
       select 1 from public.recurrence_candidate_effective_dates(
