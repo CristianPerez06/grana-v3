@@ -7,7 +7,7 @@ import { updateRecurrence } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
 import { referenceDateChoice } from '@grana/recurrences'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
-import type { IntervalUnit } from '@grana/money-logic'
+import { presetToInterval } from '@grana/money-logic'
 import { formatShortDate } from '@/lib/date'
 import { Drawer } from '@/components/ui/drawer'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
@@ -49,13 +49,16 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
   const [description, setDescription] = useState(rule.description ?? '')
 
   const anchorMoved = startDate !== rule.start_date
+  // THE CALENDAR BEING SAVED, not the one on the row. The server recomputes the
+  // dates it will accept from the patch, so a form that offers dates from the
+  // stored frequency offers dates the server refuses — which is what happens the
+  // moment somebody changes the frequency and the reference date in one pass.
+  const interval = presetToInterval(frequency)
   const choice = referenceDateChoice(
     {
       status: rule.status,
-      interval_count: rule.interval_count,
-      // The row carries it as text; the calendar is the one that narrows it, and
-      // the database CHECK is what guarantees the four values.
-      interval_unit: rule.interval_unit as IntervalUnit,
+      interval_count: interval.count,
+      interval_unit: interval.unit,
       end_date: endDate || null,
       max_occurrences: rule.max_occurrences,
       positionsSpent: rule.positions_spent,
@@ -63,6 +66,14 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
     startDate,
     formatDateISO(getTodayAR()),
   )
+
+  // THE ANSWER HAS TO BE ONE OF THE QUESTIONS CURRENTLY ON SCREEN. Editing the
+  // reference date, the frequency or the end date rebuilds the options; a
+  // selection made against the previous set is not an answer to this one, and
+  // sending it means sending a date the server never offered. Derived rather
+  // than reset from an effect: there is no moment where the two disagree.
+  const options = choice.kind === 'ask' ? choice.options : []
+  const selected = effectiveFrom != null && options.includes(effectiveFrom) ? effectiveFrom : null
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,6 +85,23 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
       return
     }
 
+    // A rule with nothing left ahead has no date that could be the first under a
+    // new reference, and the database refuses the change for exactly that
+    // reason. Saying so here is the difference between a sentence the user can
+    // act on and a failed save they have to interpret.
+    if (anchorMoved && choice.kind === 'exhausted') {
+      setFormError(t('reference_date_exhausted'))
+      return
+    }
+
+    // Asked, and unanswered. Picking the first option on the user's behalf is
+    // the inference this whole change exists to remove: from the data, "the
+    // cycle in flight is settled" and "it is not" look identical.
+    if (anchorMoved && choice.kind === 'ask' && selected == null) {
+      setFormError(t('errors.reference_date_unanswered'))
+      return
+    }
+
     startTransition(async () => {
       const result = await updateRecurrence(rule.id, {
         amount: parsedAmount,
@@ -82,7 +110,7 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
         // Only meaningful when the anchor moves; the mutation ignores it
         // otherwise. `null` is the paused rule's answer — from today, waiting —
         // and the database refuses a date there.
-        schedule_effective_from: choice.kind === 'ask' ? (effectiveFrom ?? choice.options[0]) : null,
+        schedule_effective_from: anchorMoved && choice.kind === 'ask' ? selected : null,
         end_date: endDate || null,
         description: description || null,
       })
@@ -183,7 +211,7 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
                     type="radio"
                     name="schedule_effective_from"
                     value={option}
-                    checked={(effectiveFrom ?? choice.options[0]) === option}
+                    checked={selected === option}
                     onChange={() => setEffectiveFrom(option)}
                   />
                   {formatShortDate(option)}

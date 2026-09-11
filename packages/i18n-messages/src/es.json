@@ -1703,7 +1703,8 @@
       "save_failed": "No se pudo guardar.",
       "status_change_failed": "No se pudo cambiar el estado.",
       "delete_failed": "No se pudo eliminar.",
-      "generic": "Algo salió mal. Intentá de nuevo."
+      "generic": "Algo salió mal. Intentá de nuevo.",
+      "reference_date_unanswered": "Elegí cuál querés que sea el primer vencimiento con la nueva referencia."
     },
     "mapper_errors": {
       "missing_transfer_destination": "La instancia recurrente de transferencia no tiene cuenta destino.",
@@ -1821,7 +1822,7 @@
     "reference_date_hint": "Usamos esta fecha para calcular los próximos vencimientos. Los que ya existen conservan su fecha.",
     "reference_date_question": "¿Cuál querés que sea el primer vencimiento con la nueva referencia?",
     "reference_date_paused": "Usaremos esta referencia cuando reanudes la regla.",
-    "reference_date_exhausted": "Esta regla no tiene próximos vencimientos, así que la referencia solo queda guardada."
+    "reference_date_exhausted": "Esta regla no tiene próximos vencimientos, así que no se puede cambiar la referencia. Extendé el tope o la fecha de fin para volver a ajustarla."
   },
   "subcategories": {
     "supermercado": "Supermercado",

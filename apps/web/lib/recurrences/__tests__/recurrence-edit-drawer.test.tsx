@@ -120,6 +120,15 @@ describe('the reference date field', () => {
       )
     })
 
+    await act(async () => {
+      ;(screen.getAllByRole('radio')[0] as HTMLInputElement).click()
+    })
+    await act(async () => {
+      container.querySelector('form')!.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      )
+    })
+
     expect(updateRecurrence).toHaveBeenCalledTimes(1)
     expect(updateRecurrence.mock.calls[0][1]).toMatchObject({ start_date: '2026-06-10' })
   })
@@ -186,11 +195,36 @@ describe('the question the calendar cannot answer', () => {
     })
   })
 
-  it('defaults to the first when the user does not choose', async () => {
-    // Not an empty payload: the database refuses an anchor that moves without an
-    // effective date, so the form always carries one.
+  it('refuses to save until it is answered', async () => {
+    // It used to send the first option when the user had not picked one. That is
+    // the inference this whole change exists to remove: from the data, "the cycle
+    // in flight is already settled" and "it is not" look exactly the same, and
+    // guessing wrong is the second salary in one month that started #121.
     const { container } = renderDrawer()
     await moveAnchorTo('2026-06-10')
+    await act(async () => {
+      container.querySelector('form')!.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      )
+    })
+    expect(updateRecurrence).not.toHaveBeenCalled()
+    expect(screen.getByText('recurrences.errors.reference_date_unanswered')).toBeTruthy()
+  })
+
+  it('has nothing preselected, so nothing is chosen by omission', async () => {
+    renderDrawer()
+    await moveAnchorTo('2026-06-10')
+    expect(screen.getAllByRole('radio').some((r) => (r as HTMLInputElement).checked)).toBe(false)
+  })
+
+  it('carries the answer once it is given', async () => {
+    const { container } = renderDrawer()
+    await moveAnchorTo('2026-06-10')
+    await act(async () => {
+      ;(screen
+        .getAllByRole('radio')
+        .find((input) => (input as HTMLInputElement).value === '2026-09-10')! as HTMLInputElement).click()
+    })
     await act(async () => {
       container.querySelector('form')!.dispatchEvent(
         new Event('submit', { bubbles: true, cancelable: true }),
@@ -199,5 +233,132 @@ describe('the question the calendar cannot answer', () => {
     expect(updateRecurrence.mock.calls[0][1]).toMatchObject({
       schedule_effective_from: '2026-09-10',
     })
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// The question and the answer have to describe the SAME rule.
+//
+// The dates offered come from a calendar, and the server recomputes them from
+// the calendar the patch is about to save. Anything the form reads off the
+// stored row instead is a different rule, and the two disagree the moment the
+// user edits both halves in one pass.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const setField = async (testId: string, value: string) => {
+  const field = screen.getByTestId(testId) as HTMLInputElement
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value',
+    )!.set!
+    setter.call(field, value)
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
+const setSelect = async (id: string, value: string) => {
+  const select = document.getElementById(id) as HTMLSelectElement
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value',
+    )!.set!
+    setter.call(select, value)
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+}
+
+const submit = async (container: HTMLElement) => {
+  await act(async () => {
+    container.querySelector('form')!.dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true }),
+    )
+  })
+}
+
+const offered = () =>
+  [...document.querySelectorAll('input[name="schedule_effective_from"]')].map(
+    (input) => (input as HTMLInputElement).value,
+  )
+
+describe('changing the frequency and the reference date in one pass', () => {
+  it('offers the dates of the frequency being SAVED, not the stored one', async () => {
+    // Today is 2026-09-10. Anchored on 12/06 and switched to weekly, the calendar
+    // keeps the WEEKDAY: 12/06/2026 is a Friday, so the next two occurrences are
+    // 11/09 and 18/09. Read off the stored monthly frequency they would be 12/09
+    // and 12/10, and the server, which recomputes from the patch, refuses both.
+    renderDrawer()
+    await setSelect('frequency', 'weekly')
+    await setField('start_date', '2026-06-12')
+
+    expect(offered()).toEqual(['2026-09-11', '2026-09-18'])
+  })
+})
+
+describe('a choice that stopped being one of the options', () => {
+  it('is not carried over when the reference date changes again', async () => {
+    const { container } = renderDrawer()
+    await setField('start_date', '2026-06-12')
+    const first = offered()
+    // The user picks the SECOND date — "from the next cycle".
+    await act(async () => {
+      ;(document.querySelector(
+        `input[name="schedule_effective_from"][value="${first[1]}"]`,
+      ) as HTMLInputElement).click()
+    })
+
+    // Then thinks again and moves the reference date somewhere else entirely.
+    await setField('start_date', '2026-06-20')
+    const second = offered()
+    expect(second).not.toContain(first[1])
+
+    // The old answer is gone, not carried: saving now asks again rather than
+    // sending a date these options never contained.
+    await submit(container)
+    expect(updateRecurrence).not.toHaveBeenCalled()
+
+    await act(async () => {
+      ;(document.querySelector(
+        `input[name="schedule_effective_from"][value="${second[0]}"]`,
+      ) as HTMLInputElement).click()
+    })
+    await submit(container)
+    const sent = updateRecurrence.mock.calls[0][1] as { schedule_effective_from: string }
+    expect(sent.schedule_effective_from).toBe(second[0])
+  })
+})
+
+describe('a rule with no occurrences left', () => {
+  // The cap is spent: there is no next vencimiento, so there is no date that
+  // could be the first one under a new reference.
+  const exhausted = {
+    ...(rule as unknown as Record<string, unknown>),
+    max_occurrences: 3,
+    positions_spent: 3,
+  } as unknown as Parameters<typeof RecurrenceEditDrawer>[0]['rule']
+
+  it('does not send a change the database is going to refuse', async () => {
+    // The screen used to say the reference "solo queda guardada" and then send
+    // `schedule_effective_from: null`, which the server rejects for any active
+    // rule whose anchor moves. The user read a promise and got an error.
+    const { container } = render(
+      <RecurrenceEditDrawer rule={exhausted} open onClose={() => {}} />,
+    )
+    await setField('start_date', '2026-06-12')
+    expect(screen.getByText('recurrences.reference_date_exhausted')).toBeTruthy()
+
+    await submit(container)
+    expect(updateRecurrence).not.toHaveBeenCalled()
+  })
+
+  it('still saves everything else', async () => {
+    // Only the reference date is impossible here. Leaving it alone, the rest of
+    // the form works as it always did.
+    const { container } = render(
+      <RecurrenceEditDrawer rule={exhausted} open onClose={() => {}} />,
+    )
+    await submit(container)
+    expect(updateRecurrence).toHaveBeenCalledTimes(1)
   })
 })

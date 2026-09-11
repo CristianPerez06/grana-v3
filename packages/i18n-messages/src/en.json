@@ -1703,7 +1703,8 @@
       "save_failed": "Failed to save.",
       "status_change_failed": "Failed to change status.",
       "delete_failed": "Failed to delete.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "reference_date_unanswered": "Choose which occurrence should be the first one under the new reference date."
     },
     "mapper_errors": {
       "missing_transfer_destination": "The recurring transfer instance has no destination account.",
@@ -1821,7 +1822,7 @@
     "reference_date_hint": "We use this date to work out the next occurrences. The ones that already exist keep their own.",
     "reference_date_question": "Which one should be the first occurrence with the new reference?",
     "reference_date_paused": "We will use this reference when you resume the rule.",
-    "reference_date_exhausted": "This rule has no occurrences left, so the reference is only stored."
+    "reference_date_exhausted": "This rule has no upcoming occurrences, so its reference date cannot be changed. Extend the cap or the end date to adjust it again."
   },
   "subcategories": {
     "supermercado": "Supermarket",

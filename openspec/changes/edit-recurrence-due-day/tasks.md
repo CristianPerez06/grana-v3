@@ -260,13 +260,22 @@ se queda corto **en silencio**, que es la forma en que un tope deja de ser un to
   quince paquetes sólo `movement-form` tiene script propio. Por eso un fixture sobrevivió a un
   renombre de campo y propagó `NaN`.
 
-- [ ] 2c.6 **Cambiar frecuencia y referencia juntas falla.** Los dos formularios calculan las opciones
-      con `rule.interval_count/unit` —lo guardado— mientras el servidor valida contra la frecuencia
-      nueva del patch, así que rechaza la fecha que el formulario ofreció.
-- [ ] 2c.7 **La elección queda obsoleta.** Al cambiar después la referencia, la frecuencia o el fin, el
-      formulario conserva la selección anterior y la manda aunque ya no esté entre las opciones.
-- [ ] 2c.8 **El estado `exhausted` promete algo que no pasa.** El texto dice que la referencia "queda
-      guardada", pero el formulario manda `null` y el RPC rechaza toda regla activa sin fecha efectiva.
+- [x] 2c.6 **Cambiar frecuencia y referencia juntas falla.** Los dos formularios calculaban las
+      opciones con `rule.interval_count/unit` —lo guardado— mientras el servidor valida contra la
+      frecuencia nueva del patch, así que rechaza la fecha que el formulario ofreció. Ahora ambos
+      derivan el intervalo de `presetToInterval(frequency)`, que es exactamente lo que la mutación va
+      a guardar. Con la regla anclada al 12/06 y pasada a semanal, las opciones son 11/09 y 18/09 —el
+      calendario semanal conserva el DÍA DE LA SEMANA, no el del mes— y no 12/09 y 12/10.
+- [x] 2c.7 **La elección queda obsoleta.** La selección se deriva ahora en vez de guardarse suelta:
+      vale sólo si sigue entre las opciones vigentes. Cambiar después la referencia, la frecuencia o el
+      fin reconstruye las opciones y la respuesta anterior deja de contar — no se manda una fecha que
+      el servidor nunca ofreció. Derivada y no reseteada por efecto: no hay un instante en que las dos
+      cosas discrepen.
+- [x] 2c.8 **El estado `exhausted` prometía algo que no pasa.** Decía que la referencia "solo queda
+      guardada" y mandaba `schedule_effective_from: null`, que el RPC rechaza para toda regla activa
+      cuyo ancla se mueve: el usuario leía una promesa y recibía un error. Una regla sin vencimientos
+      por delante no tiene fecha que pueda ser la primera bajo una referencia nueva, así que el
+      formulario lo dice y no intenta el guardado. El resto de los campos se sigue guardando.
 - [ ] 2c.9 Endurecer además: exigir una elección vigente en vez de tomar la primera en silencio;
       `schedule_effective_from` como invariante persistente (`NOT NULL` con un default fail-closed que
       el trigger pise); y `validate_schema.sql`, que hoy acepta un `CHECK` equivalente a `... OR true`
@@ -279,7 +288,11 @@ se queda corto **en silencio**, que es la forma en que un tope deja de ser un to
         no puede hacerse pasar por el código. El comportamiento se prueba aparte y completo contra
         Postgres real en `seeded-anchor-correction.test.ts`; este archivo responde la otra pregunta,
         si eso probado es lo que está desplegado. Pinea también el trigger habilitado (`tgenabled`).
-  - [ ] Falta: exigir una elección vigente, y el `CHECK` equivalente a `... OR true`.
+  - [x] **Exigir una elección vigente** — cerrado junto con 2c.7, porque es la misma línea de código.
+        El formulario ya no toma la primera opción en silencio: nada viene premarcado, la respuesta
+        tiene que ser una de las que están en pantalla, y guardar sin contestar muestra la pregunta en
+        vez de inventar la respuesta. Adivinar mal es el segundo sueldo en un mes que originó el #96.
+  - [ ] Falta: el `CHECK` equivalente a `... OR true`.
 
 ## 2d. La identidad de la ocurrencia semilla (revisión del 11/9, segunda vuelta)
 

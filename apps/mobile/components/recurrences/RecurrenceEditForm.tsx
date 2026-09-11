@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { X } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { parseMoneyInput } from '@grana/validation'
-import { formatDateISO, getTodayAR } from '@grana/money-logic'
-import type { IntervalUnit, RecurrenceFrequency } from '@grana/money-logic'
+import { formatDateISO, getTodayAR, presetToInterval } from '@grana/money-logic'
+import type { RecurrenceFrequency } from '@grana/money-logic'
 import { referenceDateChoice } from '@grana/recurrences'
 import type { RecurrenceDetail } from '@grana/recurrences'
 import { Label } from '../ui/Label'
@@ -54,13 +54,16 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
   const [submitting, setSubmitting] = useState(false)
 
   const anchorMoved = startDate !== rule.start_date
+  // THE CALENDAR BEING SAVED, not the one on the row. The server recomputes the
+  // dates it will accept from the patch, so a form that offers dates from the
+  // stored frequency offers dates the server refuses — which is what happens the
+  // moment somebody changes the frequency and the reference date in one pass.
+  const interval = presetToInterval(frequency)
   const choice = referenceDateChoice(
     {
       status: rule.status,
-      interval_count: rule.interval_count,
-      // The row carries it as text; the calendar is the one that narrows it, and
-      // the database CHECK is what guarantees the four values.
-      interval_unit: rule.interval_unit as IntervalUnit,
+      interval_count: interval.count,
+      interval_unit: interval.unit,
       end_date: endDate || null,
       max_occurrences: rule.max_occurrences,
       positionsSpent: rule.positions_spent,
@@ -69,11 +72,35 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
     formatDateISO(getTodayAR()),
   )
 
+  // THE ANSWER HAS TO BE ONE OF THE QUESTIONS CURRENTLY ON SCREEN. Editing the
+  // reference date, the frequency or the end date rebuilds the options; a
+  // selection made against the previous set is not an answer to this one, and
+  // sending it means sending a date the server never offered.
+  const options = choice.kind === 'ask' ? choice.options : []
+  const selected = effectiveFrom != null && options.includes(effectiveFrom) ? effectiveFrom : null
+
   const submit = async () => {
     setFormError(null)
     const parsedAmount = parseMoneyInput(amount)
     if (parsedAmount === null || parsedAmount <= 0) {
       setFormError(t('recurrences.errors.amount_invalid'))
+      return
+    }
+
+    // A rule with nothing left ahead has no date that could be the first under a
+    // new reference, and the database refuses the change for exactly that
+    // reason. Saying so here is the difference between a sentence the user can
+    // act on and a failed save they have to interpret.
+    if (anchorMoved && choice.kind === 'exhausted') {
+      setFormError(t('recurrences.reference_date_exhausted'))
+      return
+    }
+
+    // Asked, and unanswered. Picking the first option on the user's behalf is
+    // the inference this whole change exists to remove: from the data, "the
+    // cycle in flight is settled" and "it is not" look identical.
+    if (anchorMoved && choice.kind === 'ask' && selected == null) {
+      setFormError(t('recurrences.errors.reference_date_unanswered'))
       return
     }
     setSubmitting(true)
@@ -86,8 +113,7 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
         // Only meaningful when the anchor moves; the mutation ignores it
         // otherwise. `null` is the paused rule's answer — from today, waiting —
         // and the database refuses a date there.
-        schedule_effective_from:
-          choice.kind === 'ask' ? (effectiveFrom ?? choice.options[0]) : null,
+        schedule_effective_from: anchorMoved && choice.kind === 'ask' ? selected : null,
         end_date: endDate || null,
         description: description || null,
       },
@@ -177,18 +203,18 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
               {t('recurrences.reference_date_question')}
             </Text>
             {choice.options.map((option) => {
-              const selected = (effectiveFrom ?? choice.options[0]) === option
+              const isSelected = selected === option
               return (
                 <Pressable
                   key={option}
                   onPress={() => setEffectiveFrom(option)}
                   accessibilityRole="radio"
-                  accessibilityState={{ selected }}
+                  accessibilityState={{ selected: isSelected }}
                   className="flex-row items-center gap-2 py-1"
                 >
                   <View
                     className={`h-4 w-4 rounded-full border ${
-                      selected ? 'border-navy bg-navy' : 'border-border bg-card'
+                      isSelected ? 'border-navy bg-navy' : 'border-border bg-card'
                     }`}
                   />
                   <Text className="text-[13px] text-text">
