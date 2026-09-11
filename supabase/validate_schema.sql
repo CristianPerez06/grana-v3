@@ -856,6 +856,8 @@ do $$
 declare
   v_check_def text;
   v_orphans   int;
+  v_body      text;
+  v_default   text;
 begin
   if not exists (
     select 1 from information_schema.columns
@@ -959,16 +961,82 @@ begin
     raise exception 'recurrences: % seeded rows without seed_occurrence_date', v_orphans;
   end if;
 
-  -- Both halves of the repair have to name the immutable column. A database
-  -- still carrying 0064's guard or 0065's release rejects the deletion of a
-  -- corrected rule's seed movement, and the user cannot get rid of it at all.
-  if (select prosrc from pg_proc where oid = 'public.recurrence_reconstruct_from_guard()'::regprocedure)
-       not like '%seed_occurrence_date%' then
-    raise exception 'recurrence_reconstruct_from_guard still keys the floor release on start_date: deleting the seed of a rule whose reference date was corrected is rejected';
+  -- ── Both halves of the repair, by the EXPRESSION and not by the word ────
+  --
+  -- Asking whether the body mentions `seed_occurrence_date` is not a check: the
+  -- word appears in a comment, in an unrelated clause, or in a function that
+  -- names it once and still keys the release on the anchor. What has to hold is
+  -- an EXPRESSION, so that is what is compared — after stripping comments, so a
+  -- sentence about the column can never stand in for the code.
+  --
+  -- Whitespace is collapsed and the body lowercased first, so re-indenting the
+  -- migration is not a false red; anything past that is a real difference. The
+  -- same trade this file's identity contract takes: an equivalent rewrite is
+  -- rejected, which stops a deploy instead of blessing a database where deleting
+  -- a corrected rule's seed movement is impossible.
+  --
+  -- BEHAVIOUR is proved separately and in full, against a real Postgres, in
+  -- `packages/recurrences/__tests__/seeded-anchor-correction.test.ts`: create
+  -- from a future movement, correct the anchor, delete the seed. What THIS file
+  -- answers is the other question — whether that proven code is what is deployed
+  -- here.
+  select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
+    into v_body
+    from pg_proc where oid = 'public.recurrence_reconstruct_from_guard()'::regprocedure;
+  if v_body not like '%new.reconstruct_from = old.seed_occurrence_date - 1 and old.reconstruct_from = old.seed_occurrence_date%' then
+    raise exception 'recurrence_reconstruct_from_guard does not key the floor release on seed_occurrence_date: deleting the seed of a rule whose reference date was corrected is rejected, and the movement cannot be deleted at all';
   end if;
-  if (select prosrc from pg_proc where oid = 'public.delete_movement_unlinking_seed(uuid)'::regprocedure)
-       not like '%seed_occurrence_date%' then
-    raise exception 'delete_movement_unlinking_seed still releases the floor from start_date, which is a date the seed movement never covered';
+  if v_body like '%old.reconstruct_from = old.start_date%' then
+    raise exception 'recurrence_reconstruct_from_guard still carries 0064''s anchor-keyed release clause';
+  end if;
+  if v_body not like '%new.seed_occurrence_date is distinct from old.seed_occurrence_date%' then
+    raise exception 'recurrence_reconstruct_from_guard does not freeze seed_occurrence_date: the occurrence a movement covers could be rewritten';
+  end if;
+  if v_body not like '%new.created_from_transaction_id is distinct from old.created_from_transaction_id%' then
+    raise exception 'recurrence_reconstruct_from_guard does not freeze the seed link: a rule could be pointed at another movement while its seed date stays frozen';
+  end if;
+
+  select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
+    into v_body
+    from pg_proc where oid = 'public.delete_movement_unlinking_seed(uuid)'::regprocedure;
+  if v_body not like '%then v_rule.seed_occurrence_date - 1%' then
+    raise exception 'delete_movement_unlinking_seed does not release the floor from seed_occurrence_date, so it offers a date the seed movement never covered and the guard rejects it';
+  end if;
+  if v_body like '%then v_rule.start_date - 1%' then
+    raise exception 'delete_movement_unlinking_seed still carries 0065''s anchor-keyed release';
+  end if;
+
+  -- ── The pair, as a constraint the table itself holds ─────────────────────
+  select pg_get_constraintdef(c.oid) into v_check_def
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+   where n.nspname = 'public' and t.relname = 'recurrences'
+     and c.conname = 'chk_recurrences_seed_pair';
+  if v_check_def is null then
+    raise exception 'chk_recurrences_seed_pair is missing: a linked rule with no seed date is a row every reader of the covered set misreads';
+  end if;
+  if v_check_def not like '%created_from_transaction_id%seed_occurrence_date%' then
+    raise exception 'chk_recurrences_seed_pair does not relate the link to the seed date: %', v_check_def;
+  end if;
+  if exists (
+    select 1 from public.recurrences
+     where created_from_transaction_id is not null and seed_occurrence_date is null
+  ) then
+    raise exception 'recurrences: a linked rule has no seed_occurrence_date';
+  end if;
+
+  -- ── The floor a row lands on when nothing decides it ─────────────────────
+  select pg_get_expr(d.adbin, d.adrelid) into v_default
+    from pg_attrdef d
+    join pg_attribute a on a.attrelid = d.adrelid and a.attnum = d.adnum
+   where d.adrelid = 'public.recurrences'::regclass
+     and a.attname = 'schedule_effective_from';
+  if v_default is null then
+    raise exception 'recurrences.schedule_effective_from has no default: an insert that misses the trigger has nothing to write, and NOT NULL turns that into a failed write instead of a safe one';
+  end if;
+  if v_default not like '%9999-12-31%' then
+    raise exception 'recurrences.schedule_effective_from defaults to %, which is not the fail-closed value: a default reached only when the trigger is bypassed must SUPPRESS, never project', v_default;
   end if;
 
   raise notice '✓ 8.1K — the schedule gap (0068): effective_until, a NOT NULL floor on every rule, the seed occurrence kept apart from the anchor, the RPC that requires an effective date, and anon kept out';

@@ -250,7 +250,11 @@ function makeSupabase(db: Db, options: { maxRows?: number } = {}) {
                 interval_unit: 'month',
                 max_occurrences: null,
                 created_from_transaction_id: null,
-                schedule_effective_from: null,
+                // What the trigger writes at insert. NOT null: the column is NOT
+                // NULL, so "this schedule has always ruled" is spelled as the
+                // date the rule began — a fixture defaulting to null would be a
+                // row the database cannot hold.
+                schedule_effective_from: r.start_date,
                 seed_occurrence_date: null,
                 status: 'active',
                 category: null,

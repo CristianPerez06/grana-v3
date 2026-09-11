@@ -144,14 +144,14 @@ que probaban el cálculo y nunca el cableado. En producción la columna nueva no
 Coincidir no es estar bien — la prueba de paridad TS↔SQL coincide porque las dos mitades comparten el
 mismo dato incorrecto.
 
-- [ ] 2c.1 **El generador no lee `effective_until`.** La query de versiones no lo selecciona y el mapper
+- [x] 2c.1 **El generador no lee `effective_until`.** La query de versiones no lo selecciona y el mapper
       no lo copia, así que el walker lo recibe `undefined` y el cronograma viejo sigue produciendo
       dentro del hueco. `queries.ts:656`.
-- [ ] 2c.2 **Las lecturas reales no reciben `schedule_effective_from`.** "Próxima fecha" arma el objeto
+- [x] 2c.2 **Las lecturas reales no reciben `schedule_effective_from`.** "Próxima fecha" arma el objeto
       sin la columna (`queries.ts:72`), el detector de duplicados no la selecciona, y el dashboard ni
       la selecciona ni la propaga (`dashboard/queries.ts:918`, `aggregations.ts:713`). La prueba de las
       tres superficies usa objetos a mano y no cubre nada de esto.
-- [ ] 2c.3 **El trigger cierra TODAS las versiones históricas.** El `update` no se limita a la vigente,
+- [x] 2c.3 **El trigger cierra TODAS las versiones históricas.** El `update` no se limita a la vigente,
       así que una segunda edición durante un hueco extiende una versión ya cerrada hasta hoy y vuelve
       a producir fechas que la primera edición había excluido. Falta la regresión de "editar otra vez
       durante el hueco". `0068:227`.
@@ -172,6 +172,35 @@ mismo dato incorrecto.
       `schedule_effective_from` como invariante persistente (`NOT NULL` con un default fail-closed que
       el trigger pise); y `validate_schema.sql`, que hoy acepta un `CHECK` equivalente a `... OR true`
       y un trigger deshabilitado o apuntando a otra función.
+  - [x] `NOT NULL` + default `'9999-12-31'`, que suprime en vez de proyectar: sólo se alcanza cuando
+        el trigger está ausente, deshabilitado o esquivado, que es justo cuando un valor equivocado
+        pasa inadvertido. Es además lo que vuelve honesto el `Insert` opcional de los tipos.
+  - [x] `validate_schema.sql` deja de preguntar si el cuerpo *menciona* `seed_occurrence_date`: compara
+        la EXPRESIÓN, sobre el cuerpo con los comentarios quitados, así que una frase sobre la columna
+        no puede hacerse pasar por el código. El comportamiento se prueba aparte y completo contra
+        Postgres real en `seeded-anchor-correction.test.ts`; este archivo responde la otra pregunta,
+        si eso probado es lo que está desplegado. Pinea también el trigger habilitado (`tgenabled`).
+  - [ ] Falta: exigir una elección vigente, y el `CHECK` equivalente a `... OR true`.
+
+## 2d. La identidad de la ocurrencia semilla (revisión del 11/9, segunda vuelta)
+
+Descubierto al cerrar 2c.2: el ancla dejó de ser inmutable y **tres** lugares seguían leyendo de ella
+la ocurrencia que cubre el movimiento semilla. El peor no era un número mal mostrado sino una regla
+que el usuario ya no puede deshacer.
+
+- [x] 2d.1 **`recurrences.seed_occurrence_date`**, derivada en el INSERT y congelada después. Antes esa
+      ocurrencia se leía de `start_date`, lo cual era seguro sólo mientras `start_date` no se movía.
+      Con el ancla corregida: `coveredOccurrences` marcaba como cubierta la ocurrencia NUEVA y la
+      escondía de toda proyección; y 0065 liberaba el piso desde el ancla corregida mientras el guard
+      de 0064 exigía el que estableció la semilla — no coinciden, la transición se rechaza y **el
+      movimiento ya no se puede borrar**. 0068 redefine ambas funciones para nombrar la columna nueva.
+- [x] 2d.2 **El par vínculo/fecha, como invariante persistente.** `chk_recurrences_seed_pair` prohíbe
+      una regla vinculada sin fecha semilla, y el guard rechaza introducir o reemplazar el vínculo: con
+      la fecha congelada, un vínculo agregado después nombraría una ocurrencia que la regla nunca
+      cubrió. La única transición abierta sigue siendo la que hace 0065: cortarlo.
+- [x] 2d.3 **La regresión recorre la secuencia entera** contra Postgres real: crear desde un movimiento
+      futuro → corregir el ancla por el RPC → borrar la semilla por el RPC → atomicidad (probada con un
+      fallo que produce la base misma) y la fecha corregida materializada una sola vez.
 
 ## 3. Cierre
 

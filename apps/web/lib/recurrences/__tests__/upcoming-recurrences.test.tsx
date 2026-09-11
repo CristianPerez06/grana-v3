@@ -35,7 +35,7 @@ afterEach(cleanup)
  * calendar stopped, and the new one only starts ruling on 10/10. The occurrence
  * of 10/09 is inside the gap — nobody's.
  */
-const corrected = (floor: string | null): RecurrenceSummary =>
+const corrected = (floor: string): RecurrenceSummary =>
   ({
     id: 'r-alquiler',
     description: 'Alquiler',
@@ -77,7 +77,11 @@ describe('Próximas recurrencias — the stretch that belongs to nobody', () => 
   })
 
   it('lists it when no correction ever happened', async () => {
-    await renderCard(corrected(null))
+    // A rule that was never corrected does NOT carry an empty floor: the trigger
+    // writes `start_date` at insert and the column is NOT NULL, so "since always"
+    // is spelled as the date the rule began. Asserting against `null` here would
+    // be asserting against a row the database cannot produce.
+    await renderCard(corrected('2026-06-10'))
     expect(screen.getByText('10 sept')).toBeTruthy()
   })
 })

@@ -145,6 +145,18 @@ update public.recurrences
  where created_from_transaction_id is not null
    and seed_occurrence_date is null;
 
+-- THE PAIR, AS A CONSTRAINT. The trigger below derives the date and refuses to
+-- move it, but a trigger is a rule about WRITES: it says nothing about a row
+-- that reached this shape some other way — a migration with the trigger
+-- disabled, a repair run as the owner, a restore. A linked rule with no seed
+-- date is the state every consumer of `coveredOccurrences` misreads, so the
+-- table refuses to hold it at all.
+alter table public.recurrences
+  drop constraint if exists chk_recurrences_seed_pair;
+alter table public.recurrences
+  add constraint chk_recurrences_seed_pair
+  CHECK (created_from_transaction_id is null or seed_occurrence_date is not null);
+
 commit;
 
 begin;
@@ -182,6 +194,22 @@ begin
       raise exception
         'seed_occurrence_date is immutable: rule % covers occurrence %, and the write tried to move it to %.',
         OLD.id, OLD.seed_occurrence_date, NEW.seed_occurrence_date
+        using errcode = '23514';
+    end if;
+
+    -- THE LINK IS SET AT BIRTH AND CAN ONLY BE CUT. With the seed date frozen
+    -- above, a client that could attach a link afterwards — or point it at a
+    -- different movement — would produce exactly the row the CHECK forbids or,
+    -- worse, one that satisfies it while naming the wrong occurrence: a rule
+    -- claiming to cover a date some unrelated movement has nothing to do with.
+    -- ONE transition stays open, and it is the one 0065 makes: cutting it.
+    if NEW.created_from_transaction_id is distinct from OLD.created_from_transaction_id
+       and not (OLD.created_from_transaction_id is not null
+                and NEW.created_from_transaction_id is null)
+    then
+      raise exception
+        'created_from_transaction_id cannot be introduced or replaced: rule % was seeded by %, and the write tried to point it at %. Only unlinking is allowed.',
+        OLD.id, OLD.created_from_transaction_id, NEW.created_from_transaction_id
         using errcode = '23514';
     end if;
 
@@ -380,6 +408,20 @@ create trigger trg_recurrence_resolve_schedule_effective_from
 -- "no floor" is to write a date that says so.
 alter table public.recurrences
   alter column schedule_effective_from set not null;
+
+-- FAIL-CLOSED, and it exists to be overwritten. The trigger above writes this
+-- column on every insert, so the default is only ever reached when the trigger
+-- is gone, disabled, or bypassed — precisely when a wrong value would go
+-- unnoticed. So the value it lands on is the one that SUPPRESSES: a floor in the
+-- year 9999 means no schedule rules yet and nothing is projected. An empty card
+-- is a bug someone reports; a card announcing vencimientos nobody will ever owe
+-- is a bug someone BELIEVES.
+--
+-- It is also what makes `Insert` optional in the generated types honest: without
+-- a default, a regeneration marks the column required and every insert in the
+-- codebase would have to name a floor it has no business choosing.
+alter table public.recurrences
+  alter column schedule_effective_from set default '9999-12-31';
 
 -- ── 4 · The version, closed so the two never overlap ───────────────────────
 -- Replaces 0064's function in place. Everything it did stays; what changes is

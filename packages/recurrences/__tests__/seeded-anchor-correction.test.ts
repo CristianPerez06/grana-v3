@@ -148,6 +148,93 @@ describe('the occurrence the seed covers keeps its own identity', () => {
   })
 })
 
+describe('the link and the date it implies cannot come apart', () => {
+  it('refuses to point an existing rule at a different movement', async () => {
+    const seeded = await seededFromAFutureMovement()
+    const otherTx = nextId('d')
+    await actAsAdmin(db)
+    await db.exec(`
+      insert into public.transactions (id, user_id, date, amount)
+      values ('${otherTx}', '${U_A}', '${seeded.seedDate}', 1000);
+    `)
+    await actAs(db, U_A)
+
+    await expect(
+      db.exec(`
+        update public.recurrences set created_from_transaction_id = '${otherTx}'
+         where id = '${seeded.ruleId}';
+      `),
+    ).rejects.toThrow(/cannot be introduced or replaced/)
+  })
+
+  it('refuses to seed a rule that was never seeded', async () => {
+    // The seed date is frozen at birth, so a link attached later names an
+    // occurrence this rule never covered — and no write can put the date right.
+    const plain = nextId('e')
+    const tx = nextId('f')
+    await actAsAdmin(db)
+    await db.exec(`
+      insert into public.transactions (id, user_id, date, amount)
+      values ('${tx}', '${U_A}', '${await today()}', 1000);
+      insert into public.recurrences
+        (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code, movement_type)
+      values ('${plain}', '${U_A}', '2026-06-08', 1, 'month', 'active', 1000, 'ARS', 'expense');
+    `)
+    await actAs(db, U_A)
+
+    await expect(
+      db.exec(`
+        update public.recurrences set created_from_transaction_id = '${tx}' where id = '${plain}';
+      `),
+    ).rejects.toThrow(/cannot be introduced or replaced/)
+  })
+
+  it('the table refuses the broken pair even with the trigger out of the way', async () => {
+    // The second line of defence, and the reason it exists: a trigger rules over
+    // WRITES, and 0064 itself documents disabling one around a migration as a
+    // legitimate move. A linked rule with no seed date is the row every reader
+    // of `coveredOccurrences` misreads, so the table must not hold it at all.
+    const seeded = await seededFromAFutureMovement()
+    await actAsAdmin(db)
+    await db.exec(`alter table public.recurrences disable trigger trg_recurrence_reconstruct_from_guard;`)
+    try {
+      await expect(
+        db.exec(`
+          update public.recurrences set seed_occurrence_date = null where id = '${seeded.ruleId}';
+        `),
+      ).rejects.toThrow(/chk_recurrences_seed_pair/)
+    } finally {
+      await db.exec(`alter table public.recurrences enable trigger trg_recurrence_reconstruct_from_guard;`)
+      await actAs(db, U_A)
+    }
+  })
+})
+
+describe('the floor a row lands on when nothing decides it', () => {
+  it('suppresses rather than projects', async () => {
+    // Reached only when the trigger is gone, disabled or bypassed — exactly when
+    // a wrong value goes unnoticed. A card showing nothing gets reported; a card
+    // announcing vencimientos nobody will owe gets believed.
+    const bypassed = nextId('9')
+    await actAsAdmin(db)
+    await db.exec(`alter table public.recurrences disable trigger trg_recurrence_resolve_schedule_effective_from;`)
+    try {
+      await db.exec(`
+        insert into public.recurrences
+          (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code, movement_type)
+        values ('${bypassed}', '${U_A}', '2026-06-08', 1, 'month', 'active', 1000, 'ARS', 'expense');
+      `)
+    } finally {
+      await db.exec(`alter table public.recurrences enable trigger trg_recurrence_resolve_schedule_effective_from;`)
+    }
+    const { rows } = await db.query<{ f: string }>(
+      `select schedule_effective_from::text as f from public.recurrences where id = '${bypassed}'`,
+    )
+    await actAs(db, U_A)
+    expect(rows[0].f).toBe('9999-12-31')
+  })
+})
+
 describe('deleting the seed of a rule whose reference date was corrected', () => {
   it('goes through, and releases the floor the SEED established', async () => {
     const seeded = await seededFromAFutureMovement()

@@ -1059,7 +1059,7 @@ export async function getDuplicateRulesFor(
       interval_unit: IntervalUnit
       max_occurrences: number | null
       created_from_transaction_id: string | null
-      schedule_effective_from: string | null
+      schedule_effective_from: string
       seed_occurrence_date: string | null
     }
   >

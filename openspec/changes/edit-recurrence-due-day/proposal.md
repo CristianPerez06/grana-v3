@@ -52,6 +52,21 @@ Hace falta que una versión pueda **dejar de producir antes** de que arranque la
 - La etiqueta es "Fecha de referencia" y no "Día de vencimiento": para una regla semanal o cada N días no hay un "día" del mes, y el nombre sería incorrecto justo en los casos donde el campo más se necesita.
 - El formulario dice qué va a pasar antes de guardar: el cambio rige desde acá, y las ocurrencias que ya existen conservan su vencimiento.
 - El spec de `transactions` deja de fijar el field set mutable en cuatro campos y pasa a cinco, con las tres reglas del cambio escritas: rige desde el cambio, no reconstruye el pasado, y funciona con la regla activa o pausada.
+- **`recurrences.seed_occurrence_date`**, inmutable: la ocurrencia que cubre el movimiento semilla, separada del ancla. Ver abajo.
+
+### La consecuencia de volver mutable el ancla: la ocurrencia semilla necesita identidad propia
+
+Una regla creada desde un movimiento cubre **una** ocurrencia que no tiene fila en `recurrence_instances` — el movimiento mismo **es** esa ocurrencia. Hasta ahora esa fecha se leía de `start_date`, y eso era correcto sólo porque `start_date` no se podía mover. Este cambio lo mueve, y en ese momento tres lugares pasan a hablar de una ocurrencia distinta de la que el movimiento cubre:
+
+- `coveredOccurrences` marca como ya existente la **primera ocurrencia del cronograma corregido**, que desaparece de toda proyección, mientras anuncia como próxima la que el movimiento sí cubre;
+- `delete_movement_unlinking_seed` (`0065`) libera el piso calculando `start_date - 1` sobre el ancla corregida, mientras el guard de `0064` exige el piso que estableció la semilla (`reconstruct_from = start_date`). Ya no coinciden: **la transición se rechaza y el movimiento no se puede borrar nunca más**. Un movimiento futuro mal cargado queda pegado a la cuenta;
+- la pantalla que pregunta qué hacer con la regla antes de borrar nombra el vencimiento equivocado.
+
+No es un número mal mostrado: es una regla que el usuario ya no puede deshacer. Por eso la ocurrencia semilla pasa a tener **columna propia**, derivada en el INSERT y congelada después, y `0068` redefine el guard de `0064` y la función de `0065` para nombrarla a ella y no al ancla.
+
+El par se sostiene además en la tabla, no sólo en el trigger: `chk_recurrences_seed_pair` prohíbe una regla vinculada sin fecha semilla, y el guard rechaza **introducir o reemplazar** el vínculo — con la fecha congelada, un vínculo agregado después nombraría una ocurrencia que la regla nunca cubrió. La única transición que queda abierta es la que hace `0065`: cortarlo.
+
+`schedule_effective_from` queda `NOT NULL` con default `'9999-12-31'`, un valor que **suprime en vez de proyectar**: sólo se alcanza cuando el trigger está ausente, deshabilitado o esquivado, que es justo cuando un valor equivocado pasa inadvertido. Una tarjeta vacía se reporta; una tarjeta que anuncia vencimientos que nadie va a deber se cree.
 
 ### Lo que NO cambia
 
@@ -75,6 +90,9 @@ _Ninguna._
 
 ## Impact
 
+- `supabase/migrations/0068_schedule_version_effective_until.sql` — `effective_until`, `schedule_effective_from`, `seed_occurrence_date`, el guard de `0064` y la función de `0065` redefinidos, y el RPC.
+- `packages/transactions-mutations/src/thin-mutations.ts` — el borrado de la semilla lee el piso y la ocurrencia semilla.
+- `apps/web/app/(app)/transactions/recurring/_components/upcoming-recurrences.tsx` — "Próximas recurrencias" respeta el piso.
 - `apps/web/app/(app)/transactions/recurring/[id]/_components/recurrence-edit-drawer.tsx` — el campo nuevo.
 - `apps/mobile/components/recurrences/RecurrenceEditForm.tsx` — su espejo nativo.
 - `packages/i18n-messages` — la etiqueta, la ayuda y la pregunta, en `es.json` y `en.json`.
