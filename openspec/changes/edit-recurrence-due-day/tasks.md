@@ -137,6 +137,42 @@ una pregunta en el formulario. El detalle está en `proposal.md`; acá va el tra
       días, topes y fechas de fin. Si divergen, el formulario ofrecería una fecha que el servidor
       rechaza y corregir la referencia sería imposible justo en esos casos.
 
+## 2c. BLOQUEANTES de la revisión del 11/9 — nada se aplica hasta cerrarlos
+
+La causa común de los tres primeros: **los tests construían las versiones y las reglas a mano**, así
+que probaban el cálculo y nunca el cableado. En producción la columna nueva no llega a quien la usa.
+Coincidir no es estar bien — la prueba de paridad TS↔SQL coincide porque las dos mitades comparten el
+mismo dato incorrecto.
+
+- [ ] 2c.1 **El generador no lee `effective_until`.** La query de versiones no lo selecciona y el mapper
+      no lo copia, así que el walker lo recibe `undefined` y el cronograma viejo sigue produciendo
+      dentro del hueco. `queries.ts:656`.
+- [ ] 2c.2 **Las lecturas reales no reciben `schedule_effective_from`.** "Próxima fecha" arma el objeto
+      sin la columna (`queries.ts:72`), el detector de duplicados no la selecciona, y el dashboard ni
+      la selecciona ni la propaga (`dashboard/queries.ts:918`, `aggregations.ts:713`). La prueba de las
+      tres superficies usa objetos a mano y no cubre nada de esto.
+- [ ] 2c.3 **El trigger cierra TODAS las versiones históricas.** El `update` no se limita a la vigente,
+      así que una segunda edición durante un hueco extiende una versión ya cerrada hasta hoy y vuelve
+      a producir fechas que la primera edición había excluido. Falta la regresión de "editar otra vez
+      durante el hueco". `0068:227`.
+- [ ] 2c.4 **La migración está partida en tres transacciones.** Si falla la segunda o la tercera, la
+      primera ya quedó aplicada, y existe una ventana donde la columna está instalada sin sus
+      triggers. Tiene que ser una sola.
+- [ ] 2c.5 **`max_occurrences` se cuenta por filas**, y la semántica que cerró el #96 es por posiciones
+      del calendario: una ocurrencia semilla no tiene fila, y una posición gastada puede no tenerla.
+      Está mal en los dos lados —cliente y SQL— y por eso la paridad no lo detecta.
+- [ ] 2c.6 **Cambiar frecuencia y referencia juntas falla.** Los dos formularios calculan las opciones
+      con `rule.interval_count/unit` —lo guardado— mientras el servidor valida contra la frecuencia
+      nueva del patch, así que rechaza la fecha que el formulario ofreció.
+- [ ] 2c.7 **La elección queda obsoleta.** Al cambiar después la referencia, la frecuencia o el fin, el
+      formulario conserva la selección anterior y la manda aunque ya no esté entre las opciones.
+- [ ] 2c.8 **El estado `exhausted` promete algo que no pasa.** El texto dice que la referencia "queda
+      guardada", pero el formulario manda `null` y el RPC rechaza toda regla activa sin fecha efectiva.
+- [ ] 2c.9 Endurecer además: exigir una elección vigente en vez de tomar la primera en silencio;
+      `schedule_effective_from` como invariante persistente (`NOT NULL` con un default fail-closed que
+      el trigger pise); y `validate_schema.sql`, que hoy acepta un `CHECK` equivalente a `... OR true`
+      y un trigger deshabilitado o apuntando a otra función.
+
 ## 3. Cierre
 
 - [ ] 3.1 QA manual en las dos plataformas, con el caso real del sueldo.
