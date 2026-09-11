@@ -648,11 +648,22 @@ declare
   v_produced int := 0;
   v_count    int;
   v_span     int;
+  v_seed     date;
+  v_upfront  boolean := false;
+  v_prefix   boolean;
 begin
   select * into v_rule from public.recurrences where id = p_id;
   if not found then
     return 0;
   end if;
+
+  -- THE SEED IS A SPENT POSITION, always. The movement is in the ledger from the
+  -- day the rule is created, dated ahead or not, and no version of the schedule
+  -- need produce it for that to be true. Correcting a reference date is exactly
+  -- the case where none does — the seed's own date falls in the gap the
+  -- correction opens — and without this a three-cuota rule hands out three more
+  -- on top of the movement the user already has.
+  v_seed := v_rule.seed_occurrence_date;
 
   for v_version in
     select v.*,
@@ -703,6 +714,17 @@ begin
        where (v_version.anchor_date + (v_step * n))::date < v_version.effective_from
          and (v_rule.end_date is null
               or (v_version.anchor_date + (v_step * n))::date <= v_rule.end_date);
+
+      -- Counted there already, or counted here — once either way.
+      select v_seed is not null and exists (
+        select 1 from generate_series(0, v_span) n
+         where (v_version.anchor_date + (v_step * n))::date = v_seed
+           and (v_version.anchor_date + (v_step * n))::date < v_version.effective_from
+      ) into v_prefix;
+      v_upfront := v_seed is not null and not v_prefix;
+      if v_upfront then
+        v_produced := v_produced + 1;
+      end if;
     end if;
 
     continue when v_version.effective_from > v_to;
@@ -713,6 +735,7 @@ begin
      where d >= v_version.effective_from
        and d <= v_to
        and (v_rule.end_date is null or d <= v_rule.end_date)
+       and not (v_upfront and d = v_seed)
        and not exists (
          select 1 from public.recurrence_pauses ps
           where ps.recurrence_id = p_id
@@ -722,6 +745,13 @@ begin
 
     v_produced := v_produced + v_count;
   end loop;
+
+  -- No versions at all: the loop never ran, and the seed is still spent.
+  if not exists (
+    select 1 from public.recurrence_schedule_versions where recurrence_id = p_id
+  ) then
+    v_produced := case when v_seed is null then 0 else 1 end;
+  end if;
 
   if v_rule.max_occurrences is not null and v_produced > v_rule.max_occurrences then
     v_produced := v_rule.max_occurrences;

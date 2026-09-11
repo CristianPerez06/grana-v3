@@ -116,6 +116,7 @@ const spentBothWays = async (setup: {
   pauses?: Array<{ paused_from: string; resumed_at: string | null }>
   endDate?: string | null
   maxOccurrences?: number | null
+  seedOccurrenceDate?: string | null
   today: string
 }): Promise<{ ts: number; sql: number }> => {
   const id = `00000000-0000-4000-8000-00000000ca${(parityRule++).toString(16).padStart(2, '0')}`
@@ -127,16 +128,19 @@ const spentBothWays = async (setup: {
   await db.exec(`
     alter table public.recurrences disable trigger trg_recurrence_resolve_schedule_effective_from;
     alter table public.recurrences disable trigger trg_recurrence_sync_schedule_and_pauses;
+    alter table public.recurrences disable trigger trg_recurrence_reconstruct_from_guard;
     insert into public.recurrences
       (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code,
-       movement_type, end_date, max_occurrences, schedule_effective_from)
+       movement_type, end_date, max_occurrences, schedule_effective_from, seed_occurrence_date)
     values ('${id}', '${U_A}', '${first.anchor_date}', ${first.interval_count},
             '${first.interval_unit}', 'active', 1000, 'ARS', 'expense',
             ${setup.endDate == null ? 'null' : `'${setup.endDate}'`},
             ${setup.maxOccurrences == null ? 'null' : setup.maxOccurrences},
-            '${first.effective_from}');
+            '${first.effective_from}',
+            ${setup.seedOccurrenceDate == null ? 'null' : `'${setup.seedOccurrenceDate}'`});
     alter table public.recurrences enable trigger trg_recurrence_resolve_schedule_effective_from;
     alter table public.recurrences enable trigger trg_recurrence_sync_schedule_and_pauses;
+    alter table public.recurrences enable trigger trg_recurrence_reconstruct_from_guard;
   `)
   for (const v of setup.versions) {
     await db.exec(`
@@ -170,6 +174,7 @@ const spentBothWays = async (setup: {
       pauses: setup.pauses ?? [],
       endDate: setup.endDate ?? null,
       maxOccurrences: setup.maxOccurrences ?? null,
+      seedOccurrenceDate: setup.seedOccurrenceDate ?? null,
       today: setup.today,
     }),
     sql: Number(rows[0].n),
@@ -279,6 +284,57 @@ const spentCases: Array<{
     expected: 28,
     setup: {
       versions: [{ effective_from: '2026-03-02', anchor_date: '2026-03-02', interval_count: 1, interval_unit: 'week' }],
+      today: '2026-09-11',
+    },
+  },
+  {
+    // MORE THAN 750 POSITIONS. The TypeScript walker carries a step budget meant
+    // as a safety net for a bounded window; counting a rule's whole life is not
+    // bounded, and a daily rule running for years walks past it. Truncation is
+    // silent, so the count comes back short, the cap looks unspent, and the form
+    // offers cuotas that no longer exist.
+    name: 'every day for three years, past the walker\'s step budget',
+    expected: 1096,
+    setup: {
+      versions: [{ effective_from: '2023-09-12', anchor_date: '2023-09-12', interval_count: 1, interval_unit: 'day' }],
+      today: '2026-09-11',
+    },
+  },
+  {
+    // The seed's own date is on the first version's calendar and BEFORE it takes
+    // effect, so the arithmetic prefix already counts it. Counting it again here
+    // would spend a cuota that does not exist.
+    name: 'a seed inside the first version\'s prefix, counted once',
+    expected: 9,
+    setup: {
+      versions: [{ effective_from: '2026-03-10', anchor_date: '2026-01-10', interval_count: 1, interval_unit: 'month' }],
+      seedOccurrenceDate: '2026-01-10',
+      today: '2026-09-11',
+    },
+  },
+  {
+    // The case the whole thing exists for: the seed's date falls between the
+    // version that stopped and the one that has not started. Nothing walks it.
+    // 1 (the stranded seed) + 6 from the first version (Jan–Jun on the 8th)
+    // + 3 from the second (Jul–Sep on the 10th).
+    name: 'a seed stranded in the gap, counted all the same',
+    expected: 10,
+    setup: {
+      versions: [
+        { effective_from: '2026-01-08', effective_until: '2026-06-30', anchor_date: '2026-01-08', interval_count: 1, interval_unit: 'month' },
+        { effective_from: '2026-07-10', anchor_date: '2026-07-10', interval_count: 1, interval_unit: 'month' },
+      ],
+      seedOccurrenceDate: '2026-07-05',
+      today: '2026-09-11',
+    },
+  },
+  {
+    // Emitted by a version's own walk. Still one position, not two.
+    name: 'a seed the calendar does produce, counted once',
+    expected: 9,
+    setup: {
+      versions: [{ effective_from: '2026-01-10', anchor_date: '2026-01-10', interval_count: 1, interval_unit: 'month' }],
+      seedOccurrenceDate: '2026-03-10',
       today: '2026-09-11',
     },
   },

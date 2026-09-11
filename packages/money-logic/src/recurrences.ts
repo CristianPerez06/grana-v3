@@ -335,6 +335,17 @@ export type OwedOccurrencesForRuleInput = {
   horizon: string
   today: string
   existing: Iterable<string>
+  /**
+   * The occurrence the rule's seed movement covers, or null when it had none.
+   *
+   * It is a SPENT POSITION from the moment the rule exists — the movement is in
+   * the ledger, dated ahead or not — and no version of the schedule need produce
+   * it for that to be true. Correcting a reference date is exactly the case
+   * where none does: the seed's own date falls in the gap the correction opens,
+   * nothing walks it, nothing counts it, and a three-cuota rule generates three
+   * more on top of the movement the user already has.
+   */
+  seedOccurrenceDate: string | null
 }
 
 // A pause covers [paused_from, resumed_at): the day it is resumed the rule is
@@ -389,12 +400,35 @@ function forEachComposedOccurrence(
     maxOccurrences,
     horizon,
     today,
+    seedOccurrenceDate,
   }: Omit<OwedOccurrencesForRuleInput, 'reconstructFrom' | 'existing'>,
   visit: (date: string) => void,
 ): number {
-  if (versions.length === 0) return 0
+  if (versions.length === 0) return seedOccurrenceDate == null ? 0 : 1
 
   const ordered = [...versions].sort((a, b) => a.effective_from.localeCompare(b.effective_from))
+
+  // Is the seed's own position already inside the arithmetic prefix the first
+  // version contributes? If it is, it is counted there and must not be counted
+  // again; if it is not, it is counted UP FRONT — before the cap is consulted —
+  // because whether some version happens to walk over it is not what decides
+  // that the money is committed.
+  const firstVersion = ordered[0]
+  const seedInFirstPrefix =
+    seedOccurrenceDate != null &&
+    seedOccurrenceDate < firstVersion.effective_from &&
+    occurrenceOrdinal(
+      {
+        start_date: firstVersion.anchor_date,
+        end_date: endDate,
+        interval_count: firstVersion.interval_count,
+        interval_unit: firstVersion.interval_unit,
+        max_occurrences: null,
+        schedule_effective_from: null,
+      },
+      seedOccurrenceDate,
+    ) != null
+  const seedCountedUpFront = seedOccurrenceDate != null && !seedInFirstPrefix
 
   // How many occurrences the rule has produced SO FAR along its composed
   // timeline. `max_occurrences` counts positions on the rule's calendar from its
@@ -442,7 +476,9 @@ function forEachComposedOccurrence(
     // Counting them by arithmetic costs nothing and is exactly what
     // `walkOccurrences` did when the cap lived in the schedule.
     if (index === 0) {
-      produced = occurrenceIndexAt(schedule, version.effective_from, 'on-or-after')
+      produced =
+        occurrenceIndexAt(schedule, version.effective_from, 'on-or-after') +
+        (seedCountedUpFront ? 1 : 0)
     }
 
     // Where the walk STARTS. With a cap it must start where the version does,
@@ -459,12 +495,32 @@ function forEachComposedOccurrence(
       const remaining = maxOccurrences == null ? undefined : maxOccurrences - produced
       if (remaining != null && remaining <= 0) break
 
+      // The budget this segment actually needs, by the same arithmetic that
+      // positions the walk. Without it a rule whose life outruns the default — a
+      // daily rule running for years — stopped at 750 and reported fewer
+      // positions spent than it had, which reads as a cap still unspent.
+      const span =
+        occurrenceIndexAt(schedule, segment.to, 'strictly-after') -
+        occurrenceIndexAt(schedule, segment.from, 'on-or-after') +
+        2
+
+      // One more when the seed's date falls in this stretch: it is emitted like
+      // any other, but it was counted up front, so a limit derived from what is
+      // left of the cap would stop the walk one occurrence short.
+      const seedInSegment =
+        seedCountedUpFront &&
+        seedOccurrenceDate != null &&
+        seedOccurrenceDate >= segment.from &&
+        seedOccurrenceDate <= segment.to
+
       for (const date of walkOccurrences(schedule, {
         from: segment.from,
         to: segment.to,
-        limit: remaining,
+        limit: remaining == null ? undefined : remaining + (seedInSegment ? 1 : 0),
+        maxSteps: Math.max(span, MAX_WALK_STEPS),
       })) {
-        produced += 1
+        // Counted once, and it may already have been.
+        if (!(seedCountedUpFront && date === seedOccurrenceDate)) produced += 1
         visit(date)
       }
     }
@@ -513,6 +569,8 @@ export function occurrencePositionsSpent(input: {
   endDate: string | null
   maxOccurrences: number | null
   today: string
+  /** See `OwedOccurrencesForRuleInput.seedOccurrenceDate`. */
+  seedOccurrenceDate: string | null
 }): number {
   return forEachComposedOccurrence(
     {
@@ -621,7 +679,17 @@ export type ProjectedOccurrence = {
 // Safety net, no longer the thing that decides how far a rule can reach: the
 // walker positions itself at the window's edge by arithmetic, so this bounds the
 // steps taken INSIDE the window, not the life of the rule. See occurrenceIndexAt.
+//
+// It is a DEFAULT, not a ceiling: counting the positions a rule has spent walks
+// its whole life, and three years of a daily rule is past this. A caller that
+// knows its own span says so — and running out now THROWS, because the failure
+// this replaces was a walk that stopped at 750 and returned a short list with
+// nothing to say it had.
 const MAX_WALK_STEPS = 750
+
+// How far the arithmetic estimate in `occurrenceIndexAt` may be off. Month-end
+// clamping moves it by at most one; the rest is slack.
+const MAX_ESTIMATE_CORRECTION = 4
 
 export type OccurrenceWindow = {
   /** Inclusive lower bound. Occurrences before it are stepped over, not emitted. */
@@ -639,6 +707,12 @@ export type OccurrenceWindow = {
    * AND in the projection until the user resolves it.
    */
   cursor?: string | null
+  /**
+   * How many steps this walk may take. Defaults to `MAX_WALK_STEPS`, which suits
+   * a bounded window; a caller walking a rule's whole life passes its own span.
+   * Running out throws rather than truncating.
+   */
+  maxSteps?: number
   /** Stop after this many emitted occurrences. Use 1 to ask "the next one". */
   limit?: number
 }
@@ -689,11 +763,20 @@ function occurrenceIndexAt(
   if (n < 0) n = 0
 
   // Walk back while the estimate overshot, then forward until it satisfies.
-  // Both loops are bounded: the estimate is never more than a couple of steps off.
+  //
+  // The forward bound counts CORRECTIONS, not the index. It used to read
+  // `n > MAX_WALK_STEPS`, which is a different quantity: for a rule whose true
+  // position is past 750 — a daily rule running two years — the loop was already
+  // over its limit before it began, so an estimate that did need correcting came
+  // back uncorrected.
   while (n > 0 && satisfies(occurrenceAt(schedule, n - 1))) n -= 1
-  while (!satisfies(occurrenceAt(schedule, n))) {
+  for (let steps = 0; !satisfies(occurrenceAt(schedule, n)); steps += 1) {
+    if (steps > MAX_ESTIMATE_CORRECTION) {
+      throw new Error(
+        `occurrenceIndexAt: the estimate for ${date} did not converge on ${start} every ${count} ${unit}`,
+      )
+    }
     n += 1
-    if (n > MAX_WALK_STEPS) break
   }
   return n
 }
@@ -737,7 +820,7 @@ export function walkOccurrences(
   schedule: OccurrenceSchedule,
   window: OccurrenceWindow,
 ): string[] {
-  const { from, to = null, cursor = null, limit } = window
+  const { from, to = null, cursor = null, limit, maxSteps = MAX_WALK_STEPS } = window
   const out: string[] = []
 
   // Position at the window's edge: the first occurrence that is both >= `from`
@@ -750,7 +833,12 @@ export function walkOccurrences(
 
   let current = occurrenceAt(schedule, produced)
 
-  for (let steps = 0; steps < MAX_WALK_STEPS; steps++) {
+  for (let steps = 0; ; steps += 1) {
+    if (steps > maxSteps) {
+      throw new Error(
+        `walkOccurrences: ${maxSteps} steps did not reach ${to ?? 'the end'} from ${from} on ${schedule.start_date} every ${schedule.interval_count} ${schedule.interval_unit}`,
+      )
+    }
     if (schedule.max_occurrences != null && produced >= schedule.max_occurrences) break
     if (to != null && current > to) break
     if (schedule.end_date != null && current > schedule.end_date) break
@@ -810,9 +898,11 @@ export function getNextExpectedOccurrence(
   // calendar would have produced. See `schedule_effective_from`.
   const floor = rule.schedule_effective_from
   const from = floor != null && floor > today ? floor : today
-  // Bounded because the walk is: it steps forward only while it keeps landing on
-  // dates that already exist, and occurrences exist only up to today.
-  for (const date of walkOccurrences(rule, { from })) {
+  // Bounded by the covered set, and told so. It steps forward only while it
+  // keeps landing on dates that already exist, so one more than there ARE is
+  // always enough — and saying it is what keeps this from walking the step
+  // budget on every call and throwing away all but the first answer.
+  for (const date of walkOccurrences(rule, { from, limit: already.size + 1 })) {
     if (!already.has(date)) return date
   }
   return null
@@ -848,7 +938,14 @@ export function candidateEffectiveDates(
   const remaining = schedule.remaining
   if (remaining != null && remaining <= 0) return []
 
-  const walk = walkOccurrences(
+  // At most two, and the walk is TOLD so. It used to ask for an open-ended walk
+  // and take the first two off the front, which meant stepping to whatever the
+  // step budget allowed and throwing the rest away — and, once running out of
+  // budget became an error instead of a silent stop, it meant erroring on every
+  // schedule. The bound belongs where the walk can act on it.
+  const wanted = remaining == null ? 2 : Math.min(2, remaining)
+
+  return walkOccurrences(
     {
       start_date: schedule.anchor_date,
       end_date: schedule.end_date ?? null,
@@ -859,16 +956,8 @@ export function candidateEffectiveDates(
       // floor in force would hide the very dates being offered.
       schedule_effective_from: null,
     },
-    { from },
+    { from, limit: wanted },
   )
-
-  const wanted = remaining == null ? 2 : Math.min(2, remaining)
-  const out: string[] = []
-  for (const date of walk) {
-    out.push(date)
-    if (out.length === wanted) break
-  }
-  return out
 }
 
 // Flatten every rule's in-window occurrences into a single date-sorted list.

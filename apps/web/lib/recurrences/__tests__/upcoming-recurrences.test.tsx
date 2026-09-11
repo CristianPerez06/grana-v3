@@ -17,7 +17,12 @@ import type { RecurrenceSummary } from '@/lib/recurrences/types'
 // calendar would assert different dates every day it runs.
 vi.mock('@grana/money-logic', async () => {
   const actual = await vi.importActual<typeof import('@grana/money-logic')>('@grana/money-logic')
-  return { ...actual, getTodayAR: () => new Date('2026-09-08T12:00:00Z') }
+  // LOCAL midnight, the shape the real `getTodayAR` returns: it reads the AR
+  // calendar date and builds `new Date(y, m - 1, d)`, and `formatDateISO` then
+  // reads LOCAL parts back off it. A UTC instant round-trips through that pair
+  // as a different day everywhere east of UTC, so the suite would pass here and
+  // fail on a machine set to Auckland — a failure about nothing.
+  return { ...actual, getTodayAR: () => new Date(2026, 8, 8) }
 })
 vi.mock('next-intl/server', () => ({
   getTranslations: async (namespace?: string) => (key: string) =>

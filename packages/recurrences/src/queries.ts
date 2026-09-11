@@ -414,6 +414,7 @@ export type RecurrenceRuleForGeneration = {
   start_date: string
   end_date: string | null
   reconstruct_from: string
+  seed_occurrence_date: string | null
   amount: number
   account_id: string
   transfer_destination_account_id: string | null
@@ -642,7 +643,7 @@ export async function generateDueRecurrenceInstances(
     supabase
       .from('recurrences')
       .select(
-        'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, reconstruct_from, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
+        'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, reconstruct_from, seed_occurrence_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
       )
       .eq('user_id', userId)
       .eq('status', 'active')
@@ -775,6 +776,9 @@ export async function generateDueRecurrenceInstances(
       horizon,
       today,
       existing: existing?.dates ?? [],
+      // Spent whether or not any version produces it — and after a corrected
+      // reference date, none does: the seed's own date sits in the gap.
+      seedOccurrenceDate: rule.seed_occurrence_date,
     })
     if (owed.length === 0) continue
     backlogByRule.set(rule.id, {

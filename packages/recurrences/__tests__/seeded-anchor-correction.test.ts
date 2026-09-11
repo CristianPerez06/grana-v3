@@ -307,6 +307,48 @@ describe('the RPC validates against positions too', () => {
   })
 })
 
+describe('the cap counts the seed, even when no version produces it', () => {
+  it('a corrected future seed does not buy the user a fourth cuota', async () => {
+    // Three cuotas, the first of them the movement itself, dated ahead. Correct
+    // the reference date and the seed's own date lands in the GAP — the stretch
+    // the old version no longer rules and the new one does not yet. Nothing walks
+    // it, so nothing counts it, and the cap starts again from zero with the
+    // movement already in the ledger: three generated plus one real = four.
+    const seeded = await seededFromAFutureMovement()
+    await actAsAdmin(db)
+    await db.exec(`
+      update public.recurrences set max_occurrences = 3 where id = '${seeded.ruleId}';
+    `)
+    await actAs(db, U_A)
+    const chosen = await correctAnchor(seeded, 2)
+
+    // Far enough ahead for three monthly positions of the corrected schedule to
+    // have come due, and inside the generator's own horizon so that what it
+    // declines to create is the cap and nothing else.
+    await generateDueRecurrenceInstances(supabase, U_A, { today: shift(chosen, 70) })
+
+    await actAsAdmin(db)
+    const { rows } = await db.query<{ due_date: string }>(
+      `select due_date::text from public.recurrence_instances
+        where recurrence_id = '${seeded.ruleId}' order by due_date`,
+    )
+    await actAs(db, U_A)
+    // The seed movement IS one of the three. Two more is the whole of what is left.
+    expect(rows.map((r) => r.due_date)).toHaveLength(2)
+  })
+
+  it('counts it as spent from the moment the movement exists', async () => {
+    // The money is committed the day the rule is created, not the day the date
+    // arrives: the movement is already in the ledger, dated ahead.
+    const seeded = await seededFromAFutureMovement()
+    const { rows } = await db.query<{ n: number }>(
+      `select public.recurrence_positions_spent('${seeded.ruleId}'::uuid,
+         ((now() at time zone 'America/Argentina/Buenos_Aires')::date)) as n`,
+    )
+    expect(Number(rows[0].n)).toBe(1)
+  })
+})
+
 describe('the floor a row lands on when nothing decides it', () => {
   it('suppresses rather than projects', async () => {
     // Reached only when the trigger is gone, disabled or bypassed — exactly when

@@ -28,7 +28,10 @@ vi.mock('next-intl', () => ({
 // real calendar would assert different dates every day it runs.
 vi.mock('@grana/money-logic', async () => {
   const actual = await vi.importActual<typeof import('@grana/money-logic')>('@grana/money-logic')
-  return { ...actual, getTodayAR: () => new Date('2026-09-10T12:00:00Z') }
+  // LOCAL midnight, the shape the real `getTodayAR` returns — a UTC instant is
+  // read back by `formatDateISO` as the NEXT day east of UTC, which moves every
+  // candidate a month.
+  return { ...actual, getTodayAR: () => new Date(2026, 8, 10) }
 })
 // The drawer is a portal with focus traps; the fields are the subject.
 vi.mock('@/components/ui/drawer', () => ({

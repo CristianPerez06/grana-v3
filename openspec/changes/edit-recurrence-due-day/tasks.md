@@ -169,6 +169,36 @@ mismo dato incorrecto.
   - [x] Paridad TS↔SQL sobre doce historias —dos versiones, un hueco, pausas abierta y cerrada, tope,
         `end_date`, cada N días, fin de mes, semanal, anual— con el valor esperado **calculado a mano**
         y no copiado de una corrida: coincidir no alcanza, que es justamente cómo pasó este bug.
+## 2e. Tercera vuelta de revisión — el conteo por posiciones, afinado
+
+Los tres salieron de revisar 2c.5 ya implementado. Los dos primeros son del mismo tipo: un número que
+se queda corto **en silencio**, que es la forma en que un tope deja de ser un tope.
+
+- [x] 2e.1 **La semilla futura podía superar `max_occurrences`.** La ocurrencia que cubre el movimiento
+      semilla se contaba sólo si alguna versión la producía — y al corregir la referencia ninguna la
+      produce: su fecha cae en el hueco. Reproducido: tres cuotas, tres generadas **más** el movimiento
+      que ya estaba = cuatro. Ahora es una posición gastada desde que la regla existe, contada una sola
+      vez (el prefijo aritmético de la primera versión ya puede contenerla), en TS y en SQL.
+- [x] 2e.2 **El conteo TS cortaba en 750.** `MAX_WALK_STEPS` era una red de seguridad para una ventana
+      acotada; contar la vida entera de una regla no está acotado, y una regla diaria de tres años
+      devolvía 750 en vez de 1096 — un tope que parece sin gastar. El presupuesto ahora es explícito y
+      cada tramo pide el suyo; quedarse sin presupuesto **lanza**, porque el fallo que esto reemplaza
+      era devolver de menos sin decirlo. De paso: `occurrenceIndexAt` acotaba el ÍNDICE en vez de las
+      correcciones, así que para posiciones más allá de 750 devolvía la estimación sin corregir.
+- [x] 2e.3 **Los tests movían fechas un día fuera de UTC.** Dos mocks de `getTodayAR` devolvían un
+      instante UTC, y `formatDateISO` lee partes LOCALES: al este de UTC el drawer corría las
+      candidatas un mes entero. Ahora devuelven medianoche local, la forma que devuelve la función
+      real. Verificado en Auckland, Los Ángeles, UTC y Buenos Aires.
+
+### Fuera de alcance, anotado
+
+- `apps/web/lib/savings/__tests__/savings-mutations.test.ts` falla con `TZ=Pacific/Auckland` — tres
+  casos de `reserveAvailability`/`releaseAvailability`. Es **previo** a esta rama: lo comprobé en
+  `ad049843` sin ninguno de estos cambios. No lo toqué; es de otro módulo.
+- Los tests de los paquetes **no se typechequean**: `pnpm typecheck` es sólo `--filter web`, y de los
+  quince paquetes sólo `movement-form` tiene script propio. Por eso un fixture sobrevivió a un
+  renombre de campo y propagó `NaN`.
+
 - [ ] 2c.6 **Cambiar frecuencia y referencia juntas falla.** Los dos formularios calculan las opciones
       con `rule.interval_count/unit` —lo guardado— mientras el servidor valida contra la frecuencia
       nueva del patch, así que rechaza la fecha que el formulario ofreció.
