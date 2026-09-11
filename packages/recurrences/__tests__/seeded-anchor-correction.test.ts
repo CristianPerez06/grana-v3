@@ -455,6 +455,42 @@ describe('deleting the seed of a rule whose reference date was corrected', () =>
 // backfill. That is a different computation and it needs its own database.
 // ═══════════════════════════════════════════════════════════════════════════
 
+describe('a rule whose frequency label is custom', () => {
+  it('generates from its own interval, through the real query', async () => {
+    // The column has held `custom` since 0021, and the generator reads the
+    // column. It was typed as the four presets — the same lie that crashed the
+    // edit form — so nothing checked that the generator survives one.
+    //
+    // What this pins is the path: a custom-labelled rule materializes on ITS OWN
+    // interval. The label never reaches `presetToInterval` here, because the
+    // walker takes the interval from the schedule versions; the fallback that
+    // does consult the label is covered where it lives, in `custom-frequency`.
+    const ruleId = nextId('3')
+    await actAsAdmin(db)
+    await db.exec(`
+      insert into public.recurrences
+        (id, user_id, start_date, interval_count, interval_unit, frequency, status, amount,
+         currency_code, movement_type, last_generated_date)
+      values ('${ruleId}', '${U_A}', '2026-09-01', 3, 'day', 'custom', 'active', 1000, 'ARS',
+              'expense', '2026-09-01');
+    `)
+    await actAs(db, U_A)
+
+    const result = await generateDueRecurrenceInstances(supabase, U_A, { today: '2026-09-10' })
+    expect(result.error).toBeNull()
+
+    await actAsAdmin(db)
+    const { rows } = await db.query<{ due_date: string }>(
+      `select due_date::text from public.recurrence_instances
+        where recurrence_id = '${ruleId}' order by due_date`,
+    )
+    await actAs(db, U_A)
+    // Every three days from 01/09, up to and including 10/09 — 04, 07 and 10 —
+    // and not a monthly calendar invented from a label with no preset.
+    expect(rows.map((r) => r.due_date)).toEqual(['2026-09-04', '2026-09-07', '2026-09-10'])
+  })
+})
+
 describe('a seed the cap never reaches', () => {
   it('stays in the offset, even though the calendar contains its date', async () => {
     // Being ON the calendar is not the same as being REACHED by it. A rule with

@@ -9,7 +9,7 @@ import {
   owedOccurrencesForRule,
   type IntervalUnit,
   type PauseInterval,
-  type RecurrenceFrequency,
+  type RecurrenceFrequencyLabel,
   type RecurrenceSuggestion,
   type ScheduleVersion,
   type SuggestionMovement,
@@ -410,7 +410,11 @@ export async function getRecurrenceLinkForTransaction(
 
 export type RecurrenceRuleForGeneration = {
   id: string
-  frequency: RecurrenceFrequency
+  // The LABEL, not the preset union: this is a row, and the column has held
+  // `custom` since 0021. Typing it as the four presets is the same lie that made
+  // a custom rule crash the edit form — invisible to the compiler, and fine
+  // until something hands the value to `presetToInterval`.
+  frequency: RecurrenceFrequencyLabel
   interval_count: number
   interval_unit: IntervalUnit
   max_occurrences: number | null

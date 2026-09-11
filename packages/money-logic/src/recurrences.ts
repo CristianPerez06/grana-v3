@@ -111,10 +111,12 @@ export type RuleForDecision = {
   last_generated_date: string | null
   // Authoritative interval. When present it drives the calculation; `frequency`
   // is kept as a backward-compatible fallback for callers that only carry the
-  // preset label.
+  // label. A `custom` rule always carries the interval — that is what `custom`
+  // MEANS — so the fallback is for the presets, and the type says the whole set
+  // the column can hold rather than the subset the fallback handles.
   interval_count?: number
   interval_unit?: IntervalUnit
-  frequency?: RecurrenceFrequency
+  frequency?: RecurrenceFrequencyLabel
   // Optional cap on how many occurrences the rule ever produces.
   max_occurrences?: number | null
 }
@@ -145,10 +147,24 @@ export function decideRecurrenceInstance(
   //    invariant; we also short-circuit it here to avoid useless inserts.
   if (hasPending) return { generate: false, reason: 'has_pending' }
 
+  // The explicit interval wins; the preset label is the fallback for callers
+  // that carry only it. `custom` has no preset to fall back TO — a custom rule
+  // is defined by its interval — so an input that says `custom` without one is
+  // incoherent, and treating it as monthly would silently invent a calendar.
+  //
+  // A ROW cannot reach this: `interval_count` and `interval_unit` are NOT NULL
+  // with defaults since 0021. It guards the hand-built objects this type also
+  // accepts, where the two fields are optional.
   const { count, unit } =
     rule.interval_count != null && rule.interval_unit != null
       ? { count: rule.interval_count, unit: rule.interval_unit }
-      : presetToInterval(rule.frequency ?? 'monthly')
+      : rule.frequency === 'custom'
+        ? (() => {
+            throw new Error(
+              `a recurrence anchored on ${rule.start_date} says frequency 'custom' and carries no interval`,
+            )
+          })()
+        : presetToInterval(rule.frequency ?? 'monthly')
   // The rule's calendar, and only the calendar. `end_date` and `max_occurrences`
   // are deliberately left out: both are applied below, with their own reason, and
   // a schedule carrying them would make the walk stop short of the very date we

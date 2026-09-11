@@ -229,6 +229,14 @@ se queda corto **en silencio**, que es la forma en que un tope deja de ser un to
         Ahora existe `RecurrenceFrequencyLabel` y el compilador nombró los cinco lugares que asumían
         cuatro — todos en nativo, todos reales: `frequencyLabel` no aceptaba `custom` aunque
         `recurrences.frequencies.custom` es un mensaje que existe.
+  - [x] 2h.2 **La última fila tipada sin `custom`.** `RecurrenceRuleForGeneration.frequency` —lo que
+        el generador LEE de la base— seguía declarando los cuatro presets. Ensanchada, el compilador
+        encontró el punto donde el label llega a `presetToInterval`: el fallback de
+        `decideRecurrenceInstance`. `custom` no tiene preset al que caer, así que ahora falla en voz
+        alta en vez de caminar la regla mensualmente — un calendario que nadie pidió sobre una regla
+        cuyo sentido es no ser mensual. Ninguna FILA puede llegar ahí (`interval_count` e
+        `interval_unit` son NOT NULL desde 0021): lo que guarda son los objetos armados a mano que
+        este tipo también acepta, donde los dos campos son opcionales.
   - [x] El `<select>` de web muestra `custom` como opción deshabilitada mientras la regla lo sea: sin
         eso el control tiene un valor que ninguna de sus opciones lleva y el browser dibuja el primer
         preset — "Semanal" sobre una regla que vence cada tres días.
