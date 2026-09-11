@@ -909,6 +909,33 @@ begin
   if to_regprocedure('public.update_recurrence_schedule(uuid, jsonb, date)') is null then
     raise exception 'update_recurrence_schedule is missing: an anchor could be moved without saying from when, which is what duplicated a salary in QA';
   end if;
+  -- The offset every version-less reader leans on, and the function that decides
+  -- it. A database carrying the column but not the function has rules whose cap
+  -- restarts the moment their anchor moves.
+  if not exists (
+    select 1 from pg_attribute
+     where attrelid = 'public.recurrences'::regclass
+       and attname = 'schedule_positions_before'
+       and attnotnull
+  ) then
+    raise exception 'recurrences.schedule_positions_before is missing or nullable: max_occurrences restarts from whatever anchor a reader can see, so a corrected rule hands out cuotas it already spent';
+  end if;
+  if to_regprocedure('public.recurrence_positions_spent(uuid, date)') is null then
+    raise exception 'recurrence_positions_spent is missing: the cap would be counted from recurrence_instances rows, which a seeded occurrence does not have';
+  end if;
+  if to_regprocedure('public.recurrence_positions_before(uuid, date, date, int, text, date)') is null then
+    raise exception 'recurrence_positions_before is missing: the offset would be the TOTAL spent, which counts the seed twice for every rule created from a movement';
+  end if;
+  -- The offset is not the total. A database where the column was filled from
+  -- `recurrence_positions_spent` reads as complete and is short by one cuota on
+  -- every seeded rule, so the distinction is pinned by the expression itself.
+  select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
+    into v_body
+    from pg_proc where oid = 'public.recurrence_positions_before(uuid, date, date, int, text, date)'::regprocedure;
+  if v_body not like '%v_spent - case when v_walks then 1 else 0 end%' then
+    raise exception 'recurrence_positions_before does not take the seed out of the offset when the current calendar walks it: a seeded rule spends that position twice';
+  end if;
+
   if to_regprocedure('public.recurrence_candidate_effective_dates(date, int, text, date, date, int)') is null then
     raise exception 'recurrence_candidate_effective_dates is missing: the server cannot recompute the dates it validates against';
   end if;

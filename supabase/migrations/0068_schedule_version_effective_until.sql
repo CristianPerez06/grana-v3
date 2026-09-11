@@ -514,6 +514,83 @@ begin
   return v_produced;
 end $$;
 
+-- ── 2e-bis · The OFFSET, which is a different number ───────────────────────
+--
+-- `schedule_positions_before` is not "what the rule has spent". It is what the
+-- CURRENT calendar will not walk again — the head start a reader without the
+-- schedule versions has to be given so that `max_occurrences` still counts from
+-- the rule's beginning.
+--
+-- The total above cannot be copied into it. The two disagree on exactly one
+-- position: the seed's. A rule created from a movement has its version starting
+-- ON the seed's own date, so the current calendar DOES produce it; counted in
+-- the offset as well, it is spent twice, and a three-cuota rule with two of them
+-- accounted for answers that there is no third.
+--
+-- So the seed is taken out of the offset precisely when the current calendar is
+-- going to walk it — which is not the same as "the seed is recent": a seed the
+-- corrected schedule does not land on is never walked, and belongs here.
+create or replace function public.recurrence_positions_before(
+  p_id             uuid,
+  p_floor          date,
+  p_anchor         date,
+  p_interval_count int,
+  p_interval_unit  text,
+  p_seed           date
+)
+returns int
+language plpgsql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  v_today date := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
+  v_spent int;
+  v_step  interval;
+  v_span  int;
+  v_walks boolean;
+begin
+  -- Up to the day the outgoing schedule stops: the day before the new one rules,
+  -- or today when the new one is still ahead — the gap between produces nothing.
+  v_spent := public.recurrence_positions_spent(p_id, least(v_today, p_floor - 1));
+
+  -- Before the floor, so the current calendar cannot reach it: it is offset.
+  if p_seed is null or p_seed < p_floor or p_seed < p_anchor then
+    return v_spent;
+  end if;
+
+  v_step := case p_interval_unit
+              when 'day'   then make_interval(days   => p_interval_count)
+              when 'week'  then make_interval(weeks  => p_interval_count)
+              when 'month' then make_interval(months => p_interval_count)
+              when 'year'  then make_interval(years  => p_interval_count)
+            end;
+  if v_step is null or p_interval_count < 1 then
+    raise exception 'unknown schedule: % every %', p_interval_unit, p_interval_count
+      using errcode = 'check_violation';
+  end if;
+
+  v_span := greatest(0, (p_seed - p_anchor)) + 1;
+  v_span := case p_interval_unit
+              when 'day'   then v_span / p_interval_count
+              when 'week'  then v_span / (p_interval_count * 7)
+              when 'month' then v_span / (p_interval_count * 28)
+              when 'year'  then v_span / (p_interval_count * 365)
+            end + 2;
+
+  select exists (
+    select 1 from generate_series(0, v_span) n
+     where (p_anchor + (v_step * n))::date = p_seed
+  ) into v_walks;
+
+  return v_spent - case when v_walks then 1 else 0 end;
+end $$;
+
+revoke all on function public.recurrence_positions_before(uuid, date, date, int, text, date) from public;
+revoke all on function public.recurrence_positions_before(uuid, date, date, int, text, date) from anon;
+grant execute on function public.recurrence_positions_before(uuid, date, date, int, text, date) to authenticated;
+
 revoke all on function public.recurrence_positions_spent(uuid, date) from public;
 revoke all on function public.recurrence_positions_spent(uuid, date) from anon;
 grant execute on function public.recurrence_positions_spent(uuid, date) to authenticated;
@@ -529,8 +606,9 @@ begin;
 -- positions the current anchor still happens to count. Asking the function is
 -- what gets both right without having to tell them apart.
 update public.recurrences r
-   set schedule_positions_before =
-         public.recurrence_positions_spent(r.id, r.schedule_effective_from - 1);
+   set schedule_positions_before = public.recurrence_positions_before(
+         r.id, r.schedule_effective_from, r.start_date,
+         r.interval_count, r.interval_unit, r.seed_occurrence_date);
 
 -- ── 3 · Where the effective date is decided, once ──────────────────────────
 --
@@ -584,8 +662,9 @@ begin
     -- close it on. Asked BEFORE that close, so the outgoing version still
     -- describes its own stretch; asked as of the day it stops, so the gap it
     -- leaves behind contributes nothing.
-    NEW.schedule_positions_before :=
-      public.recurrence_positions_spent(NEW.id, least(today, chosen::date - 1));
+    NEW.schedule_positions_before := public.recurrence_positions_before(
+      NEW.id, chosen::date, NEW.start_date,
+      NEW.interval_count, NEW.interval_unit, NEW.seed_occurrence_date);
 
   elsif NEW.interval_count is distinct from OLD.interval_count
      or NEW.interval_unit  is distinct from OLD.interval_unit then
@@ -593,8 +672,9 @@ begin
     -- or from the start for a rule that has not begun. Nothing is ambiguous here
     -- — the anchor does not move, so no cycle can be served twice.
     NEW.schedule_effective_from := greatest(today, NEW.start_date);
-    NEW.schedule_positions_before :=
-      public.recurrence_positions_spent(NEW.id, greatest(today, NEW.start_date) - 1);
+    NEW.schedule_positions_before := public.recurrence_positions_before(
+      NEW.id, greatest(today, NEW.start_date), NEW.start_date,
+      NEW.interval_count, NEW.interval_unit, NEW.seed_occurrence_date);
   end if;
 
   return NEW;

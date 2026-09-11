@@ -215,6 +215,26 @@ se queda corto **en silencio**, que es la forma en que un tope deja de ser un to
       desarrolla la app. Pasaba en UTC y al este de UTC: exactamente la forma de un bug que sobrevive
       a CI. Verificado ahora en UTC, Buenos Aires, Auckland y Los Ángeles.
 
+## 2g. Quinta vuelta — el offset no es el total
+
+- [x] 2g.1 **El backfill contaba la semilla dos veces.** `schedule_positions_before` no significa "lo
+      que la regla gastó": significa **lo que el calendario actual no va a volver a recorrer**. Copiarle
+      el total gastado difiere en exactamente una posición, la de la semilla: la versión de una regla
+      creada desde un movimiento arranca EN la fecha de la semilla, así que ese calendario sí la
+      produce, y contarla también en el offset la gasta dos veces. Una regla de tres cuotas con las dos
+      primeras cubiertas contestaba que no hay tercera.
+  - [x] `recurrence_positions_before(...)` calcula el offset aparte: el total hasta el día en que el
+        cronograma saliente se detiene, menos la semilla **sólo cuando el calendario actual la va a
+        recorrer**. No alcanza con "la semilla es reciente" — una semilla que el cronograma corregido
+        no pisa no la recorre nadie, y pertenece al offset. Las dos direcciones tienen su caso.
+  - [x] La usan el backfill y el trigger: el defecto estaba en los dos caminos, no sólo en la migración.
+  - [x] La regresión construye la base **antes** de 0068 y aplica la migración encima, que es el único
+        camino donde el backfill corre. Todo lo anterior creaba las reglas después, con el trigger
+        inicializando el campo en cero, y por eso ninguna lo veía.
+  - [x] `validate_schema.sql` pinea la columna, las dos funciones, y la expresión que distingue el
+        offset del total — una base llenada con el total se ve completa y está corta una cuota en cada
+        regla con semilla.
+
 ### Fuera de alcance, anotado
 
 - `apps/web/lib/savings/__tests__/savings-mutations.test.ts` falla con `TZ=Pacific/Auckland` — tres

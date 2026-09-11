@@ -1,7 +1,14 @@
 import type { PGlite } from '@electric-sql/pglite'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { generateDueRecurrenceInstances, getRecurrenceDetail } from '../src/queries'
-import { actAs, actAsAdmin, applyActivation, createRecurrenceIdentityDb, U_A } from './support/recurrence-identity-db'
+import { generateDueRecurrenceInstances, getRecurrenceDetail, getRecurrences } from '../src/queries'
+import {
+  actAs,
+  actAsAdmin,
+  applyActivation,
+  applyEffectiveUntil,
+  createRecurrenceIdentityDb,
+  U_A,
+} from './support/recurrence-identity-db'
 import { pglitePostgrest } from './support/pglite-postgrest'
 
 /**
@@ -436,4 +443,103 @@ describe('deleting the seed of a rule whose reference date was corrected', () =>
     expect(after.created_from_transaction_id).toBe(before.created_from_transaction_id)
     expect(after.reconstruct_from).toBe(before.reconstruct_from)
   })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE BACKFILL, on rules that existed before 0068.
+//
+// Every case above builds its rule AFTER the migration, where the trigger sets
+// the offset to zero and the question never arises. Production has the other
+// kind: rows already in the table when 0068 runs, whose offset comes from the
+// backfill. That is a different computation and it needs its own database.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('a seed the corrected calendar does not land on', () => {
+  it('stays in the offset, because nothing is ever going to walk it', async () => {
+    // The mirror of the case above, and the reason the test is not simply "is the
+    // seed recent". Here the correction moves the anchor to a date BEFORE the
+    // seed, onto a calendar whose positions miss it: the seed is at or after the
+    // floor and still nobody produces it. Subtracting it would hand the rule a
+    // cuota it already spent.
+    const seeded = await seededFromAFutureMovement()
+    const chosen = await correctAnchor(seeded, -10)
+    expect(chosen < seeded.seedDate).toBe(true)
+
+    await actAsAdmin(db)
+    const { rows } = await db.query<{ n: number; walks: boolean }>(
+      `select r.schedule_positions_before as n,
+              exists (
+                select 1 from generate_series(0, 40) k
+                 where (r.start_date + (make_interval(months => 1) * k))::date
+                       = r.seed_occurrence_date
+              ) as walks
+         from public.recurrences r where r.id = '${seeded.ruleId}'`,
+    )
+    await actAs(db, U_A)
+    expect(rows[0].walks).toBe(false)
+    expect(Number(rows[0].n)).toBe(1)
+  })
+})
+
+describe('a seeded rule that was already there when 0068 ran', () => {
+  it('does not count the seed both as an offset and as a position of its own calendar', async () => {
+    // The offset means "positions the current calendar will NOT walk again". A
+    // seeded rule's version starts ON the seed's own date, so that position is
+    // walked — counting it in the offset too spends a cuota that does not exist,
+    // and a three-cuota rule with the first two accounted for answers that there
+    // is no third.
+    const legacy = await createRecurrenceIdentityDb({ scheduleGap: false })
+    try {
+      const ruleId = '00000000-0000-4000-8000-00000000ba01'
+      const txId = '00000000-0000-4000-8000-00000000ba02'
+      // Dated off the database's own calendar: cuota 1 is the movement, cuota 2
+      // is behind us, cuota 3 is still ahead. Hard-coded months would make this
+      // a rule that finished long ago, where "no hay próxima" is simply true.
+      const { rows: dates } = await legacy.query<{ start: string; second: string; third: string }>(
+        `select (d - interval '2 months')::date::text as start,
+                (d - interval '1 month')::date::text  as second,
+                d::text                               as third
+           from (select ((now() at time zone 'America/Argentina/Buenos_Aires')::date + 20) as d) x`,
+      )
+      const { start, second, third } = dates[0]
+
+      await legacy.exec(`
+        insert into public.transactions (id, user_id, date, amount)
+        values ('${txId}', '${U_A}', '${start}', 1000);
+        insert into public.recurrences
+          (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code,
+           movement_type, max_occurrences, last_generated_date, created_from_transaction_id)
+        values ('${ruleId}', '${U_A}', '${start}', 1, 'month', 'active', 1000, 'ARS', 'expense',
+                3, '${start}', '${txId}');
+      `)
+      await applyEffectiveUntil(legacy)
+
+      const { rows } = await legacy.query<{ before: number; floor: string; seed: string }>(
+        `select schedule_positions_before as before,
+                schedule_effective_from::text as floor,
+                seed_occurrence_date::text as seed
+           from public.recurrences where id = '${ruleId}'`,
+      )
+      expect(rows[0].floor).toBe(start)
+      expect(rows[0].seed).toBe(start)
+      // The seed's position is ON this calendar, from the very day it rules.
+      // Nothing precedes it, so there is nothing to carry.
+      expect(Number(rows[0].before)).toBe(0)
+
+      // And what the user sees: cuota 1 is the movement, cuota 2 is materialized,
+      // and the third is still owed. An offset of one turns that into "no hay
+      // próxima" — a cuota the user is owed and is never told about.
+      await legacy.exec(`
+        insert into public.recurrence_instances
+          (recurrence_id, user_id, due_date, scheduled_date, status, amount, currency_code,
+           resolved_at, confirmed_transaction_id)
+        values ('${ruleId}', '${U_A}', '${second}', '${second}', 'confirmed', 1000, 'ARS',
+                now(), gen_random_uuid());
+      `)
+      const rules = await getRecurrences(pglitePostgrest(legacy, U_A), { statuses: ['active'] })
+      expect(rules.find((r) => r.id === ruleId)?.next_occurrence).toBe(third)
+    } finally {
+      await legacy.close()
+    }
+  }, 60_000)
 })
