@@ -843,6 +843,7 @@ export type Database = {
           movement_type: string
           reconstruct_from: string
           schedule_effective_from: string
+          schedule_positions_before: number
           seed_occurrence_date: string | null
           start_date: string
           status: string
@@ -870,6 +871,7 @@ export type Database = {
           movement_type: string
           reconstruct_from?: string
           schedule_effective_from?: string
+          schedule_positions_before?: number
           seed_occurrence_date?: string | null
           start_date: string
           status?: string
@@ -897,6 +899,7 @@ export type Database = {
           movement_type?: string
           reconstruct_from?: string
           schedule_effective_from?: string
+          schedule_positions_before?: number
           seed_occurrence_date?: string | null
           start_date?: string
           status?: string

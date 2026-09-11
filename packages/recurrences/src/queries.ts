@@ -80,6 +80,9 @@ function mapRecurrenceSummary(
         // date from the stretch where the old schedule has stopped and the new
         // one has not begun — a "próximo" the generator is never going to create.
         schedule_effective_from: recurrence.schedule_effective_from,
+        // And how much of the cap was already gone by then: this reader walks one
+        // anchor, and a corrected rule spent its cuotas under another.
+        schedule_positions_before: recurrence.schedule_positions_before,
       },
       today,
       covered,
@@ -1064,7 +1067,7 @@ export async function getDuplicateRulesFor(
       // from it: without the floor, a rule inside a schedule gap announces a date
       // the generator will never create, and the duplicate warning compares
       // against a date that does not exist.
-      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, seed_occurrence_date, schedule_effective_from',
+      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, seed_occurrence_date, schedule_effective_from, schedule_positions_before',
     )
     .eq('status', 'active')
   if (error) throw error
@@ -1079,6 +1082,7 @@ export async function getDuplicateRulesFor(
       max_occurrences: number | null
       created_from_transaction_id: string | null
       schedule_effective_from: string
+      schedule_positions_before: number
       seed_occurrence_date: string | null
     }
   >

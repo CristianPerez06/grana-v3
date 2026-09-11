@@ -151,6 +151,8 @@ export function decideRecurrenceInstance(
     // The calendar, unfloored on purpose: the floor is applied to the RESULT of
     // the walk below, for the same reason `end_date` is left out here.
     schedule_effective_from: null,
+    // No cap is applied here either, so there is nothing for this to bound.
+    schedule_positions_before: null,
   }
 
   // 2. The next occurrence is READ OFF THE CALENDAR — the first one strictly
@@ -425,6 +427,7 @@ function forEachComposedOccurrence(
         interval_unit: firstVersion.interval_unit,
         max_occurrences: null,
         schedule_effective_from: null,
+        schedule_positions_before: null,
       },
       seedOccurrenceDate,
     ) != null
@@ -451,6 +454,9 @@ function forEachComposedOccurrence(
       // what the readers WITHOUT versions use instead; here it would be a second
       // bound on the same thing.
       schedule_effective_from: null,
+      // Same: the cap is applied against `produced` across every version, so a
+      // per-version head start would count the same positions twice.
+      schedule_positions_before: null,
       interval_count: version.interval_count,
       interval_unit: version.interval_unit,
       // Deliberately null: the cap is applied against `produced` below, across
@@ -526,7 +532,13 @@ function forEachComposedOccurrence(
     }
   }
 
-  return produced
+  // SATURATED. The arithmetic prefix of the first version is a count of
+  // positions, not a count of ALLOWED positions, so on a rule whose calendar
+  // began long before the version that describes it the prefix alone can overrun
+  // the cap. Spending more of a cap than it holds is not a state — and left
+  // unsaturated this number disagrees with the database, which clamps, so the
+  // form and the server would answer differently about the same rule.
+  return maxOccurrences == null ? produced : Math.min(produced, maxOccurrences)
 }
 
 export function owedOccurrencesForRule({
@@ -617,6 +629,21 @@ export type OccurrenceSchedule = {
    * schedule has always ruled", and it has to be written out.
    */
   schedule_effective_from: string | null
+  /**
+   * Positions of the rule's calendar spent BEFORE the current schedule started
+   * ruling — the other half of what `schedule_effective_from` fixes.
+   *
+   * `max_occurrences` counts positions from the rule's start. A reader without
+   * the schedule versions counts them from the anchor it can see, which is the
+   * CURRENT one; while the anchor could not move those agreed. Correcting a
+   * reference date moves it, and everything spent under the previous anchor
+   * stops counting — a three-cuota rule finishes and the screens go on offering
+   * a fourth. This carries the part the current calendar cannot see.
+   *
+   * `null` means "count from the anchor", which is what an internal walk over a
+   * single version wants: there the anchor IS the origin.
+   */
+  schedule_positions_before: number | null
 }
 
 export type RuleForProjection = OccurrenceSchedule & {
@@ -675,6 +702,23 @@ export type ProjectedOccurrence = {
   rule_id: string
   scheduled_date: string
 }
+
+/**
+ * The floor a rule lands on when nothing decided one — `schedule_effective_from`
+ * is NOT NULL, and 0068 defaults it to this.
+ *
+ * It is reached only when the trigger that fills the column is gone, disabled or
+ * bypassed, which is exactly when a wrong value would go unnoticed, so the value
+ * chosen SUPPRESSES: no schedule rules, nothing is projected, nothing is
+ * announced. An empty card is a bug someone reports; a card promising money that
+ * will never move is a bug someone believes.
+ *
+ * Named, and checked by name, because a sentinel that is only a big date is one
+ * the arithmetic honours by accident: the projection suppressed it because its
+ * window ended first, while "próxima fecha" walked happily to the year 9999 and
+ * put that on screen.
+ */
+export const SCHEDULE_NEVER_RULES = '9999-12-31'
 
 // Safety net, no longer the thing that decides how far a rule can reach: the
 // walker positions itself at the window's edge by arithmetic, so this bounds the
@@ -823,15 +867,30 @@ export function walkOccurrences(
   const { from, to = null, cursor = null, limit, maxSteps = MAX_WALK_STEPS } = window
   const out: string[] = []
 
-  // Position at the window's edge: the first occurrence that is both >= `from`
-  // and strictly after the cursor. `produced` keeps counting from start_date,
-  // because that is what max_occurrences means.
-  let produced = occurrenceIndexAt(schedule, from, 'on-or-after')
+  // WHERE THE WALK IS, and HOW MUCH OF THE CAP IS GONE. One number did both
+  // while the anchor was immutable — the n-th position of this calendar was also
+  // the n-th the rule had ever had. A corrected reference date splits them: the
+  // calendar restarts at the new anchor, the cap does not.
+  let index = occurrenceIndexAt(schedule, from, 'on-or-after')
   if (cursor != null) {
-    produced = Math.max(produced, occurrenceIndexAt(schedule, cursor, 'strictly-after'))
+    index = Math.max(index, occurrenceIndexAt(schedule, cursor, 'strictly-after'))
   }
 
-  let current = occurrenceAt(schedule, produced)
+  // Positions of THIS calendar between the day it started ruling and the edge of
+  // the window, plus everything spent before that under whatever anchor ruled
+  // then. With no `schedule_positions_before` the two collapse back into one, which is
+  // the single-version walk this used to be.
+  const floor = schedule.schedule_effective_from
+  let spent =
+    schedule.schedule_positions_before == null
+      ? index
+      : schedule.schedule_positions_before +
+        Math.max(
+          0,
+          index - (floor == null ? 0 : occurrenceIndexAt(schedule, floor, 'on-or-after')),
+        )
+
+  let current = occurrenceAt(schedule, index)
 
   for (let steps = 0; ; steps += 1) {
     if (steps > maxSteps) {
@@ -839,7 +898,7 @@ export function walkOccurrences(
         `walkOccurrences: ${maxSteps} steps did not reach ${to ?? 'the end'} from ${from} on ${schedule.start_date} every ${schedule.interval_count} ${schedule.interval_unit}`,
       )
     }
-    if (schedule.max_occurrences != null && produced >= schedule.max_occurrences) break
+    if (schedule.max_occurrences != null && spent >= schedule.max_occurrences) break
     if (to != null && current > to) break
     if (schedule.end_date != null && current > schedule.end_date) break
 
@@ -850,8 +909,9 @@ export function walkOccurrences(
       if (limit != null && out.length >= limit) break
     }
 
-    produced += 1
-    current = occurrenceAt(schedule, produced)
+    index += 1
+    spent += 1
+    current = occurrenceAt(schedule, index)
   }
 
   return out
@@ -870,6 +930,7 @@ export function projectRuleOccurrences(
   // The window never reaches before the schedule rules: see
   // `schedule_effective_from`.
   const floor = rule.schedule_effective_from
+  if (floor != null && floor >= SCHEDULE_NEVER_RULES) return []
   const from = floor != null && floor > windowStart ? floor : windowStart
   if (from > windowEnd) return []
   return walkOccurrences(rule, { from, to: windowEnd }).filter((date) => !covered.has(date))
@@ -897,6 +958,9 @@ export function getNextExpectedOccurrence(
   // the answer is the first date of the NEW schedule, not the next one the old
   // calendar would have produced. See `schedule_effective_from`.
   const floor = rule.schedule_effective_from
+  // No schedule rules, so there is no next occurrence — not one in the year
+  // 9999, which is what walking from the fail-closed floor would answer.
+  if (floor != null && floor >= SCHEDULE_NEVER_RULES) return null
   const from = floor != null && floor > today ? floor : today
   // Bounded by the covered set, and told so. It steps forward only while it
   // keeps landing on dates that already exist, so one more than there ARE is
@@ -955,6 +1019,8 @@ export function candidateEffectiveDates(
       // This walk is what the floor will be CHOSEN FROM. Flooring it by the
       // floor in force would hide the very dates being offered.
       schedule_effective_from: null,
+      // The cap is applied by `remaining` below, which the caller computed.
+      schedule_positions_before: null,
     },
     { from, limit: wanted },
   )

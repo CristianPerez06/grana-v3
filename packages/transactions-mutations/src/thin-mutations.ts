@@ -772,7 +772,7 @@ export async function deleteTransaction(
   const { data: seededRule } = await supabase
     .from('recurrences')
     .select(
-      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences, schedule_effective_from, seed_occurrence_date',
+      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences, schedule_effective_from, schedule_positions_before, seed_occurrence_date',
     )
     .eq('created_from_transaction_id', id)
     .eq('user_id', userId)
@@ -789,6 +789,7 @@ export async function deleteTransaction(
       interval_unit: IntervalUnit
       max_occurrences: number | null
       schedule_effective_from: string | null
+      schedule_positions_before: number
       seed_occurrence_date: string | null
     }
     const today = options.today ?? formatDateISO(getTodayAR())

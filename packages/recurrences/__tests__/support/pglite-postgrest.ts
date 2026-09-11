@@ -225,10 +225,13 @@ function toPostgrestJson(result: {
     for (const column of dateColumns) {
       const value = out[column]
       if (value instanceof Date) {
-        const year = value.getFullYear()
-        const month = String(value.getMonth() + 1).padStart(2, '0')
-        const day = String(value.getDate()).padStart(2, '0')
-        out[column] = `${year}-${month}-${day}`
+        // UTC parts, because PGlite decodes a `date` as midnight UTC. Reading
+        // LOCAL parts turns 2026-05-23 into 2026-05-22 anywhere west of UTC —
+        // Buenos Aires included — so every date the generator read came back a
+        // day early and the whole suite answered wrong on the machine this app
+        // is built on. It passed in UTC, and east of UTC, which is exactly the
+        // shape of a bug that survives CI.
+        out[column] = value.toISOString().slice(0, 10)
       }
     }
     return out

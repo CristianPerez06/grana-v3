@@ -923,7 +923,7 @@ export async function getCommittedOutlookForMonth(
           // `schedule_effective_from` is what keeps the projection from announcing
           // a commitment inside a schedule gap — the stretch where a corrected
           // anchor has stopped the old calendar and the new one has not begun.
-          'id, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, seed_occurrence_date, schedule_effective_from, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
+          'id, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, seed_occurrence_date, schedule_effective_from, schedule_positions_before, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
         )
         .eq('status', 'active')
         .order('id'),

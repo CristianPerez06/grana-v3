@@ -26,6 +26,8 @@ type RuleRow = {
   last_generated_date: string | null
   /** Since when the current schedule rules (#121). */
   schedule_effective_from: string | null
+  /** Positions spent before that schedule started ruling (#121). */
+  schedule_positions_before: number
   /** The occurrence the seed movement covers — NOT the anchor (#121). */
   seed_occurrence_date: string | null
 }
@@ -41,6 +43,7 @@ const monthlyRule = (over: Partial<RuleRow> = {}): RuleRow => ({
   max_occurrences: null,
   last_generated_date: null,
   schedule_effective_from: '2026-08-07',
+  schedule_positions_before: 0,
   seed_occurrence_date: '2026-08-07',
   ...over,
 })

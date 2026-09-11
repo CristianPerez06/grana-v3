@@ -255,6 +255,18 @@ const spentCases: Array<{
     },
   },
   {
+    // The prefix ALONE is past the cap: seven positions happened before this
+    // version took effect, and the rule allows three. Spent saturates at the cap
+    // — it is not possible to have spent more of it than there is.
+    name: 'a prefix that already overruns the cap',
+    expected: 3,
+    setup: {
+      versions: [{ effective_from: '2026-08-10', anchor_date: '2026-01-10', interval_count: 1, interval_unit: 'month' }],
+      maxOccurrences: 3,
+      today: '2026-09-11',
+    },
+  },
+  {
     name: 'an end_date that stopped the calendar early',
     expected: 4,
     setup: {

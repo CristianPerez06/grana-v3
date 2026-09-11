@@ -53,6 +53,9 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
     // without this floor "Próximas recurrencias" lists a date for that stretch,
     // which the generator is never going to create.
     schedule_effective_from: r.schedule_effective_from,
+    // The cap counts positions from the rule's start, and this screen only sees
+    // the current anchor: without it a finished rule keeps listing a next one.
+    schedule_positions_before: r.schedule_positions_before,
     // An occurrence that already exists — covered by the rule's seed movement, or
     // materialized as an instance in any state — is not "próxima": it is already
     // in the review block or already a movement. The read computes this set.

@@ -67,6 +67,8 @@ type FakeRule = {
   schedule_effective_from?: string | null
   /** The occurrence the seed movement covers, which is not the anchor (#121). */
   seed_occurrence_date?: string | null
+  /** Positions spent before the current schedule started ruling (#121). */
+  schedule_positions_before?: number
 }
 type FakeInstance = {
   recurrence_id: string
@@ -255,6 +257,8 @@ function makeSupabase(db: Db, options: { maxRows?: number } = {}) {
                 // date the rule began — a fixture defaulting to null would be a
                 // row the database cannot hold.
                 schedule_effective_from: r.start_date,
+                // Nothing spent before a rule's first (and usually only) schedule.
+                schedule_positions_before: 0,
                 seed_occurrence_date: null,
                 status: 'active',
                 category: null,

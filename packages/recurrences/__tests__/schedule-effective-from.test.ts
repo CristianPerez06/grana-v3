@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { PGlite } from '@electric-sql/pglite'
+import { SCHEDULE_NEVER_RULES } from '@grana/money-logic'
 import {
   actAs,
   actAsAdmin,
@@ -219,6 +220,25 @@ describe('the outgoing version is closed so the two never overlap', () => {
     const [, later] = await candidatesFor('2026-06-10')
     await correctAnchor(rule, '2026-06-10', later)
     expect(await floorOf(rule)).toBe(later)
+  })
+})
+
+describe('the fail-closed floor, on both sides of the wire', () => {
+  it('is the same value in the migration and in the code that honours it', async () => {
+    // A sentinel known to one side only is not a sentinel. The column's default
+    // is what a row lands on; `SCHEDULE_NEVER_RULES` is what the readers check
+    // for. If they drift, a bypassed trigger stops suppressing and starts
+    // announcing vencimientos from the year the default happens to name.
+    await actAsAdmin(db)
+    const { rows } = await db.query<{ d: string }>(
+      `select pg_get_expr(d.adbin, d.adrelid) as d
+         from pg_attrdef d
+         join pg_attribute a on a.attrelid = d.adrelid and a.attnum = d.adnum
+        where d.adrelid = 'public.recurrences'::regclass
+          and a.attname = 'schedule_effective_from'`,
+    )
+    await actAs(db, U_A)
+    expect(rows[0].d).toContain(SCHEDULE_NEVER_RULES)
   })
 })
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  SCHEDULE_NEVER_RULES,
   getNextExpectedOccurrence,
   owedOccurrencesForRule,
   projectRuleOccurrences,
@@ -265,5 +266,93 @@ describe('the three surfaces agree inside the gap', () => {
     expect(owedNow).toEqual([CHOSEN])
     expect(getNextExpectedOccurrence(asRule, CHOSEN, asRule.covered)).toBe(CHOSEN)
     expect(projectRuleOccurrences(asRule, CHOSEN, '2026-10-31')).toEqual([CHOSEN])
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// The floor a row lands on when nothing decided it.
+//
+// `schedule_effective_from` is NOT NULL with a fail-closed default, reached only
+// when the trigger that fills it is gone, disabled or bypassed. The value was
+// chosen to SUPPRESS — a schedule that does not rule yet produces nothing — and
+// that has to be true of every reader, not just the one where `from > windowEnd`
+// happens to fall out of the arithmetic.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('a schedule that never starts ruling', () => {
+  const unruled = {
+    id: 'r1',
+    start_date: '2026-06-10',
+    end_date: null,
+    interval_count: 1,
+    interval_unit: 'month' as const,
+    max_occurrences: null,
+    schedule_effective_from: SCHEDULE_NEVER_RULES,
+    covered: [] as string[],
+  }
+
+  it('projects nothing', () => {
+    expect(projectRuleOccurrences(unruled, '2026-09-01', '2026-09-30')).toEqual([])
+  })
+
+  it('announces nothing as próximo, rather than a date in the year 9999', () => {
+    expect(getNextExpectedOccurrence(unruled, TODAY, [])).toBeNull()
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// The cap, after the anchor has moved.
+//
+// The generator composes versions and counts positions across all of them. The
+// other two readers walk the rule's COLUMNS — one anchor, the current one — and
+// count the cap from there. While the anchor could not move those were the same
+// number. Correcting a reference date moves it, and everything the rule spent
+// under its previous anchor stops counting: a three-cuota rule finishes, and the
+// screens go on offering a fourth.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('a rule whose cap ran out before its anchor moved', () => {
+  // Three cuotas on the 25th — June, July, August — then corrected to the 25th
+  // of September, which is the first date the new schedule would rule.
+  const CORRECTED = '2026-09-25'
+  const rule = {
+    id: 'r-cuotas',
+    start_date: CORRECTED,
+    end_date: null,
+    interval_count: 1,
+    interval_unit: 'month' as const,
+    max_occurrences: 3,
+    schedule_effective_from: CORRECTED,
+    schedule_positions_before: 3,
+    covered: [] as string[],
+  }
+
+  it('owes nothing: the generator counts across both anchors', () => {
+    expect(
+      owedOccurrencesForRule({
+        versions: [
+          { effective_from: '2026-06-25', effective_until: '2026-09-10', ...monthly('2026-06-25') },
+          { effective_from: CORRECTED, effective_until: null, ...monthly(CORRECTED) },
+        ],
+        pauses: [],
+        // Generation had caught up to the correction, so the three cuotas are
+        // behind the floor: what stops the fourth is the cap, not the backlog.
+        reconstructFrom: TODAY,
+        horizon: '2026-01-01',
+        today: TODAY,
+        existing: new Set<string>(),
+        endDate: null,
+        maxOccurrences: 3,
+        seedOccurrenceDate: null,
+      }),
+    ).toEqual([])
+  })
+
+  it('announces no próximo either', () => {
+    expect(getNextExpectedOccurrence(rule, TODAY, [])).toBeNull()
+  })
+
+  it('projects nothing into the window that contains it', () => {
+    expect(projectRuleOccurrences(rule, '2026-09-01', '2026-09-30')).toEqual([])
   })
 })

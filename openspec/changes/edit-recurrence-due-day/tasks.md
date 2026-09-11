@@ -190,6 +190,31 @@ se queda corto **en silencio**, que es la forma en que un tope deja de ser un to
       candidatas un mes entero. Ahora devuelven medianoche local, la forma que devuelve la función
       real. Verificado en Auckland, Los Ángeles, UTC y Buenos Aires.
 
+## 2f. Cuarta vuelta — el tope después de que el ancla se mueve
+
+- [x] 2f.1 **"Próximo" y el dashboard reiniciaban el tope.** `max_occurrences` cuenta posiciones desde
+      el inicio de la regla; un lector sin versiones las cuenta desde la única ancla que ve, la actual.
+      Mientras el ancla no se movía eran el mismo número. Al corregir la referencia el calendario
+      recibe un origen nuevo cerca de hoy, y todo lo gastado bajo el ancla anterior deja de contar:
+      el generador decía `owed: []` y las dos pantallas seguían ofreciendo `2026-09-25`.
+      Ahora `recurrences.schedule_positions_before` —llenada por el mismo trigger que decide el piso,
+      con la misma función que valida el RPC— viaja con la fila, y `walkOccurrences` separa DÓNDE está
+      el calendario de CUÁNTO del tope se gastó, que eran un solo número.
+- [x] 2f.2 **TypeScript no saturaba al alcanzar el tope.** El prefijo aritmético de la primera versión
+      es un conteo de posiciones, no de posiciones permitidas: en una regla cuyo calendario empezó
+      mucho antes de la versión que la describe, el prefijo solo ya pasa el tope. SQL clampea, TS no
+      — 7 contra 3 sobre la misma regla. Haber gastado más tope del que hay no es un estado.
+- [x] 2f.3 **El valor fail-closed no suprimía en todos lados.** La proyección lo suprimía por
+      accidente —su ventana termina antes— y "próxima fecha" caminaba hasta el año 9999 y lo ponía en
+      pantalla. Ahora el centinela tiene nombre, `SCHEDULE_NEVER_RULES`, lo respetan los dos lectores,
+      y una prueba lo compara contra el DEFAULT real de la columna para que no se separen.
+- [x] 2f.4 **La corrección horaria estaba incompleta, y era peor de lo que parecía.** No eran los
+      tests moviendo fechas: PGlite decodifica una columna `date` como medianoche **UTC** y el adapter
+      del harness leía partes **locales**. Al oeste de UTC —Buenos Aires incluido— cada fecha que el
+      generador leía volvía un día antes, y la suite entera respondía mal en la máquina donde se
+      desarrolla la app. Pasaba en UTC y al este de UTC: exactamente la forma de un bug que sobrevive
+      a CI. Verificado ahora en UTC, Buenos Aires, Auckland y Los Ángeles.
+
 ### Fuera de alcance, anotado
 
 - `apps/web/lib/savings/__tests__/savings-mutations.test.ts` falla con `TZ=Pacific/Auckland` — tres

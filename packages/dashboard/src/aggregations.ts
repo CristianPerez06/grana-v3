@@ -722,6 +722,9 @@ export function projectRecurrenceItems(
       // Without this the card announces a payment for a date the generator is
       // never going to create: the gap a corrected reference date opens (#121).
       schedule_effective_from: r.schedule_effective_from,
+      // And without this it keeps projecting a rule whose cap ran out under the
+      // anchor it had before the correction.
+      schedule_positions_before: r.schedule_positions_before,
     })),
     windowStart,
     windowEnd,
