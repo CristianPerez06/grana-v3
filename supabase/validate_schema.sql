@@ -923,7 +923,7 @@ begin
   if to_regprocedure('public.recurrence_positions_spent(uuid, date)') is null then
     raise exception 'recurrence_positions_spent is missing: the cap would be counted from recurrence_instances rows, which a seeded occurrence does not have';
   end if;
-  if to_regprocedure('public.recurrence_positions_before(uuid, date, date, int, text, date)') is null then
+  if to_regprocedure('public.recurrence_positions_before(uuid, date, date, int, text, date, int, date)') is null then
     raise exception 'recurrence_positions_before is missing: the offset would be the TOTAL spent, which counts the seed twice for every rule created from a movement';
   end if;
   -- The offset is not the total. A database where the column was filled from
@@ -931,9 +931,13 @@ begin
   -- every seeded rule, so the distinction is pinned by the expression itself.
   select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
     into v_body
-    from pg_proc where oid = 'public.recurrence_positions_before(uuid, date, date, int, text, date)'::regprocedure;
-  if v_body not like '%v_spent - case when v_walks then 1 else 0 end%' then
-    raise exception 'recurrence_positions_before does not take the seed out of the offset when the current calendar walks it: a seeded rule spends that position twice';
+    from pg_proc where oid = 'public.recurrence_positions_before(uuid, date, date, int, text, date, int, date)'::regprocedure;
+  -- The REACH test has to be there. Not its exact boundary: at `v_k` exactly on
+  -- the limit the two readings allow the same visible positions — they differ
+  -- only over the seed's own slot, which the movement covers either way — so
+  -- pinning `>` against `>=` would be a false red over nothing.
+  if v_body not like '%p_max is not null and v_k%' then
+    raise exception 'recurrence_positions_before decides by whether the calendar CONTAINS the seed rather than whether it reaches it: a rule whose cap runs out first loses that position entirely';
   end if;
 
   if to_regprocedure('public.recurrence_candidate_effective_dates(date, int, text, date, date, int)') is null then

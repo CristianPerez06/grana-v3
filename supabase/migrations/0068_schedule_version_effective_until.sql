@@ -530,13 +530,19 @@ end $$;
 -- So the seed is taken out of the offset precisely when the current calendar is
 -- going to walk it — which is not the same as "the seed is recent": a seed the
 -- corrected schedule does not land on is never walked, and belongs here.
+-- The old six-argument shape goes: its answer was wrong, and leaving it callable
+-- would leave the wrong answer reachable.
+drop function if exists public.recurrence_positions_before(uuid, date, date, int, text, date);
+
 create or replace function public.recurrence_positions_before(
   p_id             uuid,
   p_floor          date,
   p_anchor         date,
   p_interval_count int,
   p_interval_unit  text,
-  p_seed           date
+  p_seed           date,
+  p_max            int,
+  p_end_date       date
 )
 returns int
 language plpgsql
@@ -549,7 +555,8 @@ declare
   v_spent int;
   v_step  interval;
   v_span  int;
-  v_walks boolean;
+  v_on    boolean;
+  v_k     int;
 begin
   -- Up to the day the outgoing schedule stops: the day before the new one rules,
   -- or today when the new one is still ahead — the gap between produces nothing.
@@ -579,17 +586,38 @@ begin
               when 'year'  then v_span / (p_interval_count * 365)
             end + 2;
 
-  select exists (
-    select 1 from generate_series(0, v_span) n
-     where (p_anchor + (v_step * n))::date = p_seed
-  ) into v_walks;
+  -- WHERE the seed sits among the positions this schedule still has to walk, and
+  -- whether it is one of them at all.
+  select bool_or(d = p_seed), count(*) filter (where d < p_seed)
+    into v_on, v_k
+    from generate_series(0, v_span) n
+    cross join lateral (select (p_anchor + (v_step * n))::date as d) x
+   where d >= p_floor and d <= p_seed;
 
-  return v_spent - case when v_walks then 1 else 0 end;
+  -- Not a position of this calendar: nobody walks it, so it stays.
+  if not coalesce(v_on, false) then
+    return v_spent;
+  end if;
+
+  -- BEING ON THE CALENDAR IS NOT BEING REACHED BY IT. A progression contains
+  -- every one of its dates; a rule walks only as far as its end and its cap let
+  -- it. A seed past either is spent once and never counted again, so taking it
+  -- out of the offset would spend it zero times.
+  if p_end_date is not null and p_seed > p_end_date then
+    return v_spent;
+  end if;
+  -- `v_spent` already counts the seed, so what is left to walk from the floor is
+  -- `p_max - (v_spent - 1)` positions, at indices 0 .. p_max - v_spent.
+  if p_max is not null and v_k > p_max - v_spent then
+    return v_spent;
+  end if;
+
+  return v_spent - 1;
 end $$;
 
-revoke all on function public.recurrence_positions_before(uuid, date, date, int, text, date) from public;
-revoke all on function public.recurrence_positions_before(uuid, date, date, int, text, date) from anon;
-grant execute on function public.recurrence_positions_before(uuid, date, date, int, text, date) to authenticated;
+revoke all on function public.recurrence_positions_before(uuid, date, date, int, text, date, int, date) from public;
+revoke all on function public.recurrence_positions_before(uuid, date, date, int, text, date, int, date) from anon;
+grant execute on function public.recurrence_positions_before(uuid, date, date, int, text, date, int, date) to authenticated;
 
 revoke all on function public.recurrence_positions_spent(uuid, date) from public;
 revoke all on function public.recurrence_positions_spent(uuid, date) from anon;
@@ -608,7 +636,8 @@ begin;
 update public.recurrences r
    set schedule_positions_before = public.recurrence_positions_before(
          r.id, r.schedule_effective_from, r.start_date,
-         r.interval_count, r.interval_unit, r.seed_occurrence_date);
+         r.interval_count, r.interval_unit, r.seed_occurrence_date,
+         r.max_occurrences, r.end_date);
 
 -- ── 3 · Where the effective date is decided, once ──────────────────────────
 --
@@ -664,7 +693,8 @@ begin
     -- leaves behind contributes nothing.
     NEW.schedule_positions_before := public.recurrence_positions_before(
       NEW.id, chosen::date, NEW.start_date,
-      NEW.interval_count, NEW.interval_unit, NEW.seed_occurrence_date);
+      NEW.interval_count, NEW.interval_unit, NEW.seed_occurrence_date,
+      NEW.max_occurrences, NEW.end_date);
 
   elsif NEW.interval_count is distinct from OLD.interval_count
      or NEW.interval_unit  is distinct from OLD.interval_unit then
@@ -674,7 +704,8 @@ begin
     NEW.schedule_effective_from := greatest(today, NEW.start_date);
     NEW.schedule_positions_before := public.recurrence_positions_before(
       NEW.id, greatest(today, NEW.start_date), NEW.start_date,
-      NEW.interval_count, NEW.interval_unit, NEW.seed_occurrence_date);
+      NEW.interval_count, NEW.interval_unit, NEW.seed_occurrence_date,
+      NEW.max_occurrences, NEW.end_date);
   end if;
 
   return NEW;

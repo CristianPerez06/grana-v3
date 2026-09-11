@@ -1,4 +1,5 @@
 import type { PGlite } from '@electric-sql/pglite'
+import { projectRuleOccurrences } from '@grana/money-logic'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { generateDueRecurrenceInstances, getRecurrenceDetail, getRecurrences } from '../src/queries'
 import {
@@ -453,6 +454,77 @@ describe('deleting the seed of a rule whose reference date was corrected', () =>
 // kind: rows already in the table when 0068 runs, whose offset comes from the
 // backfill. That is a different computation and it needs its own database.
 // ═══════════════════════════════════════════════════════════════════════════
+
+describe('a seed the cap never reaches', () => {
+  it('stays in the offset, even though the calendar contains its date', async () => {
+    // Being ON the calendar is not the same as being REACHED by it. A rule with
+    // one position left stops at that position; a seed three steps further along
+    // is a date the progression contains and the walk never arrives at. Taken out
+    // of the offset it is spent zero times, and the rule hands out a position it
+    // does not have.
+    const ruleId = nextId('5')
+    const txId = nextId('4')
+    const t0 = await today()
+    const seedDate = shift(t0, 9)
+
+    await actAsAdmin(db)
+    await db.exec(`
+      insert into public.transactions (id, user_id, date, amount)
+      values ('${txId}', '${U_A}', '${seedDate}', 1000);
+      insert into public.recurrences
+        (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code,
+         movement_type, max_occurrences, last_generated_date, created_from_transaction_id)
+      values ('${ruleId}', '${U_A}', '${seedDate}', 3, 'day', 'active', 1000, 'ARS', 'expense',
+              2, '${seedDate}', '${txId}');
+    `)
+    await actAs(db, U_A)
+
+    // Two cuotas every three days, one of them the movement. Corrected to start
+    // three days from now: the new calendar is t+3, t+6, t+9 … and the seed is
+    // the THIRD of those, while the cap allows exactly one more.
+    const corrected = shift(t0, 3)
+    const { rows: candidates } = await db.query<{ effective_from: string }>(
+      `select effective_from::text from public.recurrence_candidate_effective_dates(
+         '${corrected}'::date, 3, 'day',
+         ((now() at time zone 'America/Argentina/Buenos_Aires')::date))`,
+    )
+    expect(candidates[0].effective_from).toBe(corrected)
+    await db.exec(`
+      select public.update_recurrence_schedule('${ruleId}'::uuid,
+        jsonb_build_object('start_date', '${corrected}', 'interval_count', 3, 'interval_unit', 'day'),
+        '${corrected}'::date);
+    `)
+
+    await actAsAdmin(db)
+    const { rows } = await db.query<{ n: number }>(
+      `select schedule_positions_before as n from public.recurrences where id = '${ruleId}'`,
+    )
+    await actAs(db, U_A)
+    // The movement's own cuota: spent, and never walked again, because the cap
+    // runs out two positions before the calendar gets there.
+    expect(Number(rows[0].n)).toBe(1)
+
+    // And the contract that number exists to keep: the reader that walks one
+    // anchor answers what the generator, composing every version, answers.
+    const rule = await getRecurrenceDetail(supabase, ruleId)
+    const projected = projectRuleOccurrences(
+      {
+        id: ruleId,
+        start_date: corrected,
+        end_date: null,
+        interval_count: 3,
+        interval_unit: 'day',
+        max_occurrences: 2,
+        schedule_effective_from: rule!.schedule_effective_from,
+        schedule_positions_before: rule!.schedule_positions_before,
+        covered: [],
+      },
+      t0,
+      shift(t0, 60),
+    )
+    expect(projected).toEqual([corrected])
+  })
+})
 
 describe('a seed the corrected calendar does not land on', () => {
   it('stays in the offset, because nothing is ever going to walk it', async () => {

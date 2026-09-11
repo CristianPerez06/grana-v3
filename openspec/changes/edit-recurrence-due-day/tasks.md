@@ -235,6 +235,22 @@ se queda corto **en silencio**, que es la forma en que un tope deja de ser un to
         offset del total — una base llenada con el total se ve completa y está corta una cuota en cada
         regla con semilla.
 
+- [x] 2g.2 **Estar EN el calendario no es ser ALCANZADO por él.** La condición de 2g.1 preguntaba si
+      la progresión contiene la fecha de la semilla, y una progresión contiene todas las suyas: una
+      regla que se queda sin tope dos posiciones antes nunca llega. Restada ahí, esa posición se gasta
+      cero veces y la regla reparte una cuota que no tiene. Ahora la pregunta es si la semilla cae
+      dentro de las posiciones que el calendario actual va a recorrer **antes del tope** —y del
+      `end_date`—, que es la regla correcta. La función toma `max_occurrences` y `end_date`; la vieja
+      firma de seis argumentos se elimina, porque dejarla invocable deja invocable la respuesta mala.
+  - [x] La regresión es la que describe la revisión: semilla a futuro, cada tres días, tope con una
+        sola posición restante y la semilla dentro del calendario nuevo pero después de esa posición.
+        Afirma además el contrato que el número existe para sostener — que el lector de una sola ancla
+        contesta lo mismo que el generador compuesto.
+  - [x] El borde exacto (`v_k` justo en el límite) **no es observable**: las dos lecturas permiten las
+        mismas posiciones visibles y difieren sólo en la ranura de la semilla, que el movimiento cubre
+        igual. El pin de `validate_schema.sql` exige la prueba de alcance, no su operador, para no
+        convertir una reescritura equivalente en un rojo falso.
+
 ### Fuera de alcance, anotado
 
 - `apps/web/lib/savings/__tests__/savings-mutations.test.ts` falla con `TZ=Pacific/Auckland` — tres
