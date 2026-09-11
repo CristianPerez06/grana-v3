@@ -24,7 +24,6 @@ let db: PGlite
 
 beforeAll(async () => {
   db = await createRecurrenceIdentityDb()
-  await applyEffectiveUntil(db)
   await actAs(db, U_A)
 })
 
@@ -66,8 +65,12 @@ const moveAnchor = async (ruleId: string, anchor: string, which: 0 | 1 = 0) => {
 
 const versionsOf = async (ruleId: string) => {
   await actAsAdmin(db)
-  const { rows } = await db.query<{ effective_from: string; anchor_date: string }>(
-    `select effective_from::text, anchor_date::text
+  const { rows } = await db.query<{
+    effective_from: string
+    effective_until: string | null
+    anchor_date: string
+  }>(
+    `select effective_from::text, effective_until::text, anchor_date::text
        from public.recurrence_schedule_versions
       where recurrence_id = '${ruleId}'
       order by effective_from`,
@@ -91,16 +94,19 @@ const today = async (): Promise<string> => {
 }
 
 describe('moving the anchor rules from the change forward', () => {
-  it('opens a version effective today, anchored on the new date', async () => {
+  it('opens the version on the date the user chose, anchored on the new one', async () => {
+    // NOT "on today": the effective date is one of the two candidates the
+    // calendar offers, and whether the first of them happens to BE today depends
+    // on what day of the month this suite runs. It is the chosen date that has to
+    // come back — asserting `today` passed for a month and then stopped.
     const rule = await anchoredOnThe8th()
-    await moveAnchor(rule, '2026-06-10')
+    const chosen = await moveAnchor(rule, '2026-06-10')
 
     const versions = await versionsOf(rule)
     const newest = versions[versions.length - 1]
-    // `greatest(today, start_date)`: the new schedule starts ruling NOW, not on
-    // the date the user typed — which is in the past, and the past is not rewritten.
-    expect(newest.effective_from).toBe(await today())
+    expect(newest.effective_from).toBe(chosen)
     expect(newest.anchor_date).toBe('2026-06-10')
+    expect(newest.effective_until).toBeNull()
   })
 
   it('leaves the old version standing for the stretch it governed', async () => {

@@ -76,6 +76,10 @@ function mapRecurrenceSummary(
         interval_count: recurrence.interval_count,
         interval_unit: recurrence.interval_unit as IntervalUnit,
         max_occurrences: recurrence.max_occurrences,
+        // Since when the current schedule rules. Without it this answers with a
+        // date from the stretch where the old schedule has stopped and the new
+        // one has not begun — a "próximo" the generator is never going to create.
+        schedule_effective_from: recurrence.schedule_effective_from,
       },
       today,
       covered,
@@ -656,13 +660,21 @@ export async function generateDueRecurrenceInstances(
     selectAllPages<{
       recurrence_id: string
       effective_from: string
+      effective_until: string | null
       interval_count: number
       interval_unit: string
       anchor_date: string
     }>(() =>
       supabase
         .from('recurrence_schedule_versions')
-        .select('recurrence_id, effective_from, interval_count, interval_unit, anchor_date')
+        // `effective_until` is not decoration: a version that stops before the
+        // next one starts is how a corrected anchor avoids charging the cycle in
+        // flight twice. Left out of this select, the walker gets `undefined` and
+        // the old schedule keeps producing inside the gap — in production only,
+        // because a test that builds the versions by hand never notices.
+        .select(
+          'recurrence_id, effective_from, effective_until, interval_count, interval_unit, anchor_date',
+        )
         .eq('user_id', userId)
         .in('recurrence_id', ruleIds)
         // Unique by `recurrence_schedule_versions_one_per_date`.
@@ -706,6 +718,7 @@ export async function generateDueRecurrenceInstances(
     const list = versionsByRule.get(row.recurrence_id as string) ?? []
     list.push({
       effective_from: row.effective_from as string,
+      effective_until: (row.effective_until as string | null) ?? null,
       interval_count: row.interval_count as number,
       interval_unit: row.interval_unit as IntervalUnit,
       anchor_date: row.anchor_date as string,
@@ -1028,7 +1041,11 @@ export async function getDuplicateRulesFor(
   const { data, error } = await supabase
     .from('recurrences')
     .select(
-      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id',
+      // `schedule_effective_from` travels because the "próximo" below is computed
+      // from it: without the floor, a rule inside a schedule gap announces a date
+      // the generator will never create, and the duplicate warning compares
+      // against a date that does not exist.
+      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, schedule_effective_from',
     )
     .eq('status', 'active')
   if (error) throw error
@@ -1042,6 +1059,7 @@ export async function getDuplicateRulesFor(
       interval_unit: IntervalUnit
       max_occurrences: number | null
       created_from_transaction_id: string | null
+      schedule_effective_from: string | null
     }
   >
 

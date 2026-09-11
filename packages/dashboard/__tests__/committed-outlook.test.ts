@@ -63,6 +63,8 @@ type FakeRule = {
   max_occurrences?: number | null
   last_generated_date?: string | null
   status?: string
+  /** Since when the current schedule rules — see `schedule_effective_from`. */
+  schedule_effective_from?: string | null
 }
 type FakeInstance = {
   recurrence_id: string
@@ -102,6 +104,7 @@ function makeSupabase(db: Db, options: { maxRows?: number } = {}) {
     let orGroups: string[][] | null = null
     let orderBy: string[] = []
     let window: { from: number; to: number } | null = null
+    let selected: string | undefined
 
     // `and(due_date.gte.X,due_date.lte.Y)` — the slice of PostgREST's filter
     // grammar these reads use. A row passes the `or` if ANY group passes.
@@ -151,6 +154,53 @@ function makeSupabase(db: Db, options: { maxRows?: number } = {}) {
       return out.slice(offset, offset + capped)
     }
 
+    // PostgREST answers with the columns the query ASKED FOR, and nothing else.
+    // A fake that hands back every column it knows proves the mapper and never
+    // the read: drop a column from a `.select()` in `src/queries.ts` and the
+    // suite stays green while production gets `undefined`. So the column list
+    // is honoured here, and an unknown column fails the way PostgREST does.
+    const project = (rows: Record<string, unknown>[]) => {
+      if (selected == null || selected.includes('*')) return rows
+      const terms: string[] = []
+      let depth = 0
+      let current = ''
+      for (const char of selected) {
+        if (char === '(') depth += 1
+        if (char === ')') depth -= 1
+        if (char === ',' && depth === 0) {
+          terms.push(current)
+          current = ''
+          continue
+        }
+        current += char
+      }
+      terms.push(current)
+
+      const fields = terms
+        .map((term) => term.trim())
+        .filter(Boolean)
+        .map((term) => {
+          // `alias:table(cols)` and `table(cols)` are embeds: the fake already
+          // builds the nested object, so only its key matters here.
+          const embed = term.indexOf('(')
+          const head = embed === -1 ? term : term.slice(0, embed)
+          const [left, right] = head.split(':')
+          return right == null ? { key: left, column: left } : { key: left, column: right }
+        })
+
+      return rows.map((row) => {
+        const out: Record<string, unknown> = {}
+        for (const { key, column } of fields) {
+          const source = column in row ? column : key
+          if (!(source in row)) {
+            throw new Error(`${table}.${column} was selected but the fixture has no such column`)
+          }
+          out[key] = row[source]
+        }
+        return out
+      })
+    }
+
     const run = () => {
       switch (table) {
         case 'accounts':
@@ -198,6 +248,7 @@ function makeSupabase(db: Db, options: { maxRows?: number } = {}) {
                 interval_unit: 'month',
                 max_occurrences: null,
                 created_from_transaction_id: null,
+                schedule_effective_from: null,
                 status: 'active',
                 category: null,
                 subcategory: null,
@@ -232,7 +283,10 @@ function makeSupabase(db: Db, options: { maxRows?: number } = {}) {
     }
 
     const b: Record<string, unknown> = {
-      select: () => b,
+      select: (columns?: string) => {
+        selected = columns
+        return b
+      },
       eq: (c: string, v: unknown) => {
         eq[c] = v
         return b
@@ -286,8 +340,11 @@ function makeSupabase(db: Db, options: { maxRows?: number } = {}) {
         notNull.push(c)
         return b
       },
-      then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
-        Promise.resolve(run()).then(resolve, reject),
+      then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => {
+        const { data, error } = run()
+        const projected = data == null ? data : project(data as Record<string, unknown>[])
+        return Promise.resolve({ data: projected, error }).then(resolve, reject)
+      },
     }
     return b
   }
@@ -1238,5 +1295,47 @@ describe('getCommittedOutlookForMonth — archiving a card is not retroactive', 
       CURRENT_MONTH,
     )
     expect(out.ARS.debt).toBe(0)
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// A rule whose schedule does not rule yet — the gap a corrected reference date
+// opens between the old calendar stopping and the new one starting (#121).
+//
+// The projection walks the rule's own columns, so it cannot see the schedule
+// versions the generator reads. Without the floor it announces a commitment for
+// a date the generator is never going to create, and the card shows money that
+// will not move.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('getCommittedOutlookForMonth — a schedule that has not started ruling', () => {
+  const insideTheGap: FakeRule = {
+    id: 'r-alquiler',
+    movement_type: 'expense',
+    account_id: 'bank',
+    amount: 500_000,
+    currency_code: 'ARS',
+    description: 'Alquiler',
+    start_date: '2026-01-10',
+    // The window is September; the corrected schedule only starts ruling in
+    // October, so the occurrence of 10/09 falls inside the gap.
+    schedule_effective_from: '2026-10-10',
+  }
+
+  it('does not project an occurrence the generator will never create', async () => {
+    const supabase = makeSupabase({ accounts: [bank], recurrences: [insideTheGap] })
+
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
+    expect(out.ARS.recurringExpense).toBe(0)
+  })
+
+  it('projects it again once the schedule rules', async () => {
+    const supabase = makeSupabase({
+      accounts: [bank],
+      recurrences: [{ ...insideTheGap, schedule_effective_from: '2026-09-10' }],
+    })
+
+    const out = await getCommittedOutlookForMonth(supabase, CURRENT_MONTH)
+    expect(out.ARS.recurringExpense).toBe(500_000)
   })
 })

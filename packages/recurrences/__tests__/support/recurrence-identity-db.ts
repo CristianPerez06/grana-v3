@@ -70,7 +70,11 @@ const SCHEMA = `
     default_split       jsonb,
     -- The seed link. A rule created from a movement covers its own start_date
     -- with that movement, which is why the generator must not materialize it.
-    created_from_transaction_id uuid
+    created_from_transaction_id uuid,
+    -- Read by the hub's mapper. Present because the shipped read selects every
+    -- column, and a harness table missing one the app reads is a harness that can
+    -- only test the functions, never the path that feeds them.
+    created_at          timestamptz not null default now()
   );
 
   create table public.recurrence_instances (
@@ -181,14 +185,26 @@ const SEED = `
  * A fresh Postgres with the two recurrence tables, 0011's index and policies,
  * two users, and — unless `applyMigration` is false — 0064 applied on top.
  */
+/**
+ * The schema as production has it — which after #121 includes 0068, because the
+ * code SELECTS `effective_until` and would fail against a database without it.
+ * That is not an accident of the harness: it is the deployment order, and a test
+ * building the pre-0068 world is testing a state the app is never deployed into.
+ *
+ * `scheduleGap: false` is for the tests that assert on an EARLIER state on
+ * purpose — 0064's own behaviour, or what 0066 refuses to run against.
+ */
 export async function createRecurrenceIdentityDb(
-  options: { applyMigration?: boolean } = {},
+  options: { applyMigration?: boolean; scheduleGap?: boolean } = {},
 ): Promise<PGlite> {
   const db = new PGlite()
   await db.exec('create schema if not exists public;')
   await db.exec(SCHEMA)
   await db.exec(SEED)
-  if (options.applyMigration !== false) await applyMigration(db)
+  if (options.applyMigration !== false) {
+    await applyMigration(db)
+    if (options.scheduleGap !== false) await applyEffectiveUntil(db)
+  }
   return db
 }
 

@@ -219,16 +219,32 @@ begin
     delete from public.recurrence_schedule_versions
      where recurrence_id = NEW.id and effective_from > today;
 
-    -- CLOSE THE OUTGOING ONE. `effective_until` is inclusive, so a new version
-    -- starting today means the old one ends yesterday; one starting later leaves
-    -- a gap that produces nothing. Without this the old schedule keeps firing
-    -- through the gap and the duplicate comes back a cycle later, on the old
-    -- date — the 8th of October behind a correction that starts on the 10th.
-    update public.recurrence_schedule_versions
+    -- CLOSE THE OUTGOING ONE — the one RULING, and only that one.
+    --
+    -- `effective_until` is inclusive, so a new version starting today means the
+    -- old one ends yesterday; one starting later leaves a gap that produces
+    -- nothing. Without this the old schedule keeps firing through the gap and
+    -- the duplicate comes back a cycle later, on the old date — the 8th of
+    -- October behind a correction that starts on the 10th.
+    --
+    -- THE `order by ... limit 1` IS THE POINT. Closing every version that began
+    -- before today would rewrite the ends of versions already closed, and a
+    -- second edit made DURING a gap would push a closed version's end forward to
+    -- today — reopening the stretch the first edit had shut and producing the
+    -- dates it excluded. Only the version in force is being replaced; the ones
+    -- before it describe stretches that already happened.
+    update public.recurrence_schedule_versions v
        set effective_until = least(today, opens - 1)
-     where recurrence_id = NEW.id
-       and effective_from <= today
-       and effective_from <= least(today, opens - 1);
+     where v.id = (
+       select ruling.id
+         from public.recurrence_schedule_versions ruling
+        where ruling.recurrence_id = NEW.id
+          and ruling.effective_from <= today
+          and (ruling.effective_until is null or ruling.effective_until >= today)
+        order by ruling.effective_from desc
+        limit 1
+     )
+       and least(today, opens - 1) >= v.effective_from;
 
     insert into public.recurrence_schedule_versions
       (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)

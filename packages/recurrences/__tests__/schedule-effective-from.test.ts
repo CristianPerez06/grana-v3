@@ -25,7 +25,6 @@ let db: PGlite
 
 beforeAll(async () => {
   db = await createRecurrenceIdentityDb()
-  await applyEffectiveUntil(db)
 })
 
 afterAll(async () => {
@@ -183,6 +182,38 @@ describe('the outgoing version is closed so the two never overlap', () => {
     expect(versions[versions.length - 1].effective_from).toBe(later)
   })
 
+  it('does not rewrite the end of a version that was already closed', async () => {
+    // A rule that has been corrected before (or paused, or had its frequency
+    // changed) carries versions already shut. Closing EVERY version that began
+    // before today — rather than the one in force — pushes their ends forward to
+    // today: the stretch a previous edit had shut reopens, two versions rule the
+    // same days, and the walker hands back the dates that edit had excluded.
+    const rule = await seedRule()
+    const now = await today()
+    await actAsAdmin(db)
+    await db.exec(`
+      update public.recurrence_schedule_versions
+         set effective_until = '2026-07-31'
+       where recurrence_id = '${rule}';
+      insert into public.recurrence_schedule_versions
+        (recurrence_id, user_id, effective_from, interval_count, interval_unit, anchor_date, is_assumed)
+      values
+        ('${rule}', '${U_A}', '2026-08-01', 1, 'month', '2026-06-08', false);
+    `)
+    await actAs(db, U_A)
+
+    const [, later] = await candidatesFor('2026-06-10')
+    await correctAnchor(rule, '2026-06-10', later)
+
+    const versions = await versionsOf(rule)
+    expect(versions).toHaveLength(3)
+    // Untouched: it describes a stretch that already happened.
+    expect(versions[0].effective_until).toBe('2026-07-31')
+    // The one in force is the one being replaced.
+    expect(versions[1].effective_until).toBe(now)
+    expect(versions[2].effective_from).toBe(later)
+  })
+
   it('records the floor on the rule, for the reads that do not know about versions', async () => {
     const rule = await seedRule()
     const [, later] = await candidatesFor('2026-06-10')
@@ -332,7 +363,7 @@ describe('a database whose model drifted', () => {
     // No version describes the schedule the rule has: the two halves of the model
     // disagree. Picking the newest version would freeze a false floor into a
     // column every read trusts.
-    const drifted = await createRecurrenceIdentityDb()
+    const drifted = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await drifted.exec(`
         insert into public.recurrences (id, user_id, start_date, interval_count, interval_unit, status)
@@ -375,7 +406,7 @@ describe('validate_schema.sql · 8.1K', () => {
   it('REFUSES a database that does not', async () => {
     // The state this exists to catch: the code deployed and the migration not,
     // where an anchor moves with an implicit effective date again.
-    const bare = await createRecurrenceIdentityDb()
+    const bare = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await expect(db_exec_on(bare)).rejects.toThrow(/0068 was not applied/)
     } finally {

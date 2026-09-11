@@ -32,7 +32,7 @@ describe('a rule that starts in the future, edited before it starts', () => {
   let db: PGlite
 
   beforeAll(async () => {
-    db = await createRecurrenceIdentityDb()
+    db = await createRecurrenceIdentityDb({ scheduleGap: false })
     await actAs(db, U_A)
   })
 
@@ -113,7 +113,7 @@ describe('the history is read-only for the user and maintained by the database',
   let db: PGlite
 
   beforeAll(async () => {
-    db = await createRecurrenceIdentityDb()
+    db = await createRecurrenceIdentityDb({ scheduleGap: false })
     await actAs(db, U_A)
   })
 

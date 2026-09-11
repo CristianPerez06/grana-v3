@@ -919,7 +919,10 @@ export async function getCommittedOutlookForMonth(
       supabase
         .from('recurrences')
         .select(
-          'id, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
+          // `schedule_effective_from` is what keeps the projection from announcing
+          // a commitment inside a schedule gap — the stretch where a corrected
+          // anchor has stopped the old calendar and the new one has not begun.
+          'id, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, schedule_effective_from, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
         )
         .eq('status', 'active')
         .order('id'),

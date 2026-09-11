@@ -18,7 +18,6 @@ let db: PGlite
 
 beforeAll(async () => {
   db = await createRecurrenceIdentityDb()
-  await applyEffectiveUntil(db)
 })
 
 afterAll(async () => {
