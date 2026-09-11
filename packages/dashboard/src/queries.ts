@@ -893,6 +893,7 @@ export async function getCommittedOutlookForMonth(
   type RecurrenceRuleRow = Omit<CommittedRecurrenceRule, 'covered'> & {
     account_id: string | null
     created_from_transaction_id: string | null
+    seed_occurrence_date: string | null
     category: NameEmbed
     subcategory: NameEmbed
   }
@@ -922,7 +923,7 @@ export async function getCommittedOutlookForMonth(
           // `schedule_effective_from` is what keeps the projection from announcing
           // a commitment inside a schedule gap — the stretch where a corrected
           // anchor has stopped the old calendar and the new one has not begun.
-          'id, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, schedule_effective_from, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
+          'id, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, seed_occurrence_date, schedule_effective_from, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
         )
         .eq('status', 'active')
         .order('id'),
@@ -994,7 +995,7 @@ export async function getCommittedOutlookForMonth(
     ...r,
     description: r.description || embedName(r.subcategory) || embedName(r.category),
     covered: coveredOccurrences({
-      startDate: r.start_date,
+      seedOccurrenceDate: r.seed_occurrence_date,
       seededFromMovement: r.created_from_transaction_id != null,
       existing: coveredByRule.get(r.id) ?? [],
     }),

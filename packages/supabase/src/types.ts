@@ -842,7 +842,8 @@ export type Database = {
           max_occurrences: number | null
           movement_type: string
           reconstruct_from: string
-          schedule_effective_from: string | null
+          schedule_effective_from: string
+          seed_occurrence_date: string | null
           start_date: string
           status: string
           subcategory_id: string | null
@@ -868,7 +869,8 @@ export type Database = {
           max_occurrences?: number | null
           movement_type: string
           reconstruct_from?: string
-          schedule_effective_from?: string | null
+          schedule_effective_from?: string
+          seed_occurrence_date?: string | null
           start_date: string
           status?: string
           subcategory_id?: string | null
@@ -894,7 +896,8 @@ export type Database = {
           max_occurrences?: number | null
           movement_type?: string
           reconstruct_from?: string
-          schedule_effective_from?: string | null
+          schedule_effective_from?: string
+          seed_occurrence_date?: string | null
           start_date?: string
           status?: string
           subcategory_id?: string | null

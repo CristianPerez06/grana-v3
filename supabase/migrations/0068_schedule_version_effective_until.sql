@@ -112,6 +112,200 @@ begin
   end loop;
 end $floor$;
 
+
+-- ── 2b · Which occurrence the seed movement covers ─────────────────────────
+--
+-- A rule created from a movement has no instance row for that movement's
+-- occurrence: the movement IS it. Until now that occurrence was READ OFF
+-- `start_date`, which was safe only because `start_date` could not move.
+--
+-- This feature moves it. The moment an anchor is corrected the two come apart,
+-- and every reader that still equates them is wrong in a different way:
+--
+--   · `coveredOccurrences` marks the NEW anchor as already covered, hiding the
+--     first occurrence of the corrected schedule from every projection;
+--   · 0065 releases the floor computing `start_date - 1` from the corrected
+--     anchor, while the guard below demands the floor the SEED established —
+--     they no longer match, the transition is rejected, and the movement can no
+--     longer be deleted at all.
+--
+-- So the occurrence gets an identity of its own, immutable, next to the anchor
+-- that is now free to move.
+alter table public.recurrences
+  add column if not exists seed_occurrence_date DATE;
+
+comment on column public.recurrences.seed_occurrence_date is
+  'Occurrence covered by the seed movement. Immutable: the anchor may be corrected, this may not.';
+
+-- Exact for every existing row: before this migration a seeded rule could not
+-- move its anchor, so `start_date` still IS the seed occurrence. A rule already
+-- unlinked covers nothing and gets NULL.
+update public.recurrences
+   set seed_occurrence_date = start_date
+ where created_from_transaction_id is not null
+   and seed_occurrence_date is null;
+
+commit;
+
+begin;
+
+-- ── 2c · The guard, keyed on the seed occurrence instead of the anchor ─────
+--
+-- 0064's version reads the seed's occurrence off `start_date`, in two of its
+-- clauses. With the anchor free to move they stop describing the situation the
+-- exception exists for, and the exception stops firing for it:
+--
+--   seed dated the 7th, still in the future  ⇒ floor 7, anchor 7
+--   reference corrected to the 9th           ⇒ floor 7, anchor 9
+--   delete the seed movement                 ⇒ 0065 offers floor 8 (9 - 1),
+--     the guard demands `OLD.reconstruct_from = OLD.start_date` (7 = 9) — false
+--
+-- …so the write is rejected and the movement can no longer be deleted at all.
+-- Both clauses now name `seed_occurrence_date`, which does not move, and the
+-- released floor is the day before the occurrence the movement actually covers.
+--
+-- Everything else is 0064's function unchanged, restated in full rather than
+-- patched: a trigger body is replaced whole, and a reader comparing the two
+-- should see the same shape.
+create or replace function public.recurrence_reconstruct_from_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if TG_OP = 'UPDATE' then
+    -- The seed occurrence is an identity, not a setting. Nothing may move it —
+    -- there is no correct new value, because the movement it names does not
+    -- change. Checked before the floor, since the floor's exception rests on it.
+    if NEW.seed_occurrence_date is distinct from OLD.seed_occurrence_date then
+      raise exception
+        'seed_occurrence_date is immutable: rule % covers occurrence %, and the write tried to move it to %.',
+        OLD.id, OLD.seed_occurrence_date, NEW.seed_occurrence_date
+        using errcode = '23514';
+    end if;
+
+    if NEW.reconstruct_from is distinct from OLD.reconstruct_from
+       -- ONE transition is allowed, and it is not an edit: RELEASING THE FLOOR A
+       -- DELETED FUTURE SEED LEFT BEHIND.
+       --
+       -- A rule created from a movement has its floor set to that movement's
+       -- date, because the movement IS that occurrence. Delete the movement and
+       -- keep the rule and the premise is gone — but with the floor frozen the
+       -- generator would never produce it, so the period the movement was
+       -- covering disappears (the orphan defect 0053 repairs, which used to be
+       -- repaired by clearing the cursor the generator no longer reads).
+       --
+       -- Every clause below is load-bearing, and together they describe that one
+       -- situation and nothing else:
+       --   · the floor moves back by EXACTLY ONE DAY, to the day before the seed
+       --     occurrence, which is the floor the rule would have had with no seed
+       --     at all. It cannot reach any further back, so an occurrence hidden
+       --     before it stays hidden and the reconstruction cannot be widened;
+       --   · the floor being released is the one the SEED established
+       --     (`OLD.reconstruct_from = OLD.seed_occurrence_date`);
+       --   · `start_date` does not move in the same write. Redundant now that the
+       --     target is pinned to an immutable column, and kept anyway: it costs
+       --     nothing and keeps the permission as narrow as it was;
+       --   · the seed occurrence is still in the FUTURE. This is what keeps
+       --     `acceptRecurrenceSuggestion` out: it produces the same floor shape,
+       --     but from the last date DETECTION SAW, always in the past — and there
+       --     the movement really does exist, so releasing would duplicate it;
+       --   · the rule WAS seeded and is no longer, in this very write. Requiring
+       --     the seed to have existed is what makes this a repair rather than a
+       --     transition any rule can reach: without it, a rule that never had a
+       --     seed could be walked into the same shape and then released, and the
+       --     exception would stop describing the situation it exists for.
+       and not (
+            NEW.reconstruct_from = OLD.seed_occurrence_date - 1
+        and OLD.reconstruct_from = OLD.seed_occurrence_date
+        and NEW.start_date = OLD.start_date
+        and OLD.seed_occurrence_date > (now() at time zone 'America/Argentina/Buenos_Aires')::date
+        and OLD.created_from_transaction_id is not null
+        and NEW.created_from_transaction_id is null
+       )
+    then
+      raise exception
+        'reconstruct_from is immutable: rule % has floor %, and the write tried to move it to %.',
+        OLD.id, OLD.reconstruct_from, NEW.reconstruct_from
+        using errcode = '23514';
+    end if;
+    return NEW;
+  end if;
+
+  -- Derived, never taken from the client: a rule seeded by a movement covers the
+  -- occurrence that movement is dated on, and one that was not seeded covers
+  -- nothing. This is the only write that ever sets it.
+  NEW.seed_occurrence_date := case
+    when NEW.created_from_transaction_id is not null then NEW.start_date
+    else null
+  end;
+
+  NEW.reconstruct_from := case
+    when NEW.status = 'paused'               then (now() at time zone 'America/Argentina/Buenos_Aires')::date
+    when NEW.last_generated_date is not null then NEW.last_generated_date
+    -- With no cursor the first occurrence lands ON start_date, and the
+    -- contract generates strictly after the floor.
+    else NEW.start_date - 1
+  end;
+  return NEW;
+end $$;
+
+-- ── 2d · 0065 releases the floor the SEED established ──────────────────────
+--
+-- The other half of the same correction. 0065 computed `start_date - 1`; with a
+-- corrected anchor that is a date the seed never covered, and the guard above
+-- rejects it. Restated in full for the same reason as the guard.
+create or replace function public.delete_movement_unlinking_seed(
+  p_transaction_id UUID
+)
+returns void
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  v_rule  public.recurrences;
+  v_today DATE := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
+begin
+  -- No status filter, matching the client-side guard: RESTRICT blocks the DELETE
+  -- for ANY rule still holding the link, a soft-deleted one included.
+  select * into v_rule
+    from public.recurrences
+   where created_from_transaction_id = p_transaction_id
+     and user_id = auth.uid();
+
+  if found then
+    update public.recurrences
+       set created_from_transaction_id = null,
+           -- The legacy cursor is nulled alongside, as the client did, only for
+           -- the repair case. Nothing reads it; it goes with migration C.
+           last_generated_date = case
+             when v_rule.status <> 'deleted' and v_rule.seed_occurrence_date > v_today
+               then null
+             else v_rule.last_generated_date
+           end,
+           reconstruct_from = case
+             when v_rule.status <> 'deleted' and v_rule.seed_occurrence_date > v_today
+               then v_rule.seed_occurrence_date - 1
+             else v_rule.reconstruct_from
+           end
+     where id = v_rule.id
+       and user_id = auth.uid();
+  end if;
+
+  -- Same DELETE the client issued. Every guard on `transactions` — the temporal
+  -- one that raises GRN01, the cascades, the FKs — fires here exactly as it did,
+  -- and now inside the same transaction as the writes above.
+  delete from public.transactions
+   where id = p_transaction_id
+     and user_id = auth.uid();
+end $$;
+
+revoke all on function public.delete_movement_unlinking_seed(UUID) from public;
+revoke all on function public.delete_movement_unlinking_seed(UUID) from anon;
+grant execute on function public.delete_movement_unlinking_seed(UUID) to authenticated;
+
 commit;
 
 begin;
@@ -177,6 +371,15 @@ create trigger trg_recurrence_resolve_schedule_effective_from
   before insert or update on public.recurrences
   for each row
   execute function public.recurrence_resolve_schedule_effective_from();
+
+-- NOT NULL, and only NOW: the trigger above is what fills the column on INSERT,
+-- so between the backfill and its creation there is a window where an insert
+-- would have nothing to write. A nullable floor is a floor that can go missing
+-- and read as "this schedule has always ruled" — the permissive answer, reached
+-- by forgetting rather than by deciding. Closed here so the only way to get
+-- "no floor" is to write a date that says so.
+alter table public.recurrences
+  alter column schedule_effective_from set not null;
 
 -- ── 4 · The version, closed so the two never overlap ───────────────────────
 -- Replaces 0064's function in place. Everything it did stays; what changes is

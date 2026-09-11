@@ -13,6 +13,7 @@ const monthly = (overrides: Partial<RuleForProjection> = {}): RuleForProjection 
   interval_count: 1,
   interval_unit: 'month',
   max_occurrences: null,
+  schedule_effective_from: null,
   covered: [],
   ...overrides,
 })

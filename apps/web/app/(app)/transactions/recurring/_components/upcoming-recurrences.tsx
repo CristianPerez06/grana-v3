@@ -48,6 +48,11 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
     interval_count: r.interval_count,
     interval_unit: r.interval_unit as IntervalUnit,
     max_occurrences: r.max_occurrences,
+    // Since when the current schedule rules. A corrected reference date opens a
+    // stretch where the old calendar has stopped and the new one has not begun;
+    // without this floor "Próximas recurrencias" lists a date for that stretch,
+    // which the generator is never going to create.
+    schedule_effective_from: r.schedule_effective_from,
     // An occurrence that already exists — covered by the rule's seed movement, or
     // materialized as an instance in any state — is not "próxima": it is already
     // in the review block or already a movement. The read computes this set.

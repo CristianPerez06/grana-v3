@@ -24,6 +24,10 @@ type RuleRow = {
   interval_unit: string
   max_occurrences: number | null
   last_generated_date: string | null
+  /** Since when the current schedule rules (#121). */
+  schedule_effective_from: string | null
+  /** The occurrence the seed movement covers — NOT the anchor (#121). */
+  seed_occurrence_date: string | null
 }
 
 const monthlyRule = (over: Partial<RuleRow> = {}): RuleRow => ({
@@ -36,8 +40,28 @@ const monthlyRule = (over: Partial<RuleRow> = {}): RuleRow => ({
   interval_unit: 'month',
   max_occurrences: null,
   last_generated_date: null,
+  schedule_effective_from: '2026-08-07',
+  seed_occurrence_date: '2026-08-07',
   ...over,
 })
+
+/**
+ * PostgREST answers with the columns the query ASKED FOR. A fake that hands back
+ * the whole fixture proves the code that reads the row and never the `.select()`
+ * that fetches it — drop a column from the real query and everything stays green
+ * while production reads `undefined`. Which is how the floor went missing twice.
+ */
+const project = (row: RuleRow | null, columns: string): Record<string, unknown> | null => {
+  if (row == null) return null
+  const out: Record<string, unknown> = {}
+  for (const name of columns.split(',').map((c) => c.trim()).filter(Boolean)) {
+    if (!(name in row)) {
+      throw new Error(`recurrences.${name} was selected but the fixture has no such column`)
+    }
+    out[name] = (row as unknown as Record<string, unknown>)[name]
+  }
+  return out
+}
 
 // Records what the mutation wrote, so the tests can assert the repair.
 type Recorder = {
@@ -100,9 +124,9 @@ function stubClient(
       }
       if (table === 'recurrences') {
         return {
-          select: () => ({
+          select: (columns: string) => ({
             eq: () => ({
-              eq: () => ({ maybeSingle: async () => ({ data: rule }) }),
+              eq: () => ({ maybeSingle: async () => ({ data: project(rule, columns) }) }),
             }),
           }),
           update: (patch: Record<string, unknown>) => {
@@ -149,6 +173,54 @@ describe('deleteTransaction — seeded recurrence guard', () => {
     // Nothing touched: neither the rule nor the movement.
     expect(rec.deletedTx).toBe(false)
     expect(rec.updates).toEqual([])
+  })
+
+  // ── The anchor is mutable now, and this screen still names an occurrence ──
+
+  it('names the occurrence the SEED covers, not the corrected anchor', async () => {
+    // Seed dated 07/08, reference corrected to 09/08 taking effect at once. The
+    // movement covers the 7th and always will; reading the covered occurrence off
+    // `start_date` instead marks the 9th as already existing and announces the
+    // NEXT cycle — the rule's first real occurrence, hidden from the user at the
+    // exact moment they are deciding whether to keep it.
+    const rec = recorder()
+    const result = await deleteTransaction(
+      stubClient(
+        monthlyRule({
+          start_date: '2026-08-09',
+          seed_occurrence_date: '2026-08-07',
+          schedule_effective_from: '2026-08-09',
+        }),
+        rec,
+      ),
+      USER,
+      TX,
+      { today: '2026-08-04' },
+    )
+
+    expect(result.seededRecurrence?.next_occurrence).toBe('2026-08-09')
+  })
+
+  it('does not name a date from the stretch that belongs to nobody', async () => {
+    // Same correction, taking effect NEXT cycle: between today and 09/09 the old
+    // schedule has stopped and the new one has not begun. Without the floor this
+    // offers 09/08 — a vencimiento the generator is never going to create.
+    const rec = recorder()
+    const result = await deleteTransaction(
+      stubClient(
+        monthlyRule({
+          start_date: '2026-08-09',
+          seed_occurrence_date: '2026-08-07',
+          schedule_effective_from: '2026-09-09',
+        }),
+        rec,
+      ),
+      USER,
+      TX,
+      { today: '2026-08-04' },
+    )
+
+    expect(result.seededRecurrence?.next_occurrence).toBe('2026-09-09')
   })
 
   it('unlink hands the whole repair to one transaction', async () => {

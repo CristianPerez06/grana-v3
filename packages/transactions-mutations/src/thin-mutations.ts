@@ -772,7 +772,7 @@ export async function deleteTransaction(
   const { data: seededRule } = await supabase
     .from('recurrences')
     .select(
-      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences',
+      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences, schedule_effective_from, seed_occurrence_date',
     )
     .eq('created_from_transaction_id', id)
     .eq('user_id', userId)
@@ -788,6 +788,8 @@ export async function deleteTransaction(
       interval_count: number
       interval_unit: IntervalUnit
       max_occurrences: number | null
+      schedule_effective_from: string | null
+      seed_occurrence_date: string | null
     }
     const today = options.today ?? formatDateISO(getTodayAR())
     const ruleIsLive = rule.status !== 'deleted'
@@ -800,10 +802,19 @@ export async function deleteTransaction(
           id: rule.id,
           description: rule.description,
           // The rule was found BY `created_from_transaction_id`, so it is seeded
-          // by definition and its `start_date` is the occurrence this very
+          // by definition and `seed_occurrence_date` is the occurrence this very
           // movement covers. That is the whole of what the cursor used to say
           // here, stated directly.
-          next_occurrence: getNextExpectedOccurrence(rule, today, [rule.start_date]),
+          //
+          // NOT `start_date`. It said `start_date` while a seeded rule's anchor
+          // could not move; correcting a reference date moves it (#121), and
+          // then this would subtract a date the movement never covered and
+          // announce as "próxima" the very occurrence it does.
+          next_occurrence: getNextExpectedOccurrence(
+            rule,
+            today,
+            rule.seed_occurrence_date == null ? [] : [rule.seed_occurrence_date],
+          ),
         },
       }
     }

@@ -918,16 +918,60 @@ begin
     raise exception 'authenticated cannot execute update_recurrence_schedule: moving an anchor is impossible';
   end if;
 
+  -- ENABLED, not merely present. A trigger left `disable`d by a migration that
+  -- meant to re-enable it is indistinguishable from a correct schema to anything
+  -- that only asks whether the row exists — and 0064 documents disabling one
+  -- around a write as a legitimate migration move, so this is a real state.
   if not exists (
     select 1 from pg_trigger
      where tgrelid = 'public.recurrences'::regclass
        and tgname = 'trg_recurrence_resolve_schedule_effective_from'
        and not tgisinternal
+       and tgenabled <> 'D'
   ) then
-    raise exception 'trg_recurrence_resolve_schedule_effective_from is missing: the floor would be whatever a client sends';
+    raise exception 'trg_recurrence_resolve_schedule_effective_from is missing or disabled: the floor would be whatever a client sends';
   end if;
 
-  raise notice '✓ 8.1K — the schedule gap (0068): effective_until, the floor on every rule, the RPC that requires an effective date, and anon kept out';
+  -- NOT NULL at the column, not merely "no NULLs today". Without it the next
+  -- insert that misses the trigger reintroduces the permissive reading.
+  if not exists (
+    select 1 from pg_attribute
+     where attrelid = 'public.recurrences'::regclass
+       and attname = 'schedule_effective_from'
+       and attnotnull
+  ) then
+    raise exception 'recurrences.schedule_effective_from is nullable: a missing floor reads as "this schedule has always ruled", which is the permissive answer reached by forgetting';
+  end if;
+
+  -- ── The seed occurrence, immutable and separate from the anchor ──────────
+  if not exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'recurrences'
+       and column_name = 'seed_occurrence_date'
+  ) then
+    raise exception 'recurrences.seed_occurrence_date is missing: the occurrence a seed movement covers would be read off start_date, which this release makes mutable — and deleting that movement then becomes impossible';
+  end if;
+
+  select count(*) into v_orphans
+    from public.recurrences
+   where created_from_transaction_id is not null and seed_occurrence_date is null;
+  if v_orphans > 0 then
+    raise exception 'recurrences: % seeded rows without seed_occurrence_date', v_orphans;
+  end if;
+
+  -- Both halves of the repair have to name the immutable column. A database
+  -- still carrying 0064's guard or 0065's release rejects the deletion of a
+  -- corrected rule's seed movement, and the user cannot get rid of it at all.
+  if (select prosrc from pg_proc where oid = 'public.recurrence_reconstruct_from_guard()'::regprocedure)
+       not like '%seed_occurrence_date%' then
+    raise exception 'recurrence_reconstruct_from_guard still keys the floor release on start_date: deleting the seed of a rule whose reference date was corrected is rejected';
+  end if;
+  if (select prosrc from pg_proc where oid = 'public.delete_movement_unlinking_seed(uuid)'::regprocedure)
+       not like '%seed_occurrence_date%' then
+    raise exception 'delete_movement_unlinking_seed still releases the floor from start_date, which is a date the seed movement never covered';
+  end if;
+
+  raise notice '✓ 8.1K — the schedule gap (0068): effective_until, a NOT NULL floor on every rule, the seed occurrence kept apart from the anchor, the RPC that requires an effective date, and anon kept out';
 end $$;
 
 -- ┌── SHARED CONTRACT · occurrence identity ─────────────────────────────────┐

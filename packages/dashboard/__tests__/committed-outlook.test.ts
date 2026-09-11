@@ -65,6 +65,8 @@ type FakeRule = {
   status?: string
   /** Since when the current schedule rules — see `schedule_effective_from`. */
   schedule_effective_from?: string | null
+  /** The occurrence the seed movement covers, which is not the anchor (#121). */
+  seed_occurrence_date?: string | null
 }
 type FakeInstance = {
   recurrence_id: string
@@ -249,6 +251,7 @@ function makeSupabase(db: Db, options: { maxRows?: number } = {}) {
                 max_occurrences: null,
                 created_from_transaction_id: null,
                 schedule_effective_from: null,
+                seed_occurrence_date: null,
                 status: 'active',
                 category: null,
                 subcategory: null,

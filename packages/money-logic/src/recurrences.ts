@@ -148,6 +148,9 @@ export function decideRecurrenceInstance(
     interval_count: count,
     interval_unit: unit,
     max_occurrences: null,
+    // The calendar, unfloored on purpose: the floor is applied to the RESULT of
+    // the walk below, for the same reason `end_date` is left out here.
+    schedule_effective_from: null,
   }
 
   // 2. The next occurrence is READ OFF THE CALENDAR — the first one strictly
@@ -397,6 +400,11 @@ export function owedOccurrencesForRule({
       // produced.
       start_date: version.anchor_date,
       end_date: endDate,
+      // A version already states the stretch it rules (`effective_from` ..
+      // `effective_until`), which is bounded below. The column-level floor is
+      // what the readers WITHOUT versions use instead; here it would be a second
+      // bound on the same thing.
+      schedule_effective_from: null,
       interval_count: version.interval_count,
       interval_unit: version.interval_unit,
       // Deliberately null: the cap is applied against `produced` below, across
@@ -484,8 +492,14 @@ export type OccurrenceSchedule = {
    * effect NEXT cycle opens a stretch where the new schedule does not rule yet
    * and the old one has stopped, and without this floor both readers would
    * announce a date the generator is never going to create.
+   *
+   * REQUIRED, not optional, and that is the point. Every caller builds this
+   * object by hand from a row, and an optional floor is one a caller can forget
+   * in silence — which is exactly how two shipped readers lost it (#121). Made
+   * required, the compiler names them instead. `null` is the explicit "this
+   * schedule has always ruled", and it has to be written out.
    */
-  schedule_effective_from?: string | null
+  schedule_effective_from: string | null
 }
 
 export type RuleForProjection = OccurrenceSchedule & {
@@ -510,19 +524,33 @@ export type RuleForProjection = OccurrenceSchedule & {
  *
  * There are exactly two, and the second is easy to forget: a rule created from a
  * movement has NO instance row for its first occurrence — the seed transaction
- * itself is that occurrence — so `start_date` is covered even though nothing in
+ * itself is that occurrence — so that date is covered even though nothing in
  * `recurrence_instances` says so. The old cursor encoded this implicitly by
  * being set to the seed's date; naming it is what lets the cursor go.
+ *
+ * WHICH DATE, AND WHY NOT `start_date`. It used to be read off the anchor, which
+ * was safe only while the anchor could not move. Correcting a reference date
+ * moves it (#121), and then the anchor names an occurrence the seed movement
+ * never covered: the rule's FIRST occurrence under the corrected schedule would
+ * be marked as already existing and vanish from every projection, while the date
+ * the movement really covers would be announced as upcoming. The seed occurrence
+ * has its own immutable column for exactly this reason.
  */
 export function coveredOccurrences(input: {
-  startDate: string
+  /**
+   * The occurrence the seed movement covers, or null when the rule was not
+   * seeded. NOT the anchor — see above.
+   */
+  seedOccurrenceDate: string | null
   /** True when the rule was created from an existing movement. */
   seededFromMovement: boolean
   /** Due dates of the rule's existing instances, in ANY state. */
   existing: Iterable<string>
 }): Set<string> {
   const covered = new Set(input.existing)
-  if (input.seededFromMovement) covered.add(input.startDate)
+  if (input.seededFromMovement && input.seedOccurrenceDate != null) {
+    covered.add(input.seedOccurrenceDate)
+  }
   return covered
 }
 
@@ -768,6 +796,9 @@ export function candidateEffectiveDates(
       interval_count: schedule.interval_count,
       interval_unit: schedule.interval_unit,
       max_occurrences: null,
+      // This walk is what the floor will be CHOSEN FROM. Flooring it by the
+      // floor in force would hide the very dates being offered.
+      schedule_effective_from: null,
     },
     { from },
   )

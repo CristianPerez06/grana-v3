@@ -376,7 +376,12 @@ describe('a database whose model drifted', () => {
     } finally {
       await drifted.close()
     }
-  })
+    // The exception to this suite's 5s `testTimeout`, and the reason is in the
+    // config: the default holds because the database is built in the HOOK, so a
+    // long BODY is a hang. These two build a SECOND database inside the body —
+    // they are about what a DIFFERENT schema does — so seconds here are the
+    // Postgres starting up, not a hang.
+  }, 60_000)
 })
 
 /**
@@ -412,7 +417,7 @@ describe('validate_schema.sql · 8.1K', () => {
     } finally {
       await bare.close()
     }
-  })
+  }, 60_000)
 })
 
 const db_exec_on = (target: PGlite) => target.exec(scheduleGapBranchOfValidateSchema())

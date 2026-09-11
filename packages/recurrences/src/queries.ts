@@ -56,7 +56,7 @@ function mapRecurrenceSummary(
   today: string,
 ): RecurrenceSummary {
   const covered = coveredOccurrences({
-    startDate: recurrence.start_date,
+    seedOccurrenceDate: recurrence.seed_occurrence_date,
     seededFromMovement: recurrence.created_from_transaction_id != null,
     existing: upcomingByRecurrenceId.get(recurrence.id) ?? [],
   })
@@ -1045,7 +1045,7 @@ export async function getDuplicateRulesFor(
       // from it: without the floor, a rule inside a schedule gap announces a date
       // the generator will never create, and the duplicate warning compares
       // against a date that does not exist.
-      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, schedule_effective_from',
+      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, seed_occurrence_date, schedule_effective_from',
     )
     .eq('status', 'active')
   if (error) throw error
@@ -1060,6 +1060,7 @@ export async function getDuplicateRulesFor(
       max_occurrences: number | null
       created_from_transaction_id: string | null
       schedule_effective_from: string | null
+      seed_occurrence_date: string | null
     }
   >
 
@@ -1077,7 +1078,7 @@ export async function getDuplicateRulesFor(
         rule,
         today,
         coveredOccurrences({
-          startDate: rule.start_date,
+          seedOccurrenceDate: rule.seed_occurrence_date,
           seededFromMovement: rule.created_from_transaction_id != null,
           existing: upcoming.get(rule.id) ?? [],
         }),
