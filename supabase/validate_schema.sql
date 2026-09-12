@@ -973,42 +973,47 @@ begin
     raise exception 'authenticated cannot execute update_recurrence_schedule: moving an anchor is impossible';
   end if;
 
-  -- ENABLED, not merely present. A trigger left `disable`d by a migration that
-  -- meant to re-enable it is indistinguishable from a correct schema to anything
-  -- that only asks whether the row exists — and 0064 documents disabling one
-  -- around a write as a legitimate migration move, so this is a real state.
+  -- THE TRIGGER 0068 ADDS, asked the way 8.1J asks about the others — which is
+  -- the stricter way, and the reason to copy it rather than invent a second one:
+  --
+  --   · ENABLED FOR NORMAL WRITES. `<> 'D'` is not that: 'R' is ENABLE REPLICA,
+  --     which fires only on a replica and leaves every write the app makes
+  --     unprotected while reading as "not disabled". 'O' fires for origin and
+  --     local writes, 'A' always.
+  --   · THE EXACT EVENTS. A same-named trigger wired to INSERT only would let
+  --     every UPDATE through — the anchor moving is an UPDATE, so that is the
+  --     whole feature — and one wired to UPDATE only would let every INSERT
+  --     start life with a floor the client chose. Neither is visible to a check
+  --     that asks whether a trigger of this name exists.
+  --   · BEFORE, FOR EACH ROW. An AFTER trigger cannot set `NEW`, so the column
+  --     would keep whatever the client sent, which is what this exists to
+  --     discard; a statement-level one has no `NEW` at all.
+  --   · THE FUNCTION, BY SCHEMA. A same-named function outside `public` would
+  --     otherwise pass.
+  --
+  -- `pg_trigger.tgtype` bits: 1 ROW, 2 BEFORE, 4 INSERT, 8 DELETE, 16 UPDATE.
+  --
+  -- `trg_recurrence_reconstruct_from_guard` is NOT re-checked here: 8.1J already
+  -- asks all of this about it, and a second, weaker copy of the same claim is
+  -- worse than none. What 0068 changes about it is its BODY, and that is pinned
+  -- above by the expressions the new guard must contain.
   if not exists (
-    select 1 from pg_trigger
-     where tgrelid = 'public.recurrences'::regclass
-       and tgname = 'trg_recurrence_resolve_schedule_effective_from'
-       and not tgisinternal
-       and tgenabled <> 'D'
-       -- AND CALLING THE RIGHT FUNCTION. A name is a label: a trigger of this
-       -- name wired to something else satisfies every other question here and
-       -- maintains nothing.
-       and tgfoid = 'public.recurrence_resolve_schedule_effective_from()'::regprocedure
-       -- BEFORE, and per row: an AFTER trigger cannot set `NEW`, so the column
-       -- would keep whatever the client sent — which is the thing this trigger
-       -- exists to discard.
-       and (tgtype & 2) = 2
-       and (tgtype & 1) = 1
+    select 1
+      from pg_trigger tr
+      join pg_proc pr on pr.oid = tr.tgfoid
+     where tr.tgname = 'trg_recurrence_resolve_schedule_effective_from'
+       and not tr.tgisinternal
+       and tr.tgrelid = 'public.recurrences'::regclass
+       and pr.proname = 'recurrence_resolve_schedule_effective_from'
+       and pr.pronamespace = 'public'::regnamespace
+       and tr.tgenabled in ('O', 'A')      -- enabled for normal writes
+       and (tr.tgtype & 4)  <> 0           -- INSERT
+       and (tr.tgtype & 16) <> 0           -- UPDATE
+       and (tr.tgtype & 8)   = 0           -- and not DELETE
+       and (tr.tgtype & 2)  <> 0           -- BEFORE
+       and (tr.tgtype & 1)  <> 0           -- FOR EACH ROW
   ) then
-    raise exception 'trg_recurrence_resolve_schedule_effective_from is missing, disabled, or not a BEFORE ... FOR EACH ROW trigger on recurrence_resolve_schedule_effective_from: the floor would be whatever a client sends';
-  end if;
-
-  -- The guard that keeps the seed occurrence and the link immutable, asked the
-  -- same way and for the same reason.
-  if not exists (
-    select 1 from pg_trigger
-     where tgrelid = 'public.recurrences'::regclass
-       and tgname = 'trg_recurrence_reconstruct_from_guard'
-       and not tgisinternal
-       and tgenabled <> 'D'
-       and tgfoid = 'public.recurrence_reconstruct_from_guard()'::regprocedure
-       and (tgtype & 2) = 2
-       and (tgtype & 1) = 1
-  ) then
-    raise exception 'trg_recurrence_reconstruct_from_guard is missing, disabled, or not a BEFORE ... FOR EACH ROW trigger on recurrence_reconstruct_from_guard: the reconstruction floor and the seed occurrence stop being immutable';
+    raise exception 'trg_recurrence_resolve_schedule_effective_from is missing, disabled, enabled only for replicas, sits on a same-named function outside public, or no longer fires BEFORE INSERT OR UPDATE FOR EACH ROW: the floor would be whatever a client sends';
   end if;
 
   -- NOT NULL at the column, not merely "no NULLs today". Without it the next

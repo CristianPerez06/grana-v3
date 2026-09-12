@@ -333,6 +333,17 @@ se queda corto **en silencio**, que es la forma en que un tope deja de ser un to
         MISMO deparser, como ya hace el contrato de identidad de este archivo. El precio es el mismo
         que ese contrato acepta: una reescritura equivalente da rojo, que es un rojo falso —frena un
         deploy— y no un verde falso.
+  - [x] **Y los EVENTOS del trigger, que me había salteado.** Lo validaba por tabla, nombre, función,
+        timing y nivel — pero no por eventos, y `tgenabled <> 'D'` acepta `ENABLE REPLICA`. Un
+        homónimo cableado sólo a INSERT deja pasar todos los UPDATE (y mover el ancla **es** un
+        UPDATE: es la feature entera); sólo a UPDATE deja que cada regla nazca con el piso que eligió
+        el cliente; y en modo replica no dispara para ninguna escritura de la app mientras se lee
+        como "no deshabilitado". La sección 8.1J ya tenía el patrón correcto —eventos exactos y
+        `tgenabled in ('O','A')`— así que lo copié en vez de inventar un segundo. Tres regresiones,
+        una por forma, y verificado que las tres pasan el gate viejo.
+  - [x] Saqué de 8.1K el chequeo del guard: 8.1J ya lo hace, y más estricto. Dos afirmaciones iguales
+        con fuerzas distintas son peores que una — la débil da tranquilidad falsa. Lo que 0068 le
+        cambia es el CUERPO, y eso se pinea aparte por las expresiones que debe contener.
   - [x] **Y el trigger "apuntando a otra función"** — el último ítem de la lista. Un nombre es una
         etiqueta: un trigger llamado así y cableado a otra cosa satisfacía todo lo demás y no
         mantenía nada. Se pinea `tgfoid`, y además que sea `BEFORE ... FOR EACH ROW`, porque un

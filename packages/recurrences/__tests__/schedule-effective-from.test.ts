@@ -472,6 +472,64 @@ describe('validate_schema.sql · 8.1K', () => {
     await actAs(db, U_A)
   })
 
+  // The three shapes a homonym can take while still being "a trigger of that
+  // name": wired to half the events, or enabled only for replicas. Each one
+  // leaves the writes the app actually makes unguarded, and each one passed the
+  // gate when it asked only for name, function, timing and level.
+  const CANONICAL_TRIGGER = `
+    drop trigger if exists trg_recurrence_resolve_schedule_effective_from on public.recurrences;
+    create trigger trg_recurrence_resolve_schedule_effective_from
+      before insert or update on public.recurrences
+      for each row
+      execute function public.recurrence_resolve_schedule_effective_from();
+  `
+
+  const rewire = async (sql: string) => {
+    await actAsAdmin(db)
+    await db.exec(sql)
+    try {
+      await expect(db.exec(scheduleGapBranchOfValidateSchema())).rejects.toThrow(
+        /trg_recurrence_resolve_schedule_effective_from/,
+      )
+    } finally {
+      await db.exec('rollback;').catch(() => undefined)
+      await db.exec(CANONICAL_TRIGGER)
+      await actAs(db, U_A)
+    }
+  }
+
+  it('REFUSES a homonym wired to INSERT only', async () => {
+    // Moving an anchor is an UPDATE — the whole feature — so this one guards
+    // nothing that matters and reads as present.
+    await rewire(`
+      drop trigger trg_recurrence_resolve_schedule_effective_from on public.recurrences;
+      create trigger trg_recurrence_resolve_schedule_effective_from
+        before insert on public.recurrences
+        for each row
+        execute function public.recurrence_resolve_schedule_effective_from();
+    `)
+  })
+
+  it('REFUSES a homonym wired to UPDATE only', async () => {
+    // And this one lets every rule start life with a floor the client chose.
+    await rewire(`
+      drop trigger trg_recurrence_resolve_schedule_effective_from on public.recurrences;
+      create trigger trg_recurrence_resolve_schedule_effective_from
+        before update on public.recurrences
+        for each row
+        execute function public.recurrence_resolve_schedule_effective_from();
+    `)
+  })
+
+  it('REFUSES a trigger enabled only for replicas', async () => {
+    // `tgenabled` is 'R': not disabled, and it never fires for an origin write.
+    // A gate asking `<> 'D'` waves it through.
+    await rewire(`
+      alter table public.recurrences
+        enable replica trigger trg_recurrence_resolve_schedule_effective_from;
+    `)
+  })
+
   it('REFUSES a database that does not', async () => {
     // The state this exists to catch: the code deployed and the migration not,
     // where an anchor moves with an implicit effective date again.
