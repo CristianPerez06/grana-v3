@@ -48,7 +48,57 @@
 -- would let the OLD schedule keep firing through the gap — which is the same
 -- duplicate, one cycle later, on the old date.
 --
--- Additive: no row is rewritten and nothing is dropped.
+-- ═══ WHAT IT RUNS, EXACTLY ════════════════════════════════════════════════
+--
+-- This said "additive: no row is rewritten and nothing is dropped" while the
+-- file only added `effective_until`. It has grown since, and the sentence had
+-- stopped describing it. What runs, in one transaction:
+--
+--   · FOUR COLUMNS ADDED. `recurrence_schedule_versions.effective_until`;
+--     `recurrences.schedule_effective_from` (later NOT NULL, defaulted to the
+--     fail-closed `9999-12-31`), `.schedule_positions_before` (NOT NULL,
+--     default 0) and `.seed_occurrence_date`.
+--   · TWO CHECK CONSTRAINTS added — `chk_schedule_versions_effective_range` and
+--     `chk_recurrences_seed_pair`. Each is preceded by a `drop constraint if
+--     exists` of ITS OWN name, so a re-run replaces its own work. No constraint
+--     that predates this migration is removed.
+--   · THREE BACKFILL `UPDATE`s over every row of `recurrences`: the floor from
+--     the version that describes the current schedule, the seed occurrence from
+--     `start_date` for rules created from a movement, and the offset from
+--     `recurrence_positions_before`. Rows ARE rewritten — in the columns added
+--     three statements earlier, and in no other. Nothing that existed before
+--     this migration is read back differently or overwritten.
+--   · FIVE FUNCTIONS CREATED: `recurrence_positions_spent`,
+--     `recurrence_positions_before`, `recurrence_resolve_schedule_effective_from`,
+--     `recurrence_candidate_effective_dates`, `update_recurrence_schedule`.
+--   · THREE EXISTING FUNCTIONS REPLACED, and this is the part that is not
+--     additive: `recurrence_reconstruct_from_guard` and
+--     `recurrence_sync_schedule_and_pauses` (0064) and
+--     `delete_movement_unlinking_seed` (0065). Undoing this migration therefore
+--     takes more than dropping the columns — those three bodies have to be
+--     restored from 0064 and 0065.
+--   · ONE SIGNATURE DROPPED: the obsolete six-argument
+--     `recurrence_positions_before(uuid, date, date, int, text, date)`, whose
+--     answer was wrong. Leaving it callable would leave the wrong answer
+--     reachable. It exists only in a database that ran an earlier draft of this
+--     file; `drop ... if exists` makes it a no-op everywhere else.
+--   · ONE TRIGGER created, `trg_recurrence_resolve_schedule_effective_from`,
+--     preceded by a `drop trigger if exists` of its own name.
+--
+-- ═══ ONE TRANSACTION ══════════════════════════════════════════════════════
+--
+-- Everything above is between a single `begin` and a single `commit`. A failure
+-- at any statement — including the self-check at the end — rolls back ALL of it,
+-- and the database is left exactly as it was. It was five transactions until
+-- #121's review; a failure in the third used to leave the columns installed and
+-- the triggers that maintain them missing, which is a shape no version of the
+-- app is written against and which nothing would surface until a write went
+-- wrong.
+--
+-- RUNBOOK NOTE. The Supabase SQL Editor reports a successful run as "Success.
+-- No rows returned" and may not surface the closing `RAISE NOTICE` at all. The
+-- absence of the notice is NOT a failure; a failure arrives as an error naming
+-- what was wrong.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 begin;
