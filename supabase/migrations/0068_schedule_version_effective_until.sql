@@ -62,21 +62,31 @@
 --     `chk_recurrences_seed_pair`. Each is preceded by a `drop constraint if
 --     exists` of ITS OWN name, so a re-run replaces its own work. No constraint
 --     that predates this migration is removed.
---   · THREE BACKFILL `UPDATE`s over every row of `recurrences`: the floor from
---     the version that describes the current schedule, the seed occurrence from
---     `start_date` for rules created from a movement, and the offset from
---     `recurrence_positions_before`. Rows ARE rewritten — in the columns added
---     three statements earlier, and in no other. Nothing that existed before
---     this migration is read back differently or overwritten.
+--   · THREE BACKFILL `UPDATE`s on `recurrences`, and they do not cover the same
+--     rows. TWO walk every rule: the floor, from the version that describes the
+--     schedule it currently has, and the offset, from
+--     `recurrence_positions_before`. The THIRD writes the seed occurrence and
+--     reaches only the rules that have one — `created_from_transaction_id is not
+--     null` — so how many rows it touches is whatever that count happens to be.
+--     All three write EXCLUSIVELY the columns added a few statements earlier,
+--     and none overwrites a pre-existing column. Rows are rewritten; what they
+--     already said is not.
 --   · FIVE FUNCTIONS CREATED: `recurrence_positions_spent`,
 --     `recurrence_positions_before`, `recurrence_resolve_schedule_effective_from`,
 --     `recurrence_candidate_effective_dates`, `update_recurrence_schedule`.
 --   · THREE EXISTING FUNCTIONS REPLACED, and this is the part that is not
---     additive: `recurrence_reconstruct_from_guard` and
---     `recurrence_sync_schedule_and_pauses` (0064) and
---     `delete_movement_unlinking_seed` (0065). Undoing this migration therefore
---     takes more than dropping the columns — those three bodies have to be
---     restored from 0064 and 0065.
+--     additive — they are replaced precisely BECAUSE their behaviour changes,
+--     so operations that already work behave differently the moment this runs:
+--       - `recurrence_reconstruct_from_guard` (0064) keys the floor release on
+--         `seed_occurrence_date` instead of `start_date`, and additionally
+--         freezes that column and the seed link;
+--       - `recurrence_sync_schedule_and_pauses` (0064) closes only the version
+--         IN FORCE, at `least(today, opens - 1)`, instead of every version that
+--         began before today;
+--       - `delete_movement_unlinking_seed` (0065) releases the floor from the
+--         seed occurrence instead of from the anchor.
+--     Undoing this migration therefore takes more than dropping the columns:
+--     those three bodies have to be restored from 0064 and 0065.
 --   · ONE SIGNATURE DROPPED: the obsolete six-argument
 --     `recurrence_positions_before(uuid, date, date, int, text, date)`, whose
 --     answer was wrong. Leaving it callable would leave the wrong answer
