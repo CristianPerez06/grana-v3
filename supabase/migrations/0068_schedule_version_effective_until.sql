@@ -214,9 +214,19 @@ alter table public.recurrences
 comment on column public.recurrences.seed_occurrence_date is
   'Occurrence covered by the seed movement. Immutable: the anchor may be corrected, this may not.';
 
--- Exact for every existing row: before this migration a seeded rule could not
--- move its anchor, so `start_date` still IS the seed occurrence. A rule already
--- unlinked covers nothing and gets NULL.
+-- `start_date` is the best value available, and on some rows it is not the right
+-- one. The claim this comment used to make — that before this migration a seeded
+-- rule could not move its anchor — is FALSE: `updateRecurrence` has accepted
+-- `start_date` all along, and on the database this first ran against, eleven
+-- seeded rules had an anchor that no longer matched their movement's date.
+--
+-- It is kept as the backfill because there is nothing better to derive it from,
+-- and because being wrong here costs nothing measurable: the offset it feeds is
+-- only read when the rule has a `max_occurrences`, and the floor release only
+-- fires for a seed occurrence in the FUTURE. What it is NOT is exact, and the
+-- next person to read this should not be told otherwise.
+--
+-- A rule already unlinked covers nothing and gets NULL.
 update public.recurrences
    set seed_occurrence_date = start_date
  where created_from_transaction_id is not null
