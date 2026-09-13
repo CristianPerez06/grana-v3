@@ -225,12 +225,14 @@ comment on column public.recurrences.seed_occurrence_date is
 -- make, because the versions it would read are the ones it is in the middle of
 -- giving an `effective_until` to.
 --
--- BEST AVAILABLE, NOT AUTHORITATIVE. The sync trigger below deletes the versions
--- that have not come into effect yet, so a rule seeded by a FUTURE movement and
--- corrected before it starts loses the very version that recorded its beginning.
--- On such a rule the earliest one left carries the corrected anchor while the
--- seed is right — so 0069 is a one-time repair validated against an audit of the
--- data it runs on, not a rule that holds anywhere.
+-- BEST AVAILABLE, NOT AUTHORITATIVE — AND NOT USABLE AS A CRITERION. The sync
+-- trigger below deletes the versions that have not come into effect yet, so a
+-- rule seeded by a FUTURE movement and corrected before it starts loses the very
+-- version that recorded its beginning. On such a rule the earliest one left
+-- carries the corrected anchor while the seed is right, and repairing "every
+-- rule where the two disagree" would destroy that correct identity. 0069 is
+-- therefore addressed to ONE ROW BY ID, in the one shape the audit found, and
+-- refuses to write on anything else.
 --
 -- The damage is dormant, NOT nil: the value is read when the seed movement is
 -- unlinked or deleted — where a mismatch makes 0064's guard refuse the floor

@@ -388,12 +388,13 @@ que el usuario ya no puede deshacer.
     semilla —y ahí una discrepancia hace que el guard de 0064 RECHACE la liberación del piso, o sea un
     movimiento que ya no se puede borrar— y alimenta el offset del tope en cuanto se fije un
     `max_occurrences`. Hoy no se ve porque esa semilla ya pasó y la regla no tiene tope.
-  - [x] **`0069`** repara atómicamente toda regla vinculada cuyo seed difiera del `anchor_date` de su
-        primera versión disponible, **incluidas las eliminadas**, y recalcula
-        `schedule_positions_before`. Criterio genérico y verificable aunque hoy toque una fila.
-        Desactiva por una transacción el guard (el seed es inmutable a propósito) y el resolver (en
-        UPDATE copia el offset desde OLD, así que sin desactivarlo el recálculo se deshace solo —
-        verificado en negativo).
+  - [x] **`0069` es una reparación DIRIGIDA a una fila, por id.** Escribe sólo si esa fila está
+        exactamente como la encontró la auditoría —`start_date 2026-07-10`, seed `2026-07-10`, primer
+        ancla `2026-07-08`, vinculada— y pone el seed en `2026-07-08`. **Cualquier otra forma aborta
+        sin tocar nada**; en una base donde la fila no existe es un **no-op**; re-pegarla es
+        idempotente. Desactiva por una transacción el guard (el seed es inmutable a propósito) y el
+        resolver (en UPDATE copia el offset desde OLD, así que sin desactivarlo el recálculo se
+        deshace solo — verificado en negativo), y recalcula `schedule_positions_before` de esa fila.
   - [x] **La igualdad seed = primer ancla NO es una invariante.** Una versión anterior de 0069 y de
         8.1L afirmaban que "nada reescribe la primera versión". Es falso: el trigger de 0068
         **elimina** las versiones con `effective_from > today` antes de abrir la corregida. Una regla
@@ -402,13 +403,19 @@ que el usuario ya no puede deshacer.
         empezó: la primera versión que sobrevive lleva el ancla nueva y el seed conserva,
         correctamente, la ocurrencia cubierta. Los dos difieren y no hay nada roto. Ninguna consulta
         distingue ese estado del que 0069 repara.
-  - [x] Por eso **0069 es una reparación puntual auditada, no una regla**: lo que la hace segura es
-        que el criterio se corrió primero como lectura sobre la base real (una sola fila, sin ninguna
-        regla del segundo tipo), no el criterio en sí.
-  - [x] Regresiones: la historia real —regla sembrada → ancla corregida **antes** de 0068 → 0068 →
-        0069—, el caso que NO debe tocarse (movimiento re-fechado con el seed intacto) y **el
-        recorrido futuro**: regla sembrada a futuro, corregida por el RPC antes de arrancar, que
-        pierde su primera versión y sin embargo es correcta.
+  - [x] **El criterio genérico CORROMPE datos sanos, no es sólo impreciso.** "Toda regla vinculada
+        cuyo seed difiera de su primer ancla" **matchea** a esa regla futura, y ahí el seed es el
+        correcto: repararlo destruye la identidad que el guard existe para proteger. Verificado en
+        negativo — con el criterio genérico el test del recorrido futuro falla pisando `2026-11-12`
+        con `2026-11-14`. Lo que justificaba la escritura nunca fue el criterio: fue la **auditoría**,
+        que corrió la comparación como LECTURA sobre la base real y encontró una sola discrepancia.
+        `0069` escribe ese hallazgo en vez de re-derivarlo.
+  - [x] Regresiones (11): la historia real con **la fila auditada exacta** —regla sembrada → ancla
+        corregida **antes** de 0068 → 0068 → 0069—, el **recorrido futuro** (regla sembrada a futuro,
+        corregida por el RPC antes de arrancar, que pierde su primera versión, es correcta y 0069 **no
+        la toca**), otra regla con el movimiento re-fechado, la base sin la fila (no-op), el re-pegado
+        (idempotente) y **la fila auditada en otra forma (aborta sin escribir, con los triggers
+        restaurados por el rollback)**.
   - [x] `validate_schema.sql` **8.1L** pasa a ser un **reporte**: lista las discrepancias y nunca
         falla. Verificado en negativo — con la aserción anterior, el recorrido futuro la rompe.
 - [x] 3.2b ~~**Limpieza dirigida** de la ocurrencia que el QA produjo~~ — **no hace falta: el usuario la

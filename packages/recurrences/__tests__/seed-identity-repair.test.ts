@@ -26,7 +26,12 @@ import {
  * the right value and prove nothing.
  */
 
-const RULE = '00000000-0000-4000-8000-00000000d001'
+/**
+ * THE AUDITED ROW, to the character. 0069 is addressed to this id in this shape
+ * and writes on nothing else, so a fixture with invented values would exercise
+ * the abort path and call it a repair.
+ */
+const RULE = '3e8a9b72-8059-42e7-b163-f482f0b05749'
 const TX = '00000000-0000-4000-8000-00000000d002'
 const SEED_DATE = '2026-07-08'
 const CORRECTED = '2026-07-10'
@@ -52,17 +57,21 @@ async function driftedDatabase(): Promise<PGlite> {
   return db
 }
 
-const rule = async (db: PGlite) => {
+const OTHER_RULE = '00000000-0000-4000-8000-00000000d005'
+
+const ruleRow = async (db: PGlite, id: string) => {
   const { rows } = await db.query<{
     start_date: string
     seed_occurrence_date: string | null
     schedule_positions_before: number
   }>(
     `select start_date::text, seed_occurrence_date::text, schedule_positions_before
-       from public.recurrences where id = '${RULE}'`,
+       from public.recurrences where id = '${id}'`,
   )
   return rows[0]
 }
+
+const rule = (db: PGlite) => ruleRow(db, RULE)
 
 const anchors = async (db: PGlite) => {
   const { rows } = await db.query<{ anchor_date: string }>(
@@ -170,7 +179,7 @@ describe('a seeded rule whose anchor moved before 0068 ran', () => {
     }
   }, 120_000)
 
-  it('does nothing to a rule whose seed already agrees with its first anchor', async () => {
+  it('does nothing to another rule whose movement was merely re-dated', async () => {
     // The ten rules that looked broken only because the MOVEMENT had been
     // re-dated. `transactions.date` is editable; the occurrence identity is not
     // read from it, and 0069 must not touch them.
@@ -182,16 +191,73 @@ describe('a seeded rule whose anchor moved before 0068 ran', () => {
         insert into public.recurrences
           (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code,
            movement_type, last_generated_date, created_from_transaction_id)
-        values ('${RULE}', '${U_A}', '2026-07-08', 1, 'month', 'active', 1000, 'ARS', 'expense',
+        values ('${OTHER_RULE}', '${U_A}', '2026-07-08', 1, 'month', 'active', 1000, 'ARS', 'expense',
                 '2026-07-08', '${TX}');
       `)
       await applyEffectiveUntil(db)
       // The movement is re-dated afterwards, as a user may do at any time.
       await db.exec(`update public.transactions set date = '2026-06-05' where id = '${TX}';`)
-      const before = await rule(db)
+      const before = await ruleRow(db, OTHER_RULE)
 
       await applySeedRepair(db)
+      expect(await ruleRow(db, OTHER_RULE)).toEqual(before)
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
+  it('is a no-op on a database that does not have the audited row', async () => {
+    // Every database but the one audited — a fresh one, a second environment.
+    // Not an error: there is nothing there to repair.
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
+    try {
+      await applyEffectiveUntil(db)
+      await expect(applySeedRepair(db)).resolves.toBeUndefined()
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
+  it('is safe to re-apply, because pasting a migration twice is a normal accident', async () => {
+    const db = await driftedDatabase()
+    try {
+      await applyEffectiveUntil(db)
+      await applySeedRepair(db)
+      const once = await rule(db)
+      await applySeedRepair(db)
+      expect(await rule(db)).toEqual(once)
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
+  it('ABORTS without writing when the audited row is in another shape', async () => {
+    // Same id, different history: the anchor was never corrected, so the seed
+    // 0068 recorded is right. The generic criterion would have passed over it;
+    // the point here is that even the NAMED row is only written in one shape.
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
+    try {
+      await db.exec(`
+        insert into public.transactions (id, user_id, date, amount)
+        values ('${TX}', '${U_A}', '${SEED_DATE}', 1000);
+        insert into public.recurrences
+          (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code,
+           movement_type, last_generated_date, created_from_transaction_id)
+        values ('${RULE}', '${U_A}', '${SEED_DATE}', 1, 'month', 'active', 1000, 'ARS', 'expense',
+                '${SEED_DATE}', '${TX}');
+      `)
+      await applyEffectiveUntil(db)
+      const before = await rule(db)
+
+      await expect(applySeedRepair(db)).rejects.toThrow(/is not in the shape this repair was audited for/)
+      // Nothing written, and the guards are back on: the abort rolled the
+      // `disable trigger` statements back with it.
       expect(await rule(db)).toEqual(before)
+      const { rows } = await db.query<{ tgenabled: string }>(
+        `select tgenabled from pg_trigger
+          where tgrelid = 'public.recurrences'::regclass and not tgisinternal`,
+      )
+      expect(rows.every((r) => ['O', 'A'].includes(r.tgenabled))).toBe(true)
     } finally {
       await db.close()
     }
@@ -282,16 +348,12 @@ describe('a seeded rule corrected before it starts', () => {
     }
   }, 120_000)
 
-  it('would be rewritten by 0069 — which is the bound of a one-time repair', async () => {
-    // NOT an approval of that write: 0069's criterion reads the earliest
-    // surviving version, and on this rule that version is the corrected one, so
-    // the repair would overwrite a seed that was never wrong.
-    //
-    // It is pinned because it is the reason 0069 is a one-time migration and not
-    // a rule: what makes it safe is not the criterion, it is the audit of the
-    // database it runs against — caso real reportado en #96, where exactly one
-    // rule disagreed and no rule of this shape existed. Anyone reaching for the
-    // same query on another database has to redo that audit first.
+  it('keeps its correct seed when 0069 runs', async () => {
+    // THE CASE THAT KILLED THE GENERIC CRITERION. "Every linked rule whose seed
+    // differs from its earliest surviving anchor" matches this rule, and its
+    // seed is RIGHT — repairing it would overwrite the identity the guard exists
+    // to protect. 0069 is addressed to one id instead, so this rule is not even
+    // looked at.
     const db = await correctedBeforeItStarts()
     try {
       const seed = async () =>
@@ -302,7 +364,7 @@ describe('a seeded rule corrected before it starts', () => {
         ).rows[0].seed
       const before = await seed()
       await applySeedRepair(db)
-      expect(await seed()).not.toBe(before)
+      expect(await seed()).toBe(before)
     } finally {
       await db.close()
     }

@@ -1156,9 +1156,9 @@ end $$;
 --   is in perfect order and the two dates disagree.
 --
 -- And the two states are the same three columns with the old value on the other
--- side, so no query here separates them. 0069 is therefore a ONE-TIME repair,
--- justified by an audit of the data it ran against — caso real reportado en #96,
--- where a single rule disagreed and no rule of the second kind existed — and it
+-- side, so no query here separates them — which is also why 0069 does not use
+-- one: it names a single row by id, in the one shape the audit found (caso real
+-- reportado en #96), and refuses to write on anything else. A targeted repair
 -- leaves nothing behind for a schema validator to confirm.
 --
 -- NOT compared against `transactions.date` either: that column is editable, so a

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- 0069 · The seed occurrence, repaired where 0068 guessed it wrong
+-- 0069 · The seed occurrence of ONE rule, repaired where 0068 guessed it wrong
 -- ═══════════════════════════════════════════════════════════════════════════
 --
 -- 0068 backfilled `recurrences.seed_occurrence_date` from `start_date`, on this
@@ -14,20 +14,26 @@
 -- For that rule the backfill recorded the CORRECTED anchor as the occurrence its
 -- seed movement covers, which is a different date.
 --
--- ═══ THE CRITERION, AND WHAT IT IS WORTH ══════════════════════════════════
+-- ═══ ONE ROW, NAMED, AND ONLY IN ONE SHAPE ════════════════════════════════
 --
---   repair every linked rule whose `seed_occurrence_date` differs from the
---   `anchor_date` of its earliest schedule version.
+-- This repair is addressed to a single rule, identified by id, and it writes
+-- only if that row is EXACTLY as the audit found it:
 --
--- Generic on purpose, though today it matches one row. The alternative — naming
--- that row's id — would be a migration nobody can verify and that says nothing
--- about what was wrong.
+--   id                    3e8a9b72-8059-42e7-b163-f482f0b05749
+--   start_date            2026-07-10   (the corrected anchor)
+--   seed_occurrence_date  2026-07-10   (what 0068 wrote: the corrected anchor)
+--   earliest anchor_date  2026-07-08   (where the rule actually began)
+--   created_from_transaction_id  not null
 --
--- ═══ THIS IS AN AUDITED ONE-TIME REPAIR, NOT AN INVARIANT ═════════════════
+-- and it sets `seed_occurrence_date` to 2026-07-08. Any other shape ABORTS
+-- without writing. A database where the row does not exist is a NO-OP.
 --
--- The earliest surviving version is the best record of where a rule began. It is
--- NOT a permanent one, and an earlier draft of this migration claimed it was.
--- The correction, kept here because the wrong version reads perfectly plausible:
+-- ═══ WHY NOT THE GENERIC CRITERION ════════════════════════════════════════
+--
+-- Two earlier drafts of this file repaired "every linked rule whose seed differs
+-- from the `anchor_date` of its earliest schedule version", on the claim that
+-- nothing rewrites that first version. THAT CLAIM IS FALSE, and the criterion
+-- built on it CORRUPTS CORRECT DATA:
 --
 --   0068's `recurrence_sync_schedule_and_pauses()` DELETES the versions that
 --   have not come into effect yet — `effective_from > today` — before opening
@@ -35,24 +41,26 @@
 --   version, the one its own insert created. Correct its anchor before the rule
 --   starts and that version is gone; the earliest one left carries the NEW
 --   anchor, while `seed_occurrence_date` correctly keeps the occurrence the
---   movement covers. The two disagree and NOTHING IS WRONG.
+--   movement covers. The two disagree and NOTHING IS WRONG — and the generic
+--   query would have overwritten that correct seed with the corrected anchor,
+--   destroying the identity `trg_recurrence_reconstruct_from_guard` exists to
+--   protect. `seed-identity-repair.test.ts` walks that path.
 --
--- On such a rule this migration would overwrite a seed that was never broken,
--- and no query separates it from the rule that IS broken: the same three
--- columns, with the old value on the other side.
+-- No query separates the broken rule from that correct one: the same three
+-- columns, with the old value on the other side. So the rule is not expressed as
+-- a query at all. What justified the write was never the criterion — it was the
+-- AUDIT (caso real reportado en #96), which ran the comparison as a READ and
+-- found exactly one disagreement, on an active rule whose anchor had been
+-- corrected in the past. This file writes that finding down instead of
+-- re-deriving it, and refuses if the row it names is not what was audited.
 --
--- WHAT MAKES IT SAFE HERE IS NOT THE CRITERION — IT IS THE AUDIT. On the
--- database this runs against (caso real reportado en #96) the criterion was run
--- as a read first: exactly one rule disagreed, an active rule whose anchor was
--- corrected in the past, with no rule of the second kind anywhere. Anyone
--- reaching for this query on another database has to redo that audit before
--- running it, and `validate_schema.sql` 8.1L only LISTS the disagreements for
--- that reason — it cannot assert an equality that a correct database can break.
+-- Which is also why `validate_schema.sql` 8.1L only LISTS disagreements: there
+-- is no invariant here for a schema validator to assert.
 --
--- WHAT IT IS NOT. It does NOT compare against `transactions.date`: that column
--- is editable, so a movement re-dated after the rule was created would look like
--- a broken identity and is not one. Ten rules on this database differ that way
--- and are correct; comparing against the movement is what made them look wrong.
+-- NOT compared against `transactions.date` either: that column is editable, so a
+-- movement re-dated after the fact reads as a broken identity and is not one.
+-- Ten rules differ that way and are correct; comparing against the movement is
+-- what made them look wrong in the first measurement.
 --
 -- ═══ WHY IT MATTERS, GIVEN NOTHING VISIBLY BREAKS TODAY ═══════════════════
 --
@@ -76,15 +84,15 @@
 --     design and this is the deliberate, auditable exception 0064 documents; and
 --     the resolver, because on UPDATE it copies `schedule_positions_before` back
 --     from OLD — leave it on and the recomputation below undoes itself.
---   · Repairs the seed of every linked rule matching the criterion, DELETED ONES
---     INCLUDED: a soft-deleted rule keeps its movements and can be consulted, and
---     leaving a known-wrong identity behind because the row is hidden is how a
---     repair becomes a second bug.
---   · Recomputes `schedule_positions_before` for exactly those rules, in the same
---     transaction, from the same function the RPC validates with.
+--   · Reads the named row under `for update`, compares it against the four
+--     values above, and writes ONLY on an exact match.
+--   · Recomputes `schedule_positions_before` for that same row, in the same
+--     transaction, from the same function the RPC validates with: a repaired
+--     seed with a stale offset is half a repair.
 --
 -- A failure at any point rolls the whole thing back, the trigger states included:
--- `alter table ... disable trigger` is transactional in Postgres.
+-- `alter table ... disable trigger` is transactional in Postgres. So an abort
+-- leaves the database exactly as it was, guards on.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 begin;
@@ -92,77 +100,104 @@ begin;
 alter table public.recurrences disable trigger trg_recurrence_reconstruct_from_guard;
 alter table public.recurrences disable trigger trg_recurrence_resolve_schedule_effective_from;
 
--- The earliest version of each rule. `effective_from` orders it; `id` breaks a
--- tie so the answer cannot depend on physical row order.
-create temp table seed_repair_targets on commit drop as
-with first_version as (
-  select distinct on (v.recurrence_id)
-         v.recurrence_id, v.anchor_date
+DO $repair$
+declare
+  -- The audited row, and the state it was audited in. Every one of these is
+  -- compared before anything is written.
+  k_id     constant uuid := '3e8a9b72-8059-42e7-b163-f482f0b05749';
+  k_start  constant date := '2026-07-10';  -- the corrected anchor, left alone
+  k_was    constant date := '2026-07-10';  -- what 0068 recorded as the seed
+  k_should constant date := '2026-07-08';  -- where the rule actually began
+  v_rule   public.recurrences%rowtype;
+  v_anchor   date;
+  v_after    date;
+  v_offset   int;
+  v_expected int;
+begin
+  -- Locked for the whole decision: the shape is checked and then written, and a
+  -- concurrent edit in between would mean writing against a row nobody audited.
+  select * into v_rule from public.recurrences where id = k_id for update;
+
+  if not found then
+    -- A clean database, or any database that is not the one audited. Nothing to
+    -- repair and nothing to complain about.
+    raise notice '· 0069 — rule % is not on this database: no-op', k_id;
+    return;
+  end if;
+
+  -- The earliest version SURVIVING today. `effective_from` orders it; `id`
+  -- breaks a tie so the answer cannot depend on physical row order.
+  select v.anchor_date into v_anchor
     from public.recurrence_schedule_versions v
-   order by v.recurrence_id, v.effective_from, v.id
-)
-select r.id, r.seed_occurrence_date as was, fv.anchor_date as should_be
-  from public.recurrences r
-  join first_version fv on fv.recurrence_id = r.id
- where r.created_from_transaction_id is not null
-   and r.seed_occurrence_date is distinct from fv.anchor_date;
+   where v.recurrence_id = k_id
+   order by v.effective_from, v.id
+   limit 1;
 
-update public.recurrences r
-   set seed_occurrence_date = t.should_be
-  from seed_repair_targets t
- where t.id = r.id;
+  -- ALREADY APPLIED. Re-pasting a migration by hand is a normal accident, and a
+  -- repair that explodes the second time teaches people to stop re-running the
+  -- ones that are safe. Distinguishable from the shape below: the seed holds the
+  -- repaired value while `start_date` still holds the corrected anchor.
+  if v_rule.created_from_transaction_id is not null
+     and v_rule.seed_occurrence_date = k_should
+     and v_rule.start_date           = k_start
+     and v_anchor                    = k_should then
+    raise notice '· 0069 — rule % already carries the repaired seed %: no-op', k_id, k_should;
+    return;
+  end if;
 
--- And the number derived from it, for the same rules and in the same breath: a
--- repaired seed with a stale offset is half a repair.
-update public.recurrences r
-   set schedule_positions_before = public.recurrence_positions_before(
-         r.id, r.schedule_effective_from, r.start_date,
-         r.interval_count, r.interval_unit, r.seed_occurrence_date,
-         r.max_occurrences, r.end_date)
-  from seed_repair_targets t
- where t.id = r.id;
+  -- ANY OTHER SHAPE IS NOT THE AUDITED ONE. The whole point of naming the row is
+  -- that the write is justified by what was found there, not by a query that
+  -- also matches rules which are correct. Aborting rolls back the trigger
+  -- disables above with it.
+  if v_rule.created_from_transaction_id is null
+     or v_rule.seed_occurrence_date is distinct from k_was
+     or v_rule.start_date           is distinct from k_start
+     or v_anchor                    is distinct from k_should then
+    raise exception '0069 refuses to write: rule % is not in the shape this repair was audited for (linked=%, start_date=%, seed=%, earliest anchor=%; expected linked=true, start_date=%, seed=%, earliest anchor=%). Nothing was changed — re-run the audit before repairing anything here',
+      k_id,
+      v_rule.created_from_transaction_id is not null, v_rule.start_date,
+      v_rule.seed_occurrence_date, v_anchor,
+      k_start, k_was, k_should;
+  end if;
+
+  update public.recurrences
+     set seed_occurrence_date = k_should
+   where id = k_id;
+
+  -- And the number derived from it, in the same breath.
+  update public.recurrences r
+     set schedule_positions_before = public.recurrence_positions_before(
+           r.id, r.schedule_effective_from, r.start_date,
+           r.interval_count, r.interval_unit, r.seed_occurrence_date,
+           r.max_occurrences, r.end_date)
+   where r.id = k_id;
+
+  -- ── Self-check, on the row that was written ──────────────────────────────
+  select r.seed_occurrence_date,
+         r.schedule_positions_before,
+         public.recurrence_positions_before(
+           r.id, r.schedule_effective_from, r.start_date,
+           r.interval_count, r.interval_unit, r.seed_occurrence_date,
+           r.max_occurrences, r.end_date)
+    into v_after, v_offset, v_expected
+    from public.recurrences r where r.id = k_id;
+
+  if v_after is distinct from k_should then
+    raise exception '0069 failed: rule % still carries seed %', k_id, v_after;
+  end if;
+  if v_offset is distinct from v_expected then
+    raise exception '0069 failed: rule % kept an offset the function does not agree with (% vs %)', k_id, v_offset, v_expected;
+  end if;
+
+  raise notice '✓ 0069 — rule %: seed occurrence % → %, offset recomputed to %', k_id, k_was, k_should, v_offset;
+end $repair$;
 
 alter table public.recurrences enable trigger trg_recurrence_reconstruct_from_guard;
 alter table public.recurrences enable trigger trg_recurrence_resolve_schedule_effective_from;
 
--- ── Self-check ─────────────────────────────────────────────────────────────
-DO $selfcheck$
-declare
-  v_left int;
-  v_off  uuid;
+-- ── The triggers are back on, for normal writes ────────────────────────────
+DO $guards$
 begin
-  with first_version as (
-    select distinct on (v.recurrence_id)
-           v.recurrence_id, v.anchor_date
-      from public.recurrence_schedule_versions v
-     order by v.recurrence_id, v.effective_from, v.id
-  )
-  select count(*) into v_left
-    from public.recurrences r
-    join first_version fv on fv.recurrence_id = r.id
-   where r.created_from_transaction_id is not null
-     and r.seed_occurrence_date is distinct from fv.anchor_date;
-  if v_left > 0 then
-    raise exception '0069 failed: % linked rules still disagree with their earliest surviving version', v_left;
-  end if;
-
-  -- Every rule this migration touched must now agree with the function. Only
-  -- those: for a rule whose floor is still in the FUTURE the offset is computed
-  -- against `today` and legitimately moves with the calendar, so asserting it
-  -- across the whole table would fail on a date rather than on a defect.
-  select r.id into v_off
-    from public.recurrences r
-    join seed_repair_targets t on t.id = r.id
-   where r.schedule_positions_before is distinct from public.recurrence_positions_before(
-           r.id, r.schedule_effective_from, r.start_date,
-           r.interval_count, r.interval_unit, r.seed_occurrence_date,
-           r.max_occurrences, r.end_date)
-   limit 1;
-  if v_off is not null then
-    raise exception '0069 failed: rule % kept an offset the function does not agree with', v_off;
-  end if;
-
-  -- And the triggers are back on, for normal writes.
   if exists (
     select 1 from pg_trigger
      where tgrelid = 'public.recurrences'::regclass
@@ -172,8 +207,6 @@ begin
   ) then
     raise exception '0069 failed: a trigger it disabled was left off';
   end if;
-
-  raise notice '✓ 0069 — the seed occurrence agrees with the anchor the rule began with';
-end $selfcheck$;
+end $guards$;
 
 commit;
