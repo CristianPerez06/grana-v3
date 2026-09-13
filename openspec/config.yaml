@@ -3,18 +3,50 @@ schema: spec-driven
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Grana is a personal finance app for Argentina, built by an accountant for people
+  who handle money in two currencies (ARS and USD). Three pillars: numbers are
+  correct and nothing is hidden, its own personality (not a bank, not a
+  spreadsheet), and it teaches without talking down.
+
+  Write every artifact in Spanish. OpenSpec keywords stay in English
+  (`### Requirement:`, `#### Scenario:`, `**WHEN**`, `**THEN**`, `## ADDED Requirements`, ...).
+
+  Accounting rules are product decisions: capture them in specs, never only in
+  conversation. The ones that cause silent bugs — separate ARS and USD ledgers,
+  balances always derived and never stored, the future is not a fact, credit card
+  installments — are in AGENTS.md § Cross-cutting principles.
+
+  Stack: pnpm workspaces. apps/web (Next.js App Router, Tailwind) and apps/mobile
+  (Expo) over shared packages in packages/. Supabase for Postgres and auth, online
+  only — migrations are applied through the dashboard.
+
+  Every user-facing change ships on both mobile surfaces: web at phone width and the
+  native app. Shared logic lives in packages/; UI is built separately per platform.
+
+  Where things are: `openspec/specs/` for the rules in force, `AGENTS.md` for
+  conventions, gotchas and how to talk to the user.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - Write for someone who doesn't write code. Say what changes for the person using the app and why.
+    - Keep it short. Name what is not being done rather than designing for it.
+  design:
+    - Only create design.md when there is a real technical choice to make.
+    - One recommendation per decision. List alternatives only if the user asked to compare them.
+  tasks:
+    - Only what this change needs. Anything noticed along the way goes to findings.md, not the task list.
+
+# Per-operation guidance (optional)
+# Advisory guidance for apply and archive. Read by OpenSpec 1.7 and later; older
+# CLIs ignore it, and AGENTS.md carries the same rules either way.
+operations:
+  apply:
+    guidance:
+      - Don't raise bugs or improvements found along the way; add them to findings.md in the change folder. Stop only for a blocker — can't continue, would break or lose data, would cost money.
+      - When the tasks are done, archive on the same branch unless the user says otherwise.
+  archive:
+    guidance:
+      - After archiving, present findings.md in a sentence or two per finding. Drop what the user doesn't take up, then delete the file.

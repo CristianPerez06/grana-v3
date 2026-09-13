@@ -50,3 +50,6 @@ storybook-static
 # supabase cli local cache
 supabase/.temp/
 tmp_grana_contact/
+
+# things an agent noticed while working on a change, held until archive (see AGENTS.md)
+openspec/changes/**/findings.md

@@ -147,7 +147,7 @@ jobs:
       # "could not determine executable to run". Pinned so a new upstream
       # release cannot redden a PR that changed nothing.
       - name: Validate master specs
-        run: npx --yes @fission-ai/openspec@1.7.0 validate --specs --strict
+        run: npx --yes @fission-ai/openspec@1.13.0 validate --specs --strict
 
       # Greps for the placeholders `openspec archive` leaves behind when a
       # new capability's Purpose was never written. Runs even if the step
