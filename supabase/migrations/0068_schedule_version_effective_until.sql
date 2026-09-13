@@ -220,10 +220,17 @@ comment on column public.recurrences.seed_occurrence_date is
 -- `start_date` all along, so on any rule whose anchor had already been corrected
 -- this records the CORRECTED date as the occurrence the movement covers.
 --
--- **0069 repairs it**, against the one thing that does remember where a rule
--- began: the `anchor_date` of its first schedule version. That is a comparison
--- this migration cannot make, because the versions it would read are the ones it
--- is in the middle of giving an `effective_until` to.
+-- **0069 repairs it**, against the best record available: the `anchor_date` of
+-- the earliest schedule version. That is a comparison this migration cannot
+-- make, because the versions it would read are the ones it is in the middle of
+-- giving an `effective_until` to.
+--
+-- BEST AVAILABLE, NOT AUTHORITATIVE. The sync trigger below deletes the versions
+-- that have not come into effect yet, so a rule seeded by a FUTURE movement and
+-- corrected before it starts loses the very version that recorded its beginning.
+-- On such a rule the earliest one left carries the corrected anchor while the
+-- seed is right — so 0069 is a one-time repair validated against an audit of the
+-- data it runs on, not a rule that holds anywhere.
 --
 -- The damage is dormant, NOT nil: the value is read when the seed movement is
 -- unlinked or deleted — where a mismatch makes 0064's guard refuse the floor

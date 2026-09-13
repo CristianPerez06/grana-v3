@@ -14,13 +14,7 @@
 -- For that rule the backfill recorded the CORRECTED anchor as the occurrence its
 -- seed movement covers, which is a different date.
 --
--- ═══ THE CRITERION ════════════════════════════════════════════════════════
---
--- A seeded rule's seed occurrence is the anchor its calendar had at the
--- BEGINNING — which is exactly what the `anchor_date` of its FIRST schedule
--- version records. 0064 created that version from the rule's columns as they
--- stood then, and nothing rewrites it afterwards: a later correction opens a NEW
--- version and leaves the first one alone. So:
+-- ═══ THE CRITERION, AND WHAT IT IS WORTH ══════════════════════════════════
 --
 --   repair every linked rule whose `seed_occurrence_date` differs from the
 --   `anchor_date` of its earliest schedule version.
@@ -28,6 +22,32 @@
 -- Generic on purpose, though today it matches one row. The alternative — naming
 -- that row's id — would be a migration nobody can verify and that says nothing
 -- about what was wrong.
+--
+-- ═══ THIS IS AN AUDITED ONE-TIME REPAIR, NOT AN INVARIANT ═════════════════
+--
+-- The earliest surviving version is the best record of where a rule began. It is
+-- NOT a permanent one, and an earlier draft of this migration claimed it was.
+-- The correction, kept here because the wrong version reads perfectly plausible:
+--
+--   0068's `recurrence_sync_schedule_and_pauses()` DELETES the versions that
+--   have not come into effect yet — `effective_from > today` — before opening
+--   the corrected one. A rule seeded by a FUTURE movement has exactly one such
+--   version, the one its own insert created. Correct its anchor before the rule
+--   starts and that version is gone; the earliest one left carries the NEW
+--   anchor, while `seed_occurrence_date` correctly keeps the occurrence the
+--   movement covers. The two disagree and NOTHING IS WRONG.
+--
+-- On such a rule this migration would overwrite a seed that was never broken,
+-- and no query separates it from the rule that IS broken: the same three
+-- columns, with the old value on the other side.
+--
+-- WHAT MAKES IT SAFE HERE IS NOT THE CRITERION — IT IS THE AUDIT. On the
+-- database this runs against (caso real reportado en #96) the criterion was run
+-- as a read first: exactly one rule disagreed, an active rule whose anchor was
+-- corrected in the past, with no rule of the second kind anywhere. Anyone
+-- reaching for this query on another database has to redo that audit before
+-- running it, and `validate_schema.sql` 8.1L only LISTS the disagreements for
+-- that reason — it cannot assert an equality that a correct database can break.
 --
 -- WHAT IT IS NOT. It does NOT compare against `transactions.date`: that column
 -- is editable, so a movement re-dated after the rule was created would look like
@@ -123,7 +143,7 @@ begin
    where r.created_from_transaction_id is not null
      and r.seed_occurrence_date is distinct from fv.anchor_date;
   if v_left > 0 then
-    raise exception '0069 failed: % linked rules still disagree with their first version', v_left;
+    raise exception '0069 failed: % linked rules still disagree with their earliest surviving version', v_left;
   end if;
 
   -- Every rule this migration touched must now agree with the function. Only

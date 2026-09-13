@@ -381,21 +381,36 @@ que el usuario ya no puede deshacer.
   - **UNA fila, no once.** Mi primera medición comparó `seed_occurrence_date` contra
     `transactions.date` y dio once. Esa comparación no prueba nada: **`transactions.date` es
     editable**, y un movimiento re-fechado después no cambia la identidad de la ocurrencia. En diez de
-    esas once el seed COINCIDE con el `anchor_date` de la primera versión, que es el único registro de
-    dónde empezó la regla. La única discrepancia real es el sueldo: seed `2026-07-10` contra primer
+    esas once el seed COINCIDE con el `anchor_date` de la primera versión, que es el mejor registro
+    disponible de dónde empezó la regla. La única discrepancia real es el sueldo: seed `2026-07-10` contra primer
     ancla `2026-07-08`.
   - **El impacto no es cero, está dormido.** El valor se lee al desvincular o borrar el movimiento
     semilla —y ahí una discrepancia hace que el guard de 0064 RECHACE la liberación del piso, o sea un
     movimiento que ya no se puede borrar— y alimenta el offset del tope en cuanto se fije un
     `max_occurrences`. Hoy no se ve porque esa semilla ya pasó y la regla no tiene tope.
   - [x] **`0069`** repara atómicamente toda regla vinculada cuyo seed difiera del `anchor_date` de su
-        primera versión, **incluidas las eliminadas**, y recalcula `schedule_positions_before`.
-        Criterio genérico y verificable aunque hoy toque una fila. Desactiva por una transacción el
-        guard (el seed es inmutable a propósito) y el resolver (en UPDATE copia el offset desde OLD,
-        así que sin desactivarlo el recálculo se deshace solo — verificado en negativo).
-  - [x] Regresión con la historia real: regla sembrada → ancla corregida **antes** de 0068 → 0068 →
-        0069. Más el caso que NO debe tocarse: movimiento re-fechado con el seed intacto.
-  - [x] Invariante en `validate_schema.sql` **8.1L**, que falla mientras 0069 esté pendiente.
+        primera versión disponible, **incluidas las eliminadas**, y recalcula
+        `schedule_positions_before`. Criterio genérico y verificable aunque hoy toque una fila.
+        Desactiva por una transacción el guard (el seed es inmutable a propósito) y el resolver (en
+        UPDATE copia el offset desde OLD, así que sin desactivarlo el recálculo se deshace solo —
+        verificado en negativo).
+  - [x] **La igualdad seed = primer ancla NO es una invariante.** Una versión anterior de 0069 y de
+        8.1L afirmaban que "nada reescribe la primera versión". Es falso: el trigger de 0068
+        **elimina** las versiones con `effective_from > today` antes de abrir la corregida. Una regla
+        sembrada por un movimiento **futuro** tiene exactamente una de esas —la que creó su propio
+        insert—, así que corregir su ancla **antes de que empiece** borra el registro de dónde
+        empezó: la primera versión que sobrevive lleva el ancla nueva y el seed conserva,
+        correctamente, la ocurrencia cubierta. Los dos difieren y no hay nada roto. Ninguna consulta
+        distingue ese estado del que 0069 repara.
+  - [x] Por eso **0069 es una reparación puntual auditada, no una regla**: lo que la hace segura es
+        que el criterio se corrió primero como lectura sobre la base real (una sola fila, sin ninguna
+        regla del segundo tipo), no el criterio en sí.
+  - [x] Regresiones: la historia real —regla sembrada → ancla corregida **antes** de 0068 → 0068 →
+        0069—, el caso que NO debe tocarse (movimiento re-fechado con el seed intacto) y **el
+        recorrido futuro**: regla sembrada a futuro, corregida por el RPC antes de arrancar, que
+        pierde su primera versión y sin embargo es correcta.
+  - [x] `validate_schema.sql` **8.1L** pasa a ser un **reporte**: lista las discrepancias y nunca
+        falla. Verificado en negativo — con la aserción anterior, el recorrido futuro la rompe.
 - [x] 3.2b ~~**Limpieza dirigida** de la ocurrencia que el QA produjo~~ — **no hace falta: el usuario la
       omitió**, porque la de septiembre ya estaba confirmada. Las dos razones por las que esta tarea
       decía "NO se omite" se revisaron antes de cerrarla:

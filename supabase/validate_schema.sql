@@ -1138,27 +1138,38 @@ begin
   raise notice '✓ 8.1K — the schedule gap (0068): effective_until, a NOT NULL floor on every rule, the seed occurrence kept apart from the anchor, the RPC that requires an effective date, and anon kept out';
 end $$;
 
--- ── 8.1L · the seed occurrence agrees with where the rule began (0069) ─────
--- 0068 derived `seed_occurrence_date` from `start_date`, on a premise that was
--- never true: `updateRecurrence` has always accepted `start_date`, so a seeded
--- rule's anchor could move before that backfill ran, and on one rule it had.
+-- ── 8.1L · REPORT, not a check · the seed occurrence and the first anchor ──
+-- 0069 repairs `seed_occurrence_date` on the rules where 0068 derived it from a
+-- `start_date` that had already moved. This section does NOT verify that repair,
+-- because there is no invariant here to verify — and the first draft of it
+-- asserted one anyway. Written down so the same check is not written twice:
 --
--- The record of where a rule BEGAN is the `anchor_date` of its earliest schedule
--- version: 0064 wrote it from the columns as they stood, and a later correction
--- opens a new version rather than rewriting that one. So the invariant is that
--- the two agree — and 0069 is what restores it.
+--   THE EQUALITY IS NOT A TRUTH OF THE MODEL. `seed_occurrence_date` is the
+--   rule's `start_date` at creation, frozen afterwards by the guard. The
+--   `anchor_date` of the earliest schedule version is usually the same date —
+--   but 0068's sync trigger DELETES the versions that have not come into effect
+--   yet (`effective_from > today`) before opening the corrected one. A rule
+--   seeded by a FUTURE movement has exactly one such version: the one its own
+--   insert created. Correct its anchor before it starts and the record of where
+--   it began is gone; the earliest version left carries the NEW anchor, while
+--   the seed correctly keeps the occurrence its movement covers. That database
+--   is in perfect order and the two dates disagree.
 --
--- NOT compared against `transactions.date`: that column is editable, so a
--- movement re-dated after the fact would read as a broken identity and is not
--- one. Ten rules on the first database to run this differ that way and are
--- correct.
+-- And the two states are the same three columns with the old value on the other
+-- side, so no query here separates them. 0069 is therefore a ONE-TIME repair,
+-- justified by an audit of the data it ran against — caso real reportado en #96,
+-- where a single rule disagreed and no rule of the second kind existed — and it
+-- leaves nothing behind for a schema validator to confirm.
 --
--- Deleted rules included. A soft-deleted rule keeps its movements and can still
--- be consulted; skipping it would hide the very rows a repair is for.
+-- NOT compared against `transactions.date` either: that column is editable, so a
+-- movement re-dated after the fact reads as a broken identity and is not one.
+-- Comparing against the movement is what made ten correct rules look wrong.
+--
+-- So this only LISTS. Deleted rules included — a soft-deleted rule keeps its
+-- movements and can still be consulted. It never fails.
 do $$
 declare
-  v_broken int;
-  v_sample text;
+  v_split int;
 begin
   with first_version as (
     select distinct on (v.recurrence_id)
@@ -1166,17 +1177,17 @@ begin
       from public.recurrence_schedule_versions v
      order by v.recurrence_id, v.effective_from, v.id
   )
-  select count(*), min(r.id::text) into v_broken, v_sample
+  select count(*) into v_split
     from public.recurrences r
     join first_version fv on fv.recurrence_id = r.id
    where r.created_from_transaction_id is not null
      and r.seed_occurrence_date is distinct from fv.anchor_date;
 
-  if v_broken > 0 then
-    raise exception '% linked rules carry a seed occurrence that disagrees with the anchor they began with (e.g. %): 0069 was not applied. Until it is, deleting one of those seed movements is refused by the reconstruction guard, and the cap offset derived from it is short', v_broken, v_sample;
+  if v_split > 0 then
+    raise notice '· 8.1L — % linked rule(s) carry a seed occurrence that differs from their earliest surviving anchor. NOT a defect on its own: a rule corrected before it started reads exactly like this. Worth a look only if 0069 has not been applied here', v_split;
+  else
+    raise notice '✓ 8.1L — no linked rule differs from its earliest surviving anchor';
   end if;
-
-  raise notice '✓ 8.1L — the seed occurrence (0069): every linked rule agrees with the anchor its first schedule version recorded';
 end $$;
 
 -- ┌── SHARED CONTRACT · occurrence identity ─────────────────────────────────┐

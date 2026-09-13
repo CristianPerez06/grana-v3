@@ -3,6 +3,8 @@ import { resolve } from 'node:path'
 import type { PGlite } from '@electric-sql/pglite'
 import { describe, expect, it } from 'vitest'
 import {
+  actAs,
+  actAsAdmin,
   applyEffectiveUntil,
   applySeedRepair,
   createRecurrenceIdentityDb,
@@ -83,19 +85,22 @@ function seedIdentityBranchOfValidateSchema(): string {
 }
 
 describe('validate_schema.sql · 8.1L', () => {
-  it('REFUSES a database where 0069 is still pending', async () => {
+  // It REPORTS; it does not assert. The state 0069 repairs and the state a rule
+  // corrected before it started leaves behind are the same columns with the old
+  // value on the other side, so a validator that failed on one would fail on the
+  // other. Both cases below therefore pass — what 8.1L gives an operator is the
+  // list, not a verdict.
+  it('does not fail on a database where 0069 is still pending', async () => {
     const db = await driftedDatabase()
     try {
       await applyEffectiveUntil(db)
-      await expect(db.exec(seedIdentityBranchOfValidateSchema())).rejects.toThrow(
-        /0069 was not applied/,
-      )
+      await expect(db.exec(seedIdentityBranchOfValidateSchema())).resolves.toBeDefined()
     } finally {
       await db.close()
     }
   }, 120_000)
 
-  it('passes once it is', async () => {
+  it('does not fail once it is applied either', async () => {
     const db = await driftedDatabase()
     try {
       await applyEffectiveUntil(db)
@@ -187,6 +192,117 @@ describe('a seeded rule whose anchor moved before 0068 ran', () => {
 
       await applySeedRepair(db)
       expect(await rule(db)).toEqual(before)
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+})
+
+/**
+ * THE SAME EQUALITY, ON A RULE THAT HAD NOT STARTED YET — where it is FALSE.
+ *
+ * 0068's sync trigger deletes the schedule versions that have not come into
+ * effect yet (`effective_from > today`) before opening the corrected one. A rule
+ * seeded by a FUTURE movement has exactly one such version: the one its own
+ * insert created. Correct its anchor before it starts and that version — the
+ * record of where the rule began — is gone; the earliest one left carries the
+ * NEW anchor.
+ *
+ * `seed_occurrence_date` is right throughout: the movement still covers the date
+ * it was dated on, and the guard keeps anyone from moving it. So this is a
+ * database in perfect order where the seed and the first surviving anchor
+ * DISAGREE — which is why that disagreement cannot be an invariant.
+ */
+const FUTURE_RULE = '00000000-0000-4000-8000-00000000d003'
+const FUTURE_TX = '00000000-0000-4000-8000-00000000d004'
+/**
+ * Relative to the database's own clock, never a literal: a fixture that hardcodes
+ * "the future" stops testing the future on the day it arrives, and this case only
+ * exists while `effective_from > today`.
+ */
+const AR_TODAY = `(now() at time zone 'America/Argentina/Buenos_Aires')::date`
+
+async function correctedBeforeItStarts(): Promise<PGlite> {
+  const db = await createRecurrenceIdentityDb()
+  await db.exec(`
+    insert into public.transactions (id, user_id, date, amount)
+    values ('${FUTURE_TX}', '${U_A}', ${AR_TODAY} + 60, 1000);
+    insert into public.recurrences
+      (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code,
+       movement_type, created_from_transaction_id)
+    values ('${FUTURE_RULE}', '${U_A}', ${AR_TODAY} + 60, 1, 'month', 'active', 1000, 'ARS',
+            'expense', '${FUTURE_TX}');
+  `)
+  // Through the real door. The corrected schedule's first occurrence on or after
+  // today IS the new anchor, since the rule has not started — so that is the
+  // effective date the drawer offers and the RPC accepts.
+  await actAs(db, U_A)
+  await db.exec(`
+    select public.update_recurrence_schedule(
+      '${FUTURE_RULE}',
+      jsonb_build_object('start_date', (${AR_TODAY} + 62)::text),
+      ${AR_TODAY} + 62
+    );
+  `)
+  await actAsAdmin(db)
+  return db
+}
+
+describe('a seeded rule corrected before it starts', () => {
+  it('loses its first version to the sync trigger, keeping the right seed', async () => {
+    const db = await correctedBeforeItStarts()
+    try {
+      const { rows } = await db.query<{
+        seed: string
+        first_anchor: string
+        versions: number
+      }>(
+        `select r.seed_occurrence_date::text as seed,
+                (select v.anchor_date::text from public.recurrence_schedule_versions v
+                  where v.recurrence_id = r.id order by v.effective_from, v.id limit 1) as first_anchor,
+                (select count(*)::int from public.recurrence_schedule_versions v
+                  where v.recurrence_id = r.id) as versions
+           from public.recurrences r where r.id = '${FUTURE_RULE}'`,
+      )
+      // ONE version, not two: the original was deleted, not closed.
+      expect(rows[0].versions).toBe(1)
+      // And the two dates disagree — legitimately.
+      expect(rows[0].seed).not.toBe(rows[0].first_anchor)
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
+  it('passes 8.1L, which is why 8.1L cannot assert the equality', async () => {
+    const db = await correctedBeforeItStarts()
+    try {
+      await expect(db.exec(seedIdentityBranchOfValidateSchema())).resolves.toBeDefined()
+    } finally {
+      await db.close()
+    }
+  }, 120_000)
+
+  it('would be rewritten by 0069 — which is the bound of a one-time repair', async () => {
+    // NOT an approval of that write: 0069's criterion reads the earliest
+    // surviving version, and on this rule that version is the corrected one, so
+    // the repair would overwrite a seed that was never wrong.
+    //
+    // It is pinned because it is the reason 0069 is a one-time migration and not
+    // a rule: what makes it safe is not the criterion, it is the audit of the
+    // database it runs against — caso real reportado en #96, where exactly one
+    // rule disagreed and no rule of this shape existed. Anyone reaching for the
+    // same query on another database has to redo that audit first.
+    const db = await correctedBeforeItStarts()
+    try {
+      const seed = async () =>
+        (
+          await db.query<{ seed: string }>(
+            `select seed_occurrence_date::text as seed from public.recurrences where id = '${FUTURE_RULE}'`,
+          )
+        ).rows[0].seed
+      const before = await seed()
+      await applySeedRepair(db)
+      expect(await seed()).not.toBe(before)
     } finally {
       await db.close()
     }
