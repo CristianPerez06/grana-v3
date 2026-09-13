@@ -248,7 +248,7 @@ Before starting a new change, verify no other active change in `openspec/changes
 
 Two gates in one command, mirroring the `specs` job in `ci.yml`:
 
-1. **`pnpm openspec:validate`** — runs `@fission-ai/openspec@1.13.0 validate --specs --strict`, the same pinned command CI runs. It catches what a grep cannot: requirements missing `SHALL`/`MUST`, requirements with no `#### Scenario:` block, and Purpose blocks that are too brief.
+1. **`pnpm openspec:validate`** — runs `@fission-ai/openspec@1.13.0 validate --all --strict`, the same pinned command CI runs. `--all` covers the active changes as well as the master specs; it was `--specs` until pinpoint's stronger flag was mirrored across. It catches what a grep cannot: requirements missing `SHALL`/`MUST`, requirements with no `#### Scenario:` block, and Purpose blocks that are too brief.
 2. The **placeholder grep** — fails if any master spec under `openspec/specs/` contains `TBD - created by archiving` or a literal `Purpose: TBD`.
 
 Step 1 exists because it once didn't: `openspec:check` was the grep alone, so an archive that produced nine requirements without `SHALL` passed locally and reddened CI. A local gate that is weaker than the CI job it stands for is worse than no gate — it buys false confidence. Run it as part of the pre-merge checklist.
