@@ -373,10 +373,33 @@ que el usuario ya no puede deshacer.
 ## 3. Cierre
 
 - [ ] 3.1 QA manual en las dos plataformas, con el caso real del sueldo.
-- [ ] 3.2b **Limpieza dirigida** de la ocurrencia que el QA produjo: el `10 de septiembre` pendiente de la
-      regla de sueldo en la cuenta de prueba. NO se omite —una omitida deja una ocurrencia falsa en el
-      historial y consume una posición de `max_occurrences`—: se identifica por id, se verifica que no
-      tenga movimiento asociado y se borra, con la consulta a la vista antes y después.
+- [ ] 3.1b **HALLAZGO DEL QA sobre datos reales — el backfill se apoyó en una premisa que este mismo
+      QA había roto.** La migración justifica copiar `seed_occurrence_date` desde `start_date` así:
+      *"before this migration a seeded rule could not move its anchor, so `start_date` still IS the
+      seed occurrence"*. Es **falso**: el ancla del sueldo se corrigió del 8 al 10 de julio durante el
+      QA anterior, con el código de la rama y ANTES de que `0068` existiera. El movimiento semilla es
+      del 8; la columna quedó en 10.
+  - Evidencia: la regla `3e8a9b72` tiene dos versiones con anclas distintas —`2026-07-08` (assumed) y
+    `2026-07-10` (no assumed)—, la única del set con esa forma. Su `schedule_positions_before` quedó
+    en 4 cuando debería ser 3.
+  - **Impacto hoy: ninguno.** La regla no tiene `max_occurrences`, así que el offset no hace nada, y
+    las dos fechas están en el pasado, así que ninguna proyección cambia. Sólo importaría al borrar
+    ese movimiento semilla, donde el piso se liberaría un día corrido.
+  - Pendiente de decisión: (a) corregir esa fila —requiere deshabilitar el guard a propósito, que la
+    propia 0064 documenta como movimiento legítimo de migración—, y (b) corregir el comentario de la
+    migración, que hoy afirma una premisa que no se cumple.
+  - Queda pendiente la consulta que compara `seed_occurrence_date` contra la fecha real del movimiento
+    en TODAS las reglas sembradas, para saber si es una sola o varias.
+- [x] 3.2b ~~**Limpieza dirigida** de la ocurrencia que el QA produjo~~ — **no hace falta: el usuario la
+      omitió**, porque la de septiembre ya estaba confirmada. Las dos razones por las que esta tarea
+      decía "NO se omite" se revisaron antes de cerrarla:
+  - **"consume una posición de `max_occurrences`"** — ya no aplica. El tope cuenta POSICIONES del
+    calendario, no filas (2c.5): el 10/9 es una posición del calendario vigente, así que está gastada
+    exista o no la fila. Borrarla no habría liberado nada.
+  - **"deja una ocurrencia falsa en el historial"** — queda en pie, y es el costo aceptado. A cambio,
+    borrar la fila habría roto la identidad de la ocurrencia, que es justamente el invariante que cerró
+    el #96: una ocurrencia es única por `(regla, vencimiento)` y no se reescribe. Omitirla REGISTRA que
+    existió y no correspondía, en vez de fingir que nunca estuvo.
 - [ ] 3.2 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm lint:mobile`, `pnpm typecheck:mobile`, `pnpm build`.
 - [ ] 3.3 Archivar el change y aplicar el delta al spec maestro de `transactions`.
 - [ ] 3.4 `pnpm openspec:check` en verde.
