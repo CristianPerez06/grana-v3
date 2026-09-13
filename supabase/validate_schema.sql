@@ -1138,6 +1138,47 @@ begin
   raise notice '✓ 8.1K — the schedule gap (0068): effective_until, a NOT NULL floor on every rule, the seed occurrence kept apart from the anchor, the RPC that requires an effective date, and anon kept out';
 end $$;
 
+-- ── 8.1L · the seed occurrence agrees with where the rule began (0069) ─────
+-- 0068 derived `seed_occurrence_date` from `start_date`, on a premise that was
+-- never true: `updateRecurrence` has always accepted `start_date`, so a seeded
+-- rule's anchor could move before that backfill ran, and on one rule it had.
+--
+-- The record of where a rule BEGAN is the `anchor_date` of its earliest schedule
+-- version: 0064 wrote it from the columns as they stood, and a later correction
+-- opens a new version rather than rewriting that one. So the invariant is that
+-- the two agree — and 0069 is what restores it.
+--
+-- NOT compared against `transactions.date`: that column is editable, so a
+-- movement re-dated after the fact would read as a broken identity and is not
+-- one. Ten rules on the first database to run this differ that way and are
+-- correct.
+--
+-- Deleted rules included. A soft-deleted rule keeps its movements and can still
+-- be consulted; skipping it would hide the very rows a repair is for.
+do $$
+declare
+  v_broken int;
+  v_sample text;
+begin
+  with first_version as (
+    select distinct on (v.recurrence_id)
+           v.recurrence_id, v.anchor_date
+      from public.recurrence_schedule_versions v
+     order by v.recurrence_id, v.effective_from, v.id
+  )
+  select count(*), min(r.id::text) into v_broken, v_sample
+    from public.recurrences r
+    join first_version fv on fv.recurrence_id = r.id
+   where r.created_from_transaction_id is not null
+     and r.seed_occurrence_date is distinct from fv.anchor_date;
+
+  if v_broken > 0 then
+    raise exception '% linked rules carry a seed occurrence that disagrees with the anchor they began with (e.g. %): 0069 was not applied. Until it is, deleting one of those seed movements is refused by the reconstruction guard, and the cap offset derived from it is short', v_broken, v_sample;
+  end if;
+
+  raise notice '✓ 8.1L — the seed occurrence (0069): every linked rule agrees with the anchor its first schedule version recorded';
+end $$;
+
 -- ┌── SHARED CONTRACT · occurrence identity ─────────────────────────────────┐
 -- │ BYTE-IDENTICAL in three files: migration 0066, validate_schema.sql and   │
 -- │ validate_schema_transition.sql. SQL applied by hand has no include, so   │

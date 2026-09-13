@@ -214,17 +214,21 @@ alter table public.recurrences
 comment on column public.recurrences.seed_occurrence_date is
   'Occurrence covered by the seed movement. Immutable: the anchor may be corrected, this may not.';
 
--- `start_date` is the best value available, and on some rows it is not the right
+-- `start_date` is the best value available HERE, and it is not always the right
 -- one. The claim this comment used to make — that before this migration a seeded
 -- rule could not move its anchor — is FALSE: `updateRecurrence` has accepted
--- `start_date` all along, and on the database this first ran against, eleven
--- seeded rules had an anchor that no longer matched their movement's date.
+-- `start_date` all along, so on any rule whose anchor had already been corrected
+-- this records the CORRECTED date as the occurrence the movement covers.
 --
--- It is kept as the backfill because there is nothing better to derive it from,
--- and because being wrong here costs nothing measurable: the offset it feeds is
--- only read when the rule has a `max_occurrences`, and the floor release only
--- fires for a seed occurrence in the FUTURE. What it is NOT is exact, and the
--- next person to read this should not be told otherwise.
+-- **0069 repairs it**, against the one thing that does remember where a rule
+-- began: the `anchor_date` of its first schedule version. That is a comparison
+-- this migration cannot make, because the versions it would read are the ones it
+-- is in the middle of giving an `effective_until` to.
+--
+-- The damage is dormant, NOT nil: the value is read when the seed movement is
+-- unlinked or deleted — where a mismatch makes 0064's guard refuse the floor
+-- release, which is a movement that can no longer be deleted at all — and it
+-- feeds the cap offset the moment a `max_occurrences` is set.
 --
 -- A rule already unlinked covers nothing and gets NULL.
 update public.recurrences

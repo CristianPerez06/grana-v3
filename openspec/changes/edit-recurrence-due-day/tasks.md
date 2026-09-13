@@ -373,27 +373,29 @@ que el usuario ya no puede deshacer.
 ## 3. Cierre
 
 - [ ] 3.1 QA manual en las dos plataformas, con el caso real del sueldo.
-- [ ] 3.1b **HALLAZGO DEL QA sobre datos reales — el backfill se apoyó en una premisa que NUNCA fue
-      cierta.** (Primero lo atribuí a nuestro propio QA; al verificarlo resultó peor y más simple.) La migración justifica copiar `seed_occurrence_date` desde `start_date` así:
-      *"before this migration a seeded rule could not move its anchor, so `start_date` still IS the
-      seed occurrence"*. `updateRecurrence` acepta `start_date` desde siempre —el campo no estaba en
-      el cajón de edición, pero la mutación lo acepta—, así que el ancla de una regla sembrada SÍ se
-      podía mover, y se movió.
-  - **Once reglas** tienen `seed_occurrence_date` distinto de la fecha del movimiento vinculado.
-    `createRecurrenceFromMovement` siempre crea con `start_date = tx.date`, así que a esas once les
-    cambiaron el ancla después. Sólo el sueldo tiene DOS anclas en sus versiones: es la única editada
-    después de `0064`; las otras diez, antes de que las versiones existieran.
-  - **Impacto medido: cero.** Las once tienen `max_occurrences = null`, y sin tope el offset no se
-    lee; las once fechas están en el pasado, y la liberación del piso sólo se dispara con la semilla
-    en el FUTURO. La única regla con tope de la base no es sembrada.
-  - **Cuál sería el valor correcto no es obvio**, y eso desaconseja un `UPDATE` a ciegas: en `AGUA`
-    (movimiento 5/6, regla desde el 21/6) el pago del 5 NO cubre la ocurrencia del 21 — se paga de
-    nuevo. Ahí `start_date` marca como cubierta una ocurrencia que no lo está, pero es el
-    comportamiento que YA existía antes de esta entrega, no algo que ésta introduzca.
-  - [x] Corregido el comentario de la migración, que afirmaba esa premisa como exacta.
-  - [ ] **Decisión pendiente (no bloquea la entrega):** si se repara el dato, va como ticket aparte,
-        con el criterio de qué ocurrencia cubre realmente un movimiento semilla cuando el ancla se
-        movió — que es una pregunta de producto, no de migración.
+- [x] 3.1b **HALLAZGO DEL QA sobre datos reales — el backfill de 0068 se apoyó en una premisa falsa.**
+      La migración justifica copiar `seed_occurrence_date` desde `start_date` diciendo que *"before
+      this migration a seeded rule could not move its anchor"*. `updateRecurrence` acepta `start_date`
+      desde siempre —el campo no estaba en el cajón de edición, pero la mutación sí—, así que el ancla
+      de una regla sembrada sí se podía mover, y en una se movió.
+  - **UNA fila, no once.** Mi primera medición comparó `seed_occurrence_date` contra
+    `transactions.date` y dio once. Esa comparación no prueba nada: **`transactions.date` es
+    editable**, y un movimiento re-fechado después no cambia la identidad de la ocurrencia. En diez de
+    esas once el seed COINCIDE con el `anchor_date` de la primera versión, que es el único registro de
+    dónde empezó la regla. La única discrepancia real es el sueldo: seed `2026-07-10` contra primer
+    ancla `2026-07-08`.
+  - **El impacto no es cero, está dormido.** El valor se lee al desvincular o borrar el movimiento
+    semilla —y ahí una discrepancia hace que el guard de 0064 RECHACE la liberación del piso, o sea un
+    movimiento que ya no se puede borrar— y alimenta el offset del tope en cuanto se fije un
+    `max_occurrences`. Hoy no se ve porque esa semilla ya pasó y la regla no tiene tope.
+  - [x] **`0069`** repara atómicamente toda regla vinculada cuyo seed difiera del `anchor_date` de su
+        primera versión, **incluidas las eliminadas**, y recalcula `schedule_positions_before`.
+        Criterio genérico y verificable aunque hoy toque una fila. Desactiva por una transacción el
+        guard (el seed es inmutable a propósito) y el resolver (en UPDATE copia el offset desde OLD,
+        así que sin desactivarlo el recálculo se deshace solo — verificado en negativo).
+  - [x] Regresión con la historia real: regla sembrada → ancla corregida **antes** de 0068 → 0068 →
+        0069. Más el caso que NO debe tocarse: movimiento re-fechado con el seed intacto.
+  - [x] Invariante en `validate_schema.sql` **8.1L**, que falla mientras 0069 esté pendiente.
 - [x] 3.2b ~~**Limpieza dirigida** de la ocurrencia que el QA produjo~~ — **no hace falta: el usuario la
       omitió**, porque la de septiembre ya estaba confirmada. Las dos razones por las que esta tarea
       decía "NO se omite" se revisaron antes de cerrarla:

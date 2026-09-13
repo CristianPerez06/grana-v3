@@ -26,6 +26,7 @@ export const MIGRATION_0064 = read('0064_recurrence_identity_expand.sql')
 export const MIGRATION_0065 = read('0065_delete_seeded_movement_atomically.sql')
 export const MIGRATION_ACTIVATE = read('0066_recurrence_backlog_activate.sql')
 export const MIGRATION_0068 = read('0068_schedule_version_effective_until.sql')
+export const MIGRATION_0069 = read('0069_repair_seed_occurrence_identity.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -195,7 +196,7 @@ const SEED = `
  * purpose — 0064's own behaviour, or what 0066 refuses to run against.
  */
 export async function createRecurrenceIdentityDb(
-  options: { applyMigration?: boolean; scheduleGap?: boolean } = {},
+  options: { applyMigration?: boolean; scheduleGap?: boolean; seedRepair?: boolean } = {},
 ): Promise<PGlite> {
   const db = new PGlite()
   await db.exec('create schema if not exists public;')
@@ -203,7 +204,12 @@ export async function createRecurrenceIdentityDb(
   await db.exec(SEED)
   if (options.applyMigration !== false) {
     await applyMigration(db)
-    if (options.scheduleGap !== false) await applyEffectiveUntil(db)
+    if (options.scheduleGap !== false) {
+      await applyEffectiveUntil(db)
+      // 0069 rides along by default, as 0065 does with 0064: the schema every
+      // test should see is the one production is going to have.
+      if (options.seedRepair !== false) await applySeedRepair(db)
+    }
   }
   return db
 }
@@ -251,6 +257,19 @@ export async function applyEffectiveUntil(db: PGlite): Promise<void> {
  * dropped the index itself would prove the generator works in a state the
  * migration would not have produced.
  */
+/**
+ * 0069: the seed occurrence, repaired where 0068's backfill guessed it from an
+ * anchor that had already moved.
+ */
+export async function applySeedRepair(db: PGlite): Promise<void> {
+  try {
+    await db.exec(MIGRATION_0069)
+  } catch (error) {
+    await db.exec('rollback;').catch(() => undefined)
+    throw error
+  }
+}
+
 export async function applyActivation(db: PGlite): Promise<void> {
   try {
     await db.exec(MIGRATION_ACTIVATE)
