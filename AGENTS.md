@@ -75,7 +75,7 @@ openspec/          # spec-driven workflow
   ```
 
   Leaving the default `core` profile puts `explore` back in both folders on the next run.
-  CI is what notices: **`pnpm openspec:workflows`** runs
+  CI is what notices: **`pnpm check:openspec-workflows`** runs
   `.github/scripts/check-openspec-workflows.mjs`, which fails if the generated workflows are not
   exactly those five — in `.claude/commands/opsx/`, in `.agents/skills/`, or in `.claude/skills/`,
   a location the CLI used to write and no longer does. It reads the working tree, so it fails the
@@ -157,6 +157,17 @@ All scripts work from the repo root (orchestrator forwards to `pnpm --filter web
 - `pnpm test:web` — only `apps/web`, when you are iterating on one suite
 - `pnpm storybook` — Storybook on :6006 (web)
 - `pnpm --filter web <script>` — explicit form if you ever add another app
+- `pnpm verify` — **everything CI runs that can run locally, in one command**
+
+`pnpm verify` exists because there was no way to run CI's set: `lint` and
+`typecheck` are web only, and two of the `monorepo-health` checks lived as shell
+inside the workflow, so a person could not run them at all — the PR template had
+to tell people to paste a `jq` one-liner by hand. A PR could tick every box in
+that template honestly and still fail on a step no local script covered. **Any
+new CI step goes into `verify` as well as into the workflow**; its own
+`comment:verify` in `package.json` says so. The one step `verify` leaves out is
+`pnpm install --frozen-lockfile`, on purpose — verifying should not prune your
+`node_modules`. Run it yourself when you touch dependencies.
 
 `pnpm test` runs what CI runs, on purpose. It used to be `--filter web` alone,
 and the packages' tests — where the money logic lives — were written but guarded

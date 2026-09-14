@@ -170,7 +170,7 @@ jobs:
       # not hide a returning `explore` until the next push.
       - name: Check the generated OpenSpec workflows
         if: always()
-        run: pnpm openspec:workflows
+        run: pnpm check:openspec-workflows
 
   monorepo-health:
     # El nombre del check NO se toca al agregarle un step, por la misma razón
@@ -199,65 +199,18 @@ jobs:
       # the monorepo crashed the mobile bundle with "Cannot read
       # property 'useRef' of null" inside react-native-screens. See
       # apps/mobile/PROXIMAS_FASES.md for the incident.
-      # Why these and not react-dom:
-      # - react: bundled into both web and mobile. Two versions = crash.
-      # - react-native: bundled into mobile. Two versions = crash.
-      # - react-dom: bundled into web only. Mobile transitively pulls a
-      #   different react-dom via @expo/metro-runtime for Expo's web
-      #   export feature, but mobile's native builds never bundle it.
-      #   That duplication is benign and intentional, so it's excluded.
+      #
+      # The rule, and why react-dom is excluded, now live in the script —
+      # it was shell here, which meant CI could check it and a person
+      # could not, and the PR template had to tell people to paste a jq
+      # one-liner instead. `pnpm verify` runs it.
       - name: Detect duplicate critical peer dependencies
-        run: |
-          set -euo pipefail
-          failed=0
-          for pkg in react react-native; do
-            versions=$(pnpm why "$pkg" --json 2>/dev/null \
-              | jq -r --arg name "$pkg" '[.. | objects | select(has("version") and (.name? == $name or .alias? == $name)) | .version] | unique | .[]' \
-              || true)
-            count=$(printf "%s" "$versions" | grep -c . || true)
-            echo "::group::$pkg (${count} version(s) installed)"
-            printf "%s\n" "$versions"
-            echo "::endgroup::"
-            if [ "${count:-0}" -gt 1 ]; then
-              echo "::error::Multiple versions of '$pkg' installed in the workspace. This causes bundle resolution failures (e.g. 'Cannot read property X of null' in React Native). Align the version across apps/web and apps/mobile."
-              failed=1
-            fi
-          done
-          exit $failed
+        run: pnpm check:duplicate-deps
 
       # Guards against the bug from issue #131: `pnpm test` was green in CI and
-      # red on a developer's machine, on the same commit. The tests inherited the
-      # timezone of whatever ran them, and GitHub's runners sit at UTC — where a
-      # date read one day early reads correctly, because the offset is zero. The
-      # gate was passing by accident of the environment.
-      #
-      # Grana's accounting date is Argentine, so the suite runs in the financial
-      # timezone and not in UTC: pinning UTC would also make local and CI agree,
-      # but agree in a timezone the product never runs in, and would keep hiding
-      # this family of date bugs instead of exposing them.
-      #
-      # The prefix lives in each package's own `test` script rather than in one
-      # place, because `pnpm test` is `pnpm -r test` and a developer iterating on
-      # one suite runs `pnpm --filter <pkg> test` directly — a root-only prefix
-      # would miss exactly that path. This step is what keeps package number 13
-      # from silently going back to inheriting the machine's zone.
+      # red on a developer's machine, on the same commit. The reasoning — why
+      # the financial timezone and not UTC, and why the prefix lives in each
+      # package rather than at the root — now lives in the script, so that it
+      # reaches the person who adds package number 14 rather than only CI.
       - name: Verify every test script pins the financial timezone
-        run: |
-          set -euo pipefail
-          tz='TZ=America/Argentina/Buenos_Aires'
-          failed=0
-          for manifest in packages/*/package.json apps/*/package.json; do
-            script=$(jq -r '.scripts.test // empty' "$manifest")
-            [ -n "$script" ] || continue
-            name=$(jq -r '.name' "$manifest")
-            case "$script" in
-              "$tz "*)
-                echo "ok      $name"
-                ;;
-              *)
-                echo "::error file=$manifest::'$name' has a test script that does not pin the financial timezone. Prefix it with \"$tz \" so its tests run in the timezone the product runs in (see issue #131)."
-                failed=1
-                ;;
-            esac
-          done
-          exit $failed
+        run: pnpm check:test-timezone
