@@ -28,6 +28,17 @@ objeto `Date`, ni un texto derivado de reformatear uno, porque eso le da al anda
 una opinión propia sobre qué día es que el cliente real no tiene. Un doble infiel en
 las fechas no puede sostener ninguna aserción sobre vencimientos, saldos ni períodos.
 
+La exigencia sobre el doble SHALL cubrir **toda columna temporal**, no sólo `date`:
+el valor que entrega SHALL ser de tipo texto, SHALL representar el mismo instante o
+día que la base guardó, y SHALL ser idéntico en cualquier huso. Para un
+`timestamptz` la salida SHALL ser una cadena ISO-8601 en UTC. Lo que un doble SHALL
+NOT hacer es pasar el texto crudo de Postgres para ese tipo: Postgres lo renderiza
+en el huso de la **sesión**, así que el mismo instante sale `2026-06-23 00:00:00+00`
+bajo UTC y `2026-06-22 21:00:00-03` en Buenos Aires — dependencia del entorno otra
+vez, un tipo más allá. MAY diferir de PostgREST en la notación del offset y en la
+precisión sub-segundo; lo que NO MAY diferir es el tipo, el instante ni la
+independencia del huso.
+
 #### Scenario: La base devuelve una fecha y el lector está en Buenos Aires
 
 - **WHEN** un read pide una columna `DATE` cuyo valor es `2026-06-23`
@@ -47,6 +58,14 @@ las fechas no puede sostener ninguna aserción sobre vencimientos, saldos ni per
 - **THEN** el doble SHALL entregar el texto `YYYY-MM-DD`, la misma representación que
   entrega PostgREST
 - **AND** SHALL NOT entregar un objeto `Date` ni un texto reformateado a partir de uno
+
+#### Scenario: Un doble de test entrega una columna `timestamptz`
+
+- **WHEN** un test lee una columna `timestamptz` a través del doble
+- **THEN** el valor SHALL ser una cadena ISO-8601 en UTC, no un objeto `Date`
+- **AND** SHALL ser el mismo valor corriendo el proceso en UTC−11, en UTC y en UTC+14
+- **AND** SHALL NOT ser el texto crudo de Postgres, que se renderiza en el huso de
+  la sesión y por lo tanto cambia con el entorno
 
 #### Scenario: Una ocurrencia futura se lee en su propia fecha
 

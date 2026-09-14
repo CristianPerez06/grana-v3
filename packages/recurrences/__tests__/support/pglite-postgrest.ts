@@ -1,3 +1,4 @@
+import { types } from '@electric-sql/pglite'
 import type { PGlite } from '@electric-sql/pglite'
 import type { GranaSupabaseClient } from '@grana/supabase'
 
@@ -202,15 +203,13 @@ function toPostgrestError(error: Error): {
   }
 }
 
-/** Postgres OID of `date`. */
-const OID_DATE = 1082
-
 /**
- * A `date` reaches the client as the text 'YYYY-MM-DD', which is what PostgREST
- * sends and what the calendar walker — string arithmetic all the way down —
- * expects to receive.
+ * Temporal columns reach the client as TEXT, the way PostgREST sends them, and
+ * the way the calendar walker — string arithmetic all the way down — expects to
+ * receive them. Neither answer may depend on the timezone of the process that
+ * ran the test.
  *
- * This is an identity parser, and it is load-bearing. Postgres carries no
+ * `DATE` is an identity parser, and it is load-bearing. Postgres carries no
  * timezone in a `DATE`, but PGlite's default parser decodes one to a JS Date at
  * midnight UTC. Formatting that instant back with the LOCAL getters
  * (`getFullYear`/`getMonth`/`getDate`) subtracts the zone's offset, so anywhere
@@ -218,15 +217,33 @@ const OID_DATE = 1082
  * read back as the 22nd. That is not a rounding error in a test, it is the
  * harness holding an opinion about what day it is that the real client does not
  * have, and it made 14 tests fail in Buenos Aires while passing in CI, whose
- * runners happen to sit at UTC where the offset is zero (issue #131).
+ * runners happen to sit at UTC where the offset is zero (issue #131). Keeping
+ * the value as text removes the Date from the path entirely rather than
+ * compensating for it with the matching UTC getters — there is no conversion
+ * left to get wrong.
  *
- * Keeping the value as text removes the Date from the path entirely, instead of
- * compensating for it with the matching UTC getters. There is no conversion left
- * to get wrong, and the double now hands back exactly the representation
- * PostgREST hands back — which is the whole point of this harness.
+ * `TIMESTAMPTZ` needs the opposite treatment, and the identity parser would be a
+ * TRAP here: Postgres renders a timestamptz in the SESSION's timezone, so the
+ * raw text of one instant is '2026-06-23 00:00:00+00' under UTC and
+ * '2026-06-22 21:00:00-03' in Buenos Aires. Handing that through would make the
+ * value environment-dependent again — the same disease, one type over. So the
+ * instant is decoded with PGlite's own parser (which reads the explicit offset
+ * correctly) and re-rendered with `toISOString()`, the one formatter that cannot
+ * observe the local zone. Verified identical from UTC-11 to UTC+9.
+ *
+ * Two deltas from PostgREST remain, both deliberate: the offset prints as 'Z'
+ * rather than '+00:00', and sub-second precision is milliseconds rather than
+ * Postgres's microseconds. What the double guarantees is the TYPE (a string),
+ * the INSTANT, and independence from the environment. No read selects a
+ * timestamptz today — `created_at` appears only in an `order()` — so this closes
+ * the class of bug before a read walks into it.
  */
 const PGLITE_QUERY_OPTIONS = {
-  parsers: { [OID_DATE]: (value: string) => value },
+  parsers: {
+    [types.DATE]: (value: string) => value,
+    [types.TIMESTAMPTZ]: (value: string) =>
+      (types.parsers[types.TIMESTAMPTZ](value) as Date).toISOString(),
+  },
 } as const
 
 /**

@@ -31,7 +31,16 @@ type RawClient = {
     select: (columns: string) => PromiseLike<{
       data: Array<Record<string, unknown>> | null
       error: unknown
-    }>
+    }> & {
+      not: (
+        column: string,
+        operator: string,
+        value: unknown,
+      ) => PromiseLike<{
+        data: Array<Record<string, unknown>> | null
+        error: unknown
+      }>
+    }
     update: (payload: Record<string, unknown>) => {
       eq: (column: string, value: unknown) => {
         select: (columns: string) => PromiseLike<{
@@ -100,6 +109,53 @@ describe('pglitePostgrest — date fidelity', () => {
       .select('last_generated_date')
 
     expect(data?.[0]).toEqual({ last_generated_date: '2026-07-23' })
+  })
+
+  it('returns a timestamptz as an ISO string, not a Date', async () => {
+    // `created_at` defaults to now(), so this asserts the SHAPE, not a value.
+    // The raw Postgres text would be a trap here: it renders in the session's
+    // timezone, so passing it through unchanged would make the answer
+    // environment-dependent all over again.
+    const { data } = await client.from('recurrence_instances').select('created_at')
+
+    const value = data?.[0]?.created_at
+    expect(typeof value).toBe('string')
+    expect(value).not.toBeInstanceOf(Date)
+    expect(value).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+  })
+
+  it('answers the same timestamptz instant from any timezone', async () => {
+    // A fixed instant, so the expected value is absolute. Postgres would print
+    // it as '...+00' under UTC and '...-03' in Buenos Aires; what the double
+    // hands back must not move.
+    await db.exec(`
+      insert into public.recurrence_instances
+        (recurrence_id, user_id, scheduled_date, due_date, status, resolved_at)
+      values ('${RULE}', '${U_A}', '2026-08-23', '2026-08-23', 'skipped',
+              '2026-06-23 15:04:05.123456+00');
+    `)
+
+    const original = process.env.TZ
+    const answers: string[] = []
+    try {
+      for (const zone of ['Pacific/Kiritimati', 'Pacific/Midway', 'UTC']) {
+        process.env.TZ = zone
+        const { data } = await client
+          .from('recurrence_instances')
+          .select('resolved_at')
+          .not('resolved_at', 'is', null)
+        answers.push(String(data?.[0]?.resolved_at))
+      }
+    } finally {
+      if (original === undefined) delete process.env.TZ
+      else process.env.TZ = original
+    }
+
+    expect(answers).toEqual([
+      '2026-06-23T15:04:05.123Z',
+      '2026-06-23T15:04:05.123Z',
+      '2026-06-23T15:04:05.123Z',
+    ])
   })
 
   it('answers the same date on both sides of Greenwich', async () => {
