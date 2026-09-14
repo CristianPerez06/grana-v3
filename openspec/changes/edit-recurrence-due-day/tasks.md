@@ -372,7 +372,31 @@ que el usuario ya no puede deshacer.
 
 ## 3. Cierre
 
-- [ ] 3.1 QA manual en las dos plataformas, con el caso real del sueldo.
+- [x] 3.1 QA manual en las dos plataformas, con el caso real del sueldo.
+  - **Sueldo, sólo lectura.** Idéntico antes y después de `0069` — la reparación toca una columna
+    dormida y no debe verse. `Creada el 8 de julio de 2026` (una columna que no participó del
+    arreglo) coincide con el seed restaurado: tercera fuente independiente diciendo `2026-07-08`.
+  - **Los dos caminos del trigger, sobre datos reales.** `QA 121` (sembrada a futuro, corregida antes
+    de arrancar): la versión original **se borra**, queda **1** y lleva el ancla nueva — el recorrido
+    que tumbó la invariante, observado por primera vez fuera de un test. `QA 121b` (semilla de hoy):
+    la versión vigente **se cierra**, quedan **2**, `seed_occurrence_date` se queda en `2026-09-13`
+    mientras el ancla se va al 20, y `schedule_positions_before` da **1**.
+  - **El guard de la semilla.** Borrar el movimiento semilla de `QA 121b` eligiendo "Conservar la
+    regla" corta el vínculo, conserva el seed y deja el piso quieto porque la semilla ya pasó. Es el
+    camino que estaba roto para el sueldo antes de `0069`.
+  - **La pregunta.** Dos fechas concretas, ninguna premarcada, guardar bloqueado sin respuesta, y la
+    regla pausada no pregunta. Verificado en web y en nativo.
+  - **Hallazgo propio del QA nativo — corregido en esta rama** (`075111de`): el radio sin marcar era
+    `border-border` (#E6EAEF) sobre `bg-border-soft` (#EEF1F4), ~1.05:1 — invisible; el chip
+    `Personalizado` faltaba, así que una regla custom mostraba cuatro presets apagados y ningún
+    indicio de su propia frecuencia (web sí lo mostraba, y el comentario del componente afirmaba
+    falsamente que había paridad); y el panel plantaba su encabezado bajo la Dynamic Island porque
+    el `SafeAreaProvider` raíz no alcanza la ventana del `Modal` que lo hospeda.
+  - **`apps/mobile` no tiene tests** — ni script ni infraestructura. Esos tres arreglos no tienen
+    regresión que los cubra; se verificaron a ojo en el simulador y así queda anotado.
+  - **Tres defectos ajenos a #121**, verificados contra `main` y fichados: #140 (bucle de render en
+    el header nativo), #141 (`custom` sin traducir en la ficha web), #142 (`Plan de pago - 11
+    cuotas` con `max_occurrences = 1`).
 - [x] 3.1b **HALLAZGO DEL QA sobre datos reales — el backfill de 0068 se apoyó en una premisa falsa.**
       La migración justifica copiar `seed_occurrence_date` desde `start_date` diciendo que *"before
       this migration a seeded rule could not move its anchor"*. `updateRecurrence` acepta `start_date`
