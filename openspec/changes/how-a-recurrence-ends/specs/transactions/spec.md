@@ -1,0 +1,262 @@
+## MODIFIED Requirements
+
+### Requirement: El usuario puede crear una regla recurrente directamente, sin movimiento de origen
+
+El sistema SHALL permitir crear una regla recurrente desde cero, sin partir de un movimiento ya registrado ni de una sugerencia. La regla SHALL persistirse en `recurrences` con `created_from_transaction_id = NULL` y `last_generated_date = NULL`, y NO SHALL crear ninguna transacción real ni ninguna instancia en el momento de la creación: la primera instancia la produce el generador de instancias.
+
+La entrada SHALL validarse con el mismo modelo de datos que el resto del módulo (tipo funcional, cuenta o tarjeta, cuenta destino cuando aplique, moneda, monto, categoría cuando aplique, descripción, frecuencia como par `interval_count`+`interval_unit` con etiqueta preset o `custom`, `start_date`, y condición de fin opcional `end_date` y/o `max_occurrences`).
+
+**LA CONDICIÓN DE FIN SE PIDE COMO UNA SOLA PREGUNTA.** El formulario SHALL preguntar **cómo termina la regla** y ofrecer exactamente tres respuestas mutuamente excluyentes:
+
+- **sin límite** — ni `end_date` ni `max_occurrences`;
+- **en una fecha** — `end_date`, sin `max_occurrences`;
+- **después de N vencimientos** — `max_occurrences`, sin `end_date`.
+
+Ningún control de la condición de fin SHALL estar oculto detrás de otro. En particular, el límite de vencimientos NO SHALL vivir dentro del bloque de la fecha de fin: eso obliga a pedir una cosa para llegar a la otra, y deja al usuario cargando un dato desde una pregunta que no es la que respondió.
+
+**LO QUE NO SE VE NO SE GUARDA.** El formulario NO SHALL enviar ningún componente de la condición de fin que no corresponda a la respuesta elegida, aunque el usuario lo haya escrito antes de cambiar de respuesta. Una regla NO SHALL quedar con un límite que el usuario no puede ver en la pantalla donde lo cargó.
+
+El campo del límite SHALL aceptar únicamente dígitos y NO SHALL modificar su valor por desplazamiento de rueda, flechas del teclado ni controles de incremento — el mismo criterio que el resto de los campos numéricos del producto, por la misma razón: un número que cambia sin que el usuario escriba es un número que el usuario no sabe que cambió.
+
+El server action SHALL rechazar entradas que violen los invariantes contables:
+- `movement_type` SHALL ser uno de `income`, `expense`, `transfer` (los ajustes y las compras en cuotas NO admiten recurrencia).
+- `income` y `expense` SHALL requerir `category_id`; `transfer` SHALL requerir `transfer_destination_account_id` distinto de `account_id` y NO SHALL llevar categoría.
+- `amount` SHALL ser positivo.
+- `currency_code` SHALL ser `ARS` o `USD` y SHALL ser una moneda activa de la cuenta (la bimoneda nunca se mezcla).
+- `end_date`, si está presente, SHALL ser ≥ `start_date`.
+- `max_occurrences`, si está presente, SHALL ser un entero ≥ 1.
+- `account_id` y la cuenta destino, si aplica, SHALL pertenecer al usuario y estar activas.
+
+Las reglas en tarjeta de crédito en moneda no-ARS NO SHALL capturar tipo de cambio al crearse: el `fx_rate` se solicita al confirmar cada instancia.
+
+El sistema SHALL ofrecer un punto de entrada para este flujo desde la pantalla de recurrencias (`/transactions/recurring`).
+
+#### Scenario: Crear un gasto recurrente desde cero
+
+- **WHEN** el usuario abre el flujo de creación directa en `/transactions/recurring` y completa un gasto mensual de `$10.000` en una cuenta cash con categoría, `start_date = 2026-06-01`
+- **THEN** el sistema crea una regla recurrente de tipo `expense` con `created_from_transaction_id = NULL` y `last_generated_date = NULL`
+- **AND** no crea ninguna transacción real en `transactions`
+- **AND** no crea ninguna instancia en `recurrence_instances` en ese momento
+
+#### Scenario: El límite de vencimientos se ofrece sin pedir una fecha de fin
+
+- **WHEN** el usuario abre el formulario de creación y elige «después de N vencimientos»
+- **THEN** puede escribir el límite sin activar ningún control de fecha de fin
+- **AND** la regla se guarda con `max_occurrences` poblado y `end_date = NULL`
+
+#### Scenario: Un límite escrito y después descartado no se guarda
+
+- **WHEN** el usuario elige «después de N vencimientos», escribe `11`, y luego cambia la respuesta a «sin límite»
+- **THEN** el formulario ya no muestra el límite
+- **AND** al guardar, la regla queda con `max_occurrences = NULL` y `end_date = NULL`
+- **AND** la regla NO queda con un límite invisible que la termine antes de tiempo
+
+#### Scenario: El límite no cambia por desplazamiento ni por flechas
+
+- **WHEN** el usuario escribe `11` en el límite y luego desplaza la pantalla con el puntero sobre ese campo, o presiona las flechas del teclado
+- **THEN** el valor sigue siendo `11`
+
+#### Scenario: Crear una transferencia recurrente desde cero
+
+- **WHEN** el usuario crea una transferencia recurrente con cuenta origen y cuenta destino distintas y sin categoría
+- **THEN** el sistema crea una regla `transfer` con `transfer_destination_account_id` poblado y `category_id = NULL`
+
+#### Scenario: Rechazo de ajuste como recurrencia
+
+- **WHEN** el usuario o una API intenta crear una regla directa con `movement_type = adjustment`
+- **THEN** la action retorna error y no crea la regla
+
+#### Scenario: Rechazo de categoría faltante en gasto
+
+- **WHEN** el usuario intenta crear un gasto recurrente sin `category_id`
+- **THEN** la action retorna error y no crea la regla
+
+#### Scenario: Rechazo de fecha de fin anterior al inicio
+
+- **WHEN** el usuario intenta crear una regla con `end_date` anterior a `start_date`
+- **THEN** la action retorna error y no crea la regla
+
+#### Scenario: Regla en tarjeta de crédito USD no captura fx_rate al crearse
+
+- **WHEN** el usuario crea una regla recurrente `expense` en una tarjeta de crédito con `currency_code = USD`
+- **THEN** la regla se crea sin tipo de cambio almacenado
+- **AND** el tipo de cambio se solicitará al confirmar cada instancia
+
+### Requirement: El usuario puede crear una regla recurrente al registrar un movimiento
+
+El sistema SHALL permitir que el usuario marque como recurrente un movimiento al registrarlo. La recurrencia SHALL ser una regla separada del movimiento real y SHALL conservar los datos necesarios para generar futuras instancias: tipo funcional, cuenta o tarjeta, cuenta destino cuando aplique, moneda, monto, categoria cuando aplique, descripcion, frecuencia, fecha de inicio y condicion de fin opcional.
+
+La frecuencia SHALL modelarse como un par `interval_count` (entero ≥ 1) e `interval_unit` (`day | week | month | year`). El campo `frequency` SHALL persistir la etiqueta de la regla: uno de los presets (`weekly`, `biweekly`, `monthly`, `annual`) o `custom`. Los presets SHALL resolver a un par intervalo+unidad fijo: `weekly`⇒`(1, week)`, `biweekly`⇒`(2, week)`, `monthly`⇒`(1, month)`, `annual`⇒`(1, year)`. `custom` SHALL usar el par elegido por el usuario.
+
+La condicion de fin SHALL ser opcional y poder expresarse como `end_date` (fecha límite) o `max_occurrences` (entero ≥ 1, cantidad máxima de ocurrencias). **Este camino SHALL ofrecer la misma pregunta de fin que la creación directa**, con las mismas tres respuestas y las mismas reglas sobre lo que se envía: quien convierte un movimiento en recurrencia SHALL poder decir «esto son 11 cuotas» sin salir del formulario. Una condición de fin disponible en un camino de alta y ausente en otro obliga al usuario a crear la regla de nuevo por el camino correcto.
+
+El movimiento semilla SHALL depender de la fecha elegida:
+
+- **`date <= hoy_AR`**: el movimiento registrado SHALL crearse como transaccion real normal usando el flujo existente, y la regla SHALL apuntar a ese movimiento mediante `created_from_transaction_id` (comportamiento actual, sin cambios).
+- **`date > hoy_AR`**: el sistema NO SHALL crear ninguna transaccion real ni ninguna instancia en ese momento. SHALL crear únicamente la regla, con la semántica de la creación directa: `created_from_transaction_id = NULL`, `last_generated_date = NULL` y `start_date =` la fecha elegida, de modo que la primera instancia pendiente la produzca el generador **exactamente en esa fecha** y pase por el gate de confirmación de instancias ("Las instancias recurrentes pendientes no son transacciones reales"). El saldo NO SHALL cambiar hasta que el usuario confirme esa instancia.
+
+#### Scenario: Ingreso recurrente creado desde registro
+
+- **WHEN** el usuario registra un ingreso con fecha de hoy y activa "Recurrente"
+- **THEN** el sistema crea el ingreso real en `transactions` con `status=NULL`
+- **AND** crea una regla recurrente de tipo `income`
+- **AND** no crea una segunda transaccion para la primera recurrencia
+
+#### Scenario: Un plan de cuotas se carga entero desde el movimiento
+
+- **WHEN** el usuario registra un gasto, activa "Recurrente" mensual y responde que termina «después de 11 vencimientos»
+- **THEN** la regla se crea con `max_occurrences = 11`
+- **AND** el usuario no necesita volver a crearla desde la pantalla de recurrencias para ponerle el límite
+
+#### Scenario: Gasto de tarjeta recurrente creado desde registro
+
+- **WHEN** el usuario registra un consumo simple en tarjeta con fecha de hoy y activa "Recurrente"
+- **THEN** el sistema crea el consumo real de tarjeta con `status='pending'` y `card_period_id`
+- **AND** crea una regla recurrente de tipo `expense` asociada a esa tarjeta
+- **AND** la regla no modifica el estado del resumen
+
+#### Scenario: Transferencia recurrente creada desde registro
+
+- **WHEN** el usuario registra una transferencia con fecha de hoy y activa "Recurrente"
+- **THEN** el sistema crea la transferencia real
+- **AND** crea una regla recurrente con cuenta origen y cuenta destino
+
+#### Scenario: Movimiento recurrente con fecha futura no crea semilla
+
+- **WHEN** hoy es `2026-07-31` y el usuario registra un gasto en cuenta cash con `date = 2026-08-10` y activa "Recurrente"
+- **THEN** el sistema NO inserta ninguna fila en `transactions`
+- **AND** crea una regla recurrente con `created_from_transaction_id = NULL`, `last_generated_date = NULL` y `start_date = 2026-08-10`
+- **AND** el saldo de la cuenta no cambia
+
+#### Scenario: La primera instancia de una regla sembrada a futuro cae en la fecha elegida
+
+- **WHEN** existe una regla creada desde el form con `start_date = 2026-08-10` (fecha futura, sin semilla) y la fecha financiera AR llega a `2026-08-10`
+- **THEN** el generador produce una única instancia pendiente con `scheduled_date = 2026-08-10`
+- **AND** el saldo cambia recién cuando el usuario confirma esa instancia
+
+#### Scenario: Consumo recurrente de tarjeta con fecha futura tampoco crea semilla
+
+- **WHEN** el usuario registra un consumo simple en tarjeta con `date` futura y activa "Recurrente"
+- **THEN** el sistema NO inserta ningún consumo con `card_period_id`
+- **AND** crea la regla `expense` asociada a la tarjeta con `start_date =` la fecha elegida
+- **AND** el resumen de la tarjeta no cambia hasta que el usuario confirme la instancia cuando llegue la fecha
+
+### Requirement: El usuario puede gestionar, pausar y eliminar reglas recurrentes
+
+El sistema SHALL exponer una pantalla `/transactions/recurring` para ver y gestionar reglas recurrentes. La pantalla SHALL listar las reglas con tipo, descripcion, monto, cuenta o tarjeta, frecuencia, proxima fecha e indicador de instancia pendiente cuando exista. El sistema SHALL permitir pausar, reactivar y eliminar/desactivar reglas.
+
+El agrupamiento de la pantalla SHALL usar el **estado mostrado** definido en "El fin de una regla se deriva de su calendario, no de una columna guardada", no la columna `status` en crudo: una regla que ya no puede producir nada NO SHALL aparecer junto a las que sí.
+
+La **próxima fecha** mostrada SHALL derivarse del mismo caminante de calendario que la proyección de próximas ocurrencias y que el generador, honrando `last_generated_date`: nunca SHALL anunciarse como próxima una ocurrencia ya cubierta por un movimiento real. Una regla sin próxima fecha NO SHALL mostrarse como activa.
+
+#### Scenario: Acceso desde Movimientos
+
+- **WHEN** el usuario abre `/transactions`
+- **THEN** puede navegar a `/transactions/recurring`
+
+#### Scenario: Una regla agotada no se lista entre las activas
+
+- **WHEN** una regla con `status = 'active'` ya gastó todas las posiciones que su límite permite
+- **THEN** la pantalla la agrupa como finalizada
+- **AND** no la cuenta entre las activas
+
+#### Scenario: Regla eliminada no borra historial
+
+- **WHEN** el usuario desactiva o elimina una regla recurrente
+- **THEN** las transacciones reales ya confirmadas se conservan
+- **AND** conservan su trazabilidad hacia la regla
+
+#### Scenario: Regla pausada no genera instancias
+
+- **WHEN** el usuario pausa una regla recurrente
+- **THEN** el sistema no genera nuevas instancias pendientes para esa regla
+- **AND** las transacciones ya confirmadas se conservan
+
+#### Scenario: Regla pausada puede reactivarse
+
+- **WHEN** el usuario reactiva una regla pausada
+- **THEN** el sistema vuelve a considerarla para generar la proxima instancia pendiente segun su frecuencia
+
+#### Scenario: La próxima fecha no repite una ocurrencia ya cubierta
+
+- **WHEN** una regla mensual tiene `start_date = 2026-08-07` y `last_generated_date = 2026-08-07`, y hoy es `2026-08-04`
+- **THEN** el hub muestra `2026-09-07` como próxima fecha, no `2026-08-07`
+
+## ADDED Requirements
+
+### Requirement: Una regla con límite de vencimientos dice en qué punto está y cuándo va a terminar
+
+Cuando una regla tiene `max_occurrences`, su detalle SHALL mostrar **cuántos vencimientos lleva de cuántos**, **cuántos le quedan** y **la fecha del último vencimiento previsto**. Un límite que decide cuándo la regla deja de avisar y que el usuario no puede leer en ninguna pantalla es indistinguible de no tener límite, y la regla parece indefinida hasta el día en que deja de recordar.
+
+El conteo SHALL expresarse en **posiciones del calendario de la regla**, la misma unidad que usa el corte de la generación (ver "La generación de instancias recurrentes usa intervalo+unidad y corta por la primera condición de fin"). NO SHALL contarse por filas de `recurrence_instances`: una regla sembrada por un movimiento no tiene fila para su primera ocurrencia, y una posición producida mientras nada estaba generando tampoco — contar filas le atribuye a una regla agotada vencimientos que no le quedan.
+
+El **último vencimiento previsto** SHALL calcularse con el mismo caminante de calendario que produce las fechas reales, honrando versiones de cronograma, pausas y correcciones de ancla. NO SHALL persistirse: una regla que se pausa o a la que se le corrige el día de vencimiento cambia esa fecha, y un valor guardado quedaría mintiendo.
+
+Una regla **sin** `max_occurrences` NO SHALL mostrar ninguno de estos datos, y su detalle SHALL seguir diciendo que se repite sin límite.
+
+#### Scenario: El detalle muestra el avance del plan
+
+- **WHEN** el usuario abre una regla mensual con `max_occurrences = 11` que ya gastó una posición, anclada al 10 de septiembre de 2026
+- **THEN** el detalle muestra que lleva 1 de 11 vencimientos
+- **AND** que le quedan 10
+- **AND** que el último vencimiento previsto es el 10 de julio de 2027
+
+#### Scenario: El avance no cuenta filas
+
+- **WHEN** una regla creada a partir de un movimiento tiene `max_occurrences = 3` y su primera ocurrencia está cubierta por el movimiento semilla, que no tiene fila en `recurrence_instances`
+- **THEN** el detalle informa que lleva 1 de 3, no 0 de 3
+
+#### Scenario: El último vencimiento previsto se mueve con la regla
+
+- **WHEN** el usuario corrige la fecha de referencia de una regla con límite
+- **THEN** el último vencimiento previsto que muestra el detalle se recalcula según el cronograma corregido
+
+#### Scenario: Una regla sin límite no inventa un final
+
+- **WHEN** el usuario abre una regla sin `end_date` ni `max_occurrences`
+- **THEN** el detalle no muestra avance ni último vencimiento previsto
+- **AND** dice que la regla se repite sin límite
+
+### Requirement: El fin de una regla se deriva de su calendario, no de una columna guardada
+
+El sistema SHALL mostrar como **finalizada** toda regla que no pueda producir ninguna ocurrencia futura, cualquiera sea el valor de `recurrences.status`. El estado mostrado SHALL derivarse en cada lectura del calendario de la regla y de su condición de fin; el sistema NO SHALL reescribir `recurrences.status` para expresarlo.
+
+Esta derivación SHALL aplicarse a **todas** las reglas, sin distinguir cuándo fueron creadas. Aplicarla sólo a las nuevas haría que dos reglas idénticas se muestren distinto según su fecha de alta, y dejaría a las reglas ya agotadas presentándose como activas — que es la situación que este cambio corrige.
+
+El estado mostrado SHALL distinguir dos formas del final:
+
+- **finalizada**: no quedan posiciones futuras ni vencimientos sin resolver;
+- **finalizada, con vencimientos por revisar**: no quedan posiciones futuras, pero hay instancias todavía sin confirmar ni omitir. El usuario SHALL poder resolverlas; el sistema NO SHALL ocultarlas por haber terminado la regla.
+
+El estado mostrado SHALL recalcularse ante cualquier cambio que altere lo que la regla puede producir. En particular, **ampliar el límite SHALL devolver la regla a activa** y **quitarlo SHALL volverla indefinida**, sin ninguna operación adicional del usuario y sin tocar `recurrences.status`.
+
+Una regla **pausada** NO SHALL mostrarse como finalizada mientras su calendario todavía tenga posiciones por delante: una pausa es una interrupción, no un final.
+
+#### Scenario: Una regla que agotó su límite se muestra finalizada
+
+- **WHEN** una regla con `max_occurrences = 1` ya gastó esa posición y su columna `status` dice `active`
+- **THEN** el sistema la muestra como finalizada
+- **AND** `recurrences.status` sigue diciendo `active`
+
+#### Scenario: Ampliar el límite reactiva la regla
+
+- **WHEN** el usuario cambia el límite de esa regla de 1 a 11
+- **THEN** el sistema vuelve a mostrarla como activa
+- **AND** anuncia su próxima fecha de vencimiento
+
+#### Scenario: Quitar el límite la vuelve indefinida
+
+- **WHEN** el usuario le quita el límite a una regla que estaba finalizada por haberlo agotado
+- **THEN** el sistema vuelve a mostrarla como activa
+- **AND** su detalle deja de mostrar avance y último vencimiento previsto
+
+#### Scenario: Terminada pero con algo por resolver
+
+- **WHEN** una regla agotó su límite y su último vencimiento sigue pendiente de confirmar u omitir
+- **THEN** el sistema la muestra como finalizada indicando que queda un vencimiento por revisar
+- **AND** el usuario puede confirmarlo u omitirlo
+
+#### Scenario: Una pausa no es un final
+
+- **WHEN** el usuario pausa una regla sin límite
+- **THEN** el sistema la muestra como pausada, no como finalizada
