@@ -42,6 +42,10 @@ La función recibe la condición de fin de la regla, las posiciones gastadas y l
 
 **Decisión**: agregar una función SQL que reciba el conjunto de reglas del usuario y devuelva sus posiciones gastadas en una sola respuesta, implementada **llamando a `recurrence_positions_spent` por fila internamente** — no reescribiendo su lógica. Una sola definición del conteo, dos formas de pedirlo.
 
+**La frontera es la misma que la de la función individual, y no se hereda sola.** La nueva función SHALL ser `SECURITY INVOKER`, de modo que la RLS del llamador siga siendo la autorización: una función `DEFINER` que recibe una lista de ids devolvería las posiciones de reglas de **otro** usuario a quien las pida. Sus privilegios SHALL declararse explícitamente —`REVOKE` para `PUBLIC` y para `anon`, `GRANT EXECUTE` sólo para `authenticated`—, porque Postgres otorga EXECUTE a `PUBLIC` por defecto y Supabase además le da `anon` acceso directo: no declararlo deja la función abierta sin que nada lo indique. Eso ya nos pasó y por eso existe la migración `0067`.
+
+`validate_schema.sql` SHALL fijar la firma, el cuerpo y esos privilegios, como ya hace con `recurrence_positions_spent` — una función que se puede reemplazar sin que nadie lo note es una frontera que no existe.
+
 **Por qué no contar en el cliente**: es el error que el spec prohíbe explícitamente y que ya costó dos rondas en #121 — una regla sembrada no tiene fila para su primera ocurrencia.
 
 **Por qué no aceptar el N+1**: el hub lista todas las reglas del usuario (64 en la base real). Sesenta y cuatro llamadas por pantalla es una regresión de rendimiento que además crece con el uso.
@@ -74,8 +78,10 @@ Es un hook compartido: agregar ahí el estado y el envío lo resuelve en web y e
 
 ## Migration Plan
 
-No hay migración de datos ni cambio de esquema: `max_occurrences` ya existe y las reglas guardadas ya tienen el valor que tienen. El estado derivado cambia lo que se muestra desde el primer despliegue, sin escribir nada.
+**Una migración, ninguna migración de datos.** Ninguna fila se reescribe: `max_occurrences` ya existe y las reglas guardadas conservan el valor que tienen. El estado derivado cambia lo que se muestra desde el primer despliegue, sin escribir nada.
 
-La única migración es la función SQL batch de la decisión 2, aditiva: crea una función nueva y no toca ninguna existente. Su número se elige contra `main` al momento de escribirla.
+La migración es la función SQL batch de la decisión 2, aditiva: crea una función nueva, con sus `REVOKE`/`GRANT`, y no toca ninguna existente. Su número se elige contra `main` al momento de escribirla, no contra el árbol de trabajo.
+
+Orden del despliegue, como en `0068`: aplicar la migración a mano en el dashboard, validar el esquema, y recién después desplegar el código que la consume.
 
 La regla real del usuario (`Plan de pago - 11 cuotas`, con límite 1) se corrige **desde la app** una vez desplegado esto, no con SQL: así conserva su historia en una sola regla.

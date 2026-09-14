@@ -44,6 +44,8 @@ Ninguna.
 
 **Código**: los tres formularios de alta y edición en web y nativo, la ficha de detalle, el listado de recurrencias, y el cálculo compartido que responde «¿le queda algo a esta regla?».
 
-**Base de datos**: ninguna migración. El límite ya se guarda en `max_occurrences`, y las dos piezas que hacen falta para contar bien ya existen desde la migración `0068`.
+**Base de datos**: **una migración, sin migración de datos**. Ninguna fila se reescribe: el límite ya se guarda en `max_occurrences` y las piezas para contarlo bien existen desde la migración `0068`. Lo que se agrega es una función para pedir ese conteo de muchas reglas a la vez, porque el listado lo necesita y hoy sólo se puede pedir de a una.
+
+**Un dato que falta antes de empezar**: el modelo permite que una regla lleve fecha de fin **y** límite al mismo tiempo. Hay que mirar la base para saber si alguna las tiene, porque de eso depende qué se le muestra al usuario cuando edite una de esas reglas.
 
 **Riesgo conocido**: contar «1 de 11» con las filas de la tabla de instancias da un número equivocado —una regla sembrada por un movimiento no tiene fila para su primera ocurrencia—. Ese error ya costó dos rondas de revisión en #121 y la solución correcta está escrita: `recurrence_positions_spent`.
