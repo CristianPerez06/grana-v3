@@ -57,13 +57,18 @@ export const DashboardHeader = ({ todayISO }: Props) => {
             accessibilityLabel={t('dashboard.month_lens.open')}
             accessibilityState={{ expanded: sheetOpen }}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-            className="min-w-0 flex-1 flex-row items-center gap-1.5"
+            className="min-w-0 flex-1 flex-row items-center"
           >
+            {/* The caret goes THROUGH `FittingText`, not beside it: the room the
+                date line has is the row minus the caret, and the component can
+                only measure a box whose width does not depend on the text it
+                picked (issue #140). It renders in the same place it always did,
+                right after the date. */}
             <FittingText
               variants={dateLineVariants(todayISO, localeCode, selected)}
               className="text-sm text-navy-muted"
+              trailing={<ChevronDown size={14} color={colors.navyMuted} />}
             />
-            <ChevronDown size={14} color={colors.navyMuted} />
           </Pressable>
 
           {/* Only while it means something. */}
