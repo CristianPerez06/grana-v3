@@ -26,8 +26,8 @@
     "check:openspec-workflows": "node --test .github/scripts/check-openspec-workflows.test.mjs && node .github/scripts/check-openspec-workflows.mjs",
     "check:duplicate-deps": "node .github/scripts/check-duplicate-deps.mjs",
     "check:test-timezone": "node .github/scripts/check-test-timezone.mjs",
-    "comment:verify": "Everything CI runs that can run locally, in one command. It exists because there was no way to run CI's set: `typecheck` is web only, `lint` is web only, and two of the monorepo-health checks lived as shell inside the workflow — so a PR could tick every box in the template honestly and still fail on a step no local script covered. Add any new CI step here as well as to the workflow. The ONE step this does not cover is `pnpm install --frozen-lockfile`, left out because verifying should not prune your node_modules: run it yourself when you touch dependencies.",
-    "verify": "pnpm lint && pnpm lint:mobile && pnpm typecheck && pnpm typecheck:mobile && pnpm test && pnpm build && pnpm openspec:check && pnpm check:openspec-workflows && pnpm check:duplicate-deps && pnpm check:test-timezone"
+    "comment:verify": "Everything CI runs that can run locally, in one command. It exists because there was no way to run CI's set: `typecheck` is web only, `lint` is web only, and two of the monorepo-health checks lived as shell inside the workflow — so a PR could tick every box in the template honestly and still fail on a step no local script covered. Add any new CI step here as well as to the workflow. Order matters: the checks that answer in milliseconds run first, so a missing `TZ=` prefix or a returning `explore` fails in seconds instead of after a four-minute build. The ONE step this does not cover is `pnpm install --frozen-lockfile`, left out because verifying should not prune your node_modules: run it yourself when you touch dependencies.",
+    "verify": "pnpm check:openspec-workflows && pnpm check:test-timezone && pnpm check:duplicate-deps && pnpm openspec:check && pnpm lint && pnpm lint:mobile && pnpm typecheck && pnpm typecheck:mobile && pnpm test && pnpm build"
   },
   "devDependencies": {
     "supabase": "^2.98.2"
