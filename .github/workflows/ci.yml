@@ -7,6 +7,7 @@
 #   - web-test       : vitest tests for apps/web AND every package
 #   - monorepo-health: pnpm-lock.yaml freshness + peer dep dedup + test timezone
 #   - specs          : openspec master-spec validation + TBD placeholder gate
+#                      + the generated workflow list stays at five
 #
 # Mobile builds (eas build) are NOT run from CI today — they consume
 # EAS free-tier credits. Local validation (pnpm eas:android:local /
@@ -149,10 +150,20 @@ jobs:
       - name: Validate master specs
         run: npx --yes @fission-ai/openspec@1.13.0 validate --specs --strict
 
-      # Greps for the placeholders `openspec archive` leaves behind when a
-      # new capability's Purpose was never written. Runs even if the step
-      # above failed, so a broken PR surfaces both problems in one go.
-      - name: Check for TBD placeholders
+      # `openspec:check` is the composite gate, and it is what a person runs
+      # locally before merging. Two things ride in it:
+      #
+      #   - the placeholders `openspec archive` leaves behind when a new
+      #     capability's Purpose was never written;
+      #   - the generated workflow list. Which workflows OpenSpec writes is a
+      #     global, per-machine setting whose default profile includes
+      #     `explore`, so `openspec update` puts back the instructions this
+      #     repo deliberately dropped — on any machine, with nothing in the
+      #     diff that looks wrong. See .github/scripts/check-openspec-workflows.mjs.
+      #
+      # Runs even if the step above failed, so a broken PR surfaces every
+      # problem in one go.
+      - name: Check placeholders and the generated workflow list
         if: always()
         run: pnpm openspec:check
 
