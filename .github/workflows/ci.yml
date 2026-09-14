@@ -5,8 +5,9 @@
 #   - quality        : eslint + tsc --noEmit for both apps
 #   - web-build      : next build for apps/web with placeholder env
 #   - web-test       : vitest tests for apps/web AND every package
-#   - monorepo-health: pnpm-lock.yaml freshness + peer dep dedup
+#   - monorepo-health: pnpm-lock.yaml freshness + peer dep dedup + test timezone
 #   - specs          : openspec master-spec validation + TBD placeholder gate
+#                      + the generated workflow list stays at five
 #
 # Mobile builds (eas build) are NOT run from CI today — they consume
 # EAS free-tier credits. Local validation (pnpm eas:android:local /
@@ -147,7 +148,7 @@ jobs:
       # "could not determine executable to run". Pinned so a new upstream
       # release cannot redden a PR that changed nothing.
       - name: Validate master specs
-        run: npx --yes @fission-ai/openspec@1.7.0 validate --specs --strict
+        run: npx --yes @fission-ai/openspec@1.13.0 validate --specs --strict
 
       # Greps for the placeholders `openspec archive` leaves behind when a
       # new capability's Purpose was never written. Runs even if the step
@@ -156,7 +157,26 @@ jobs:
         if: always()
         run: pnpm openspec:check
 
+      # Which workflows OpenSpec generates is a global, per-machine setting
+      # whose default profile includes `explore`, so `openspec update` puts
+      # back the agent instructions this repo deliberately dropped — on any
+      # machine, and nothing in the resulting diff looks wrong. Deleting the
+      # files could not record that decision; this is what records it.
+      #
+      # Its own step, not a link in `openspec:check`'s chain: the two gates
+      # above are about the content of the specs and this one is about files
+      # that should not exist, so a red icon here names which of the three
+      # fired. `always()` for the same reason as above — a malformed spec must
+      # not hide a returning `explore` until the next push.
+      - name: Check the generated OpenSpec workflows
+        if: always()
+        run: pnpm check:openspec-workflows
+
   monorepo-health:
+    # El nombre del check NO se toca al agregarle un step, por la misma razón
+    # documentada arriba en `web-test`: la protección de `main` exige los checks
+    # por nombre, y renombrar uno deja al check requerido esperando a alguien que
+    # ya no se reporta nunca. Lo que corre está en los steps.
     name: Monorepo health (lockfile + peer dep dedup)
     runs-on: ubuntu-latest
     steps:
@@ -179,28 +199,18 @@ jobs:
       # the monorepo crashed the mobile bundle with "Cannot read
       # property 'useRef' of null" inside react-native-screens. See
       # apps/mobile/PROXIMAS_FASES.md for the incident.
-      # Why these and not react-dom:
-      # - react: bundled into both web and mobile. Two versions = crash.
-      # - react-native: bundled into mobile. Two versions = crash.
-      # - react-dom: bundled into web only. Mobile transitively pulls a
-      #   different react-dom via @expo/metro-runtime for Expo's web
-      #   export feature, but mobile's native builds never bundle it.
-      #   That duplication is benign and intentional, so it's excluded.
+      #
+      # The rule, and why react-dom is excluded, now live in the script —
+      # it was shell here, which meant CI could check it and a person
+      # could not, and the PR template had to tell people to paste a jq
+      # one-liner instead. `pnpm verify` runs it.
       - name: Detect duplicate critical peer dependencies
-        run: |
-          set -euo pipefail
-          failed=0
-          for pkg in react react-native; do
-            versions=$(pnpm why "$pkg" --json 2>/dev/null \
-              | jq -r --arg name "$pkg" '[.. | objects | select(has("version") and (.name? == $name or .alias? == $name)) | .version] | unique | .[]' \
-              || true)
-            count=$(printf "%s" "$versions" | grep -c . || true)
-            echo "::group::$pkg (${count} version(s) installed)"
-            printf "%s\n" "$versions"
-            echo "::endgroup::"
-            if [ "${count:-0}" -gt 1 ]; then
-              echo "::error::Multiple versions of '$pkg' installed in the workspace. This causes bundle resolution failures (e.g. 'Cannot read property X of null' in React Native). Align the version across apps/web and apps/mobile."
-              failed=1
-            fi
-          done
-          exit $failed
+        run: pnpm check:duplicate-deps
+
+      # Guards against the bug from issue #131: `pnpm test` was green in CI and
+      # red on a developer's machine, on the same commit. The reasoning — why
+      # the financial timezone and not UTC, and why the prefix lives in each
+      # package rather than at the root — now lives in the script, so that it
+      # reaches the person who adds package number 14 rather than only CI.
+      - name: Verify every test script pins the financial timezone
+        run: pnpm check:test-timezone

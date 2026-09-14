@@ -1,3 +1,4 @@
+import { types } from '@electric-sql/pglite'
 import type { PGlite } from '@electric-sql/pglite'
 import type { GranaSupabaseClient } from '@grana/supabase'
 
@@ -132,9 +133,9 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
   ): Promise<R1 | R2> {
     const { text, params } = this.build()
     const result = await this.db
-      .query(text, params)
+      .query(text, params, PGLITE_QUERY_OPTIONS)
       .then(async (rows) => ({
-        data: await this.attachEmbeds(toPostgrestJson(rows)),
+        data: await this.attachEmbeds(rows.rows),
         error: null,
       }))
       .catch((error: Error) => ({ data: null, error: toPostgrestError(error) }))
@@ -169,8 +170,9 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
         const result = await this.db.query(
           `select ${columns} from public.${embed.table} where id = any($1)`,
           [keys],
+          PGLITE_QUERY_OPTIONS,
         )
-        for (const row of toPostgrestJson(result) as Array<Record<string, unknown>>) {
+        for (const row of result.rows as Array<Record<string, unknown>>) {
           related.set(row.id, row)
         }
       }
@@ -201,42 +203,48 @@ function toPostgrestError(error: Error): {
   }
 }
 
-/** Postgres OID of `date`. PGlite decodes it to a JS Date; PostgREST sends 'YYYY-MM-DD'. */
-const OID_DATE = 1082
-
 /**
- * PGlite hands back decoded JS values; PostgREST hands back JSON. The difference
- * that matters here is `date`, which arrives as a Date object and would reach the
- * calendar walker — which does string arithmetic — as something with no `.split`.
- * Converting it is not cosmetic: it is what makes this harness represent the
- * client the generator actually talks to.
+ * Temporal columns reach the client as TEXT, the way PostgREST sends them, and
+ * the way the calendar walker — string arithmetic all the way down — expects to
+ * receive them. Neither answer may depend on the timezone of the process that
+ * ran the test.
+ *
+ * `DATE` is an identity parser, and it is load-bearing. Postgres carries no
+ * timezone in a `DATE`, but PGlite's default parser decodes one to a JS Date at
+ * midnight UTC. Formatting that instant back with the LOCAL getters
+ * (`getFullYear`/`getMonth`/`getDate`) subtracts the zone's offset, so anywhere
+ * west of Greenwich — Argentina included — it returns the PREVIOUS day: the 23rd
+ * read back as the 22nd. That is not a rounding error in a test, it is the
+ * harness holding an opinion about what day it is that the real client does not
+ * have, and it made 14 tests fail in Buenos Aires while passing in CI, whose
+ * runners happen to sit at UTC where the offset is zero (issue #131). Keeping
+ * the value as text removes the Date from the path entirely rather than
+ * compensating for it with the matching UTC getters — there is no conversion
+ * left to get wrong.
+ *
+ * `TIMESTAMPTZ` needs the opposite treatment, and the identity parser would be a
+ * TRAP here: Postgres renders a timestamptz in the SESSION's timezone, so the
+ * raw text of one instant is '2026-06-23 00:00:00+00' under UTC and
+ * '2026-06-22 21:00:00-03' in Buenos Aires. Handing that through would make the
+ * value environment-dependent again — the same disease, one type over. So the
+ * instant is decoded with PGlite's own parser (which reads the explicit offset
+ * correctly) and re-rendered with `toISOString()`, the one formatter that cannot
+ * observe the local zone. Verified identical from UTC-11 to UTC+9.
+ *
+ * Two deltas from PostgREST remain, both deliberate: the offset prints as 'Z'
+ * rather than '+00:00', and sub-second precision is milliseconds rather than
+ * Postgres's microseconds. What the double guarantees is the TYPE (a string),
+ * the INSTANT, and independence from the environment. No read selects a
+ * timestamptz today — `created_at` appears only in an `order()` — so this closes
+ * the class of bug before a read walks into it.
  */
-function toPostgrestJson(result: {
-  rows: unknown[]
-  fields: Array<{ name: string; dataTypeID: number }>
-}): unknown[] {
-  const dateColumns = new Set(
-    result.fields.filter((field) => field.dataTypeID === OID_DATE).map((field) => field.name),
-  )
-  if (dateColumns.size === 0) return result.rows
-
-  return result.rows.map((row) => {
-    const out: Record<string, unknown> = { ...(row as Record<string, unknown>) }
-    for (const column of dateColumns) {
-      const value = out[column]
-      if (value instanceof Date) {
-        // UTC parts, because PGlite decodes a `date` as midnight UTC. Reading
-        // LOCAL parts turns 2026-05-23 into 2026-05-22 anywhere west of UTC —
-        // Buenos Aires included — so every date the generator read came back a
-        // day early and the whole suite answered wrong on the machine this app
-        // is built on. It passed in UTC, and east of UTC, which is exactly the
-        // shape of a bug that survives CI.
-        out[column] = value.toISOString().slice(0, 10)
-      }
-    }
-    return out
-  })
-}
+const PGLITE_QUERY_OPTIONS = {
+  parsers: {
+    [types.DATE]: (value: string) => value,
+    [types.TIMESTAMPTZ]: (value: string) =>
+      (types.parsers[types.TIMESTAMPTZ](value) as Date).toISOString(),
+  },
+} as const
 
 /**
  * An embedded resource in a PostgREST select: `alias:table(cols)`, optionally
@@ -369,8 +377,9 @@ class UpdateQuery implements PromiseLike<{ data: unknown[] | null; error: QueryE
       .query(
         `update public.${this.table} set ${assignments}${clause} returning ${columns}`,
         params,
+        PGLITE_QUERY_OPTIONS,
       )
-      .then((result) => ({ data: toPostgrestJson(result), error: null }))
+      .then((result) => ({ data: result.rows, error: null }))
       .catch((error: Error) => ({ data: null, error: toPostgrestError(error) }))
   }
 

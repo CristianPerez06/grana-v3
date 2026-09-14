@@ -51,15 +51,17 @@ Change: `openspec/changes/<nombre>/`
 
 #### Validaciones locales (mismas que corre CI)
 
-<!-- CI corre 5 jobs en paralelo sobre cada PR a `main`: quality, web-build, web-test, monorepo-health y specs. Correlos localmente antes de abrir el PR. -->
+<!-- CI corre 5 jobs en paralelo sobre cada PR a `main`: quality, web-build, web-test, monorepo-health y specs. `pnpm verify` corre todo eso en un comando — preferilo, porque los scripts sueltos de abajo son más angostos de lo que suenan y se puede correr todos y aun así saltear un step de CI. -->
 
-- [ ] Lint web y mobile pasan (`pnpm lint` + `pnpm lint:mobile`)
+- [ ] `pnpm verify` pasa, o tildé una por una todas las casillas de abajo
+- [ ] Lint web y mobile pasan (`pnpm lint` + `pnpm lint:mobile` — cada uno es una sola app)
 - [ ] Typecheck web y mobile pasan (`pnpm typecheck` + `pnpm typecheck:mobile`)
 - [ ] Tests pasan (`pnpm test` — web **y** paquetes)
 - [ ] Build de producción de web pasa (`pnpm build`)
 - [ ] `pnpm openspec:check` pasa (sin placeholders `TBD` en los master specs)
-- [ ] Si toqué dependencias: `pnpm-lock.yaml` actualizado y commiteado (`pnpm install --frozen-lockfile` pasa)
-- [ ] Si toqué dependencias: no se duplicaron `react` ni `react-native` en el workspace
+- [ ] `pnpm check:openspec-workflows` pasa (los workflows generados por OpenSpec siguen siendo cinco; `explore` no volvió)
+- [ ] `pnpm check:duplicate-deps` y `pnpm check:test-timezone` pasan
+- [ ] Si toqué dependencias: `pnpm-lock.yaml` actualizado y commiteado (`pnpm install --frozen-lockfile` pasa). **Es el único step de CI que `verify` no cubre**, a propósito: verificar no debería podar tu `node_modules`.
 
 #### Arquitectura y convenciones
 
