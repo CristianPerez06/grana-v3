@@ -452,11 +452,15 @@ que el usuario ya no puede deshacer.
     el #96: una ocurrencia es única por `(regla, vencimiento)` y no se reescribe. Omitirla REGISTRA que
     existió y no correspondía, en vez de fingir que nunca estuvo.
 - [x] 3.2 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm lint:mobile`, `pnpm typecheck:mobile`, `pnpm build`.
-      Los seis en verde sobre `82df170b`: lint y typecheck limpios en web y en nativo; **1.748 tests**
-      en 136 archivos (974 web, 252 recurrences, 228 dashboard, 85 cards, 81 money-logic, 60
-      movement-form, 47 transactions-mutations, 11 shared, 6 accounts, 4 transactions); build
-      compilado y 33 páginas generadas. La suite de recurrences se corrió además con
+      Los seis en verde sobre la punta ya actualizada con `main`: lint y typecheck limpios en web y
+      en nativo; **1.772 tests** (974 web, 259 recurrences, 228 dashboard, 85 cards, 81 money-logic,
+      60 movement-form, 47 transactions-mutations, 17 validation, 11 shared, 6 accounts, 4
+      transactions); build compilado. La suite de recurrences se corrió además con
       `TZ=America/Argentina/Buenos_Aires`, porque varios de sus casos dependen del día local.
+      El merge de `main` trajo #134, que resuelve la deriva de fechas del harness PGlite con
+      **parsers de decodificación** en lugar del post-proceso de filas que se había escrito acá.
+      Conflicto resuelto a favor de `main`: intercepta antes y deja el `Date` fuera del camino, en
+      vez de compensarlo después.
 - [x] 3.3 Archivar el change y aplicar el delta al spec maestro de `transactions`.
       El requirement del detalle de una regla recurrente se reemplazó entero en
       `openspec/specs/transactions/spec.md`: la fecha de referencia como ancla del calendario (y por
