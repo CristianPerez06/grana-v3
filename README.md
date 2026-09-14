@@ -148,7 +148,10 @@ Los comandos sin sufijo apuntan a `apps/web`. Para mobile usá los sufijos `:mob
 | `pnpm eas:android`        | Build de Android con EAS (remoto)                             |
 | `pnpm eas:ios`            | Build de iOS con EAS (remoto)                                 |
 | `pnpm openspec:check`     | Valida que ningún spec maestro tenga `Purpose: TBD` residual  |
-| `pnpm openspec:workflows` | Valida que los workflows generados por OpenSpec sigan siendo cinco |
+| `pnpm check:openspec-workflows` | Valida que los workflows generados por OpenSpec sigan siendo cinco |
+| `pnpm check:duplicate-deps` | Falla si `react` o `react-native` quedaron duplicados en el workspace |
+| `pnpm check:test-timezone` | Falla si algún script `test` no corre en la zona horaria financiera |
+| `pnpm verify`             | Todo lo que corre CI y se puede correr local, en un comando  |
 
 ## Convenciones
 
