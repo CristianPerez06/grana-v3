@@ -58,6 +58,7 @@ Change: `openspec/changes/<nombre>/`
 - [ ] Tests pasan (`pnpm test` — web **y** paquetes)
 - [ ] Build de producción de web pasa (`pnpm build`)
 - [ ] `pnpm openspec:check` pasa (sin placeholders `TBD` en los master specs)
+- [ ] `pnpm openspec:workflows` pasa (los workflows generados por OpenSpec siguen siendo cinco; `explore` no volvió)
 - [ ] Si toqué dependencias: `pnpm-lock.yaml` actualizado y commiteado (`pnpm install --frozen-lockfile` pasa)
 - [ ] Si toqué dependencias: no se duplicaron `react` ni `react-native` en el workspace
 

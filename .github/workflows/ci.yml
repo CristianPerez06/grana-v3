@@ -150,22 +150,27 @@ jobs:
       - name: Validate master specs
         run: npx --yes @fission-ai/openspec@1.13.0 validate --specs --strict
 
-      # `openspec:check` is the composite gate, and it is what a person runs
-      # locally before merging. Two things ride in it:
-      #
-      #   - the placeholders `openspec archive` leaves behind when a new
-      #     capability's Purpose was never written;
-      #   - the generated workflow list. Which workflows OpenSpec writes is a
-      #     global, per-machine setting whose default profile includes
-      #     `explore`, so `openspec update` puts back the instructions this
-      #     repo deliberately dropped — on any machine, with nothing in the
-      #     diff that looks wrong. See .github/scripts/check-openspec-workflows.mjs.
-      #
-      # Runs even if the step above failed, so a broken PR surfaces every
-      # problem in one go.
-      - name: Check placeholders and the generated workflow list
+      # Greps for the placeholders `openspec archive` leaves behind when a
+      # new capability's Purpose was never written. Runs even if the step
+      # above failed, so a broken PR surfaces both problems in one go.
+      - name: Check for TBD placeholders
         if: always()
         run: pnpm openspec:check
+
+      # Which workflows OpenSpec generates is a global, per-machine setting
+      # whose default profile includes `explore`, so `openspec update` puts
+      # back the agent instructions this repo deliberately dropped — on any
+      # machine, and nothing in the resulting diff looks wrong. Deleting the
+      # files could not record that decision; this is what records it.
+      #
+      # Its own step, not a link in `openspec:check`'s chain: the two gates
+      # above are about the content of the specs and this one is about files
+      # that should not exist, so a red icon here names which of the three
+      # fired. `always()` for the same reason as above — a malformed spec must
+      # not hide a returning `explore` until the next push.
+      - name: Check the generated OpenSpec workflows
+        if: always()
+        run: pnpm openspec:workflows
 
   monorepo-health:
     # El nombre del check NO se toca al agregarle un step, por la misma razón
