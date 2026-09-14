@@ -112,7 +112,7 @@ La app estará disponible en [http://localhost:3000](http://localhost:3000).
 
 ### 6. (Opcional) Instalar el CLI de OpenSpec
 
-El repo está configurado para usar [OpenSpec](https://github.com/Fission-AI/OpenSpec) como flujo de spec-driven development. Los skills y slash commands ya vienen versionados en `.claude/`, pero el CLI se instala aparte:
+El repo está configurado para usar [OpenSpec](https://github.com/Fission-AI/OpenSpec) como flujo de spec-driven development. Los skills y slash commands ya vienen versionados en `.claude/` (Claude Code) y `.agents/` (Codex), pero el CLI se instala aparte:
 
 ```bash
 pnpm add -g @fission-ai/openspec
@@ -120,9 +120,11 @@ pnpm add -g @fission-ai/openspec
 
 Una vez instalado, dentro de Claude Code podés usar:
 
+- `/grana-explore` — pensar / refinar una idea antes de proponerla (reemplaza a `/opsx:explore`)
 - `/opsx:propose "<idea>"` — crear una nueva propuesta de cambio
-- `/opsx:explore` — explorar / refinar una idea antes de proponerla
 - `/opsx:apply` — implementar las tasks de un cambio
+- `/opsx:update` — revisar los artefactos de un cambio ya propuesto
+- `/opsx:sync` — bajar las deltas del cambio a las specs maestras
 - `/opsx:archive` — archivar un cambio ya completado
 
 Las propuestas viven en `openspec/changes/` y las specs en `openspec/specs/`.
