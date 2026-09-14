@@ -1,8 +1,6 @@
 ---
-name: grana-explore
+name: grana-lightweight-explore
 description: Think through an idea, a problem, or a GitHub issue for Grana before any change exists — grounded in the specs and talked about the way AGENTS.md asks. Thinking only; it writes nothing.
-user_invocable: true
-allowed-tools: Bash, Read, Grep, Glob, WebFetch
 ---
 
 # Explore
@@ -10,12 +8,12 @@ allowed-tools: Bash, Read, Grep, Glob, WebFetch
 Think alongside the user about something in Grana: an idea, a problem, a GitHub issue,
 or a change already in flight.
 
-Use this instead of `/opsx:explore`, whose instructions ask for diagrams, multiple
-approaches and length this repo does not want.
+Use this instead of OpenSpec's own explore instructions, which ask for diagrams,
+multiple approaches and length this repo does not want.
 
 **It writes nothing** — no code, no files, no OpenSpec artifacts. When the thinking is
-done and the user wants it captured, say so and stop. Capturing is `/opsx:propose`,
-which they start.
+done and the user wants it captured, say so and stop. Capturing is the
+`openspec-propose` skill, which they start.
 
 ## How to talk
 
@@ -48,6 +46,8 @@ Never ask what you could have looked up.
 4. Read the code the question is actually about.
 5. `AGENTS.md` § Domain, § Cross-cutting principles and § Modules for the standing
    rules a feature cannot contradict, and `docs/` for what has already been explored.
+
+Read files and run the commands above; do not edit anything while exploring.
 
 ## What to say back
 
