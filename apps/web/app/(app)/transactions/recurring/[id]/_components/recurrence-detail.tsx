@@ -95,13 +95,14 @@ export const RecurrenceDetail = ({ rule }: Props) => {
       ? tTx(`types.${type}`)
       : type
 
-  const frequencyLabel =
-    rule.frequency === 'weekly' ||
-    rule.frequency === 'biweekly' ||
-    rule.frequency === 'monthly' ||
-    rule.frequency === 'annual'
-      ? t(`frequencies.${rule.frequency}`)
-      : rule.frequency
+  // No narrowing: `frequency` is `RecurrenceFrequencyLabel`, which is exactly
+  // the five keys under `frequencies.*`. The guard that used to stand here
+  // listed four of them and printed the raw column value for the fifth, so a
+  // custom rule read `custom` on this card while the list and the edit drawer
+  // both said "Personalizado" (issue #141). It was written when the row's type
+  // claimed `frequency` could be any string; #121 fixed the type, and the guard
+  // outlived the reason for it.
+  const frequencyLabel = t(`frequencies.${rule.frequency}`)
 
   const heroDesc = rule.description || rule.category?.name || typeLabel
 

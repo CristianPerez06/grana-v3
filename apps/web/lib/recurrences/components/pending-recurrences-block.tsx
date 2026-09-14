@@ -334,9 +334,11 @@ export const PendingRecurrencesBlock = ({
           const destinationName = instance.destination_account?.name
           const movementLabel =
             tTx(`types.${instance.recurrence.movement_type}` as 'types.income') ?? '—'
-          const freqLabel = t(
-            `frequencies.${instance.recurrence.frequency}` as 'frequencies.weekly',
-          )
+          // No cast: `frequency` is `RecurrenceFrequencyLabel`, exactly the five
+          // keys under `frequencies.*`. Asserting `'frequencies.weekly'` told
+          // the typechecker a lie that happened to be harmless — and would have
+          // hidden a real missing key, which is the shape of the bug in #141.
+          const freqLabel = t(`frequencies.${instance.recurrence.frequency}`)
           const error = errorByInstance[instance.id]
           const busy = isPending && activeId === instance.id
           const isEditing = editingId === instance.id
