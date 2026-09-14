@@ -75,6 +75,17 @@ openspec/          # spec-driven workflow
   ```
 
   Leaving the default `core` profile puts `explore` back in both folders on the next run.
+  CI is what notices: **`pnpm openspec:workflows`** runs
+  `.github/scripts/check-openspec-workflows.mjs`, which fails if the generated workflows are not
+  exactly those five — in `.claude/commands/opsx/`, in `.agents/skills/`, or in `.claude/skills/`,
+  a location the CLI used to write and no longer does. It reads the working tree, so it fails the
+  moment `openspec update` writes the file, before it is staged. The rule is the whole set rather
+  than a ban on `explore` so that a sixth workflow nobody asked for is caught too. It is its own
+  command and its own step in the `specs` job, NOT a link in `openspec:check`'s chain: that gate
+  is about the content of the specs, this one is about files that should not exist, and a red
+  check should say which of the three fired. `.gitignore` is deliberately NOT used for this: both
+  folders are versioned on purpose, and ignoring the files would hide them from CI without
+  stopping an agent on that machine from reading them.
 
 When a module that lives in `apps/web/lib/` later needs to be reused by mobile, promote it to `packages/` rather than copying.
 

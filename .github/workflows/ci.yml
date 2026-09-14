@@ -7,6 +7,7 @@
 #   - web-test       : vitest tests for apps/web AND every package
 #   - monorepo-health: pnpm-lock.yaml freshness + peer dep dedup + test timezone
 #   - specs          : openspec master-spec validation + TBD placeholder gate
+#                      + the generated workflow list stays at five
 #
 # Mobile builds (eas build) are NOT run from CI today — they consume
 # EAS free-tier credits. Local validation (pnpm eas:android:local /
@@ -155,6 +156,21 @@ jobs:
       - name: Check for TBD placeholders
         if: always()
         run: pnpm openspec:check
+
+      # Which workflows OpenSpec generates is a global, per-machine setting
+      # whose default profile includes `explore`, so `openspec update` puts
+      # back the agent instructions this repo deliberately dropped — on any
+      # machine, and nothing in the resulting diff looks wrong. Deleting the
+      # files could not record that decision; this is what records it.
+      #
+      # Its own step, not a link in `openspec:check`'s chain: the two gates
+      # above are about the content of the specs and this one is about files
+      # that should not exist, so a red icon here names which of the three
+      # fired. `always()` for the same reason as above — a malformed spec must
+      # not hide a returning `explore` until the next push.
+      - name: Check the generated OpenSpec workflows
+        if: always()
+        run: pnpm openspec:workflows
 
   monorepo-health:
     # El nombre del check NO se toca al agregarle un step, por la misma razón

@@ -148,6 +148,7 @@ Los comandos sin sufijo apuntan a `apps/web`. Para mobile usá los sufijos `:mob
 | `pnpm eas:android`        | Build de Android con EAS (remoto)                             |
 | `pnpm eas:ios`            | Build de iOS con EAS (remoto)                                 |
 | `pnpm openspec:check`     | Valida que ningún spec maestro tenga `Purpose: TBD` residual  |
+| `pnpm openspec:workflows` | Valida que los workflows generados por OpenSpec sigan siendo cinco |
 
 ## Convenciones
 
