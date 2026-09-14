@@ -132,9 +132,9 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
   ): Promise<R1 | R2> {
     const { text, params } = this.build()
     const result = await this.db
-      .query(text, params)
+      .query(text, params, PGLITE_QUERY_OPTIONS)
       .then(async (rows) => ({
-        data: await this.attachEmbeds(toPostgrestJson(rows)),
+        data: await this.attachEmbeds(rows.rows),
         error: null,
       }))
       .catch((error: Error) => ({ data: null, error: toPostgrestError(error) }))
@@ -169,8 +169,9 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
         const result = await this.db.query(
           `select ${columns} from public.${embed.table} where id = any($1)`,
           [keys],
+          PGLITE_QUERY_OPTIONS,
         )
-        for (const row of toPostgrestJson(result) as Array<Record<string, unknown>>) {
+        for (const row of result.rows as Array<Record<string, unknown>>) {
           related.set(row.id, row)
         }
       }
@@ -201,39 +202,32 @@ function toPostgrestError(error: Error): {
   }
 }
 
-/** Postgres OID of `date`. PGlite decodes it to a JS Date; PostgREST sends 'YYYY-MM-DD'. */
+/** Postgres OID of `date`. */
 const OID_DATE = 1082
 
 /**
- * PGlite hands back decoded JS values; PostgREST hands back JSON. The difference
- * that matters here is `date`, which arrives as a Date object and would reach the
- * calendar walker — which does string arithmetic — as something with no `.split`.
- * Converting it is not cosmetic: it is what makes this harness represent the
- * client the generator actually talks to.
+ * A `date` reaches the client as the text 'YYYY-MM-DD', which is what PostgREST
+ * sends and what the calendar walker — string arithmetic all the way down —
+ * expects to receive.
+ *
+ * This is an identity parser, and it is load-bearing. Postgres carries no
+ * timezone in a `DATE`, but PGlite's default parser decodes one to a JS Date at
+ * midnight UTC. Formatting that instant back with the LOCAL getters
+ * (`getFullYear`/`getMonth`/`getDate`) subtracts the zone's offset, so anywhere
+ * west of Greenwich — Argentina included — it returns the PREVIOUS day: the 23rd
+ * read back as the 22nd. That is not a rounding error in a test, it is the
+ * harness holding an opinion about what day it is that the real client does not
+ * have, and it made 14 tests fail in Buenos Aires while passing in CI, whose
+ * runners happen to sit at UTC where the offset is zero (issue #131).
+ *
+ * Keeping the value as text removes the Date from the path entirely, instead of
+ * compensating for it with the matching UTC getters. There is no conversion left
+ * to get wrong, and the double now hands back exactly the representation
+ * PostgREST hands back — which is the whole point of this harness.
  */
-function toPostgrestJson(result: {
-  rows: unknown[]
-  fields: Array<{ name: string; dataTypeID: number }>
-}): unknown[] {
-  const dateColumns = new Set(
-    result.fields.filter((field) => field.dataTypeID === OID_DATE).map((field) => field.name),
-  )
-  if (dateColumns.size === 0) return result.rows
-
-  return result.rows.map((row) => {
-    const out: Record<string, unknown> = { ...(row as Record<string, unknown>) }
-    for (const column of dateColumns) {
-      const value = out[column]
-      if (value instanceof Date) {
-        const year = value.getFullYear()
-        const month = String(value.getMonth() + 1).padStart(2, '0')
-        const day = String(value.getDate()).padStart(2, '0')
-        out[column] = `${year}-${month}-${day}`
-      }
-    }
-    return out
-  })
-}
+const PGLITE_QUERY_OPTIONS = {
+  parsers: { [OID_DATE]: (value: string) => value },
+} as const
 
 /**
  * An embedded resource in a PostgREST select: `alias:table(cols)`, optionally
@@ -366,8 +360,9 @@ class UpdateQuery implements PromiseLike<{ data: unknown[] | null; error: QueryE
       .query(
         `update public.${this.table} set ${assignments}${clause} returning ${columns}`,
         params,
+        PGLITE_QUERY_OPTIONS,
       )
-      .then((result) => ({ data: toPostgrestJson(result), error: null }))
+      .then((result) => ({ data: result.rows, error: null }))
       .catch((error: Error) => ({ data: null, error: toPostgrestError(error) }))
   }
 
