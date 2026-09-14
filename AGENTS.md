@@ -287,6 +287,8 @@ Two gates in one command, mirroring the `specs` job in `ci.yml`:
 
 Step 1 exists because it once didn't: `openspec:check` was the grep alone, so an archive that produced nine requirements without `SHALL` passed locally and reddened CI. A local gate that is weaker than the CI job it stands for is worse than no gate — it buys false confidence. Run it as part of the pre-merge checklist.
 
+Both gates always run, and the command fails if either did. The grep runs even when step 1 failed, so one run reports both problems. The failure is carried to the end on purpose: the script was once `validate && if …; fi; if …; fi; echo OK`, and in shell the `&&` only guards the first `if` — the exit code was the final `echo`'s, so an invalid spec or change printed `openspec:check OK` and exited 0 (#146). When editing that one-liner, check its exit code with a spec you broke on purpose, not by reading it.
+
 ## Email templates
 
 - Supabase email templates used by the app live versioned under `supabase/templates/` (`confirm-signup.html`, `reset-password.html`). The repo is the **source of truth**; the Supabase dashboard is a manual mirror until we adopt the Supabase CLI.

@@ -153,6 +153,9 @@ jobs:
       # Greps for the placeholders `openspec archive` leaves behind when a
       # new capability's Purpose was never written. Runs even if the step
       # above failed, so a broken PR surfaces both problems in one go.
+      # `openspec:check` also runs `validate --all`, so this is the step that
+      # fails on an invalid active change — the one above covers master specs
+      # only. It fails if either gate did (#146).
       - name: Check for TBD placeholders
         if: always()
         run: pnpm openspec:check
