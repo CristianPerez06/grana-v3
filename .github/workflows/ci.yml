@@ -5,7 +5,7 @@
 #   - quality        : eslint + tsc --noEmit for both apps
 #   - web-build      : next build for apps/web with placeholder env
 #   - web-test       : vitest tests for apps/web AND every package
-#   - monorepo-health: pnpm-lock.yaml freshness + peer dep dedup
+#   - monorepo-health: pnpm-lock.yaml freshness + peer dep dedup + test timezone
 #   - specs          : openspec master-spec validation + TBD placeholder gate
 #
 # Mobile builds (eas build) are NOT run from CI today — they consume
@@ -157,6 +157,10 @@ jobs:
         run: pnpm openspec:check
 
   monorepo-health:
+    # El nombre del check NO se toca al agregarle un step, por la misma razón
+    # documentada arriba en `web-test`: la protección de `main` exige los checks
+    # por nombre, y renombrar uno deja al check requerido esperando a alguien que
+    # ya no se reporta nunca. Lo que corre está en los steps.
     name: Monorepo health (lockfile + peer dep dedup)
     runs-on: ubuntu-latest
     steps:
@@ -202,5 +206,42 @@ jobs:
               echo "::error::Multiple versions of '$pkg' installed in the workspace. This causes bundle resolution failures (e.g. 'Cannot read property X of null' in React Native). Align the version across apps/web and apps/mobile."
               failed=1
             fi
+          done
+          exit $failed
+
+      # Guards against the bug from issue #131: `pnpm test` was green in CI and
+      # red on a developer's machine, on the same commit. The tests inherited the
+      # timezone of whatever ran them, and GitHub's runners sit at UTC — where a
+      # date read one day early reads correctly, because the offset is zero. The
+      # gate was passing by accident of the environment.
+      #
+      # Grana's accounting date is Argentine, so the suite runs in the financial
+      # timezone and not in UTC: pinning UTC would also make local and CI agree,
+      # but agree in a timezone the product never runs in, and would keep hiding
+      # this family of date bugs instead of exposing them.
+      #
+      # The prefix lives in each package's own `test` script rather than in one
+      # place, because `pnpm test` is `pnpm -r test` and a developer iterating on
+      # one suite runs `pnpm --filter <pkg> test` directly — a root-only prefix
+      # would miss exactly that path. This step is what keeps package number 13
+      # from silently going back to inheriting the machine's zone.
+      - name: Verify every test script pins the financial timezone
+        run: |
+          set -euo pipefail
+          tz='TZ=America/Argentina/Buenos_Aires'
+          failed=0
+          for manifest in packages/*/package.json apps/*/package.json; do
+            script=$(jq -r '.scripts.test // empty' "$manifest")
+            [ -n "$script" ] || continue
+            name=$(jq -r '.name' "$manifest")
+            case "$script" in
+              "$tz "*)
+                echo "ok      $name"
+                ;;
+              *)
+                echo "::error file=$manifest::'$name' has a test script that does not pin the financial timezone. Prefix it with \"$tz \" so its tests run in the timezone the product runs in (see issue #131)."
+                failed=1
+                ;;
+            esac
           done
           exit $failed

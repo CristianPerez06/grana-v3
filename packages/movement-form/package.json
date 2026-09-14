@@ -10,7 +10,7 @@
     "./frequent-classifications": "./src/frequent-classifications.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "TZ=America/Argentina/Buenos_Aires vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

@@ -8,7 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run --passWithNoTests",
+    "test": "TZ=America/Argentina/Buenos_Aires vitest run --passWithNoTests",
     "test:watch": "vitest"
   },
   "dependencies": {
