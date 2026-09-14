@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { X } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { parseMoneyInput } from '@grana/validation'
@@ -31,10 +31,12 @@ type Props = {
 /**
  * Edit a recurring rule's mutable fields — amount / frequency / reference date /
  * end date / description. Account, category and movement type are fixed at creation (the
- * instance is a snapshot of the rule) and intentionally absent here; frequency
- * offers only the presets (no custom) — parity with web's edit drawer. Rendered
- * as the panel content of a `Drawer`. On save it invalidates the detail + hub
- * and closes.
+ * instance is a snapshot of the rule) and intentionally absent here. Frequency
+ * offers the four presets to CHOOSE from, plus a non-selectable chip naming the
+ * rule's own calendar while that calendar is custom — parity with web's edit
+ * drawer, which renders the same thing as a disabled `<option>`. Rendered as the
+ * panel content of a `Drawer`. On save it invalidates the detail + hub and
+ * closes.
  */
 export function RecurrenceEditForm({ rule, onClose }: Props) {
   const t = useT()
@@ -137,148 +139,182 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
   }
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-page">
-      {/* Panel header — title + close */}
-      <View className="flex-row items-center justify-between border-b border-border-soft px-5 py-4">
-        <Text className="text-[17px] font-bold text-text">{t('recurrences.edit_title')}</Text>
-        <Pressable
-          onPress={onClose}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.cancel')}
-          className="h-9 w-9 items-center justify-center rounded-lg"
-        >
-          <X size={20} color={colors.textMuted} />
-        </Pressable>
-      </View>
-
-      <FormSheetBody contentClassName="gap-5 px-5 py-6">
-        {/* Amount */}
-        <View className="flex-col gap-1.5">
-          <Label>{t('recurrences.labels.amount')}</Label>
-          <MoneyAmountInput value={amount} onChangeText={setAmount} placeholder="0" />
+    // ITS OWN PROVIDER, and that is not redundant with the root one. `Drawer`
+    // hosts this panel inside an RN `Modal`, which is a SEPARATE NATIVE WINDOW:
+    // the `SafeAreaProvider` in `app/_layout.tsx` does not reach into it, so the
+    // `SafeAreaView` below reads insets of zero and plants the header at y=0 —
+    // under the Dynamic Island, with the title behind the pill and the close
+    // button pushed against it. Same reason `Drawer` mounts its own
+    // `KeyboardProvider` rather than relying on the root one.
+    <SafeAreaProvider>
+      <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-page">
+        {/* Panel header — title + close */}
+        <View className="flex-row items-center justify-between border-b border-border-soft px-5 py-4">
+          <Text className="text-[17px] font-bold text-text">{t('recurrences.edit_title')}</Text>
+          <Pressable
+            onPress={onClose}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.cancel')}
+            className="h-9 w-9 items-center justify-center rounded-lg"
+          >
+            <X size={20} color={colors.textMuted} />
+          </Pressable>
         </View>
 
-        {/* Frequency (presets only) */}
-        <View className="flex-col gap-1.5">
-          <Label>{t('recurrences.labels.frequency')}</Label>
-          <View className="flex-row flex-wrap gap-2">
-            {PRESETS.map((f) => {
-              const active = frequency === f
-              return (
-                <Pressable
-                  key={f}
-                  onPress={() => setFrequency(f)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
-                >
-                  <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}>
-                    {t(`recurrences.frequencies.${f}`)}
-                  </Text>
-                </Pressable>
-              )
-            })}
+        <FormSheetBody contentClassName="gap-5 px-5 py-6">
+          {/* Amount */}
+          <View className="flex-col gap-1.5">
+            <Label>{t('recurrences.labels.amount')}</Label>
+            <MoneyAmountInput value={amount} onChangeText={setAmount} placeholder="0" />
           </View>
-        </View>
 
-        {/* Reference date — the rule's calendar anchor */}
-        <View className="flex-col gap-1.5">
-          <Label>{t('recurrences.labels.reference_date')}</Label>
-          <DateField
-            value={startDate}
-            onChange={setStartDate}
-            placeholder={t('common.pick_date')}
-          />
-          {/* What the user cannot deduce: the change rules from here on, and the
-              occurrences that already exist keep their own date — an old one
-              sitting on the old day is not a bug. It deliberately does NOT say
-              what to do with it: confirming or skipping it is the user's call. */}
-          <Text className="text-[12px] text-text-soft">
-            {t('recurrences.reference_date_hint')}
-          </Text>
-        </View>
-
-        {/* THE AMBIGUITY IS THE USER'S TO RESOLVE, and only when the anchor
-            actually moves. The cycle in flight may already be settled — in which
-            case the corrected schedule has to rule from the NEXT one, or the
-            month gets a second salary — or it may not be, and then it rules now.
-            From the data both look the same. Two concrete dates, never the word
-            "month": a rule every three days has none. */}
-        {anchorMoved && choice.kind === 'ask' ? (
-          <View className="flex-col gap-2 rounded-xl border border-border bg-border-soft px-4 py-3">
-            <Text className="text-[13px] font-semibold text-text">
-              {t('recurrences.reference_date_question')}
-            </Text>
-            {choice.options.map((option) => {
-              const isSelected = selected === option
-              return (
-                <Pressable
-                  key={option}
-                  onPress={() => setEffectiveFrom(option)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isSelected }}
-                  className="flex-row items-center gap-2 py-1"
+          {/* Frequency (presets only) */}
+          <View className="flex-col gap-1.5">
+            <Label>{t('recurrences.labels.frequency')}</Label>
+            <View className="flex-row flex-wrap gap-2">
+              {/* Only while the rule IS custom, and not selectable: no preset
+                  carries that calendar, so without this chip all four sit dark
+                  and the field reads as unanswered on a rule that fires every
+                  three days. It is not a choice, it is the truth about where the
+                  rule stands — the same chip web renders as a disabled
+                  `<option>`. Tapping a preset from here still replaces the
+                  custom calendar, which is the only way out of it. */}
+              {frequency === 'custom' ? (
+                <View
+                  accessibilityRole="text"
+                  className="rounded-lg border border-navy bg-card px-3.5 py-2"
                 >
-                  <View
-                    className={`h-4 w-4 rounded-full border ${
-                      isSelected ? 'border-navy bg-navy' : 'border-border bg-card'
-                    }`}
-                  />
-                  <Text className="text-[13px] text-text">
-                    {formatShortDate(option, locale)}
+                  <Text className="text-sm font-bold text-navy">
+                    {t('recurrences.frequencies.custom')}
                   </Text>
-                </Pressable>
-              )
-            })}
-          </View>
-        ) : null}
-        {anchorMoved && choice.kind === 'paused' ? (
-          <Text className="text-[12px] text-text-soft">
-            {t('recurrences.reference_date_paused')}
-          </Text>
-        ) : null}
-        {anchorMoved && choice.kind === 'exhausted' ? (
-          <Text className="text-[12px] text-text-soft">
-            {t('recurrences.reference_date_exhausted')}
-          </Text>
-        ) : null}
-
-        {/* End date (optional) */}
-        <View className="flex-col gap-1.5">
-          <Label>{t('recurrences.labels.end_date')}</Label>
-          <DateField value={endDate} onChange={setEndDate} placeholder={t('common.pick_date')} />
-        </View>
-
-        {/* Description (optional) */}
-        <View className="flex-col gap-1.5">
-          <Label>{t('recurrences.labels.description')}</Label>
-          <Input value={description} onChangeText={setDescription} />
-        </View>
-
-        {formError && <FormError message={formError} />}
-
-        <Pressable
-          onPress={submit}
-          disabled={submitting}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: submitting }}
-          className={`mt-1 h-14 flex-row items-center justify-center rounded-2xl bg-emerald ${
-            submitting ? 'opacity-60' : ''
-          }`}
-        >
-          {submitting ? (
-            <View className="flex-row items-center gap-2">
-              <Spinner size="sm" color={colors.white} />
-              <Text className="text-base font-bold text-white">{t('common.saving')}</Text>
+                </View>
+              ) : null}
+              {PRESETS.map((f) => {
+                const active = frequency === f
+                return (
+                  <Pressable
+                    key={f}
+                    onPress={() => setFrequency(f)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
+                  >
+                    <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}>
+                      {t(`recurrences.frequencies.${f}`)}
+                    </Text>
+                  </Pressable>
+                )
+              })}
             </View>
-          ) : (
-            <Text className="text-base font-bold text-white">
-              {t('recurrences.actions.save_changes')}
+          </View>
+
+          {/* Reference date — the rule's calendar anchor */}
+          <View className="flex-col gap-1.5">
+            <Label>{t('recurrences.labels.reference_date')}</Label>
+            <DateField
+              value={startDate}
+              onChange={setStartDate}
+              placeholder={t('common.pick_date')}
+            />
+            {/* What the user cannot deduce: the change rules from here on, and the
+                occurrences that already exist keep their own date — an old one
+                sitting on the old day is not a bug. It deliberately does NOT say
+                what to do with it: confirming or skipping it is the user's call. */}
+            <Text className="text-[12px] text-text-soft">
+              {t('recurrences.reference_date_hint')}
             </Text>
-          )}
-        </Pressable>
-      </FormSheetBody>
-    </SafeAreaView>
+          </View>
+
+          {/* THE AMBIGUITY IS THE USER'S TO RESOLVE, and only when the anchor
+              actually moves. The cycle in flight may already be settled — in which
+              case the corrected schedule has to rule from the NEXT one, or the
+              month gets a second salary — or it may not be, and then it rules now.
+              From the data both look the same. Two concrete dates, never the word
+              "month": a rule every three days has none. */}
+          {anchorMoved && choice.kind === 'ask' ? (
+            <View className="flex-col gap-2 rounded-xl border border-border bg-border-soft px-4 py-3">
+              <Text className="text-[13px] font-semibold text-text">
+                {t('recurrences.reference_date_question')}
+              </Text>
+              {choice.options.map((option) => {
+                const isSelected = selected === option
+                return (
+                  <Pressable
+                    key={option}
+                    onPress={() => setEffectiveFrom(option)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isSelected }}
+                    className="flex-row items-center gap-2 py-1"
+                  >
+                    {/* `border-text-muted`, NOT `border-border`. This block sits
+                        on `bg-border-soft` (#EEF1F4) and `border` is #E6EAEF —
+                        a contrast ratio of about 1.05:1, which is to say the
+                        unselected radio is invisible and the question reads as
+                        two dates nobody can tell are tappable. Web gets this for
+                        free from a native `<input type="radio">`; a circle
+                        painted by hand has to earn it. #6B7683 lands near 4.5:1,
+                        past the 3:1 a non-text control needs. */}
+                    <View
+                      className={`h-4 w-4 rounded-full border ${
+                        isSelected ? 'border-navy bg-navy' : 'border-text-muted bg-card'
+                      }`}
+                    />
+                    <Text className="text-[13px] text-text">
+                      {formatShortDate(option, locale)}
+                    </Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+          ) : null}
+          {anchorMoved && choice.kind === 'paused' ? (
+            <Text className="text-[12px] text-text-soft">
+              {t('recurrences.reference_date_paused')}
+            </Text>
+          ) : null}
+          {anchorMoved && choice.kind === 'exhausted' ? (
+            <Text className="text-[12px] text-text-soft">
+              {t('recurrences.reference_date_exhausted')}
+            </Text>
+          ) : null}
+
+          {/* End date (optional) */}
+          <View className="flex-col gap-1.5">
+            <Label>{t('recurrences.labels.end_date')}</Label>
+            <DateField value={endDate} onChange={setEndDate} placeholder={t('common.pick_date')} />
+          </View>
+
+          {/* Description (optional) */}
+          <View className="flex-col gap-1.5">
+            <Label>{t('recurrences.labels.description')}</Label>
+            <Input value={description} onChangeText={setDescription} />
+          </View>
+
+          {formError && <FormError message={formError} />}
+
+          <Pressable
+            onPress={submit}
+            disabled={submitting}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: submitting }}
+            className={`mt-1 h-14 flex-row items-center justify-center rounded-2xl bg-emerald ${
+              submitting ? 'opacity-60' : ''
+            }`}
+          >
+            {submitting ? (
+              <View className="flex-row items-center gap-2">
+                <Spinner size="sm" color={colors.white} />
+                <Text className="text-base font-bold text-white">{t('common.saving')}</Text>
+              </View>
+            ) : (
+              <Text className="text-base font-bold text-white">
+                {t('recurrences.actions.save_changes')}
+              </Text>
+            )}
+          </Pressable>
+        </FormSheetBody>
+      </SafeAreaView>
+    </SafeAreaProvider>
   )
 }
