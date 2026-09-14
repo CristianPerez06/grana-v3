@@ -40,3 +40,7 @@
 - [ ] 4.3 Cerrar el issue #131 con el hallazgo: era el andamio, no la reparación de
       recurrencias, y el `hoy + 29` que parecía un piso mal liberado era `hoy + 30`
       corrido un día por el huso.
+      **Deliberadamente sin hacer al archivar:** el arreglo vive en la branch, no en
+      `main`, y cerrar el issue antes del merge afirmaría que el bug está resuelto en
+      el producto cuando todavía no lo está. El merge lo hace el usuario (regla del
+      repo), así que el cierre del issue va con el merge, no antes.
