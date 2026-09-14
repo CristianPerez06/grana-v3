@@ -9,7 +9,7 @@ import {
   owedOccurrencesForRule,
   type IntervalUnit,
   type PauseInterval,
-  type RecurrenceFrequency,
+  type RecurrenceFrequencyLabel,
   type RecurrenceSuggestion,
   type ScheduleVersion,
   type SuggestionMovement,
@@ -56,7 +56,7 @@ function mapRecurrenceSummary(
   today: string,
 ): RecurrenceSummary {
   const covered = coveredOccurrences({
-    startDate: recurrence.start_date,
+    seedOccurrenceDate: recurrence.seed_occurrence_date,
     seededFromMovement: recurrence.created_from_transaction_id != null,
     existing: upcomingByRecurrenceId.get(recurrence.id) ?? [],
   })
@@ -76,6 +76,13 @@ function mapRecurrenceSummary(
         interval_count: recurrence.interval_count,
         interval_unit: recurrence.interval_unit as IntervalUnit,
         max_occurrences: recurrence.max_occurrences,
+        // Since when the current schedule rules. Without it this answers with a
+        // date from the stretch where the old schedule has stopped and the new
+        // one has not begun — a "próximo" the generator is never going to create.
+        schedule_effective_from: recurrence.schedule_effective_from,
+        // And how much of the cap was already gone by then: this reader walks one
+        // anchor, and a corrected rule spent its cuotas under another.
+        schedule_positions_before: recurrence.schedule_positions_before,
       },
       today,
       covered,
@@ -277,6 +284,20 @@ export async function getRecurrenceDetail(
     .reverse()
 
   const today = formatDateISO(getTodayAR())
+
+  // How much of `max_occurrences` is already spent, asked to the DATABASE and
+  // not counted from `instances` above. The cap counts POSITIONS of the
+  // calendar: a rule seeded by a movement has no row for its first occurrence,
+  // and a position produced while nothing was generating has none either, so
+  // `instances.length` says a spent rule still has occurrences left. The server
+  // validates the chosen reference date against this same function, so asking it
+  // is also what keeps the form from offering a date the RPC will refuse.
+  const { data: positionsSpent, error: spentError } = await supabase.rpc(
+    'recurrence_positions_spent',
+    { p_id: id, p_today: today },
+  )
+  if (spentError) throw spentError
+
   const recurrenceSummary = mapRecurrenceSummary(
     recurrence as unknown as RecurrenceRow,
     pending.length === 0 ? new Map() : new Map([[pending[0].recurrence_id, pending]]),
@@ -297,6 +318,7 @@ export async function getRecurrenceDetail(
       ...instance,
       recurrence: recurrence as unknown as Recurrence,
     })),
+    positions_spent: positionsSpent ?? 0,
   }
 }
 
@@ -388,13 +410,18 @@ export async function getRecurrenceLinkForTransaction(
 
 export type RecurrenceRuleForGeneration = {
   id: string
-  frequency: RecurrenceFrequency
+  // The LABEL, not the preset union: this is a row, and the column has held
+  // `custom` since 0021. Typing it as the four presets is the same lie that made
+  // a custom rule crash the edit form — invisible to the compiler, and fine
+  // until something hands the value to `presetToInterval`.
+  frequency: RecurrenceFrequencyLabel
   interval_count: number
   interval_unit: IntervalUnit
   max_occurrences: number | null
   start_date: string
   end_date: string | null
   reconstruct_from: string
+  seed_occurrence_date: string | null
   amount: number
   account_id: string
   transfer_destination_account_id: string | null
@@ -623,7 +650,7 @@ export async function generateDueRecurrenceInstances(
     supabase
       .from('recurrences')
       .select(
-        'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, reconstruct_from, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
+        'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, reconstruct_from, seed_occurrence_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
       )
       .eq('user_id', userId)
       .eq('status', 'active')
@@ -656,13 +683,21 @@ export async function generateDueRecurrenceInstances(
     selectAllPages<{
       recurrence_id: string
       effective_from: string
+      effective_until: string | null
       interval_count: number
       interval_unit: string
       anchor_date: string
     }>(() =>
       supabase
         .from('recurrence_schedule_versions')
-        .select('recurrence_id, effective_from, interval_count, interval_unit, anchor_date')
+        // `effective_until` is not decoration: a version that stops before the
+        // next one starts is how a corrected anchor avoids charging the cycle in
+        // flight twice. Left out of this select, the walker gets `undefined` and
+        // the old schedule keeps producing inside the gap — in production only,
+        // because a test that builds the versions by hand never notices.
+        .select(
+          'recurrence_id, effective_from, effective_until, interval_count, interval_unit, anchor_date',
+        )
         .eq('user_id', userId)
         .in('recurrence_id', ruleIds)
         // Unique by `recurrence_schedule_versions_one_per_date`.
@@ -706,6 +741,7 @@ export async function generateDueRecurrenceInstances(
     const list = versionsByRule.get(row.recurrence_id as string) ?? []
     list.push({
       effective_from: row.effective_from as string,
+      effective_until: (row.effective_until as string | null) ?? null,
       interval_count: row.interval_count as number,
       interval_unit: row.interval_unit as IntervalUnit,
       anchor_date: row.anchor_date as string,
@@ -747,6 +783,9 @@ export async function generateDueRecurrenceInstances(
       horizon,
       today,
       existing: existing?.dates ?? [],
+      // Spent whether or not any version produces it — and after a corrected
+      // reference date, none does: the seed's own date sits in the gap.
+      seedOccurrenceDate: rule.seed_occurrence_date,
     })
     if (owed.length === 0) continue
     backlogByRule.set(rule.id, {
@@ -1028,7 +1067,11 @@ export async function getDuplicateRulesFor(
   const { data, error } = await supabase
     .from('recurrences')
     .select(
-      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id',
+      // `schedule_effective_from` travels because the "próximo" below is computed
+      // from it: without the floor, a rule inside a schedule gap announces a date
+      // the generator will never create, and the duplicate warning compares
+      // against a date that does not exist.
+      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, created_from_transaction_id, seed_occurrence_date, schedule_effective_from, schedule_positions_before',
     )
     .eq('status', 'active')
   if (error) throw error
@@ -1042,6 +1085,9 @@ export async function getDuplicateRulesFor(
       interval_unit: IntervalUnit
       max_occurrences: number | null
       created_from_transaction_id: string | null
+      schedule_effective_from: string
+      schedule_positions_before: number
+      seed_occurrence_date: string | null
     }
   >
 
@@ -1059,7 +1105,7 @@ export async function getDuplicateRulesFor(
         rule,
         today,
         coveredOccurrences({
-          startDate: rule.start_date,
+          seedOccurrenceDate: rule.seed_occurrence_date,
           seededFromMovement: rule.created_from_transaction_id != null,
           existing: upcoming.get(rule.id) ?? [],
         }),

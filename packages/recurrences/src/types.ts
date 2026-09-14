@@ -1,5 +1,5 @@
 import type { Database } from '@grana/supabase'
-import type { RecurrenceFrequency } from '@grana/money-logic'
+import type { RecurrenceFrequencyLabel } from '@grana/money-logic'
 
 type Tables<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Row']
@@ -39,7 +39,7 @@ export type Recurrence = Omit<
   'movement_type' | 'frequency' | 'status' | 'currency_code'
 > & {
   movement_type: RecurrenceMovementType
-  frequency: RecurrenceFrequency
+  frequency: RecurrenceFrequencyLabel
   status: RecurrenceStatus
   currency_code: RecurrenceCurrencyCode
 }
@@ -134,6 +134,15 @@ export type RecurrenceSummary = Recurrence & {
 }
 
 export type RecurrenceDetail = RecurrenceSummary & {
+  /**
+   * Positions of the rule's calendar already spent — what `max_occurrences`
+   * counts, and NOT `instances.length`. A seeded rule's first occurrence has no
+   * row, and neither has a position the calendar produced while nothing was
+   * generating; counting rows offers a reference date to a rule that will never
+   * fire again. Computed by the database, which is also what the RPC validates
+   * the chosen date against.
+   */
+  positions_spent: number
   /**
    * The rule's whole history, newest first — `confirmed` and `skipped` included,
    * so `due_date` may be NULL. NOT `PendingRecurrenceInstance[]`: that type

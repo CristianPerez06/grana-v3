@@ -5,14 +5,27 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { updateRecurrence } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
+import { referenceDateChoice } from '@grana/recurrences'
+import { formatDateISO, getTodayAR } from '@grana/money-logic'
+import { presetToInterval } from '@grana/money-logic'
+import type { IntervalUnit } from '@grana/money-logic'
+import { formatShortDate } from '@/lib/date'
 import { Drawer } from '@/components/ui/drawer'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { DatePicker } from '@/components/ui/date-picker'
 import type { RecurrenceDetail } from '@/lib/recurrences/types'
 
-type FrequencyValue = 'weekly' | 'biweekly' | 'monthly' | 'annual'
-const FREQUENCY_VALUES: FrequencyValue[] = ['weekly', 'biweekly', 'monthly', 'annual']
+// `custom` is one of them: the spec admits a rule every N days, which no preset
+// describes. It is offered as a value the select can HOLD, never as one the user
+// can pick — switching to it would need an interval this form does not edit.
+type FrequencyValue = 'weekly' | 'biweekly' | 'monthly' | 'annual' | 'custom'
+const FREQUENCY_VALUES: Exclude<FrequencyValue, 'custom'>[] = [
+  'weekly',
+  'biweekly',
+  'monthly',
+  'annual',
+]
 
 type Props = {
   rule: RecurrenceDetail
@@ -23,9 +36,9 @@ type Props = {
 const FIELD_BG = '#FAFBFC'
 
 // Edit drawer for a recurring rule. Edits only the mutable field set —
-// amount / frequency / end_date / description. Account, category and movement
-// type are fixed at creation and intentionally absent here (see the
-// recurrence-detail-rework design). On a successful save the drawer closes and
+// amount / frequency / reference date / end_date / description. Account,
+// category and movement type are fixed at creation and intentionally absent
+// here (see the recurrence-detail-rework design). On a successful save the drawer closes and
 // the RSC page is refreshed so the read-only summary reflects the new values.
 export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
   const router = useRouter()
@@ -36,8 +49,48 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
 
   const [amount, setAmount] = useState(String(rule.amount))
   const [frequency, setFrequency] = useState<FrequencyValue>(rule.frequency as FrequencyValue)
+  // The rule's calendar anchor. A rule created from a movement inherits that
+  // movement's date, and that date can be off — a salary that landed on the 8th
+  // because the 10th was a holiday anchors the rule to the 8th forever.
+  const [startDate, setStartDate] = useState(rule.start_date)
+  const [effectiveFrom, setEffectiveFrom] = useState<string | null>(null)
   const [endDate, setEndDate] = useState(rule.end_date ?? '')
   const [description, setDescription] = useState(rule.description ?? '')
+
+  const anchorMoved = startDate !== rule.start_date
+  // THE CALENDAR BEING SAVED, not the one on the row. The server recomputes the
+  // dates it will accept from the patch, so a form that offers dates from the
+  // stored frequency offers dates the server refuses — which is what happens the
+  // moment somebody changes the frequency and the reference date in one pass.
+  //
+  // `custom` has no preset to derive: the mutation leaves the rule's interval
+  // untouched when the label stays custom, so the calendar being saved is the
+  // one the rule already has. Asking `presetToInterval` about it returns nothing
+  // and the form throws before it can render.
+  const interval =
+    frequency === 'custom'
+      ? { count: rule.interval_count, unit: rule.interval_unit as IntervalUnit }
+      : presetToInterval(frequency)
+  const choice = referenceDateChoice(
+    {
+      status: rule.status,
+      interval_count: interval.count,
+      interval_unit: interval.unit,
+      end_date: endDate || null,
+      max_occurrences: rule.max_occurrences,
+      positionsSpent: rule.positions_spent,
+    },
+    startDate,
+    formatDateISO(getTodayAR()),
+  )
+
+  // THE ANSWER HAS TO BE ONE OF THE QUESTIONS CURRENTLY ON SCREEN. Editing the
+  // reference date, the frequency or the end date rebuilds the options; a
+  // selection made against the previous set is not an answer to this one, and
+  // sending it means sending a date the server never offered. Derived rather
+  // than reset from an effect: there is no moment where the two disagree.
+  const options = choice.kind === 'ask' ? choice.options : []
+  const selected = effectiveFrom != null && options.includes(effectiveFrom) ? effectiveFrom : null
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,10 +102,32 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
       return
     }
 
+    // A rule with nothing left ahead has no date that could be the first under a
+    // new reference, and the database refuses the change for exactly that
+    // reason. Saying so here is the difference between a sentence the user can
+    // act on and a failed save they have to interpret.
+    if (anchorMoved && choice.kind === 'exhausted') {
+      setFormError(t('reference_date_exhausted'))
+      return
+    }
+
+    // Asked, and unanswered. Picking the first option on the user's behalf is
+    // the inference this whole change exists to remove: from the data, "the
+    // cycle in flight is settled" and "it is not" look identical.
+    if (anchorMoved && choice.kind === 'ask' && selected == null) {
+      setFormError(t('errors.reference_date_unanswered'))
+      return
+    }
+
     startTransition(async () => {
       const result = await updateRecurrence(rule.id, {
         amount: parsedAmount,
         frequency,
+        start_date: startDate,
+        // Only meaningful when the anchor moves; the mutation ignores it
+        // otherwise. `null` is the paused rule's answer — from today, waiting —
+        // and the database refuses a date there.
+        schedule_effective_from: anchorMoved && choice.kind === 'ask' ? selected : null,
         end_date: endDate || null,
         description: description || null,
       })
@@ -112,6 +187,16 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
             className={fieldClass}
             style={{ backgroundColor: FIELD_BG }}
           >
+            {/* Only while the rule IS custom, and disabled: without it the
+                select holds a value none of its options carries and the browser
+                shows the first preset instead — "Semanal" on a rule that fires
+                every three days. It is not a choice, it is the truth about
+                where the rule stands. */}
+            {frequency === 'custom' && (
+              <option value="custom" disabled>
+                {t('frequencies.custom')}
+              </option>
+            )}
             {FREQUENCY_VALUES.map((value) => (
               <option key={value} value={value}>
                 {t(`frequencies.${value}`)}
@@ -119,6 +204,55 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
             ))}
           </select>
         </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="start_date" className={labelClass}>
+            {t('labels.reference_date')}
+          </label>
+          <DatePicker
+            id="start_date"
+            value={startDate}
+            onChange={setStartDate}
+            label={t('labels.reference_date')}
+          />
+          {/* What the user cannot deduce: the change rules from here on, and the
+              occurrences that already exist keep their own date — an old one
+              sitting on the old day is not a bug. It deliberately does NOT say
+              what to do with it: confirming or skipping it is the user's call. */}
+          <p className="text-[12px] text-text-soft">{t('reference_date_hint')}</p>
+        </div>
+
+        {/* THE AMBIGUITY IS THE USER'S TO RESOLVE, and only when the anchor
+            actually moves. The cycle in flight may already be settled — in which
+            case the corrected schedule has to rule from the NEXT one, or the
+            month gets a second salary — or it may not be, and then it rules now.
+            From the data both look the same. Two concrete dates, never the word
+            "month": a rule every three days has none. */}
+        {anchorMoved && choice.kind === 'ask' && (
+          <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-soft px-4 py-3">
+            <p className="text-[13px] font-semibold text-text">{t('reference_date_question')}</p>
+            <div className="flex flex-col gap-1.5">
+              {choice.options.map((option) => (
+                <label key={option} className="flex items-center gap-2 text-[13px] text-text">
+                  <input
+                    type="radio"
+                    name="schedule_effective_from"
+                    value={option}
+                    checked={selected === option}
+                    onChange={() => setEffectiveFrom(option)}
+                  />
+                  {formatShortDate(option)}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+        {anchorMoved && choice.kind === 'paused' && (
+          <p className="text-[12px] text-text-soft">{t('reference_date_paused')}</p>
+        )}
+        {anchorMoved && choice.kind === 'exhausted' && (
+          <p className="text-[12px] text-text-soft">{t('reference_date_exhausted')}</p>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="end_date" className={labelClass}>

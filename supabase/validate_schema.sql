@@ -848,6 +848,348 @@ begin
   raise notice '✓ 8.1J — occurrence identity (0064): columns, tables, indexes, composite FKs, triggers and sole ownership OK; the atomic seed repair (0065) is in place; the backlog is ACTIVATED (0066), so a rule may owe several unresolved occurrences';
 end $$;
 
+-- ── 8.1K · a schedule version can stop before the next one starts (0068) ───
+-- Deliberately OUTSIDE the shared block: that block describes the expansion, and
+-- `validate_schema_transition.sql` runs it in a window where 0068 does not exist
+-- yet. This section belongs to the final state only.
+do $$
+declare
+  v_check_def text;
+  v_orphans   int;
+  v_body      text;
+  v_default   text;
+  v_check_canon text;
+begin
+  if not exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'recurrence_schedule_versions'
+       and column_name = 'effective_until'
+  ) then
+    raise exception 'recurrence_schedule_versions.effective_until is missing: 0068 was not applied, so a schedule version cannot stop before the next one starts and correcting an anchor duplicates the cycle in flight';
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'recurrences'
+       and column_name = 'schedule_effective_from'
+  ) then
+    raise exception 'recurrences.schedule_effective_from is missing: the reads that do not walk versions have no floor, and during a gap they announce occurrences the generator will never create';
+  end if;
+
+  -- The floor decides which occurrences exist. A rule without one falls back to
+  -- projecting from its raw columns, which is the drift this column closes.
+  select count(*) into v_orphans
+    from public.recurrences where schedule_effective_from is null;
+  if v_orphans > 0 then
+    raise exception 'recurrences: % rows without schedule_effective_from', v_orphans;
+  end if;
+
+  select pg_get_constraintdef(c.oid) into v_check_def
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+   where n.nspname = 'public' and t.relname = 'recurrence_schedule_versions'
+     and c.conname = 'chk_schedule_versions_effective_range';
+  if v_check_def is null then
+    raise exception 'chk_schedule_versions_effective_range is missing: a version could end before it starts';
+  end if;
+  -- BY THE CANONICAL DEFINITION, not by substring. `%effective_until%effective_from%`
+  -- is satisfied by `(effective_until is null or effective_until >= effective_from
+  -- or true)`, which contains every right word and rejects nothing — a CHECK that
+  -- validates as present and enforces NOTHING. Both sides are rendered by this
+  -- same server's deparser, from a temp table `like` the real one, so no Postgres
+  -- version prints one differently from the other.
+  --
+  -- The price is the one this file already takes for the identity contract: an
+  -- equivalent REWRITE is rejected. That is a false red — it stops a deploy — not
+  -- a false green, and the fix is to re-create the constraint in canonical form.
+  create temp table versions_constraint_probe (
+    like public.recurrence_schedule_versions including defaults
+  ) on commit drop;
+  alter table versions_constraint_probe
+    add constraint chk_canon
+    CHECK (effective_until is null or effective_until >= effective_from);
+  select pg_get_constraintdef(c.oid) into v_check_canon
+    from pg_constraint c
+   where c.conrelid = 'versions_constraint_probe'::regclass and c.conname = 'chk_canon';
+
+  if v_check_def is distinct from v_check_canon then
+    raise exception 'chk_schedule_versions_effective_range is not the canonical rule. found: % / expected: %',
+      v_check_def, v_check_canon;
+  end if;
+
+  -- No version may already violate it, whatever the CHECK says today.
+  if exists (
+    select 1 from public.recurrence_schedule_versions
+     where effective_until is not null and effective_until < effective_from
+  ) then
+    raise exception 'recurrence_schedule_versions: a version ends before it starts';
+  end if;
+
+  -- Moving an anchor goes through the RPC, and the anonymous role executes
+  -- neither of the two functions it needs (0067's rule, applied at birth).
+  if to_regprocedure('public.update_recurrence_schedule(uuid, jsonb, date)') is null then
+    raise exception 'update_recurrence_schedule is missing: an anchor could be moved without saying from when, which is what duplicated a salary in QA';
+  end if;
+  -- The offset every version-less reader leans on, and the function that decides
+  -- it. A database carrying the column but not the function has rules whose cap
+  -- restarts the moment their anchor moves.
+  if not exists (
+    select 1 from pg_attribute
+     where attrelid = 'public.recurrences'::regclass
+       and attname = 'schedule_positions_before'
+       and attnotnull
+  ) then
+    raise exception 'recurrences.schedule_positions_before is missing or nullable: max_occurrences restarts from whatever anchor a reader can see, so a corrected rule hands out cuotas it already spent';
+  end if;
+  if to_regprocedure('public.recurrence_positions_spent(uuid, date)') is null then
+    raise exception 'recurrence_positions_spent is missing: the cap would be counted from recurrence_instances rows, which a seeded occurrence does not have';
+  end if;
+  if to_regprocedure('public.recurrence_positions_before(uuid, date, date, int, text, date, int, date)') is null then
+    raise exception 'recurrence_positions_before is missing: the offset would be the TOTAL spent, which counts the seed twice for every rule created from a movement';
+  end if;
+  -- The offset is not the total. A database where the column was filled from
+  -- `recurrence_positions_spent` reads as complete and is short by one cuota on
+  -- every seeded rule, so the distinction is pinned by the expression itself.
+  select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
+    into v_body
+    from pg_proc where oid = 'public.recurrence_positions_before(uuid, date, date, int, text, date, int, date)'::regprocedure;
+  -- The REACH test has to be there. Not its exact boundary: at `v_k` exactly on
+  -- the limit the two readings allow the same visible positions — they differ
+  -- only over the seed's own slot, which the movement covers either way — so
+  -- pinning `>` against `>=` would be a false red over nothing.
+  if v_body not like '%p_max is not null and v_k%' then
+    raise exception 'recurrence_positions_before decides by whether the calendar CONTAINS the seed rather than whether it reaches it: a rule whose cap runs out first loses that position entirely';
+  end if;
+
+  if to_regprocedure('public.recurrence_candidate_effective_dates(date, int, text, date, date, int)') is null then
+    raise exception 'recurrence_candidate_effective_dates is missing: the server cannot recompute the dates it validates against';
+  end if;
+  if has_function_privilege('anon', 'public.update_recurrence_schedule(uuid, jsonb, date)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.recurrence_candidate_effective_dates(date, int, text, date, date, int)', 'EXECUTE') then
+    raise exception 'COBERTURA RLS: anon conserva EXECUTE sobre las funciones de 0068';
+  end if;
+  if not has_function_privilege('authenticated', 'public.update_recurrence_schedule(uuid, jsonb, date)', 'EXECUTE') then
+    raise exception 'authenticated cannot execute update_recurrence_schedule: moving an anchor is impossible';
+  end if;
+
+  -- THE TRIGGER 0068 ADDS, asked the way 8.1J asks about the others — which is
+  -- the stricter way, and the reason to copy it rather than invent a second one:
+  --
+  --   · ENABLED FOR NORMAL WRITES. `<> 'D'` is not that: 'R' is ENABLE REPLICA,
+  --     which fires only on a replica and leaves every write the app makes
+  --     unprotected while reading as "not disabled". 'O' fires for origin and
+  --     local writes, 'A' always.
+  --   · THE EXACT EVENTS. A same-named trigger wired to INSERT only would let
+  --     every UPDATE through — the anchor moving is an UPDATE, so that is the
+  --     whole feature — and one wired to UPDATE only would let every INSERT
+  --     start life with a floor the client chose. Neither is visible to a check
+  --     that asks whether a trigger of this name exists.
+  --   · BEFORE, FOR EACH ROW. An AFTER trigger cannot set `NEW`, so the column
+  --     would keep whatever the client sent, which is what this exists to
+  --     discard; a statement-level one has no `NEW` at all.
+  --   · THE FUNCTION, BY SCHEMA. A same-named function outside `public` would
+  --     otherwise pass.
+  --
+  -- `pg_trigger.tgtype` bits: 1 ROW, 2 BEFORE, 4 INSERT, 8 DELETE, 16 UPDATE.
+  --
+  -- `trg_recurrence_reconstruct_from_guard` is NOT re-checked here: 8.1J already
+  -- asks all of this about it, and a second, weaker copy of the same claim is
+  -- worse than none. What 0068 changes about it is its BODY, and that is pinned
+  -- above by the expressions the new guard must contain.
+  if not exists (
+    select 1
+      from pg_trigger tr
+      join pg_proc pr on pr.oid = tr.tgfoid
+     where tr.tgname = 'trg_recurrence_resolve_schedule_effective_from'
+       and not tr.tgisinternal
+       and tr.tgrelid = 'public.recurrences'::regclass
+       and pr.proname = 'recurrence_resolve_schedule_effective_from'
+       and pr.pronamespace = 'public'::regnamespace
+       and tr.tgenabled in ('O', 'A')      -- enabled for normal writes
+       and (tr.tgtype & 4)  <> 0           -- INSERT
+       and (tr.tgtype & 16) <> 0           -- UPDATE
+       and (tr.tgtype & 8)   = 0           -- and not DELETE
+       and (tr.tgtype & 2)  <> 0           -- BEFORE
+       and (tr.tgtype & 1)  <> 0           -- FOR EACH ROW
+  ) then
+    raise exception 'trg_recurrence_resolve_schedule_effective_from is missing, disabled, enabled only for replicas, sits on a same-named function outside public, or no longer fires BEFORE INSERT OR UPDATE FOR EACH ROW: the floor would be whatever a client sends';
+  end if;
+
+  -- NOT NULL at the column, not merely "no NULLs today". Without it the next
+  -- insert that misses the trigger reintroduces the permissive reading.
+  if not exists (
+    select 1 from pg_attribute
+     where attrelid = 'public.recurrences'::regclass
+       and attname = 'schedule_effective_from'
+       and attnotnull
+  ) then
+    raise exception 'recurrences.schedule_effective_from is nullable: a missing floor reads as "this schedule has always ruled", which is the permissive answer reached by forgetting';
+  end if;
+
+  -- ── The seed occurrence, immutable and separate from the anchor ──────────
+  if not exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'recurrences'
+       and column_name = 'seed_occurrence_date'
+  ) then
+    raise exception 'recurrences.seed_occurrence_date is missing: the occurrence a seed movement covers would be read off start_date, which this release makes mutable — and deleting that movement then becomes impossible';
+  end if;
+
+  select count(*) into v_orphans
+    from public.recurrences
+   where created_from_transaction_id is not null and seed_occurrence_date is null;
+  if v_orphans > 0 then
+    raise exception 'recurrences: % seeded rows without seed_occurrence_date', v_orphans;
+  end if;
+
+  -- ── Both halves of the repair, by the EXPRESSION and not by the word ────
+  --
+  -- Asking whether the body mentions `seed_occurrence_date` is not a check: the
+  -- word appears in a comment, in an unrelated clause, or in a function that
+  -- names it once and still keys the release on the anchor. What has to hold is
+  -- an EXPRESSION, so that is what is compared — after stripping comments, so a
+  -- sentence about the column can never stand in for the code.
+  --
+  -- Whitespace is collapsed and the body lowercased first, so re-indenting the
+  -- migration is not a false red; anything past that is a real difference. The
+  -- same trade this file's identity contract takes: an equivalent rewrite is
+  -- rejected, which stops a deploy instead of blessing a database where deleting
+  -- a corrected rule's seed movement is impossible.
+  --
+  -- BEHAVIOUR is proved separately and in full, against a real Postgres, in
+  -- `packages/recurrences/__tests__/seeded-anchor-correction.test.ts`: create
+  -- from a future movement, correct the anchor, delete the seed. What THIS file
+  -- answers is the other question — whether that proven code is what is deployed
+  -- here.
+  select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
+    into v_body
+    from pg_proc where oid = 'public.recurrence_reconstruct_from_guard()'::regprocedure;
+  if v_body not like '%new.reconstruct_from = old.seed_occurrence_date - 1 and old.reconstruct_from = old.seed_occurrence_date%' then
+    raise exception 'recurrence_reconstruct_from_guard does not key the floor release on seed_occurrence_date: deleting the seed of a rule whose reference date was corrected is rejected, and the movement cannot be deleted at all';
+  end if;
+  if v_body like '%old.reconstruct_from = old.start_date%' then
+    raise exception 'recurrence_reconstruct_from_guard still carries 0064''s anchor-keyed release clause';
+  end if;
+  if v_body not like '%new.seed_occurrence_date is distinct from old.seed_occurrence_date%' then
+    raise exception 'recurrence_reconstruct_from_guard does not freeze seed_occurrence_date: the occurrence a movement covers could be rewritten';
+  end if;
+  if v_body not like '%new.created_from_transaction_id is distinct from old.created_from_transaction_id%' then
+    raise exception 'recurrence_reconstruct_from_guard does not freeze the seed link: a rule could be pointed at another movement while its seed date stays frozen';
+  end if;
+
+  select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
+    into v_body
+    from pg_proc where oid = 'public.delete_movement_unlinking_seed(uuid)'::regprocedure;
+  if v_body not like '%then v_rule.seed_occurrence_date - 1%' then
+    raise exception 'delete_movement_unlinking_seed does not release the floor from seed_occurrence_date, so it offers a date the seed movement never covered and the guard rejects it';
+  end if;
+  if v_body like '%then v_rule.start_date - 1%' then
+    raise exception 'delete_movement_unlinking_seed still carries 0065''s anchor-keyed release';
+  end if;
+
+  -- ── The pair, as a constraint the table itself holds ─────────────────────
+  select pg_get_constraintdef(c.oid) into v_check_def
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+   where n.nspname = 'public' and t.relname = 'recurrences'
+     and c.conname = 'chk_recurrences_seed_pair';
+  if v_check_def is null then
+    raise exception 'chk_recurrences_seed_pair is missing: a linked rule with no seed date is a row every reader of the covered set misreads';
+  end if;
+  -- Same reason, same method: a CHECK naming both columns and enforcing nothing
+  -- passes a substring test and lets a linked rule with no seed date into the
+  -- table, which is the row every reader of the covered set misreads.
+  create temp table seed_pair_constraint_probe (
+    like public.recurrences including defaults
+  ) on commit drop;
+  alter table seed_pair_constraint_probe
+    add constraint chk_canon
+    CHECK (created_from_transaction_id is null or seed_occurrence_date is not null);
+  select pg_get_constraintdef(c.oid) into v_check_canon
+    from pg_constraint c
+   where c.conrelid = 'seed_pair_constraint_probe'::regclass and c.conname = 'chk_canon';
+
+  if v_check_def is distinct from v_check_canon then
+    raise exception 'chk_recurrences_seed_pair is not the canonical rule. found: % / expected: %',
+      v_check_def, v_check_canon;
+  end if;
+  if exists (
+    select 1 from public.recurrences
+     where created_from_transaction_id is not null and seed_occurrence_date is null
+  ) then
+    raise exception 'recurrences: a linked rule has no seed_occurrence_date';
+  end if;
+
+  -- ── The floor a row lands on when nothing decides it ─────────────────────
+  select pg_get_expr(d.adbin, d.adrelid) into v_default
+    from pg_attrdef d
+    join pg_attribute a on a.attrelid = d.adrelid and a.attnum = d.adnum
+   where d.adrelid = 'public.recurrences'::regclass
+     and a.attname = 'schedule_effective_from';
+  if v_default is null then
+    raise exception 'recurrences.schedule_effective_from has no default: an insert that misses the trigger has nothing to write, and NOT NULL turns that into a failed write instead of a safe one';
+  end if;
+  if v_default not like '%9999-12-31%' then
+    raise exception 'recurrences.schedule_effective_from defaults to %, which is not the fail-closed value: a default reached only when the trigger is bypassed must SUPPRESS, never project', v_default;
+  end if;
+
+  raise notice '✓ 8.1K — the schedule gap (0068): effective_until, a NOT NULL floor on every rule, the seed occurrence kept apart from the anchor, the RPC that requires an effective date, and anon kept out';
+end $$;
+
+-- ── 8.1L · REPORT, not a check · the seed occurrence and the first anchor ──
+-- 0069 repairs `seed_occurrence_date` on the rules where 0068 derived it from a
+-- `start_date` that had already moved. This section does NOT verify that repair,
+-- because there is no invariant here to verify — and the first draft of it
+-- asserted one anyway. Written down so the same check is not written twice:
+--
+--   THE EQUALITY IS NOT A TRUTH OF THE MODEL. `seed_occurrence_date` is the
+--   rule's `start_date` at creation, frozen afterwards by the guard. The
+--   `anchor_date` of the earliest schedule version is usually the same date —
+--   but 0068's sync trigger DELETES the versions that have not come into effect
+--   yet (`effective_from > today`) before opening the corrected one. A rule
+--   seeded by a FUTURE movement has exactly one such version: the one its own
+--   insert created. Correct its anchor before it starts and the record of where
+--   it began is gone; the earliest version left carries the NEW anchor, while
+--   the seed correctly keeps the occurrence its movement covers. That database
+--   is in perfect order and the two dates disagree.
+--
+-- And the two states are the same three columns with the old value on the other
+-- side, so no query here separates them — which is also why 0069 does not use
+-- one: it names a single row by id, in the one shape the audit found (caso real
+-- reportado en #96), and refuses to write on anything else. A targeted repair
+-- leaves nothing behind for a schema validator to confirm.
+--
+-- NOT compared against `transactions.date` either: that column is editable, so a
+-- movement re-dated after the fact reads as a broken identity and is not one.
+-- Comparing against the movement is what made ten correct rules look wrong.
+--
+-- So this only LISTS. Deleted rules included — a soft-deleted rule keeps its
+-- movements and can still be consulted. It never fails.
+do $$
+declare
+  v_split int;
+begin
+  with first_version as (
+    select distinct on (v.recurrence_id)
+           v.recurrence_id, v.anchor_date
+      from public.recurrence_schedule_versions v
+     order by v.recurrence_id, v.effective_from, v.id
+  )
+  select count(*) into v_split
+    from public.recurrences r
+    join first_version fv on fv.recurrence_id = r.id
+   where r.created_from_transaction_id is not null
+     and r.seed_occurrence_date is distinct from fv.anchor_date;
+
+  if v_split > 0 then
+    raise notice '· 8.1L — % linked rule(s) carry a seed occurrence that differs from their earliest surviving anchor. NOT a defect on its own: a rule corrected before it started reads exactly like this. Worth a look only if 0069 has not been applied here', v_split;
+  else
+    raise notice '✓ 8.1L — no linked rule differs from its earliest surviving anchor';
+  end if;
+end $$;
+
 -- ┌── SHARED CONTRACT · occurrence identity ─────────────────────────────────┐
 -- │ BYTE-IDENTICAL in three files: migration 0066, validate_schema.sql and   │
 -- │ validate_schema_transition.sql. SQL applied by hand has no include, so   │

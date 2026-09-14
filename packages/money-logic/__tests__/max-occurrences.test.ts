@@ -20,7 +20,7 @@ const seededRule = (cap: number | null): RuleForProjection => ({
   max_occurrences: cap,
   // The seed movement covers start_date and leaves no instance row behind.
   covered: coveredOccurrences({
-    startDate: '2026-05-01',
+    seedOccurrenceDate: '2026-05-01',
     seededFromMovement: true,
     existing: [],
   }),

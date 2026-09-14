@@ -1,5 +1,5 @@
 import type { RecurrenceMovementType } from '@grana/recurrences'
-import type { RecurrenceFrequency } from '@grana/money-logic'
+import type { RecurrenceFrequencyLabel } from '@grana/money-logic'
 
 // The minimal category shape both the rule/instance category and the (slimmer)
 // suggestion category satisfy — only these fields drive the display name.
@@ -13,7 +13,10 @@ type Translate = (key: string, values?: Record<string, string | number>) => stri
 
 // Frequency badge label (weekly/biweekly/monthly/annual/custom). Reuses the
 // shared `recurrences.frequencies.*` catalog.
-export const frequencyLabel = (frequency: RecurrenceFrequency, t: Translate): string =>
+// Takes the LABEL, not the preset union: the column also holds `custom`, and
+// `recurrences.frequencies.custom` is a real message. Narrowing it here made
+// every screen that shows a rule's frequency a place custom could not reach.
+export const frequencyLabel = (frequency: RecurrenceFrequencyLabel, t: Translate): string =>
   t(`recurrences.frequencies.${frequency}`)
 
 // Movement-type label for a rule with no description/category (transfers).

@@ -207,3 +207,29 @@ describe('recurrence schemas — custom frequency', () => {
     ).resolves.toMatchObject({ frequency: 'custom', interval_count: 4 })
   })
 })
+
+describe('decideRecurrenceInstance — a custom label with no interval', () => {
+  it('refuses to invent a calendar for it', () => {
+    // `custom` has no preset to fall back to. Falling through to the default
+    // would walk the rule monthly — a calendar nobody asked for, on a rule whose
+    // whole point is that it is not monthly.
+    //
+    // No database row can be in this state (`interval_count` and
+    // `interval_unit` are NOT NULL since 0021); what this pins is the contract
+    // for the hand-built objects this type also accepts, where both are
+    // optional and a caller can omit them.
+    expect(() =>
+      decideRecurrenceInstance(
+        {
+          start_date: '2026-05-01',
+          end_date: null,
+          last_generated_date: '2026-05-01',
+          max_occurrences: null,
+          frequency: 'custom',
+        },
+        '2026-06-01',
+        false,
+      ),
+    ).toThrow(/carries no interval/)
+  })
+})

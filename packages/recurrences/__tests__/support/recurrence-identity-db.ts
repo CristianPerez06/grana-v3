@@ -25,6 +25,8 @@ const read = (file: string) => readFileSync(resolve(MIGRATIONS, file), 'utf-8')
 export const MIGRATION_0064 = read('0064_recurrence_identity_expand.sql')
 export const MIGRATION_0065 = read('0065_delete_seeded_movement_atomically.sql')
 export const MIGRATION_ACTIVATE = read('0066_recurrence_backlog_activate.sql')
+export const MIGRATION_0068 = read('0068_schedule_version_effective_until.sql')
+export const MIGRATION_0069 = read('0069_repair_seed_occurrence_identity.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -36,6 +38,10 @@ const SCHEMA = `
     select (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid
   $$;
   create role authenticated;
+  -- PostgREST's anonymous role. Present because the migrations revoke privileges
+  -- from it by name, and a revoke against a role that does not exist is an error
+  -- — the harness has to look like the database the SQL is written for.
+  create role anon;
   grant usage on schema public to authenticated;
   grant usage on schema auth to authenticated;
 
@@ -65,7 +71,11 @@ const SCHEMA = `
     default_split       jsonb,
     -- The seed link. A rule created from a movement covers its own start_date
     -- with that movement, which is why the generator must not materialize it.
-    created_from_transaction_id uuid
+    created_from_transaction_id uuid,
+    -- Read by the hub's mapper. Present because the shipped read selects every
+    -- column, and a harness table missing one the app reads is a harness that can
+    -- only test the functions, never the path that feeds them.
+    created_at          timestamptz not null default now()
   );
 
   create table public.recurrence_instances (
@@ -176,14 +186,31 @@ const SEED = `
  * A fresh Postgres with the two recurrence tables, 0011's index and policies,
  * two users, and — unless `applyMigration` is false — 0064 applied on top.
  */
+/**
+ * The schema as production has it — which after #121 includes 0068, because the
+ * code SELECTS `effective_until` and would fail against a database without it.
+ * That is not an accident of the harness: it is the deployment order, and a test
+ * building the pre-0068 world is testing a state the app is never deployed into.
+ *
+ * `scheduleGap: false` is for the tests that assert on an EARLIER state on
+ * purpose — 0064's own behaviour, or what 0066 refuses to run against.
+ */
 export async function createRecurrenceIdentityDb(
-  options: { applyMigration?: boolean } = {},
+  options: { applyMigration?: boolean; scheduleGap?: boolean; seedRepair?: boolean } = {},
 ): Promise<PGlite> {
   const db = new PGlite()
   await db.exec('create schema if not exists public;')
   await db.exec(SCHEMA)
   await db.exec(SEED)
-  if (options.applyMigration !== false) await applyMigration(db)
+  if (options.applyMigration !== false) {
+    await applyMigration(db)
+    if (options.scheduleGap !== false) {
+      await applyEffectiveUntil(db)
+      // 0069 rides along by default, as 0065 does with 0064: the schema every
+      // test should see is the one production is going to have.
+      if (options.seedRepair !== false) await applySeedRepair(db)
+    }
+  }
   return db
 }
 
@@ -207,6 +234,22 @@ export async function applyMigration(db: PGlite): Promise<void> {
 }
 
 /**
+ * 0068: a schedule version can stop before the next one starts, and moving an
+ * anchor has to say from when. Separate from `applyMigration` because the tests
+ * of the expansion itself assert on the world BEFORE this one — the trigger it
+ * replaces is 0064's, and a test that pinned 0064's behaviour has to keep
+ * pinning it.
+ */
+export async function applyEffectiveUntil(db: PGlite): Promise<void> {
+  try {
+    await db.exec(MIGRATION_0068)
+  } catch (error) {
+    await db.exec('rollback;').catch(() => undefined)
+    throw error
+  }
+}
+
+/**
  * The ACTIVATION (0066): retires `recurrence_instances_one_pending_per_rule`.
  *
  * Applied from the shipped file, never as a hand-written `drop index`. The
@@ -214,6 +257,19 @@ export async function applyMigration(db: PGlite): Promise<void> {
  * dropped the index itself would prove the generator works in a state the
  * migration would not have produced.
  */
+/**
+ * 0069: the seed occurrence, repaired where 0068's backfill guessed it from an
+ * anchor that had already moved.
+ */
+export async function applySeedRepair(db: PGlite): Promise<void> {
+  try {
+    await db.exec(MIGRATION_0069)
+  } catch (error) {
+    await db.exec('rollback;').catch(() => undefined)
+    throw error
+  }
+}
+
 export async function applyActivation(db: PGlite): Promise<void> {
   try {
     await db.exec(MIGRATION_ACTIVATE)

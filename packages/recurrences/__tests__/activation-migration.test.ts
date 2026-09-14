@@ -49,7 +49,7 @@ describe('migration 0066 — activation', () => {
     // With the single-pending index gone, the unique index on
     // `(recurrence_id, due_date)` is the ONLY thing stopping a concurrent run
     // from materializing the same occurrence twice.
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await db.exec(`drop index public.${IDENTITY};`)
 
@@ -121,7 +121,7 @@ describe('migration 0066 — activation', () => {
     ]
 
     for (const impostor of impostors) {
-      const db = await createRecurrenceIdentityDb()
+      const db = await createRecurrenceIdentityDb({ scheduleGap: false })
       try {
         await db.exec(`drop index public.${IDENTITY};`)
         await db.exec(impostor.ddl)
@@ -138,7 +138,7 @@ describe('migration 0066 — activation', () => {
   it('refuses when the due-date CHECK is missing', async () => {
     // Without it a `pending` row can lose its vencimiento, and a row with no
     // identity is a row the unique index above does not cover.
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await db.exec(
         'alter table public.recurrence_instances drop constraint chk_recurrence_instances_unresolved_has_due_date;',
@@ -165,7 +165,7 @@ describe('migration 0066 — activation', () => {
     ]
 
     for (const { why, body } of bodies) {
-      const db = await createRecurrenceIdentityDb()
+      const db = await createRecurrenceIdentityDb({ scheduleGap: false })
       try {
         await db.exec(`
           alter table public.recurrence_instances
@@ -205,7 +205,7 @@ describe('migration 0066 — activation', () => {
     ]
 
     for (const { why, body, expected } of bodies) {
-      const db = await createRecurrenceIdentityDb()
+      const db = await createRecurrenceIdentityDb({ scheduleGap: false })
       try {
         await db.exec(`
           alter table public.recurrence_instances
@@ -227,7 +227,7 @@ describe('migration 0066 — activation', () => {
     // and blessing "close enough" is how the comparison stops meaning anything.
     // It stops a deploy instead of blessing an unprotected table, and the fix is
     // one `alter table`.
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await db.exec(`
         alter table public.recurrence_instances
@@ -248,7 +248,7 @@ describe('migration 0066 — activation', () => {
     // `NOT VALID` enforces new rows and leaves everything already stored
     // unexamined — so the constraint exists, reads as protection, and the rows
     // the activation is about were never looked at.
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await db.exec(`
         alter table public.recurrence_instances
@@ -266,7 +266,7 @@ describe('migration 0066 — activation', () => {
   }, 120_000)
 
   it('retires the single-pending index and keeps the identity one', async () => {
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       expect(await indexExists(db, ONE_PENDING)).toBe(true)
 
@@ -280,7 +280,7 @@ describe('migration 0066 — activation', () => {
   }, 120_000)
 
   it('lets a rule hold two unresolved occurrences, which is the whole point', async () => {
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       const rule = '00000000-0000-0000-0000-000000008001'
       await db.exec(`
@@ -322,7 +322,7 @@ describe('migration 0066 — activation', () => {
   it('still refuses the SAME occurrence twice', async () => {
     // What the activation must NOT do is open the door to duplicates. The rule
     // that changes is "one pending per rule"; "one row per occurrence" stays.
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       const rule = '00000000-0000-0000-0000-000000008002'
       await db.exec(`
@@ -353,7 +353,7 @@ describe('migration 0066 — activation', () => {
   it('is safe to re-apply', async () => {
     // Migrations get replayed. A second run must be a no-op, not an error that
     // makes an operator wonder what half-happened.
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await applyActivation(db)
       await applyActivation(db)
@@ -394,7 +394,7 @@ describe('validate_schema.sql — final state', () => {
   it('REFUSES a schema whose activation is still pending', async () => {
     // The defect this replaces: a version that accepted either state and only
     // reported which one, so an unapplied activation passed final validation.
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await expect(db.exec(activationBranchOfValidateSchema())).rejects.toThrow(
         /still exists: the activation \(0066\) was not applied/,
@@ -405,7 +405,7 @@ describe('validate_schema.sql — final state', () => {
   }, 120_000)
 
   it('accepts it once the activation is applied', async () => {
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await applyActivation(db)
       await expect(db.exec(activationBranchOfValidateSchema())).resolves.toBeDefined()
@@ -417,7 +417,7 @@ describe('validate_schema.sql — final state', () => {
 
 describe('validate_schema_transition.sql — the window', () => {
   it('passes while the expansion is applied and the activation is not', async () => {
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await expect(db.exec(readSql('validate_schema_transition.sql'))).resolves.toBeDefined()
     } finally {
@@ -426,7 +426,7 @@ describe('validate_schema_transition.sql — the window', () => {
   }, 120_000)
 
   it('refuses once the activation is applied — that is the signal to switch files', async () => {
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await applyActivation(db)
       await expect(db.exec(readSql('validate_schema_transition.sql'))).rejects.toThrow(
@@ -458,7 +458,7 @@ describe('validate_schema_transition.sql — the window', () => {
     //
     // Reproduced by making the fixture match production, and the fix is generic:
     // the block drops every NOT NULL from the copy instead of naming columns.
-    const db = await createRecurrenceIdentityDb()
+    const db = await createRecurrenceIdentityDb({ scheduleGap: false })
     try {
       await db.exec(`
         alter table public.recurrence_instances alter column amount        drop default;
@@ -535,7 +535,7 @@ describe('validate_schema_transition.sql — the window', () => {
     ]
 
     for (const { why, sql, expected } of damage) {
-      const db = await createRecurrenceIdentityDb()
+      const db = await createRecurrenceIdentityDb({ scheduleGap: false })
       try {
         await db.exec(sql)
         await expect(db.exec(readSql('validate_schema_transition.sql')), why).rejects.toThrow(

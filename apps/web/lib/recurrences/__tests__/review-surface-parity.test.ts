@@ -178,3 +178,70 @@ describe('the pending read comes back, one way or another', () => {
     expect(read(file)).toContain('retry: false')
   })
 })
+
+describe('correcting the reference date exists on both platforms', () => {
+  // #121. Native has no test runner, so the field's presence there is checked
+  // statically — the same reason this file exists. What it guards is the half
+  // that silently goes missing: a form that renders the picker but never puts
+  // it in the payload looks finished and changes nothing.
+  const WEB_EDIT = 'apps/web/app/(app)/transactions/recurring/[id]/_components/recurrence-edit-drawer.tsx'
+  const NATIVE_EDIT = 'apps/mobile/components/recurrences/RecurrenceEditForm.tsx'
+
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s offers the field and sends it', (file) => {
+    const source = read(file)
+    expect(source).toContain('labels.reference_date')
+    expect(source).toMatch(/start_date:\s*startDate/)
+  })
+
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s explains what happens to what already exists', (file) => {
+    expect(read(file)).toContain('reference_date_hint')
+  })
+
+  // The ambiguity the calendar cannot resolve: both forms ask it, both use the
+  // SHARED decision, and neither hands the answer over without it.
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s asks which occurrence comes first', (file) => {
+    const source = read(file)
+    expect(source).toContain('referenceDateChoice')
+    expect(source).toContain('reference_date_question')
+    expect(source).toContain('reference_date_paused')
+    expect(source).toMatch(/schedule_effective_from:/)
+  })
+
+  // The three ways the question and its answer came apart (2c.6 / 2c.7 / 2c.8).
+  // Web has these as behaviour tests in `recurrence-edit-drawer.test.tsx`; on
+  // native there is no runner, and a form that quietly rebuilt the old shape
+  // would look identical on screen.
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s builds the options from the frequency being SAVED', (file) => {
+    const source = read(file)
+    // From the form's own state, never `rule.interval_*`: the server recomputes
+    // the dates it accepts from the patch, so a form reading the stored
+    // frequency offers dates the server refuses.
+    expect(source).toContain('presetToInterval(frequency)')
+    expect(source).not.toMatch(/interval_count:\s*rule\.interval_count/)
+    expect(source).not.toMatch(/interval_unit:\s*rule\.interval_unit/)
+  })
+
+  // `custom` is a value the column really holds (0021), and no preset describes
+  // it. Handing it to `presetToInterval` returns nothing and the form throws
+  // before it renders — the screen simply does not open for a rule every three
+  // days. Web has this as a behaviour test; native is guarded here.
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s survives a rule with a custom frequency', (file) => {
+    const source = read(file)
+    expect(source).toMatch(/frequency === 'custom'/)
+  })
+
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s drops an answer that is no longer offered', (file) => {
+    const source = read(file)
+    expect(source).toMatch(/options\.includes\(effectiveFrom\)/)
+    // The silent default is what made an unanswered question look answered.
+    expect(source).not.toMatch(/effectiveFrom \?\? choice\.options\[0\]/)
+  })
+
+  it.each([WEB_EDIT, NATIVE_EDIT])('%s refuses to save a question it did not get an answer to', (file) => {
+    const source = read(file)
+    expect(source).toContain('reference_date_unanswered')
+    // And says the truth about a rule with nothing left, instead of promising a
+    // save the database is going to refuse.
+    expect(source).toMatch(/choice\.kind === 'exhausted'/)
+  })
+})

@@ -2,6 +2,17 @@
 
 export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly' | 'annual'
 
+/**
+ * What a rule's `frequency` column can actually hold.
+ *
+ * `RecurrenceFrequency` is the set of PRESETS — the ones `presetToInterval`
+ * knows. Since 0021 the column also holds `custom`, for a rule every N days that
+ * no preset describes, and typing the row as presets-only made that value
+ * invisible to the compiler: a form that asked `presetToInterval` about it got
+ * `undefined` back and threw before rendering, and nothing said so.
+ */
+export type RecurrenceFrequencyLabel = RecurrenceFrequency | 'custom'
+
 // Custom recurrences are modelled as a generic interval: `count` units of
 // `interval_unit`. The four named frequencies above are presets of this same
 // model (see presetToInterval), so date math has a single code path.
@@ -100,10 +111,12 @@ export type RuleForDecision = {
   last_generated_date: string | null
   // Authoritative interval. When present it drives the calculation; `frequency`
   // is kept as a backward-compatible fallback for callers that only carry the
-  // preset label.
+  // label. A `custom` rule always carries the interval — that is what `custom`
+  // MEANS — so the fallback is for the presets, and the type says the whole set
+  // the column can hold rather than the subset the fallback handles.
   interval_count?: number
   interval_unit?: IntervalUnit
-  frequency?: RecurrenceFrequency
+  frequency?: RecurrenceFrequencyLabel
   // Optional cap on how many occurrences the rule ever produces.
   max_occurrences?: number | null
 }
@@ -134,10 +147,24 @@ export function decideRecurrenceInstance(
   //    invariant; we also short-circuit it here to avoid useless inserts.
   if (hasPending) return { generate: false, reason: 'has_pending' }
 
+  // The explicit interval wins; the preset label is the fallback for callers
+  // that carry only it. `custom` has no preset to fall back TO — a custom rule
+  // is defined by its interval — so an input that says `custom` without one is
+  // incoherent, and treating it as monthly would silently invent a calendar.
+  //
+  // A ROW cannot reach this: `interval_count` and `interval_unit` are NOT NULL
+  // with defaults since 0021. It guards the hand-built objects this type also
+  // accepts, where the two fields are optional.
   const { count, unit } =
     rule.interval_count != null && rule.interval_unit != null
       ? { count: rule.interval_count, unit: rule.interval_unit }
-      : presetToInterval(rule.frequency ?? 'monthly')
+      : rule.frequency === 'custom'
+        ? (() => {
+            throw new Error(
+              `a recurrence anchored on ${rule.start_date} says frequency 'custom' and carries no interval`,
+            )
+          })()
+        : presetToInterval(rule.frequency ?? 'monthly')
   // The rule's calendar, and only the calendar. `end_date` and `max_occurrences`
   // are deliberately left out: both are applied below, with their own reason, and
   // a schedule carrying them would make the walk stop short of the very date we
@@ -148,6 +175,11 @@ export function decideRecurrenceInstance(
     interval_count: count,
     interval_unit: unit,
     max_occurrences: null,
+    // The calendar, unfloored on purpose: the floor is applied to the RESULT of
+    // the walk below, for the same reason `end_date` is left out here.
+    schedule_effective_from: null,
+    // No cap is applied here either, so there is nothing for this to bound.
+    schedule_positions_before: null,
   }
 
   // 2. The next occurrence is READ OFF THE CALENDAR — the first one strictly
@@ -295,6 +327,18 @@ export function owedOccurrences({
 export type ScheduleVersion = {
   /** Since when this version applies. Nothing before it is described by it. */
   effective_from: string
+  /**
+   * The last day, INCLUSIVE, on which this version may produce. `null` means
+   * "until the next one starts", which is how every version read before #121.
+   *
+   * It exists because the end of a version could only be DERIVED from the start
+   * of the next, and that made a GAP inexpressible — the stretch where a rule's
+   * old schedule has stopped and the new one has not begun. Without it,
+   * correcting an anchor to rule from next month left the old schedule firing
+   * one more time in between, on the old date: the same duplicate, one cycle
+   * later.
+   */
+  effective_until?: string | null
   interval_count: number
   interval_unit: IntervalUnit
   /**
@@ -320,6 +364,17 @@ export type OwedOccurrencesForRuleInput = {
   horizon: string
   today: string
   existing: Iterable<string>
+  /**
+   * The occurrence the rule's seed movement covers, or null when it had none.
+   *
+   * It is a SPENT POSITION from the moment the rule exists — the movement is in
+   * the ledger, dated ahead or not — and no version of the schedule need produce
+   * it for that to be true. Correcting a reference date is exactly the case
+   * where none does: the seed's own date falls in the gap the correction opens,
+   * nothing walks it, nothing counts it, and a three-cuota rule generates three
+   * more on top of the movement the user already has.
+   */
+  seedOccurrenceDate: string | null
 }
 
 // A pause covers [paused_from, resumed_at): the day it is resumed the rule is
@@ -353,21 +408,57 @@ function subtractPauses(
   return out
 }
 
-export function owedOccurrencesForRule({
-  versions,
-  pauses,
-  endDate,
-  maxOccurrences,
-  reconstructFrom,
-  horizon,
-  today,
-  existing,
-}: OwedOccurrencesForRuleInput): string[] {
-  if (versions.length === 0) return []
+/**
+ * THE COMPOSED WALK, once.
+ *
+ * Two questions run over the same timeline: which occurrences a rule still owes,
+ * and how many positions of its calendar it has already spent. They must not be
+ * answered by two loops — `max_occurrences` counts POSITIONS, so a second
+ * implementation that counted anything else (materialized rows, say) would let
+ * the cap mean one thing to the generator and another to the form offering
+ * dates. So the walk lives here and both callers pass through it.
+ *
+ * `visit` sees every date the rule produces, in order, already counted. Returns
+ * how many positions were spent in total.
+ */
+function forEachComposedOccurrence(
+  {
+    versions,
+    pauses,
+    endDate,
+    maxOccurrences,
+    horizon,
+    today,
+    seedOccurrenceDate,
+  }: Omit<OwedOccurrencesForRuleInput, 'reconstructFrom' | 'existing'>,
+  visit: (date: string) => void,
+): number {
+  if (versions.length === 0) return seedOccurrenceDate == null ? 0 : 1
 
   const ordered = [...versions].sort((a, b) => a.effective_from.localeCompare(b.effective_from))
-  const already = new Set(existing)
-  const owed: string[] = []
+
+  // Is the seed's own position already inside the arithmetic prefix the first
+  // version contributes? If it is, it is counted there and must not be counted
+  // again; if it is not, it is counted UP FRONT — before the cap is consulted —
+  // because whether some version happens to walk over it is not what decides
+  // that the money is committed.
+  const firstVersion = ordered[0]
+  const seedInFirstPrefix =
+    seedOccurrenceDate != null &&
+    seedOccurrenceDate < firstVersion.effective_from &&
+    occurrenceOrdinal(
+      {
+        start_date: firstVersion.anchor_date,
+        end_date: endDate,
+        interval_count: firstVersion.interval_count,
+        interval_unit: firstVersion.interval_unit,
+        max_occurrences: null,
+        schedule_effective_from: null,
+        schedule_positions_before: null,
+      },
+      seedOccurrenceDate,
+    ) != null
+  const seedCountedUpFront = seedOccurrenceDate != null && !seedInFirstPrefix
 
   // How many occurrences the rule has produced SO FAR along its composed
   // timeline. `max_occurrences` counts positions on the rule's calendar from its
@@ -385,6 +476,14 @@ export function owedOccurrencesForRule({
       // produced.
       start_date: version.anchor_date,
       end_date: endDate,
+      // A version already states the stretch it rules (`effective_from` ..
+      // `effective_until`), which is bounded below. The column-level floor is
+      // what the readers WITHOUT versions use instead; here it would be a second
+      // bound on the same thing.
+      schedule_effective_from: null,
+      // Same: the cap is applied against `produced` across every version, so a
+      // per-version head start would count the same positions twice.
+      schedule_positions_before: null,
       interval_count: version.interval_count,
       interval_unit: version.interval_unit,
       // Deliberately null: the cap is applied against `produced` below, across
@@ -395,8 +494,14 @@ export function owedOccurrencesForRule({
     // The stretch this version owns: from where it takes effect until the next
     // one does, never past today.
     const nextVersion = ordered[index + 1]
-    const versionEnd = nextVersion == null ? today : addDays(nextVersion.effective_from, -1)
-    const to = versionEnd < today ? versionEnd : today
+    // The EARLIEST of the three things that can end a version: its own explicit
+    // end, the start of the next one, and today. Taking the minimum is what makes
+    // a gap possible — an explicit end before the next version starts produces a
+    // stretch nobody describes, and nothing owed inside it.
+    const bounds = [today]
+    if (version.effective_until != null) bounds.push(version.effective_until)
+    if (nextVersion != null) bounds.push(addDays(nextVersion.effective_from, -1))
+    const to = bounds.reduce((earliest, bound) => (bound < earliest ? bound : earliest))
 
     // The first version's calendar reaches back to its anchor, and the
     // occurrences between the anchor and `effective_from` are the ones the cap
@@ -404,7 +509,9 @@ export function owedOccurrencesForRule({
     // Counting them by arithmetic costs nothing and is exactly what
     // `walkOccurrences` did when the cap lived in the schedule.
     if (index === 0) {
-      produced = occurrenceIndexAt(schedule, version.effective_from, 'on-or-after')
+      produced =
+        occurrenceIndexAt(schedule, version.effective_from, 'on-or-after') +
+        (seedCountedUpFront ? 1 : 0)
     }
 
     // Where the walk STARTS. With a cap it must start where the version does,
@@ -421,24 +528,99 @@ export function owedOccurrencesForRule({
       const remaining = maxOccurrences == null ? undefined : maxOccurrences - produced
       if (remaining != null && remaining <= 0) break
 
+      // The budget this segment actually needs, by the same arithmetic that
+      // positions the walk. Without it a rule whose life outruns the default — a
+      // daily rule running for years — stopped at 750 and reported fewer
+      // positions spent than it had, which reads as a cap still unspent.
+      const span =
+        occurrenceIndexAt(schedule, segment.to, 'strictly-after') -
+        occurrenceIndexAt(schedule, segment.from, 'on-or-after') +
+        2
+
+      // One more when the seed's date falls in this stretch: it is emitted like
+      // any other, but it was counted up front, so a limit derived from what is
+      // left of the cap would stop the walk one occurrence short.
+      const seedInSegment =
+        seedCountedUpFront &&
+        seedOccurrenceDate != null &&
+        seedOccurrenceDate >= segment.from &&
+        seedOccurrenceDate <= segment.to
+
       for (const date of walkOccurrences(schedule, {
         from: segment.from,
         to: segment.to,
-        limit: remaining,
+        limit: remaining == null ? undefined : remaining + (seedInSegment ? 1 : 0),
+        maxSteps: Math.max(span, MAX_WALK_STEPS),
       })) {
-        produced += 1
-        // The three reasons a date the rule produced is not owed. They are
-        // applied AFTER counting, because a date that exists — or that predates
-        // the floor or the horizon — still occupies its position on the calendar.
-        if (date <= reconstructFrom) continue
-        if (date < horizon) continue
-        if (already.has(date)) continue
-        owed.push(date)
+        // Counted once, and it may already have been.
+        if (!(seedCountedUpFront && date === seedOccurrenceDate)) produced += 1
+        visit(date)
       }
     }
   }
 
+  // SATURATED. The arithmetic prefix of the first version is a count of
+  // positions, not a count of ALLOWED positions, so on a rule whose calendar
+  // began long before the version that describes it the prefix alone can overrun
+  // the cap. Spending more of a cap than it holds is not a state — and left
+  // unsaturated this number disagrees with the database, which clamps, so the
+  // form and the server would answer differently about the same rule.
+  return maxOccurrences == null ? produced : Math.min(produced, maxOccurrences)
+}
+
+export function owedOccurrencesForRule({
+  reconstructFrom,
+  horizon,
+  existing,
+  ...walk
+}: OwedOccurrencesForRuleInput): string[] {
+  const already = new Set(existing)
+  const owed: string[] = []
+
+  forEachComposedOccurrence({ ...walk, horizon }, (date) => {
+    // The three reasons a date the rule produced is not owed. They are applied
+    // AFTER counting, because a date that exists — or that predates the floor or
+    // the horizon — still occupies its position on the calendar.
+    if (date <= reconstructFrom) return
+    if (date < horizon) return
+    if (already.has(date)) return
+    owed.push(date)
+  })
+
   return owed.sort()
+}
+
+/**
+ * How many positions of its calendar the rule has already spent, as of `today`.
+ *
+ * This is what `max_occurrences` counts, and the reason it cannot be answered by
+ * counting `recurrence_instances`: a rule created from a movement covers its
+ * first occurrence with that movement and has NO row for it, and a position the
+ * calendar produced while the rule was not being generated has none either.
+ * Counting rows says a 6-cuota rule has cuotas left when it does not, and offers
+ * a reference date for a rule that will never fire again.
+ *
+ * Saturates at the cap, because a walk that reaches it stops there.
+ */
+export function occurrencePositionsSpent(input: {
+  versions: ScheduleVersion[]
+  pauses: PauseInterval[]
+  endDate: string | null
+  maxOccurrences: number | null
+  today: string
+  /** See `OwedOccurrencesForRuleInput.seedOccurrenceDate`. */
+  seedOccurrenceDate: string | null
+}): number {
+  return forEachComposedOccurrence(
+    {
+      ...input,
+      // Never clip the start: the horizon is the generator's "do not bother
+      // looking further back than this", and a position before it is spent all
+      // the same.
+      horizon: '0001-01-01',
+    },
+    () => {},
+  )
 }
 
 // ── Upcoming projection (pure) ───────────────────────────────────────────────
@@ -456,6 +638,39 @@ export type OccurrenceSchedule = {
   interval_count: number
   interval_unit: IntervalUnit
   max_occurrences: number | null
+  /**
+   * Since when the CURRENT schedule rules, when it is not simply "always".
+   *
+   * The generator reads a rule's schedule from its versions; these two readers —
+   * "próxima fecha" and the dashboard projection — read it from the columns
+   * above, which describe only the newest version. That was invisible while the
+   * newest version always ruled from the past. Correcting an anchor to take
+   * effect NEXT cycle opens a stretch where the new schedule does not rule yet
+   * and the old one has stopped, and without this floor both readers would
+   * announce a date the generator is never going to create.
+   *
+   * REQUIRED, not optional, and that is the point. Every caller builds this
+   * object by hand from a row, and an optional floor is one a caller can forget
+   * in silence — which is exactly how two shipped readers lost it (#121). Made
+   * required, the compiler names them instead. `null` is the explicit "this
+   * schedule has always ruled", and it has to be written out.
+   */
+  schedule_effective_from: string | null
+  /**
+   * Positions of the rule's calendar spent BEFORE the current schedule started
+   * ruling — the other half of what `schedule_effective_from` fixes.
+   *
+   * `max_occurrences` counts positions from the rule's start. A reader without
+   * the schedule versions counts them from the anchor it can see, which is the
+   * CURRENT one; while the anchor could not move those agreed. Correcting a
+   * reference date moves it, and everything spent under the previous anchor
+   * stops counting — a three-cuota rule finishes and the screens go on offering
+   * a fourth. This carries the part the current calendar cannot see.
+   *
+   * `null` means "count from the anchor", which is what an internal walk over a
+   * single version wants: there the anchor IS the origin.
+   */
+  schedule_positions_before: number | null
 }
 
 export type RuleForProjection = OccurrenceSchedule & {
@@ -480,19 +695,33 @@ export type RuleForProjection = OccurrenceSchedule & {
  *
  * There are exactly two, and the second is easy to forget: a rule created from a
  * movement has NO instance row for its first occurrence — the seed transaction
- * itself is that occurrence — so `start_date` is covered even though nothing in
+ * itself is that occurrence — so that date is covered even though nothing in
  * `recurrence_instances` says so. The old cursor encoded this implicitly by
  * being set to the seed's date; naming it is what lets the cursor go.
+ *
+ * WHICH DATE, AND WHY NOT `start_date`. It used to be read off the anchor, which
+ * was safe only while the anchor could not move. Correcting a reference date
+ * moves it (#121), and then the anchor names an occurrence the seed movement
+ * never covered: the rule's FIRST occurrence under the corrected schedule would
+ * be marked as already existing and vanish from every projection, while the date
+ * the movement really covers would be announced as upcoming. The seed occurrence
+ * has its own immutable column for exactly this reason.
  */
 export function coveredOccurrences(input: {
-  startDate: string
+  /**
+   * The occurrence the seed movement covers, or null when the rule was not
+   * seeded. NOT the anchor — see above.
+   */
+  seedOccurrenceDate: string | null
   /** True when the rule was created from an existing movement. */
   seededFromMovement: boolean
   /** Due dates of the rule's existing instances, in ANY state. */
   existing: Iterable<string>
 }): Set<string> {
   const covered = new Set(input.existing)
-  if (input.seededFromMovement) covered.add(input.startDate)
+  if (input.seededFromMovement && input.seedOccurrenceDate != null) {
+    covered.add(input.seedOccurrenceDate)
+  }
   return covered
 }
 
@@ -501,10 +730,37 @@ export type ProjectedOccurrence = {
   scheduled_date: string
 }
 
+/**
+ * The floor a rule lands on when nothing decided one — `schedule_effective_from`
+ * is NOT NULL, and 0068 defaults it to this.
+ *
+ * It is reached only when the trigger that fills the column is gone, disabled or
+ * bypassed, which is exactly when a wrong value would go unnoticed, so the value
+ * chosen SUPPRESSES: no schedule rules, nothing is projected, nothing is
+ * announced. An empty card is a bug someone reports; a card promising money that
+ * will never move is a bug someone believes.
+ *
+ * Named, and checked by name, because a sentinel that is only a big date is one
+ * the arithmetic honours by accident: the projection suppressed it because its
+ * window ended first, while "próxima fecha" walked happily to the year 9999 and
+ * put that on screen.
+ */
+export const SCHEDULE_NEVER_RULES = '9999-12-31'
+
 // Safety net, no longer the thing that decides how far a rule can reach: the
 // walker positions itself at the window's edge by arithmetic, so this bounds the
 // steps taken INSIDE the window, not the life of the rule. See occurrenceIndexAt.
+//
+// It is a DEFAULT, not a ceiling: counting the positions a rule has spent walks
+// its whole life, and three years of a daily rule is past this. A caller that
+// knows its own span says so — and running out now THROWS, because the failure
+// this replaces was a walk that stopped at 750 and returned a short list with
+// nothing to say it had.
 const MAX_WALK_STEPS = 750
+
+// How far the arithmetic estimate in `occurrenceIndexAt` may be off. Month-end
+// clamping moves it by at most one; the rest is slack.
+const MAX_ESTIMATE_CORRECTION = 4
 
 export type OccurrenceWindow = {
   /** Inclusive lower bound. Occurrences before it are stepped over, not emitted. */
@@ -522,6 +778,12 @@ export type OccurrenceWindow = {
    * AND in the projection until the user resolves it.
    */
   cursor?: string | null
+  /**
+   * How many steps this walk may take. Defaults to `MAX_WALK_STEPS`, which suits
+   * a bounded window; a caller walking a rule's whole life passes its own span.
+   * Running out throws rather than truncating.
+   */
+  maxSteps?: number
   /** Stop after this many emitted occurrences. Use 1 to ask "the next one". */
   limit?: number
 }
@@ -572,11 +834,20 @@ function occurrenceIndexAt(
   if (n < 0) n = 0
 
   // Walk back while the estimate overshot, then forward until it satisfies.
-  // Both loops are bounded: the estimate is never more than a couple of steps off.
+  //
+  // The forward bound counts CORRECTIONS, not the index. It used to read
+  // `n > MAX_WALK_STEPS`, which is a different quantity: for a rule whose true
+  // position is past 750 — a daily rule running two years — the loop was already
+  // over its limit before it began, so an estimate that did need correcting came
+  // back uncorrected.
   while (n > 0 && satisfies(occurrenceAt(schedule, n - 1))) n -= 1
-  while (!satisfies(occurrenceAt(schedule, n))) {
+  for (let steps = 0; !satisfies(occurrenceAt(schedule, n)); steps += 1) {
+    if (steps > MAX_ESTIMATE_CORRECTION) {
+      throw new Error(
+        `occurrenceIndexAt: the estimate for ${date} did not converge on ${start} every ${count} ${unit}`,
+      )
+    }
     n += 1
-    if (n > MAX_WALK_STEPS) break
   }
   return n
 }
@@ -620,21 +891,41 @@ export function walkOccurrences(
   schedule: OccurrenceSchedule,
   window: OccurrenceWindow,
 ): string[] {
-  const { from, to = null, cursor = null, limit } = window
+  const { from, to = null, cursor = null, limit, maxSteps = MAX_WALK_STEPS } = window
   const out: string[] = []
 
-  // Position at the window's edge: the first occurrence that is both >= `from`
-  // and strictly after the cursor. `produced` keeps counting from start_date,
-  // because that is what max_occurrences means.
-  let produced = occurrenceIndexAt(schedule, from, 'on-or-after')
+  // WHERE THE WALK IS, and HOW MUCH OF THE CAP IS GONE. One number did both
+  // while the anchor was immutable — the n-th position of this calendar was also
+  // the n-th the rule had ever had. A corrected reference date splits them: the
+  // calendar restarts at the new anchor, the cap does not.
+  let index = occurrenceIndexAt(schedule, from, 'on-or-after')
   if (cursor != null) {
-    produced = Math.max(produced, occurrenceIndexAt(schedule, cursor, 'strictly-after'))
+    index = Math.max(index, occurrenceIndexAt(schedule, cursor, 'strictly-after'))
   }
 
-  let current = occurrenceAt(schedule, produced)
+  // Positions of THIS calendar between the day it started ruling and the edge of
+  // the window, plus everything spent before that under whatever anchor ruled
+  // then. With no `schedule_positions_before` the two collapse back into one, which is
+  // the single-version walk this used to be.
+  const floor = schedule.schedule_effective_from
+  let spent =
+    schedule.schedule_positions_before == null
+      ? index
+      : schedule.schedule_positions_before +
+        Math.max(
+          0,
+          index - (floor == null ? 0 : occurrenceIndexAt(schedule, floor, 'on-or-after')),
+        )
 
-  for (let steps = 0; steps < MAX_WALK_STEPS; steps++) {
-    if (schedule.max_occurrences != null && produced >= schedule.max_occurrences) break
+  let current = occurrenceAt(schedule, index)
+
+  for (let steps = 0; ; steps += 1) {
+    if (steps > maxSteps) {
+      throw new Error(
+        `walkOccurrences: ${maxSteps} steps did not reach ${to ?? 'the end'} from ${from} on ${schedule.start_date} every ${schedule.interval_count} ${schedule.interval_unit}`,
+      )
+    }
+    if (schedule.max_occurrences != null && spent >= schedule.max_occurrences) break
     if (to != null && current > to) break
     if (schedule.end_date != null && current > schedule.end_date) break
 
@@ -645,8 +936,9 @@ export function walkOccurrences(
       if (limit != null && out.length >= limit) break
     }
 
-    produced += 1
-    current = occurrenceAt(schedule, produced)
+    index += 1
+    spent += 1
+    current = occurrenceAt(schedule, index)
   }
 
   return out
@@ -662,9 +954,13 @@ export function projectRuleOccurrences(
   windowEnd: string,
 ): string[] {
   const covered = rule.covered instanceof Set ? rule.covered : new Set(rule.covered)
-  return walkOccurrences(rule, { from: windowStart, to: windowEnd }).filter(
-    (date) => !covered.has(date),
-  )
+  // The window never reaches before the schedule rules: see
+  // `schedule_effective_from`.
+  const floor = rule.schedule_effective_from
+  if (floor != null && floor >= SCHEDULE_NEVER_RULES) return []
+  const from = floor != null && floor > windowStart ? floor : windowStart
+  if (from > windowEnd) return []
+  return walkOccurrences(rule, { from, to: windowEnd }).filter((date) => !covered.has(date))
 }
 
 // The next occurrence a rule is still expected to produce — the calendar
@@ -685,12 +981,76 @@ export function getNextExpectedOccurrence(
   covered: Iterable<string>,
 ): string | null {
   const already = covered instanceof Set ? covered : new Set(covered)
-  // Bounded because the walk is: it steps forward only while it keeps landing on
-  // dates that already exist, and occurrences exist only up to today.
-  for (const date of walkOccurrences(rule, { from: today })) {
+  // Never earlier than the day the current schedule starts ruling: during a gap
+  // the answer is the first date of the NEW schedule, not the next one the old
+  // calendar would have produced. See `schedule_effective_from`.
+  const floor = rule.schedule_effective_from
+  // No schedule rules, so there is no next occurrence — not one in the year
+  // 9999, which is what walking from the fail-closed floor would answer.
+  if (floor != null && floor >= SCHEDULE_NEVER_RULES) return null
+  const from = floor != null && floor > today ? floor : today
+  // Bounded by the covered set, and told so. It steps forward only while it
+  // keeps landing on dates that already exist, so one more than there ARE is
+  // always enough — and saying it is what keeps this from walking the step
+  // budget on every call and throwing away all but the first answer.
+  for (const date of walkOccurrences(rule, { from, limit: already.size + 1 })) {
     if (!already.has(date)) return date
   }
   return null
+}
+
+/**
+ * The dates a user is offered when correcting a rule's reference date.
+ *
+ * The first occurrence of the corrected schedule that falls on or after `from`,
+ * and the one after it. Two, because the ambiguity has exactly two answers: the
+ * cycle in flight, or the next one. Fewer when the calendar has fewer to give —
+ * a rule past its `end_date` or with its cap spent has no next occurrence at
+ * all, and offering a date it will never produce is a promise the calendar does
+ * not keep.
+ *
+ * This DRAWS the question; it does not settle it. The database recomputes the
+ * same two dates and refuses anything else, because a date that arrives
+ * unverified opens a schedule version on a day off the calendar and every
+ * occurrence after it lands on the wrong phase. `candidate-dates-parity` pins
+ * the two implementations against each other.
+ */
+export function candidateEffectiveDates(
+  schedule: {
+    anchor_date: string
+    interval_count: number
+    interval_unit: IntervalUnit
+    end_date?: string | null
+    /** Occurrences the cap still allows, or null when there is no cap. */
+    remaining?: number | null
+  },
+  from: string,
+): string[] {
+  const remaining = schedule.remaining
+  if (remaining != null && remaining <= 0) return []
+
+  // At most two, and the walk is TOLD so. It used to ask for an open-ended walk
+  // and take the first two off the front, which meant stepping to whatever the
+  // step budget allowed and throwing the rest away — and, once running out of
+  // budget became an error instead of a silent stop, it meant erroring on every
+  // schedule. The bound belongs where the walk can act on it.
+  const wanted = remaining == null ? 2 : Math.min(2, remaining)
+
+  return walkOccurrences(
+    {
+      start_date: schedule.anchor_date,
+      end_date: schedule.end_date ?? null,
+      interval_count: schedule.interval_count,
+      interval_unit: schedule.interval_unit,
+      max_occurrences: null,
+      // This walk is what the floor will be CHOSEN FROM. Flooring it by the
+      // floor in force would hide the very dates being offered.
+      schedule_effective_from: null,
+      // The cap is applied by `remaining` below, which the caller computed.
+      schedule_positions_before: null,
+    },
+    { from, limit: wanted },
+  )
 }
 
 // Flatten every rule's in-window occurrences into a single date-sorted list.

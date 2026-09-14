@@ -756,6 +756,7 @@ export type Database = {
           anchor_date: string
           created_at: string
           effective_from: string
+          effective_until: string | null
           id: string
           interval_count: number
           interval_unit: string
@@ -767,6 +768,7 @@ export type Database = {
           anchor_date: string
           created_at?: string
           effective_from: string
+          effective_until: string | null
           id?: string
           interval_count: number
           interval_unit: string
@@ -778,6 +780,7 @@ export type Database = {
           anchor_date?: string
           created_at?: string
           effective_from?: string
+          effective_until?: string | null
           id?: string
           interval_count?: number
           interval_unit?: string
@@ -839,6 +842,9 @@ export type Database = {
           max_occurrences: number | null
           movement_type: string
           reconstruct_from: string
+          schedule_effective_from: string
+          schedule_positions_before: number
+          seed_occurrence_date: string | null
           start_date: string
           status: string
           subcategory_id: string | null
@@ -864,6 +870,9 @@ export type Database = {
           max_occurrences?: number | null
           movement_type: string
           reconstruct_from?: string
+          schedule_effective_from?: string
+          schedule_positions_before?: number
+          seed_occurrence_date?: string | null
           start_date: string
           status?: string
           subcategory_id?: string | null
@@ -889,6 +898,9 @@ export type Database = {
           max_occurrences?: number | null
           movement_type?: string
           reconstruct_from?: string
+          schedule_effective_from?: string
+          schedule_positions_before?: number
+          seed_occurrence_date?: string | null
           start_date?: string
           status?: string
           subcategory_id?: string | null
@@ -1345,6 +1357,32 @@ export type Database = {
     Functions: {
       confirm_settlement: {
         Args: { p_account_id: string; p_date: string; p_settlement_id: string }
+        Returns: undefined
+      }
+      recurrence_positions_spent: {
+        Args: {
+          p_id: string
+          p_today: string
+        }
+        Returns: number
+      }
+      recurrence_candidate_effective_dates: {
+        Args: {
+          p_anchor: string
+          p_interval_count: number
+          p_interval_unit: string
+          p_from: string
+          p_end_date?: string | null
+          p_remaining?: number | null
+        }
+        Returns: { effective_from: string }[]
+      }
+      update_recurrence_schedule: {
+        Args: {
+          p_id: string
+          p_patch: Json
+          p_schedule_effective_from?: string | null
+        }
         Returns: undefined
       }
       delete_movement_unlinking_seed: {

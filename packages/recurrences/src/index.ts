@@ -93,3 +93,5 @@ export {
   type MaterializationOutcome,
   type ReviewFeedState,
 } from './review-surface'
+export { referenceDateChoice } from './schedule-edit'
+export type { ReferenceDateChoice } from './schedule-edit'
