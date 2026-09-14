@@ -120,7 +120,8 @@ pnpm add -g @fission-ai/openspec
 
 Una vez instalado, dentro de Claude Code podés usar:
 
-- `/grana-explore` — pensar / refinar una idea antes de proponerla (reemplaza a `/opsx:explore`)
+- `/grana-lightweight-explore` — pensar / refinar una idea antes de proponerla: corto y sin escribir nada
+- `/grana-deep-explore` — el `/opsx:explore` original de OpenSpec, palabra por palabra: largo, con diagramas, y puede escribir artefactos de OpenSpec si le decís que sí
 - `/opsx:propose "<idea>"` — crear una nueva propuesta de cambio
 - `/opsx:apply` — implementar las tasks de un cambio
 - `/opsx:update` — revisar los artefactos de un cambio ya propuesto

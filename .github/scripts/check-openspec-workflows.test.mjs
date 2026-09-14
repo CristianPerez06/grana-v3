@@ -123,10 +123,16 @@ test('the retired skills location rejects the five workflows too', () => {
 })
 
 test("the repository's own skills are none of the check's business", () => {
+  const ownSkills = [
+    'grana-lightweight-explore',
+    'grana-deep-explore',
+    'pinpoint-lightweight-explore',
+    'pinpoint-deep-explore',
+  ]
   const problems = problemsOf({
     commands: WORKFLOWS,
-    agentSkills: SKILLS,
-    claudeSkills: ['grana-explore', 'pinpoint-explore', 'impeccable'],
+    agentSkills: [...SKILLS, ...ownSkills],
+    claudeSkills: [...ownSkills, 'impeccable'],
   })
   assert.deepEqual(problems, [])
 })

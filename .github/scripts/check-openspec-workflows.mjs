@@ -7,8 +7,9 @@
  * setting, not a repository one. It lives in the global config, its default
  * `core` profile includes `explore`, and `openspec update` rewrites every
  * generated file from whatever that machine happens to say. So the decision to
- * drop `explore` — taken because the generated text asks for "think deeply",
- * "brainstorm multiple approaches" and "diagrams liberally", against
+ * drop the generated `explore` — its text is kept word for word as a skill this
+ * repository owns, `/grana-deep-explore`, so it runs only when typed by name
+ * and no update rewrites it; the everyday `/grana-lightweight-explore` follows
  * AGENTS.md § Talking to the user — cannot be recorded in the repository by
  * deleting the file. It is undone by the next update, on any machine, with
  * nothing in the diff that looks wrong.
@@ -31,7 +32,7 @@ import { fileURLToPath } from 'node:url'
  * Named in the failure message so the person reading it knows what they lose by
  * deleting the file (nothing) and what to use instead.
  */
-const REPLACEMENT = '/grana-explore'
+const REPLACEMENT = '/grana-lightweight-explore, or /grana-deep-explore for the same text word for word,'
 
 /** The workflows this repository keeps, in the order OpenSpec lists them. */
 export const WORKFLOWS = ['propose', 'apply', 'update', 'sync', 'archive']
@@ -176,7 +177,7 @@ function main() {
     if (problem.kind === 'unwanted') {
       console.error(
         `::error::${problem.path} is a generated OpenSpec workflow this repository does not keep. ` +
-          `It is written by \`openspec update\`, and removing it was deliberate: ${REPLACEMENT} replaces it. ` +
+          `It is written by \`openspec update\`, and removing it was deliberate: ${REPLACEMENT} replace it. ` +
           `Delete it — then stop the next update from writing it again.`,
       )
     } else {
