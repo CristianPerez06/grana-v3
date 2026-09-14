@@ -374,8 +374,7 @@ que el usuario ya no puede deshacer.
 
 - [x] 3.1 QA manual en las dos plataformas, con el caso real del sueldo.
   - **Sueldo, sólo lectura.** Idéntico antes y después de `0069` — la reparación toca una columna
-    dormida y no debe verse. `Creada el 8 de julio de 2026` (una columna que no participó del
-    arreglo) coincide con el seed restaurado: tercera fuente independiente diciendo `2026-07-08`.
+    dormida y no debe verse, y no se vio.
   - **Los dos caminos del trigger, sobre datos reales.** `QA 121` (sembrada a futuro, corregida antes
     de arrancar): la versión original **se borra**, queda **1** y lleva el ancla nueva — el recorrido
     que tumbó la invariante, observado por primera vez fuera de un test. `QA 121b` (semilla de hoy):
@@ -452,6 +451,17 @@ que el usuario ya no puede deshacer.
     borrar la fila habría roto la identidad de la ocurrencia, que es justamente el invariante que cerró
     el #96: una ocurrencia es única por `(regla, vencimiento)` y no se reescribe. Omitirla REGISTRA que
     existió y no correspondía, en vez de fingir que nunca estuvo.
-- [ ] 3.2 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm lint:mobile`, `pnpm typecheck:mobile`, `pnpm build`.
-- [ ] 3.3 Archivar el change y aplicar el delta al spec maestro de `transactions`.
-- [ ] 3.4 `pnpm openspec:check` en verde.
+- [x] 3.2 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm lint:mobile`, `pnpm typecheck:mobile`, `pnpm build`.
+      Los seis en verde sobre `82df170b`: lint y typecheck limpios en web y en nativo; **1.748 tests**
+      en 136 archivos (974 web, 252 recurrences, 228 dashboard, 85 cards, 81 money-logic, 60
+      movement-form, 47 transactions-mutations, 11 shared, 6 accounts, 4 transactions); build
+      compilado y 33 páginas generadas. La suite de recurrences se corrió además con
+      `TZ=America/Argentina/Buenos_Aires`, porque varios de sus casos dependen del día local.
+- [x] 3.3 Archivar el change y aplicar el delta al spec maestro de `transactions`.
+      El requirement del detalle de una regla recurrente se reemplazó entero en
+      `openspec/specs/transactions/spec.md`: la fecha de referencia como ancla del calendario (y por
+      qué no se llama "día de vencimiento"), la pregunta obligatoria con las dos fechas concretas, el
+      corte de la versión anterior antes de que empiece la nueva, y los tres límites — las
+      ocurrencias ya materializadas conservan su vencimiento, no se materializa nada hacia atrás, y
+      la regla se edita esté activa o pausada.
+- [x] 3.4 `pnpm openspec:check` en verde. 32/32 tras aplicar el delta.
