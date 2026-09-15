@@ -58,12 +58,12 @@ Ver `design.md` para el porqué de cada decisión y `specs/transactions/spec.md`
 
 ## 4. Mostrar el límite y el final
 
-- [ ] 4.1 Detalle de la regla, web y nativo: mostrar el avance (`1 de 11`), los restantes y el último vencimiento previsto cuando la regla tiene límite, y no mostrarlos cuando no lo tiene. Verificar con regresiones de render en web sobre los dos casos.
-- [ ] 4.1b Regla **pausada** con límite: mostrar el avance y, en lugar de la fecha, que el final se calcula al reanudar. Verificar con una regresión de render que no aparece ninguna fecha.
-- [ ] 4.2 Listado de recurrencias, web y nativo: agrupar por el estado **mostrado** y no por `recurrences.status`, de modo que una regla agotada no se cuente entre las activas. Verificar con una regresión sobre una regla con `status = 'active'` y su límite gastado.
-- [ ] 4.3 Comprobar que ampliar el límite devuelve la regla a activa y que quitarlo la vuelve indefinida, sin ninguna otra operación. Verificar con una regresión que recorra la mutación real, no sólo el cálculo.
-- [ ] 4.4 Comprobar que `recurrences.status` NO se reescribe en ninguno de los caminos anteriores. Verificar leyendo la columna antes y después en la regresión del 4.3.
-- [ ] 4.5 Comprobar que una regla **eliminada** no aparece como finalizada en el listado ni en ninguna superficie de reglas vivas. Verificar con una regresión sobre una regla `deleted` sin futuro.
+- [x] 4.1 Detalle de la regla, web y nativo: mostrar el avance (`1 de 11`), los restantes y el último vencimiento previsto cuando la regla tiene límite, y no mostrarlos cuando no lo tiene. Verificar con regresiones de render en web sobre los dos casos.
+- [x] 4.1b Regla **pausada** con límite: mostrar el avance y, en lugar de la fecha, que el final se calcula al reanudar. Verificar con una regresión de render que no aparece ninguna fecha.
+- [x] 4.2 Listado de recurrencias, web y nativo: agrupar por el estado **mostrado** y no por `recurrences.status`, de modo que una regla agotada no se cuente entre las activas. Verificar con una regresión sobre una regla con `status = 'active'` y su límite gastado.
+- [x] 4.3 Comprobar que ampliar el límite devuelve la regla a activa y que quitarlo la vuelve indefinida, sin ninguna otra operación. Verificar con una regresión que recorra la mutación real, no sólo el cálculo.
+- [x] 4.4 Comprobar que `recurrences.status` NO se reescribe en ninguno de los caminos anteriores. Verificar leyendo la columna antes y después en la regresión del 4.3.
+- [x] 4.5 Comprobar que una regla **eliminada** no aparece como finalizada en el listado ni en ninguna superficie de reglas vivas. Verificar con una regresión sobre una regla `deleted` sin futuro.
 
 ## 5. Cierre
 

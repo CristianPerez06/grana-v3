@@ -1842,7 +1842,19 @@
     "reference_date_hint": "Usamos esta fecha para calcular los próximos vencimientos. Los que ya existen conservan su fecha.",
     "reference_date_question": "¿Cuál querés que sea el primer vencimiento con la nueva referencia?",
     "reference_date_paused": "Usaremos esta referencia cuando reanudes la regla.",
-    "reference_date_exhausted": "Esta regla no tiene próximos vencimientos, así que no se puede cambiar la referencia. Extendé el tope o la fecha de fin para volver a ajustarla."
+    "reference_date_exhausted": "Esta regla no tiene próximos vencimientos, así que no se puede cambiar la referencia. Extendé el tope o la fecha de fin para volver a ajustarla.",
+    "limit": {
+      "progress": "{spent} de {total} vencimientos",
+      "remaining": "{remaining} restantes",
+      "last_expected": "Último vencimiento previsto",
+      "last_expected_paused": "Se calcula cuando reanudes la regla",
+      "no_limit": "Se repite sin límite",
+      "ends_on": "Termina el {date}",
+      "finished_with_pending": "Finalizada · {count} por revisar",
+      "progress_label": "Avance",
+      "remaining_label": "Restantes",
+      "end_label": "Termina"
+    }
   },
   "subcategories": {
     "supermercado": "Supermercado",

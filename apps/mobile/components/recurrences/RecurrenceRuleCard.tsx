@@ -49,14 +49,24 @@ export function RecurrenceRuleCard({
       ? `${accountName} → ${rule.destination_account?.name ?? '—'}`
       : accountName
 
+  // A finished rule that still has occurrences waiting says so — web's twin. The
+  // rule stops producing; it does not stop owing, and hiding them because it
+  // ended would strand them.
   const meta =
-    tab === 'finished'
-      ? rule.end_date
-        ? t('recurrences.until_template', { date: formatShortDate(rule.end_date, locale) })
-        : accountLine
-      : rule.status === 'paused'
-        ? `${t('recurrences.statuses.paused')} · ${accountLine}`
-        : accountLine
+    rule.lifecycle.state === 'finished-with-pending'
+      ? `${t('recurrences.limit.finished_with_pending', { count: rule.lifecycle.unresolved })} · ${accountLine}`
+      : tab === 'finished'
+        ? rule.end_date
+          ? t('recurrences.until_template', { date: formatShortDate(rule.end_date, locale) })
+          : rule.lifecycle.progress != null
+            ? `${t('recurrences.limit.progress', {
+                spent: rule.lifecycle.progress.spent,
+                total: rule.lifecycle.progress.total,
+              })} · ${accountLine}`
+            : accountLine
+        : rule.status === 'paused'
+          ? `${t('recurrences.statuses.paused')} · ${accountLine}`
+          : accountLine
 
   const nextDate =
     tab === 'active' && rule.next_occurrence

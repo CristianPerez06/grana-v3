@@ -203,6 +203,54 @@ export default function RecurrenceDetailScreen() {
                     value={formatShortDate(rule.end_date, locale)}
                   />
                 ) : null}
+
+                {/* WHERE THE RULE IS IN ITS PLAN — the web detail's twin. A
+                    limit decides when a rule stops reminding and was invisible
+                    on every screen: a plan of eleven cuotas recorded as one read
+                    «mensual, sin fecha de fin» (#142).
+
+                    Counted in POSITIONS of the calendar, which is what
+                    `max_occurrences` caps, never in instance rows. */}
+                {rule.lifecycle.progress == null && !rule.end_date ? (
+                  <Row
+                    label={t('recurrences.limit.end_label')}
+                    value={t('recurrences.limit.no_limit')}
+                  />
+                ) : null}
+                {rule.lifecycle.progress != null ? (
+                  <>
+                    <Row
+                      label={t('recurrences.limit.progress_label')}
+                      value={t('recurrences.limit.progress', {
+                        spent: rule.lifecycle.progress.spent,
+                        total: rule.lifecycle.progress.total,
+                      })}
+                    />
+                    {rule.lifecycle.progress.remaining > 0 ? (
+                      <Row
+                        label={t('recurrences.limit.remaining_label')}
+                        value={t('recurrences.limit.remaining', {
+                          remaining: rule.lifecycle.progress.remaining,
+                        })}
+                      />
+                    ) : null}
+                    {/* A paused rule gets a sentence instead of a date: while
+                        the pause is open the final date depends on a day that
+                        has not happened, and an estimate shown as a fact is
+                        exactly what this avoids. */}
+                    {rule.last_expected_occurrence.kind === 'date' ? (
+                      <Row
+                        label={t('recurrences.limit.last_expected')}
+                        value={formatShortDate(rule.last_expected_occurrence.date, locale)}
+                      />
+                    ) : rule.last_expected_occurrence.kind === 'unknown-while-paused' ? (
+                      <Row
+                        label={t('recurrences.limit.last_expected')}
+                        value={t('recurrences.limit.last_expected_paused')}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
                 {rule.description ? (
                   <Row label={t('recurrences.labels.description')} value={rule.description} />
                 ) : null}
