@@ -132,14 +132,25 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
               rule.movement_type === 'transfer'
                 ? `${accountName} → ${destinationName ?? '—'}`
                 : accountName
+            // A finished rule that still has occurrences waiting says so. They
+            // are the user's to confirm or skip, and hiding them because the
+            // rule ended would strand them: the rule stops producing, it does
+            // not stop owing.
             const meta =
-              tab === 'finished'
-                ? rule.end_date
-                  ? tRec('until_template', { date: formatDate(rule.end_date) ?? rule.end_date })
-                  : accountLine
-                : rule.status === 'paused'
-                  ? `${tRec('statuses.paused')} · ${accountLine}`
-                  : accountLine
+              rule.lifecycle.state === 'finished-with-pending'
+                ? `${tRec('limit.finished_with_pending', { count: rule.lifecycle.unresolved })} · ${accountLine}`
+                : tab === 'finished'
+                  ? rule.end_date
+                    ? tRec('until_template', { date: formatDate(rule.end_date) ?? rule.end_date })
+                    : rule.lifecycle.progress != null
+                      ? `${tRec('limit.progress', {
+                          spent: rule.lifecycle.progress.spent,
+                          total: rule.lifecycle.progress.total,
+                        })} · ${accountLine}`
+                      : accountLine
+                  : rule.status === 'paused'
+                    ? `${tRec('statuses.paused')} · ${accountLine}`
+                    : accountLine
 
             return (
               <Link

@@ -89,6 +89,19 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
+/**
+ * The reference-date radios, and only those.
+ *
+ * The drawer now also holds «¿Cómo termina?», whose three answers are radios
+ * too, so a bare `getAllByRole('radio')` picks up five inputs from two different
+ * questions. They are told apart by `name`, which is what groups radios in the
+ * first place.
+ */
+const referenceDateRadios = () =>
+  screen
+    .getAllByRole('radio')
+    .filter((input) => (input as HTMLInputElement).name === 'schedule_effective_from')
+
 describe('the reference date field', () => {
   it('opens on the rule’s current anchor', () => {
     renderDrawer()
@@ -121,7 +134,7 @@ describe('the reference date field', () => {
     })
 
     await act(async () => {
-      ;(screen.getAllByRole('radio')[0] as HTMLInputElement).click()
+      ;(referenceDateRadios()[0] as HTMLInputElement).click()
     })
     await act(async () => {
       container.querySelector('form')!.dispatchEvent(
@@ -169,9 +182,7 @@ describe('the question the calendar cannot answer', () => {
     renderDrawer()
     await moveAnchorTo('2026-06-10')
     expect(screen.getByText('recurrences.reference_date_question')).toBeTruthy()
-    const options = screen
-      .getAllByRole('radio')
-      .map((input) => (input as HTMLInputElement).value)
+    const options = referenceDateRadios().map((input) => (input as HTMLInputElement).value)
     expect(options).toEqual(['2026-09-10', '2026-10-10'])
   })
 
@@ -179,9 +190,9 @@ describe('the question the calendar cannot answer', () => {
     const { container } = renderDrawer()
     await moveAnchorTo('2026-06-10')
     await act(async () => {
-      const later = screen
-        .getAllByRole('radio')
-        .find((input) => (input as HTMLInputElement).value === '2026-10-10')!
+      const later = referenceDateRadios().find(
+        (input) => (input as HTMLInputElement).value === '2026-10-10',
+      )!
       ;(later as HTMLInputElement).click()
     })
     await act(async () => {
@@ -214,16 +225,16 @@ describe('the question the calendar cannot answer', () => {
   it('has nothing preselected, so nothing is chosen by omission', async () => {
     renderDrawer()
     await moveAnchorTo('2026-06-10')
-    expect(screen.getAllByRole('radio').some((r) => (r as HTMLInputElement).checked)).toBe(false)
+    expect(referenceDateRadios().some((r) => (r as HTMLInputElement).checked)).toBe(false)
   })
 
   it('carries the answer once it is given', async () => {
     const { container } = renderDrawer()
     await moveAnchorTo('2026-06-10')
     await act(async () => {
-      ;(screen
-        .getAllByRole('radio')
-        .find((input) => (input as HTMLInputElement).value === '2026-09-10')! as HTMLInputElement).click()
+      ;(referenceDateRadios().find(
+        (input) => (input as HTMLInputElement).value === '2026-09-10',
+      )! as HTMLInputElement).click()
     })
     await act(async () => {
       container.querySelector('form')!.dispatchEvent(

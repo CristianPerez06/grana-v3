@@ -27,6 +27,8 @@ export const MIGRATION_0065 = read('0065_delete_seeded_movement_atomically.sql')
 export const MIGRATION_ACTIVATE = read('0066_recurrence_backlog_activate.sql')
 export const MIGRATION_0068 = read('0068_schedule_version_effective_until.sql')
 export const MIGRATION_0069 = read('0069_repair_seed_occurrence_identity.sql')
+export const MIGRATION_0070 = read('0070_recurrence_positions_spent_batch.sql')
+export const MIGRATION_0071 = read('0071_pause_looks_forward.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -209,6 +211,12 @@ export async function createRecurrenceIdentityDb(
       // 0069 rides along by default, as 0065 does with 0064: the schema every
       // test should see is the one production is going to have.
       if (options.seedRepair !== false) await applySeedRepair(db)
+      // And 0070, for the same reason: the hub's read calls it, so a harness
+      // without it tests a path production does not have.
+      await applyPositionsBatch(db)
+      // 0071 too: a pause that swallows its own opening day is not the schema
+      // production is going to have.
+      await applyPauseLooksForward(db)
     }
   }
   return db
@@ -264,6 +272,35 @@ export async function applyEffectiveUntil(db: PGlite): Promise<void> {
 export async function applySeedRepair(db: PGlite): Promise<void> {
   try {
     await db.exec(MIGRATION_0069)
+  } catch (error) {
+    await db.exec('rollback;').catch(() => undefined)
+    throw error
+  }
+}
+
+/**
+ * 0070: the same spent-positions count, asked for many rules at once.
+ *
+ * Exported as well as applied by default, so the frontier tests can build a
+ * database WITHOUT it and watch the validator refuse.
+ */
+export async function applyPositionsBatch(db: PGlite): Promise<void> {
+  try {
+    await db.exec(MIGRATION_0070)
+  } catch (error) {
+    await db.exec('rollback;').catch(() => undefined)
+    throw error
+  }
+}
+
+/**
+ * 0071: a pause looks forward — the day it is opened still belongs to the
+ * calendar. Exported as well as applied by default, so a test can build the
+ * database WITHOUT it and watch the old behaviour lose a spent position.
+ */
+export async function applyPauseLooksForward(db: PGlite): Promise<void> {
+  try {
+    await db.exec(MIGRATION_0071)
   } catch (error) {
     await db.exec('rollback;').catch(() => undefined)
     throw error

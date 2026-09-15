@@ -18,6 +18,7 @@ import { Label } from '../ui/Label'
 import { Input } from '../ui/Input'
 import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { MoneyCalculator } from '../ui/MoneyCalculator'
+import { EndConditionField } from '../recurrences/EndConditionField'
 import { DateField } from '../ui/DateField'
 import { Segmented } from '../ui/Segmented'
 import { FormError } from '../ui/FormError'
@@ -1309,40 +1310,19 @@ export function MovementForm({
                     />
                   </View>
                 </View>
-                <View className="flex-row items-center justify-between gap-2">
-                  <DateField
-                    bare
-                    value={form.recurrenceEndDate}
-                    onChange={form.setRecurrenceEndDate}
-                    placeholder={t('transactions.drawer.repeat_until_placeholder')}
-                  />
-                  {form.recurrenceEndDate !== '' && (
-                    <Pressable onPress={() => form.setRecurrenceEndDate('')} accessibilityRole="button">
-                      <Text className="text-xs font-medium text-text-muted">
-                        {t('transactions.drawer.repeat_no_end')}
-                      </Text>
-                    </Pressable>
-                  )}
-                </View>
               </View>
-            ) : (
-              <View className="flex-row items-center justify-between gap-2">
-                <View className="flex-1">
-                  <DateField
-                    value={form.recurrenceEndDate}
-                    onChange={form.setRecurrenceEndDate}
-                    placeholder={t('transactions.drawer.repeat_until_placeholder')}
-                  />
-                </View>
-                {form.recurrenceEndDate !== '' && (
-                  <Pressable onPress={() => form.setRecurrenceEndDate('')} accessibilityRole="button">
-                    <Text className="text-xs font-medium text-text-muted">
-                      {t('transactions.drawer.repeat_no_end')}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            )}
+            ) : null}
+
+            {/* «¿Cómo termina?», compact. It replaces a lone "Repetir hasta
+                [fecha]", which could express only two of the three answers:
+                marking a movement recurrent had NO WAY to say «son 11 cuotas»,
+                although the spec promised it. */}
+            <EndConditionField
+              value={form.recurrenceEnd}
+              onChange={form.setRecurrenceEnd}
+              startDate={form.date}
+              variant="bare"
+            />
           </View>
 
           {/* Línea de aviso fuera de la card (reemplaza el banner verde) */}
@@ -1353,9 +1333,12 @@ export function MovementForm({
                     `recurrences.custom_interval.units.${form.intervalUnit}`,
                     { count: form.intervalCount },
                   )}${
-                    form.recurrenceEndDate
-                      ? ` ${t('recurrences.until_template', { date: fmtEndDate(form.recurrenceEndDate) })}`
-                      : t('transactions.drawer.repeat_summary_no_end')
+                    form.recurrenceEnd.answer === 'on-date' && form.recurrenceEnd.endDate !== ''
+                      ? ` ${t('recurrences.until_template', { date: fmtEndDate(form.recurrenceEnd.endDate) })}`
+                      : form.recurrenceEnd.answer === 'after-count' &&
+                          form.recurrenceEnd.maxOccurrences !== ''
+                        ? ` ${t('recurrences.create.end_after_count').toLowerCase()}: ${form.recurrenceEnd.maxOccurrences}`
+                        : t('transactions.drawer.repeat_summary_no_end')
                   }.`
                 : t('transactions.drawer.repeat_reassure')}
             </Text>

@@ -34,6 +34,7 @@ import { Button } from '@/components/ui/button'
 import { Segmented } from '@/components/ui/segmented'
 import { Switch } from '@/components/ui/switch'
 import { Popover } from '@/components/ui/popover'
+import { EndConditionField } from '@/lib/recurrences/components/end-condition-field'
 import { DatePicker } from '@/components/ui/date-picker'
 import {
   createIncome,
@@ -395,7 +396,7 @@ export const MovementForm = ({
     frequency,
     intervalCount,
     intervalUnit,
-    recurrenceEndDate,
+    recurrenceEnd,
     reimbursementEnabled,
     reimbursementTarget,
     reimbursementAmount,
@@ -424,7 +425,7 @@ export const MovementForm = ({
     setFrequency,
     setIntervalCount,
     setIntervalUnit,
-    setRecurrenceEndDate,
+    setRecurrenceEnd,
     setReimbursementEnabled,
     setReimbursementTarget,
     setReimbursementAmount,
@@ -2633,63 +2634,20 @@ export const MovementForm = ({
                         </button>
                       ))}
                     </div>
-                    <DatePicker
-                      value={recurrenceEndDate}
-                      onChange={setRecurrenceEndDate}
-                      min={date}
-                      modal={isDrawer}
-                      onClear={() => setRecurrenceEndDate('')}
-                      clearLabel={t('drawer.repeat_no_end')}
-                      trigger={
-                        <button
-                          type="button"
-                          aria-label={t('drawer.repeat_until_placeholder')}
-                          className="flex h-[34px] shrink-0 items-center justify-center rounded-[9px] border px-2"
-                          style={{
-                            backgroundColor: recurrenceEndDate ? 'var(--emerald-soft)' : FIELD_BG,
-                            borderColor: recurrenceEndDate ? '#BFE9D6' : 'var(--border)',
-                          }}
-                        >
-                          {recurrenceEndDate ? (
-                            <span className="text-[11.5px] font-semibold text-text">
-                              {fmtEndDate(recurrenceEndDate, false)}
-                            </span>
-                          ) : (
-                            <Calendar className="size-[15px]" style={{ color: '#3A6B8A' }} aria-hidden />
-                          )}
-                        </button>
-                      }
-                    />
                   </div>
-                ) : (
-                  <DatePicker
-                    value={recurrenceEndDate}
-                    onChange={setRecurrenceEndDate}
-                    min={date}
-                    modal={isDrawer}
-                    onClear={() => setRecurrenceEndDate('')}
-                    clearLabel={t('drawer.repeat_no_end')}
-                    trigger={
-                      <button
-                        type="button"
-                        className="flex h-9 w-full items-center gap-1.5 rounded-[9px] border border-border px-2.5 text-left"
-                        style={{ backgroundColor: FIELD_BG }}
-                      >
-                        <Calendar className="size-[15px] shrink-0" style={{ color: '#3A6B8A' }} aria-hidden />
-                        <span
-                          className={`min-w-0 flex-1 truncate text-[12.5px] ${
-                            recurrenceEndDate ? 'font-semibold text-text' : 'text-text-soft'
-                          }`}
-                        >
-                          {recurrenceEndDate
-                            ? tRec('until_template', { date: fmtEndDate(recurrenceEndDate, true) })
-                            : t('drawer.repeat_until_placeholder')}
-                        </span>
-                        <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
-                      </button>
-                    }
-                  />
-                )}
+                ) : null}
+
+                {/* «¿Cómo termina?», compact. It replaces a lone "Repetir hasta
+                    [fecha]", which could express only two of the three answers:
+                    marking a movement recurrent had NO WAY to say «son 11
+                    cuotas», although the spec promised it. */}
+                <EndConditionField
+                  value={recurrenceEnd}
+                  onChange={setRecurrenceEnd}
+                  startDate={date}
+                  idPrefix="movement-repeat"
+                  variant="compact"
+                />
               </div>
             </div>
             <p className="flex items-start gap-1.5 px-1 pt-1.5 text-[11.5px] leading-relaxed text-text-soft">
@@ -2699,9 +2657,11 @@ export const MovementForm = ({
                   <>
                     {t('drawer.repeat_summary_prefix')} {intervalCount}{' '}
                     {tRec(`custom_interval.units.${intervalUnit}`, { count: intervalCount })}
-                    {recurrenceEndDate
-                      ? ` ${tRec('until_template', { date: fmtEndDate(recurrenceEndDate, true) })}`
-                      : t('drawer.repeat_summary_no_end')}
+                    {recurrenceEnd.answer === 'on-date' && recurrenceEnd.endDate !== ''
+                      ? ` ${tRec('until_template', { date: fmtEndDate(recurrenceEnd.endDate, true) })}`
+                      : recurrenceEnd.answer === 'after-count' && recurrenceEnd.maxOccurrences !== ''
+                        ? ` ${tRec('create.end_after_count').toLowerCase()}: ${recurrenceEnd.maxOccurrences}`
+                        : t('drawer.repeat_summary_no_end')}
                     .
                   </>
                 ) : (
@@ -2795,22 +2755,15 @@ export const MovementForm = ({
                   </div>
                 )}
 
-                {/* Optional end date — applies to any frequency. */}
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="recurrence-until" className="text-xs text-text-muted">
-                    {t('drawer.repeat_until')}
-                  </label>
-                  <div className="w-44">
-                    <DatePicker
-                      id="recurrence-until"
-                      value={recurrenceEndDate}
-                      onChange={setRecurrenceEndDate}
-                      min={date}
-                      modal={isDrawer}
-                      label={t('drawer.repeat_until')}
-                    />
-                  </div>
-                </div>
+                {/* «¿Cómo termina?» — applies to any frequency, and offers the
+                    limit this path never offered. */}
+                <EndConditionField
+                  value={recurrenceEnd}
+                  onChange={setRecurrenceEnd}
+                  startDate={date}
+                  idPrefix="movement-repeat-wide"
+                  variant="plain"
+                />
               </div>
             )}
           </div>

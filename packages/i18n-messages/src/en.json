@@ -1394,7 +1394,10 @@
       "recurrence_failed": "Transaction saved, but the recurring rule couldn't be created: {detail}",
       "recurrence_unknown_error": "unknown error",
       "generic": "Something went wrong. Please try again.",
-      "seeded_recurrence": "This movement created a recurrence. Resolve the rule before deleting it."
+      "seeded_recurrence": "This movement created a recurrence. Resolve the rule before deleting it.",
+      "recurrence_end_date_required": "Choose the date the recurrence ends on.",
+      "recurrence_end_count_required": "Enter how many occurrences the recurrence has.",
+      "recurrence_end_before_start": "The end date cannot be earlier than the movement’s date."
     },
     "empty": {
       "title": "No transactions yet",
@@ -1480,7 +1483,11 @@
         "adjustment": "Register adjustment",
         "exchange": "Register exchange"
       },
-      "repeat_until": "Repeat until (optional)"
+      "repeat_until": "Repeat until (optional)",
+      "end_question": "How does it end?",
+      "end_never_short": "No limit",
+      "end_on_date_short": "On a date",
+      "end_after_count_short": "Count"
     },
     "confirmations": {
       "delete_title": "Delete this transaction?",
@@ -1782,13 +1789,27 @@
         "category_required": "Choose a category",
         "destination_required": "Choose the destination account",
         "destination_same": "Source and destination accounts can't be the same",
-        "create_failed": "Couldn't create the recurrence"
+        "create_failed": "Couldn't create the recurrence",
+        "end_date_required": "Choose the date it ends on",
+        "end_count_required": "Enter how many occurrences it has",
+        "end_count_below_spent": "This rule has already had {spent} occurrences: the limit cannot be lower."
       },
       "today": "Today",
       "section_movement": "Movement",
       "section_when": "When it repeats",
       "has_end_date": "Has end date",
-      "no_end_hint": "Repeats indefinitely until you pause it"
+      "no_end_hint": "Repeats indefinitely until you pause it",
+      "end_question": "How does it end?",
+      "end_never": "No limit",
+      "end_never_hint": "It repeats until you pause it",
+      "end_on_date": "On a date",
+      "end_after_count": "After a number of occurrences",
+      "end_count_label": "Number of occurrences",
+      "end_count_hint": "For example, 11 for an 11-instalment plan",
+      "end_both_title": "This rule has both an end date and a limit",
+      "end_both_confirm": "Yes, save it like this",
+      "end_both_body_keep_one": "Only one condition is saved now: «{keeping}» stays and «{dropping}» is removed. Continue?",
+      "end_both_body_drop_all": "You chose «no limit», so both are removed: «{first}» and «{second}». Continue?"
     },
     "next_prefix": "next:",
     "upcoming": {
@@ -1822,7 +1843,19 @@
     "reference_date_hint": "We use this date to work out the next occurrences. The ones that already exist keep their own.",
     "reference_date_question": "Which one should be the first occurrence with the new reference?",
     "reference_date_paused": "We will use this reference when you resume the rule.",
-    "reference_date_exhausted": "This rule has no upcoming occurrences, so its reference date cannot be changed. Extend the cap or the end date to adjust it again."
+    "reference_date_exhausted": "This rule has no upcoming occurrences, so its reference date cannot be changed. Extend the cap or the end date to adjust it again.",
+    "limit": {
+      "progress": "{spent} of {total} occurrences",
+      "remaining": "{remaining} left",
+      "last_expected": "Last expected occurrence",
+      "last_expected_paused": "It will be worked out when you resume the rule",
+      "no_limit": "It repeats with no limit",
+      "ends_on": "Ends on {date}",
+      "finished_with_pending": "Finished · {count} to review",
+      "progress_label": "Progress",
+      "remaining_label": "Remaining",
+      "end_label": "Ends"
+    }
   },
   "subcategories": {
     "supermercado": "Supermarket",

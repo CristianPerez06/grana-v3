@@ -1394,7 +1394,10 @@
       "recurrence_failed": "Movimiento guardado, pero no se pudo crear la regla recurrente: {detail}",
       "recurrence_unknown_error": "error desconocido",
       "generic": "Algo salió mal. Intentá de nuevo.",
-      "seeded_recurrence": "Este movimiento creó una recurrencia. Resolvé la regla antes de eliminarlo."
+      "seeded_recurrence": "Este movimiento creó una recurrencia. Resolvé la regla antes de eliminarlo.",
+      "recurrence_end_date_required": "Elegí la fecha en la que termina la recurrencia.",
+      "recurrence_end_count_required": "Escribí cuántos vencimientos tiene la recurrencia.",
+      "recurrence_end_before_start": "La fecha de fin no puede ser anterior a la del movimiento."
     },
     "empty": {
       "title": "Todavía no hay movimientos",
@@ -1480,7 +1483,11 @@
         "adjustment": "Registrar ajuste",
         "exchange": "Registrar cambio"
       },
-      "repeat_until": "Repetir hasta (opcional)"
+      "repeat_until": "Repetir hasta (opcional)",
+      "end_question": "¿Cómo termina?",
+      "end_never_short": "Sin límite",
+      "end_on_date_short": "En una fecha",
+      "end_after_count_short": "Cantidad"
     },
     "confirmations": {
       "delete_title": "¿Eliminar este movimiento?",
@@ -1782,13 +1789,27 @@
         "category_required": "Elegí una categoría",
         "destination_required": "Elegí la cuenta destino",
         "destination_same": "La cuenta origen y destino no pueden ser iguales",
-        "create_failed": "No se pudo crear la recurrencia"
+        "create_failed": "No se pudo crear la recurrencia",
+        "end_date_required": "Elegí la fecha en la que termina",
+        "end_count_required": "Escribí cuántos vencimientos tiene",
+        "end_count_below_spent": "Esta regla ya lleva {spent} vencimientos: el límite no puede ser menor."
       },
       "today": "Hoy",
       "section_movement": "Movimiento",
       "section_when": "Cuándo se repite",
       "has_end_date": "Tiene fecha de fin",
-      "no_end_hint": "Se repite indefinidamente hasta que la pauses"
+      "no_end_hint": "Se repite indefinidamente hasta que la pauses",
+      "end_question": "¿Cómo termina?",
+      "end_never": "Sin límite",
+      "end_never_hint": "Se repite hasta que la pauses",
+      "end_on_date": "En una fecha",
+      "end_after_count": "Después de una cantidad de vencimientos",
+      "end_count_label": "Cantidad de vencimientos",
+      "end_count_hint": "Por ejemplo, 11 para un plan de 11 cuotas",
+      "end_both_title": "Esta regla tiene fecha de fin y límite",
+      "end_both_confirm": "Sí, guardar así",
+      "end_both_body_keep_one": "Ahora se guarda una sola condición: va a quedar «{keeping}» y se quita «{dropping}». ¿Seguimos?",
+      "end_both_body_drop_all": "Elegiste «sin límite», así que se quitan las dos: «{first}» y «{second}». ¿Seguimos?"
     },
     "next_prefix": "próximo:",
     "upcoming": {
@@ -1822,7 +1843,19 @@
     "reference_date_hint": "Usamos esta fecha para calcular los próximos vencimientos. Los que ya existen conservan su fecha.",
     "reference_date_question": "¿Cuál querés que sea el primer vencimiento con la nueva referencia?",
     "reference_date_paused": "Usaremos esta referencia cuando reanudes la regla.",
-    "reference_date_exhausted": "Esta regla no tiene próximos vencimientos, así que no se puede cambiar la referencia. Extendé el tope o la fecha de fin para volver a ajustarla."
+    "reference_date_exhausted": "Esta regla no tiene próximos vencimientos, así que no se puede cambiar la referencia. Extendé el tope o la fecha de fin para volver a ajustarla.",
+    "limit": {
+      "progress": "{spent} de {total} vencimientos",
+      "remaining": "{remaining} restantes",
+      "last_expected": "Último vencimiento previsto",
+      "last_expected_paused": "Se calcula cuando reanudes la regla",
+      "no_limit": "Se repite sin límite",
+      "ends_on": "Termina el {date}",
+      "finished_with_pending": "Finalizada · {count} por revisar",
+      "progress_label": "Avance",
+      "remaining_label": "Restantes",
+      "end_label": "Termina"
+    }
   },
   "subcategories": {
     "supermercado": "Supermercado",

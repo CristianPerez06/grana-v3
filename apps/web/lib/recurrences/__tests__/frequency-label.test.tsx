@@ -62,6 +62,9 @@ const customRule = {
   category: { id: 'c1', name: 'Comida', canonical_name: 'food', user_id: null },
   subcategory: null,
   instances: [],
+  positions_spent: 0,
+  lifecycle: { state: 'active', progress: null, unresolved: 0 },
+  last_expected_occurrence: { kind: 'none' },
 } as unknown as Parameters<typeof RecurrenceDetail>[0]['rule']
 
 afterEach(cleanup)

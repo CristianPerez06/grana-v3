@@ -268,6 +268,18 @@ export const updateRecurrenceSchema = yup
       .nullable()
       .optional(),
     end_date: yup.string().label('end_date').nullable().optional(),
+    // EDITABLE, which it was not. A rule created with a limit could neither have
+    // it changed nor removed: this key was missing from the update schema, so
+    // the mutation's branch for it could never run. `null` REMOVES the limit and
+    // is not the same as absent, which leaves it alone — the same distinction
+    // `end_date` already makes here.
+    max_occurrences: yup
+      .number()
+      .label('max_occurrences')
+      .integer()
+      .min(1)
+      .nullable()
+      .optional(),
   })
   .strict()
   .test('end-after-start', 'end_date_must_be_after_start_date', function (value) {

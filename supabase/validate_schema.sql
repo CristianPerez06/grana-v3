@@ -1410,6 +1410,125 @@ end $$;
 -- └── END SHARED CONTRACT ───────────────────────────────────────────────────┘
 
 
+-- ── 8.1M · the spent positions, asked for many rules at once (0070) ────────
+-- The recurrences hub derives every rule's shown state from its calendar and its
+-- progress, so it needs this number for every row it lists. 0070 adds a way to
+-- ask for all of them in one round trip. What is pinned here is what makes it
+-- safe to have at all — a function that can be replaced without anyone noticing
+-- is not a frontier.
+-- ── 8.1N · a pause looks forward (0071) ───────────────────────────────────
+-- `recurrence_positions_spent` subtracts pauses, and ONE CHARACTER decides
+-- whether the day a pause was opened on still counts. It used to be `>=`, so a
+-- rule whose occurrence fell today, produced it, and was then paused the same
+-- day lost that position: «0 de 3» over a plan with a cuota already pending, and
+-- three more to generate — four instalments in a plan of three.
+--
+-- Pinned here because nothing on any screen distinguishes the two readings, and
+-- because the twin of this predicate lives in TypeScript (`subtractPauses`): a
+-- database that silently went back to `>=` would disagree with the generator
+-- about how many cuotas a plan has.
+do $$
+declare
+  v_body text;
+begin
+  -- ┌── BEGIN 8.1N CONTRACT ──────────────────────────────────────────────────┐
+  if to_regprocedure('public.recurrence_positions_spent(uuid, date)') is null then
+    raise exception 'recurrence_positions_spent is missing';
+  end if;
+
+  select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
+    into v_body
+    from pg_proc
+   where oid = 'public.recurrence_positions_spent(uuid, date)'::regprocedure;
+
+  if v_body like '%d >= ps.paused_from%' then
+    raise exception 'recurrence_positions_spent subtracts the pause INCLUSIVE of its opening day: a rule paused the day one of its occurrences fell loses that position, and a plan of three grows a fourth';
+  end if;
+  if v_body not like '%d > ps.paused_from%' then
+    raise exception 'recurrence_positions_spent no longer bounds pauses by paused_from at all';
+  end if;
+  -- └── END 8.1N CONTRACT ───────────────────────────────────────────────────┘
+
+  raise notice '✓ 8.1N — una pausa mira hacia adelante: el día en que se abre sigue contando';
+end $$;
+
+
+-- ┌── BEGIN 8.1M CONTRACT ────────────────────────────────────────────────────┐
+-- Everything between these two markers is LIFTED AND RUN by
+-- `packages/recurrences/__tests__/positions-spent-batch.test.ts`, declarations
+-- included: a validator nobody executes is a validator that drifts, and 8.1J's
+-- check was wrong twice in opposite directions before anyone noticed.
+do $$
+declare
+  v_body text;
+  v_oid  oid;
+  v_proc pg_proc;
+  v_cols text;
+begin
+  v_oid := to_regprocedure('public.recurrence_positions_spent_batch(uuid[], date)');
+  if v_oid is null then
+    raise exception 'recurrence_positions_spent_batch is missing: the hub would ask rule by rule, one round trip per row';
+  end if;
+  select * into v_proc from pg_proc where oid = v_oid;
+
+  -- THE SIGNATURE IS NOT ONLY ITS ARGUMENTS. The line above pins what goes IN;
+  -- these pin what comes OUT and how the planner may treat it. A replacement
+  -- that returns the same two columns the other way round type-checks in every
+  -- reader and hands each rule's progress to a different rule.
+  select string_agg(format('%s %s', p.name, format_type(p.type_oid, null)), ', ' order by p.ord)
+    into v_cols
+    from unnest(v_proc.proargnames, v_proc.proallargtypes, v_proc.proargmodes)
+         with ordinality as p(name, type_oid, mode, ord)
+   where p.mode = 't';
+  if v_cols is distinct from 'recurrence_id uuid, positions_spent integer' then
+    raise exception 'recurrence_positions_spent_batch returns %, not (recurrence_id uuid, positions_spent integer)', coalesce(v_cols, '<nothing>');
+  end if;
+
+  if v_proc.provolatile <> 's' then
+    raise exception 'recurrence_positions_spent_batch is not STABLE (provolatile = %): the planner may re-evaluate or refuse to fold a read the hub makes once per page', v_proc.provolatile;
+  end if;
+
+  -- Pinned, so a caller cannot put a schema of their own in front of the tables
+  -- this reads.
+  if v_proc.proconfig is null
+     or not ('search_path=public, pg_temp' = any(v_proc.proconfig)) then
+    raise exception 'recurrence_positions_spent_batch does not pin search_path to "public, pg_temp" (proconfig = %)', v_proc.proconfig;
+  end if;
+
+  -- SECURITY INVOKER, and this one is not a formality. The function receives a
+  -- LIST OF IDS from the caller: as `definer` it would run as the owner, RLS on
+  -- `recurrences` would not apply, and anyone who guessed a uuid would be handed
+  -- the progress of somebody else's rule.
+  if v_proc.prosecdef then
+    raise exception 'recurrence_positions_spent_batch is SECURITY DEFINER: it takes a list of ids, so RLS is the only thing standing between a caller and another user''s rules';
+  end if;
+
+  -- IT ASKS, IT DOES NOT COUNT. One definition of what `max_occurrences` counts;
+  -- a body that walked the calendar itself would be a copy that drifts, and this
+  -- number decides whether a rule goes on reminding someone about money.
+  v_body := lower(regexp_replace(regexp_replace(v_proc.prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'));
+  if v_body not like '%recurrence_positions_spent(%' then
+    raise exception 'recurrence_positions_spent_batch no longer calls recurrence_positions_spent: the count has two implementations, and they will disagree';
+  end if;
+  -- And it reads THROUGH the table, which is what applies the caller's RLS: a
+  -- body that walked `p_ids` alone would answer for ids the caller cannot see.
+  if v_body not like '%from public.recurrences%' then
+    raise exception 'recurrence_positions_spent_batch does not read through public.recurrences: RLS never gets a chance to filter the ids it was handed';
+  end if;
+
+  -- 0067's rule, applied at birth: Postgres grants EXECUTE to PUBLIC on every
+  -- new function and Supabase grants it to `anon` directly.
+  if has_function_privilege('anon', 'public.recurrence_positions_spent_batch(uuid[], date)', 'EXECUTE') then
+    raise exception 'COBERTURA RLS: anon conserva EXECUTE sobre recurrence_positions_spent_batch';
+  end if;
+  if not has_function_privilege('authenticated', 'public.recurrence_positions_spent_batch(uuid[], date)', 'EXECUTE') then
+    raise exception 'authenticated cannot execute recurrence_positions_spent_batch: the hub falls back to one call per rule';
+  end if;
+  raise notice '✓ 8.1M — recurrence_positions_spent_batch: firma, forma de retorno, cuerpo y privilegios OK';
+end $$;
+-- └── END 8.1M CONTRACT ─────────────────────────────────────────────────────┘
+
+
 -- =============================================================================
 -- 8.2 — RLS: políticas en todas las tablas
 -- =============================================================================

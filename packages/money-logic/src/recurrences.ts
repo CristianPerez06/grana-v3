@@ -377,11 +377,27 @@ export type OwedOccurrencesForRuleInput = {
   seedOccurrenceDate: string | null
 }
 
-// A pause covers [paused_from, resumed_at): the day it is resumed the rule is
-// running again, and an occurrence falling on it is owed. An occurrence on
-// `paused_from` itself is NOT — it belongs to the pause, and one that was owed
-// before pausing sits at an earlier date and survives untouched, which is what
-// keeps pre-pause occurrences resolvable.
+// A PAUSE LOOKS FORWARD. It covers (paused_from, resumed_at): the day it is
+// resumed the rule is running again, and — this is the part that was wrong — THE
+// DAY IT IS PAUSED STILL BELONGS TO THE CALENDAR.
+//
+// It used to cover `[paused_from, resumed_at)`, on the reasoning that an
+// occurrence owed before pausing "sits at an earlier date and survives
+// untouched". That holds for every day except the one the pause opens on, and
+// there it is exactly false: a rule whose occurrence falls TODAY produces it,
+// and then the user pauses the rule the same day. The row exists, the money is
+// committed — and the position stopped counting, because the pause swallowed its
+// own opening day.
+//
+// What that cost: a rule with a limit of 3 and one cuota already pending read
+// «0 de 3» and would go on to generate THREE MORE — four instalments in a plan
+// of three. Resuming the same day hid it (the interval collapses to nothing);
+// resuming two days later made it permanent.
+//
+// A date has no time of day, so the calendar cannot see whether the pause came
+// before or after that day's occurrence. The product rule settles it in the one
+// direction that cannot destroy a commitment already made: pausing affects the
+// days AFTER it. A rule paused on the day it falls due still owes that day.
 function subtractPauses(
   segments: Array<{ from: string; to: string }>,
   pauses: PauseInterval[],
@@ -390,14 +406,24 @@ function subtractPauses(
   for (const pause of pauses) {
     const next: Array<{ from: string; to: string }> = []
     for (const segment of out) {
+      // The first day the pause actually covers: the one AFTER it was opened.
+      const pauseStart = addDays(pause.paused_from, 1)
       const pauseEnd = pause.resumed_at == null ? null : addDays(pause.resumed_at, -1)
-      // No overlap: the segment ends before the pause starts, or starts after it ends.
-      if (segment.to < pause.paused_from || (pauseEnd != null && segment.from > pauseEnd)) {
+      // Resumed on the same day it was paused, or the next: the interval is
+      // empty and removes nothing. Without this the segment would be split into
+      // two halves that OVERLAP on the pause's own day, and that day would be
+      // counted twice.
+      if (pauseEnd != null && pauseEnd < pauseStart) {
         next.push(segment)
         continue
       }
-      if (segment.from < pause.paused_from) {
-        next.push({ from: segment.from, to: addDays(pause.paused_from, -1) })
+      // No overlap: the segment ends before the pause starts, or starts after it ends.
+      if (segment.to < pauseStart || (pauseEnd != null && segment.from > pauseEnd)) {
+        next.push(segment)
+        continue
+      }
+      if (segment.from < pauseStart) {
+        next.push({ from: segment.from, to: addDays(pauseStart, -1) })
       }
       if (pauseEnd != null && segment.to > pauseEnd) {
         next.push({ from: addDays(pauseEnd, 1), to: segment.to })

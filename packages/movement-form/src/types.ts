@@ -1,5 +1,9 @@
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
-import type { CategorySuggestion, EditableFields } from '@grana/money-logic'
+import type {
+  CategorySuggestion,
+  EditableFields,
+  RecurrenceEndDraft,
+} from '@grana/money-logic'
 import type {
   CreateAdjustmentInput,
   CreateExchangeInput,
@@ -370,7 +374,16 @@ export type MovementFormState = {
   frequency: Frequency
   intervalCount: number
   intervalUnit: IntervalUnit
-  recurrenceEndDate: string
+  /**
+   * «¿Cómo termina?» — the chosen answer plus both raw fields.
+   *
+   * It replaces a lone `recurrenceEndDate`, which could only express two of the
+   * three answers: a rule created from a movement had NO WAY to say "esto son 11
+   * cuotas", although the spec has promised it since the module was written. The
+   * payload is derived from the answer (`endConditionColumns`), so whichever
+   * field the user is not looking at cannot reach the rule.
+   */
+  recurrenceEnd: RecurrenceEndDraft
 
   // Reimbursement
   reimbursementEnabled: boolean
@@ -408,7 +421,7 @@ export type MovementFormState = {
   setFrequency: (f: Frequency) => void
   setIntervalCount: (n: number) => void
   setIntervalUnit: (u: IntervalUnit) => void
-  setRecurrenceEndDate: (s: string) => void
+  setRecurrenceEnd: (draft: RecurrenceEndDraft) => void
   setReimbursementEnabled: (b: boolean) => void
   setReimbursementTarget: (t: 'account' | 'statement') => void
   setReimbursementAmount: (s: string) => void

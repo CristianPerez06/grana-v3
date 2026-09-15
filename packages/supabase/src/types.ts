@@ -1366,6 +1366,16 @@ export type Database = {
         }
         Returns: number
       }
+      recurrence_positions_spent_batch: {
+        Args: {
+          p_ids: string[]
+          p_today: string
+        }
+        Returns: {
+          recurrence_id: string
+          positions_spent: number
+        }[]
+      }
       recurrence_candidate_effective_dates: {
         Args: {
           p_anchor: string

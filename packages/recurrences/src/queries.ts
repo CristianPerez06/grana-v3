@@ -2,10 +2,13 @@ import { selectAllPages, type GranaSupabaseClient } from '@grana/supabase'
 import {
   addInterval,
   coveredOccurrences,
+  deriveRecurrenceLifecycle,
   detectRecurrenceSuggestions,
   formatDateISO,
   getNextExpectedOccurrence,
   getTodayAR,
+  hasFutureOccurrenceIgnoringPauses,
+  lastExpectedOccurrence,
   owedOccurrencesForRule,
   type IntervalUnit,
   type PauseInterval,
@@ -47,13 +50,21 @@ const INSTANCE_SELECT = `
   subcategory:subcategories(id, name, canonical_name, category_id, user_id)
 `
 
-type RecurrenceRow = Omit<RecurrenceSummary, 'pending_instances' | 'covered_occurrences'>
+type RecurrenceRow = Omit<
+  RecurrenceSummary,
+  | 'pending_instances'
+  | 'covered_occurrences'
+  | 'positions_spent'
+  | 'lifecycle'
+  | 'last_expected_occurrence'
+>
 
 function mapRecurrenceSummary(
   recurrence: RecurrenceRow,
   pendingByRecurrenceId: Map<string, PendingInstance[]>,
   upcomingByRecurrenceId: Map<string, string[]>,
   today: string,
+  positionsSpentByRecurrenceId: Map<string, number>,
 ): RecurrenceSummary {
   const covered = coveredOccurrences({
     seedOccurrenceDate: recurrence.seed_occurrence_date,
@@ -61,32 +72,70 @@ function mapRecurrenceSummary(
     existing: upcomingByRecurrenceId.get(recurrence.id) ?? [],
   })
 
+  // ONE schedule object for every question asked below. The "próximo", whether
+  // anything is left and where the rule ends are three readings of the same
+  // calendar, and building it three times is how two of them lost the floor in
+  // #121.
+  const schedule = {
+    start_date: recurrence.start_date,
+    end_date: recurrence.end_date,
+    interval_count: recurrence.interval_count,
+    interval_unit: recurrence.interval_unit as IntervalUnit,
+    max_occurrences: recurrence.max_occurrences,
+    // Since when the current schedule rules. Without it these answer with a date
+    // from the stretch where the old schedule has stopped and the new one has not
+    // begun — a "próximo" the generator is never going to create.
+    schedule_effective_from: recurrence.schedule_effective_from,
+    // And how much of the cap was already gone by then: this reader walks one
+    // anchor, and a corrected rule spent its cuotas under another.
+    schedule_positions_before: recurrence.schedule_positions_before,
+  }
+  const pending = pendingByRecurrenceId.get(recurrence.id) ?? []
+  // NOT `?? 0`. A rule with no entry here means the read that was supposed to
+  // provide one did not — and zero is a number that looks like an answer: an
+  // exhausted rule would read «0 de 11» and be shown as active. The reads above
+  // guarantee an entry per rule, so reaching this is a wiring bug, and it says so.
+  const positionsSpent = positionsSpentByRecurrenceId.get(recurrence.id)
+  if (positionsSpent == null) {
+    throw new Error(`no spent-positions count for rule ${recurrence.id}`)
+  }
+
   return {
     ...recurrence,
-    pending_instances: pendingByRecurrenceId.get(recurrence.id) ?? [],
+    pending_instances: pending,
     covered_occurrences: [...covered],
     // Calendar "próximo": the next occurrence >= today that does NOT already
     // exist. It used to be "after the cursor", which announced as upcoming an
     // occurrence the user already had sitting unresolved — the same date in two
     // places at once.
-    next_occurrence: getNextExpectedOccurrence(
-      {
-        start_date: recurrence.start_date,
-        end_date: recurrence.end_date,
-        interval_count: recurrence.interval_count,
-        interval_unit: recurrence.interval_unit as IntervalUnit,
-        max_occurrences: recurrence.max_occurrences,
-        // Since when the current schedule rules. Without it this answers with a
-        // date from the stretch where the old schedule has stopped and the new
-        // one has not begun — a "próximo" the generator is never going to create.
-        schedule_effective_from: recurrence.schedule_effective_from,
-        // And how much of the cap was already gone by then: this reader walks one
-        // anchor, and a corrected rule spent its cuotas under another.
-        schedule_positions_before: recurrence.schedule_positions_before,
-      },
+    next_occurrence: getNextExpectedOccurrence(schedule, today, covered),
+    positions_spent: positionsSpent,
+    lifecycle: deriveRecurrenceLifecycle({
+      status: recurrence.status as RecurrenceStatus,
+      // THE QUESTION THAT DECIDES THE END, asked of the calendar and not of the
+      // cap: a rule can run out of future by its `end_date` too. Asked of the
+      // same schedule the "próximo" above walks, so the two can never disagree.
+      //
+      // For a PAUSED rule this reads the schedule as if it resumed today — the
+      // helper's whole point. The composed walk subtracts an open pause and then
+      // produces nothing, so asking it plainly would report every paused rule as
+      // finished.
+      hasFutureOccurrence: hasFutureOccurrenceIgnoringPauses(schedule, today, covered),
+      endDate: recurrence.end_date,
+      maxOccurrences: recurrence.max_occurrences,
+      positionsSpent,
+      unresolvedCount: pending.length,
+    }),
+    last_expected_occurrence: lastExpectedOccurrence({
+      rule: schedule,
       today,
-      covered,
-    ),
+      maxOccurrences: recurrence.max_occurrences,
+      positionsSpent,
+      // `status = 'paused'` IS the open pause: the pause row is opened when the
+      // rule is paused and closed when it resumes, so the column says it without
+      // a second read.
+      hasOpenPause: recurrence.status === 'paused',
+    }),
   }
 }
 
@@ -122,6 +171,87 @@ async function getUpcomingOccurrenceDates(
     if (list == null) byRule.set(row.recurrence_id, [row.due_date])
     else list.push(row.due_date)
   }
+  return byRule
+}
+
+/**
+ * How many positions of its calendar each rule has spent — ALL of them in ONE
+ * call.
+ *
+ * `recurrence_positions_spent` answers for one rule, and the detail screen can
+ * go on asking it that way. The hub cannot: it lists every rule the user has (64
+ * on the real database) and derives each one's shown state from this number, so
+ * asking per row would be one round trip per row, growing with use.
+ *
+ * NOT counted from `recurrence_instances` on the way past, for the reason that
+ * cost two review rounds in #121: a rule seeded by a movement has no row for its
+ * first occurrence, and a position the calendar produced while nothing was
+ * generating has none either. The count is of POSITIONS, and only the calendar
+ * knows them.
+ *
+ * AN INCOMPLETE ANSWER IS AN ERROR, NOT A ZERO. The ids handed in were just read
+ * from `recurrences` as this same caller, so every one of them is visible to it
+ * and the RPC owes exactly one row for each. Treating a missing row as zero
+ * would turn a drift or a miswired call into a plausible screen: an exhausted
+ * rule would read «0 de 11» and be shown as active, which is precisely the
+ * defect this whole change exists to remove. So the shape is checked — one row
+ * per id, no extras, no duplicates, no nulls — and a read that cannot answer
+ * fails instead of guessing.
+ */
+async function getPositionsSpentByRecurrenceId(
+  supabase: GranaSupabaseClient,
+  recurrenceIds: string[],
+  today: string,
+): Promise<Map<string, number>> {
+  const byRule = new Map<string, number>()
+  if (recurrenceIds.length === 0) return byRule
+
+  const { data, error } = await supabase.rpc('recurrence_positions_spent_batch', {
+    p_ids: recurrenceIds,
+    p_today: today,
+  })
+  if (error) throw error
+
+  for (const row of data ?? []) {
+    if (row.positions_spent == null) {
+      throw new Error(
+        `recurrence_positions_spent_batch returned no count for rule ${row.recurrence_id}`,
+      )
+    }
+    // A COUNT OF POSITIONS IS A WHOLE NUMBER, AND NEVER NEGATIVE. Nothing in the
+    // shipped function can produce anything else, which is exactly why a value
+    // that is would go unnoticed: the progress shown on screen saturates at zero
+    // and reads as a sober «0 de 11», while the last-expected date is walked
+    // from `max_occurrences - positionsSpent` and quietly projects one occurrence
+    // MORE than the rule has. Believable and wrong, which is the failure mode
+    // this whole change exists to remove.
+    if (!Number.isInteger(row.positions_spent) || row.positions_spent < 0) {
+      throw new Error(
+        `recurrence_positions_spent_batch returned ${row.positions_spent} spent positions for rule ${row.recurrence_id}: a count of calendar positions is a whole number and never negative`,
+      )
+    }
+    if (byRule.has(row.recurrence_id)) {
+      throw new Error(
+        `recurrence_positions_spent_batch returned rule ${row.recurrence_id} more than once`,
+      )
+    }
+    byRule.set(row.recurrence_id, row.positions_spent)
+  }
+
+  const wanted = new Set(recurrenceIds)
+  const missing = recurrenceIds.filter((id) => !byRule.has(id))
+  if (missing.length > 0) {
+    throw new Error(
+      `recurrence_positions_spent_batch answered for ${byRule.size} of ${wanted.size} rules; missing ${missing.join(', ')}`,
+    )
+  }
+  const extra = [...byRule.keys()].filter((id) => !wanted.has(id))
+  if (extra.length > 0) {
+    throw new Error(
+      `recurrence_positions_spent_batch answered for rules that were not asked about: ${extra.join(', ')}`,
+    )
+  }
+
   return byRule
 }
 
@@ -196,13 +326,22 @@ export async function getRecurrences(
   const ids = recurrences.map((recurrence) => recurrence.id)
   const today = formatDateISO(getTodayAR())
 
-  const [pendingByRecurrenceId, upcomingByRecurrenceId] = await Promise.all([
-    getPendingInstancesByRecurrenceId(supabase, ids),
-    getUpcomingOccurrenceDates(supabase, ids, today),
-  ])
+  const [pendingByRecurrenceId, upcomingByRecurrenceId, positionsSpentByRecurrenceId] =
+    await Promise.all([
+      getPendingInstancesByRecurrenceId(supabase, ids),
+      getUpcomingOccurrenceDates(supabase, ids, today),
+      // ONE call for the whole list, not one per rule.
+      getPositionsSpentByRecurrenceId(supabase, ids, today),
+    ])
 
   return recurrences.map((recurrence) =>
-    mapRecurrenceSummary(recurrence, pendingByRecurrenceId, upcomingByRecurrenceId, today),
+    mapRecurrenceSummary(
+      recurrence,
+      pendingByRecurrenceId,
+      upcomingByRecurrenceId,
+      today,
+      positionsSpentByRecurrenceId,
+    ),
   )
 }
 
@@ -297,6 +436,20 @@ export async function getRecurrenceDetail(
     { p_id: id, p_today: today },
   )
   if (spentError) throw spentError
+  // The same shape check the batch read applies, for the same reason: the
+  // progress on screen saturates at zero and would read as a sober «0 de 11»,
+  // while the last-expected date is walked from `max_occurrences - spent` and
+  // would project one occurrence MORE than the rule has. One reader guarding
+  // this and the other not is how the two would eventually disagree.
+  if (
+    positionsSpent == null ||
+    !Number.isInteger(positionsSpent) ||
+    positionsSpent < 0
+  ) {
+    throw new Error(
+      `recurrence_positions_spent returned ${positionsSpent} for rule ${id}: a count of calendar positions is a whole number and never negative`,
+    )
+  }
 
   const recurrenceSummary = mapRecurrenceSummary(
     recurrence as unknown as RecurrenceRow,
@@ -310,6 +463,9 @@ export async function getRecurrenceDetail(
       ],
     ]),
     today,
+    // The detail asks for one rule, so it keeps the single-rule function. Same
+    // definition of the count either way — the batch calls this one per row.
+    new Map([[id, positionsSpent]]),
   )
 
   return {
@@ -318,7 +474,6 @@ export async function getRecurrenceDetail(
       ...instance,
       recurrence: recurrence as unknown as Recurrence,
     })),
-    positions_spent: positionsSpent ?? 0,
   }
 }
 

@@ -144,6 +144,63 @@ export const RecurrenceDetail = ({ rule }: Props) => {
     })
   }
 
+  // WHERE THE RULE IS IN ITS PLAN. A limit decides when a rule stops reminding,
+  // and until now it was invisible on every screen that showed the rule: a plan
+  // of eleven cuotas recorded as one read «mensual, sin fecha de fin» — it
+  // claimed to repeat forever while it had already stopped (#142).
+  //
+  // Counted in POSITIONS of the calendar, which is what `max_occurrences` caps,
+  // and never in rows of `recurrence_instances`: a rule seeded by a movement has
+  // no row for its first occurrence.
+  const { progress } = rule.lifecycle
+  // Null for an active rule: there is nothing to announce about one that is
+  // simply running.
+  const stateLabel =
+    rule.lifecycle.state === 'active'
+      ? null
+      : rule.lifecycle.state === 'finished-with-pending'
+        ? t('limit.finished_with_pending', { count: rule.lifecycle.unresolved })
+        : t(`statuses.${rule.lifecycle.state === 'finished' ? 'finished' : rule.status}`)
+  // A rule with NEITHER condition says so. It used to say nothing, which reads
+  // the same as a rule whose limit is simply not shown — and that is exactly how
+  // a plan with a limit of 1 passed for indefinite.
+  if (progress == null && !rule.end_date) {
+    rows.push({ key: 'no_limit', label: t('limit.end_label'), value: t('limit.no_limit') })
+  }
+  if (progress != null) {
+    rows.push({
+      key: 'progress',
+      label: t('limit.progress_label'),
+      value: t('limit.progress', { spent: progress.spent, total: progress.total }),
+    })
+    if (progress.remaining > 0) {
+      rows.push({
+        key: 'remaining',
+        label: t('limit.remaining_label'),
+        value: t('limit.remaining', { remaining: progress.remaining }),
+      })
+    }
+
+    // The last occurrence, walked rather than stored — pausing the rule or
+    // correcting its day moves it. A paused rule gets a sentence instead of a
+    // date: while the pause is open the final date depends on a day that has not
+    // happened, and an estimate shown as a fact is the thing this avoids.
+    const last = rule.last_expected_occurrence
+    if (last.kind === 'date') {
+      rows.push({
+        key: 'last_expected',
+        label: t('limit.last_expected'),
+        value: formatCalendarDate(last.date),
+      })
+    } else if (last.kind === 'unknown-while-paused') {
+      rows.push({
+        key: 'last_expected',
+        label: t('limit.last_expected'),
+        value: t('limit.last_expected_paused'),
+      })
+    }
+  }
+
   // Provenance: when the rule was created, and — if it was born from a movement —
   // a link back to that movement. `created_from_transaction_id` is null for rules
   // created directly, so the origin row only appears when there's a movement.
@@ -176,9 +233,14 @@ export const RecurrenceDetail = ({ rule }: Props) => {
             )}
             {frequencyLabel}
           </span>
-          {rule.status !== 'active' && (
+          {/* THE DERIVED STATE, not the column. `status` says what the user did
+              to the rule — and a rule that spent its limit still says `active`,
+              so this chip showed nothing while the list grouped the same rule
+              under Finalizada. Two screens, two answers, which is the thing this
+              change exists to remove. */}
+          {stateLabel != null && (
             <span className="inline-flex items-center rounded-full bg-warning-soft px-2.5 py-1 text-[11px] font-semibold text-warning-deep">
-              {t(`statuses.${rule.status}`)}
+              {stateLabel}
             </span>
           )}
         </div>
@@ -193,7 +255,7 @@ export const RecurrenceDetail = ({ rule }: Props) => {
       <div className="flex flex-col overflow-hidden rounded-[15px] border border-border bg-card">
         {rows.map((row) => {
           const label = (
-            <span className="flex items-center gap-2 text-sm text-text-muted">
+            <span className="flex shrink items-center gap-2 text-sm text-text-muted">
               {iconFor(row.key)}
               {row.label}
             </span>
@@ -213,7 +275,7 @@ export const RecurrenceDetail = ({ rule }: Props) => {
           return (
             <div key={row.key} className={rowClass}>
               {label}
-              <span className="text-sm font-semibold text-text">{row.value}</span>
+              <span className="min-w-0 flex-1 text-right text-sm font-semibold text-text">{row.value}</span>
             </div>
           )
         })}

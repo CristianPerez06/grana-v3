@@ -3,7 +3,6 @@ import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { Plus } from 'lucide-react-native'
-import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { duplicateRuleIds, type RecurrenceSummary } from '@grana/recurrences'
 import { PageHeader } from '../../../../components/ui/PageHeader'
 import { Segmented } from '../../../../components/ui/Segmented'
@@ -15,11 +14,18 @@ import { useT } from '../../../../lib/locale-context'
 
 type Tab = 'active' | 'paused' | 'finished'
 
-// A rule is "finished" when it has a past end_date, regardless of its DB status
-// (active/paused) — the same partition web's recurring page uses. Otherwise it
-// falls into its status bucket.
-const isFinished = (rule: RecurrenceSummary, today: string): boolean =>
-  !!rule.end_date && rule.end_date < today
+/**
+ * The three groups come from the DERIVED state, not from `status` and not from
+ * `end_date` — the same partition web's hub uses, from the same one definition.
+ *
+ * This used to be `end_date < today`, which answers a narrower question than the
+ * tab claims: a rule that spent its `max_occurrences` has no future either, and
+ * it sat among the active ones announcing a next date it would never produce.
+ * That is how a plan with a limit of 1 read as «Activa» while it had already
+ * stopped reminding (#142).
+ */
+const isFinished = (rule: RecurrenceSummary): boolean =>
+  rule.lifecycle.state === 'finished' || rule.lifecycle.state === 'finished-with-pending'
 
 /**
  * Recurrences hub. Thin consumer of `@grana/recurrences`: lists the user's rules
@@ -38,11 +44,10 @@ export default function RecurringHubScreen() {
     queryFn: getRecurrencesList,
   })
 
-  const today = formatDateISO(getTodayAR())
   const rules = query.data ?? []
-  const active = rules.filter((r) => r.status === 'active' && !isFinished(r, today))
-  const paused = rules.filter((r) => r.status === 'paused' && !isFinished(r, today))
-  const finished = rules.filter((r) => isFinished(r, today))
+  const active = rules.filter((r) => r.lifecycle.state === 'active')
+  const paused = rules.filter((r) => r.lifecycle.state === 'paused')
+  const finished = rules.filter(isFinished)
   const buckets: Record<Tab, RecurrenceSummary[]> = { active, paused, finished }
   // Active rules that collide with another (same account, currency and type,
   // equal or nearly equal amount) get an informative badge, as on web's hub.

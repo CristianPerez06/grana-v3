@@ -7,6 +7,7 @@ import {
   actAsAdmin,
   applyActivation,
   applyEffectiveUntil,
+  applyPositionsBatch,
   createRecurrenceIdentityDb,
   U_A,
 } from './support/recurrence-identity-db'
@@ -621,6 +622,10 @@ describe('a seeded rule that was already there when 0068 ran', () => {
                 3, '${start}', '${txId}');
       `)
       await applyEffectiveUntil(legacy)
+      // The hub's read calls the batch function, so walking this database
+      // forward by hand has to include 0070 as well — the deployment order, not
+      // an extra.
+      await applyPositionsBatch(legacy)
 
       const { rows } = await legacy.query<{ before: number; floor: string; seed: string }>(
         `select schedule_positions_before as before,

@@ -28,11 +28,16 @@ import { useLocale, useT } from '../../../../lib/locale-context'
 import { useShowCents } from '../../../../lib/preferences-context'
 
 // Metadata row inside the summary card.
+//
+// Both sides shrink, and the value takes whatever the label leaves. A fixed
+// `max-w` on the value does not bound the ROW: a long label keeps its intrinsic
+// width, so label + 62% overflowed the card and «Se calcula cuando reanudes la
+// regla» was cut off mid-word on the right edge.
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-row items-center justify-between py-2.5">
-      <Text className="text-[13px] font-medium text-text-muted">{label}</Text>
-      <Text className="max-w-[62%] text-right text-[14px] font-semibold text-text">{value}</Text>
+    <View className="flex-row items-center justify-between gap-3 py-2.5">
+      <Text className="shrink text-[13px] font-medium text-text-muted">{label}</Text>
+      <Text className="flex-1 text-right text-[14px] font-semibold text-text">{value}</Text>
     </View>
   )
 }
@@ -59,6 +64,19 @@ export default function RecurrenceDetailScreen() {
 
   const rule = query.data ?? null
   const notFound = query.isError || (query.isSuccess && rule === null)
+
+  // Null for an active rule: there is nothing to announce about one that is
+  // simply running. See the comment where it is drawn.
+  const stateLabel =
+    rule == null || rule.lifecycle.state === 'active'
+      ? null
+      : rule.lifecycle.state === 'finished-with-pending'
+        ? t('recurrences.limit.finished_with_pending', { count: rule.lifecycle.unresolved })
+        : t(
+            `recurrences.statuses.${
+              rule.lifecycle.state === 'finished' ? 'finished' : rule.status
+            }`,
+          )
 
   const onBack = () =>
     router.canGoBack() ? router.back() : router.push('/transactions/recurring')
@@ -173,6 +191,11 @@ export default function RecurrenceDetailScreen() {
               </Text>
               <Text className="mt-0.5 text-[13px] font-semibold text-text-muted">
                 {movementLabel(rule.movement_type, t)} · {frequencyLabel(rule.frequency, t)}
+                {/* THE DERIVED STATE, web's twin. `status` says what the user
+                    did to the rule, and a rule that spent its limit still says
+                    `active` — so this line said nothing while the list grouped
+                    the same rule under Finalizada. */}
+                {stateLabel == null ? null : ` · ${stateLabel}`}
               </Text>
 
               <View className="mt-3 border-t border-border-soft">
@@ -202,6 +225,54 @@ export default function RecurrenceDetailScreen() {
                     label={t('recurrences.labels.end_date')}
                     value={formatShortDate(rule.end_date, locale)}
                   />
+                ) : null}
+
+                {/* WHERE THE RULE IS IN ITS PLAN — the web detail's twin. A
+                    limit decides when a rule stops reminding and was invisible
+                    on every screen: a plan of eleven cuotas recorded as one read
+                    «mensual, sin fecha de fin» (#142).
+
+                    Counted in POSITIONS of the calendar, which is what
+                    `max_occurrences` caps, never in instance rows. */}
+                {rule.lifecycle.progress == null && !rule.end_date ? (
+                  <Row
+                    label={t('recurrences.limit.end_label')}
+                    value={t('recurrences.limit.no_limit')}
+                  />
+                ) : null}
+                {rule.lifecycle.progress != null ? (
+                  <>
+                    <Row
+                      label={t('recurrences.limit.progress_label')}
+                      value={t('recurrences.limit.progress', {
+                        spent: rule.lifecycle.progress.spent,
+                        total: rule.lifecycle.progress.total,
+                      })}
+                    />
+                    {rule.lifecycle.progress.remaining > 0 ? (
+                      <Row
+                        label={t('recurrences.limit.remaining_label')}
+                        value={t('recurrences.limit.remaining', {
+                          remaining: rule.lifecycle.progress.remaining,
+                        })}
+                      />
+                    ) : null}
+                    {/* A paused rule gets a sentence instead of a date: while
+                        the pause is open the final date depends on a day that
+                        has not happened, and an estimate shown as a fact is
+                        exactly what this avoids. */}
+                    {rule.last_expected_occurrence.kind === 'date' ? (
+                      <Row
+                        label={t('recurrences.limit.last_expected')}
+                        value={formatShortDate(rule.last_expected_occurrence.date, locale)}
+                      />
+                    ) : rule.last_expected_occurrence.kind === 'unknown-while-paused' ? (
+                      <Row
+                        label={t('recurrences.limit.last_expected')}
+                        value={t('recurrences.limit.last_expected_paused')}
+                      />
+                    ) : null}
+                  </>
                 ) : null}
                 {rule.description ? (
                   <Row label={t('recurrences.labels.description')} value={rule.description} />
