@@ -67,7 +67,7 @@ Ver `design.md` para el porqué de cada decisión y `specs/transactions/spec.md`
 
 ## 5. Cierre
 
-- [ ] 5.1 `pnpm verify` en verde, y la suite de recurrences también con `TZ=America/Argentina/Buenos_Aires`.
+- [x] 5.1 `pnpm verify` en verde, y la suite de recurrences también con `TZ=America/Argentina/Buenos_Aires`.
 - [ ] 5.2 QA manual en las dos plataformas: crear una regla con límite por cada uno de los tres caminos de alta, ver el avance en la ficha, ampliar el límite y comprobar que vuelve a activa.
 - [ ] 5.3 Archivar el change y aplicar el delta al spec maestro de `transactions`.
 - [ ] 5.4 `pnpm openspec:check` en verde.
