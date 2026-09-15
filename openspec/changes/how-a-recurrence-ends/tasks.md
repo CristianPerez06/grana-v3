@@ -4,8 +4,28 @@ Ver `design.md` para el porqué de cada decisión y `specs/transactions/spec.md`
 
 ## 0. Antes de escribir código: saber qué hay en la base
 
-- [ ] 0.1 **Auditar las reglas que tienen fecha de fin Y límite a la vez.** El modelo lo permitía y la generación cortaba por la primera condición que se cumpliera; las tres respuestas excluyentes rigen de acá en adelante, pero no pueden descartar en silencio lo que ya está guardado. Correr como lectura sobre la base real —sin importes ni descripciones— y anotar el resultado acá: cuántas reglas tienen las dos, y en qué estado están.
-- [ ] 0.2 Según ese resultado, redactar con el usuario **el texto** de lo que se le muestra a quien edite una de esas reglas. Lo que NO se decide acá es si el camino se construye: mientras la base permita las dos condiciones a la vez, el formulario tiene que sostenerlas siempre, encuentre o no el 0.1 un caso hoy — una fila creada mañana por cualquier camino que no sea el formulario vuelve a ponerlas. La única alternativa a construirlo es **prohibir la combinación en la base** con un CHECK, y eso es otro cambio: obliga a decidir qué pasa con las filas que ya la tienen. El 0.1 dice con cuánto cuidado hay que redactar el mensaje, no si hace falta.
+- [x] 0.1 **Auditar las reglas que tienen fecha de fin Y límite a la vez.** El modelo lo permitía y la generación cortaba por la primera condición que se cumpliera; las tres respuestas excluyentes rigen de acá en adelante, pero no pueden descartar en silencio lo que ya está guardado. Correr como lectura sobre la base real —sin importes ni descripciones— y anotar el resultado acá: cuántas reglas tienen las dos, y en qué estado están.
+
+  **Resultado (2026-09-15, base de producción): ninguna.** La consulta agrupada por `status` sobre `end_date is not null and max_occurrences is not null` no devolvió filas. Nadie llegó nunca a esa combinación, lo cual es coherente con el defecto que originó el cambio: el límite estaba escondido adentro del bloque de la fecha de fin, así que quien lo cargaba salía con una sola de las dos.
+
+  ```sql
+  select r.status,
+         count(*) as reglas,
+         min(r.start_date)::text as mas_vieja,
+         max(r.start_date)::text as mas_nueva
+    from public.recurrences r
+   where r.end_date is not null
+     and r.max_occurrences is not null
+   group by r.status
+   order by r.status;
+  ```
+- [x] 0.2 Según ese resultado, redactar con el usuario **el texto** de lo que se le muestra a quien edite una de esas reglas. Lo que NO se decide acá es si el camino se construye: mientras la base permita las dos condiciones a la vez, el formulario tiene que sostenerlas siempre, encuentre o no el 0.1 un caso hoy — una fila creada mañana por cualquier camino que no sea el formulario vuelve a ponerlas. La única alternativa a construirlo es **prohibir la combinación en la base** con un CHECK, y eso es otro cambio: obliga a decidir qué pasa con las filas que ya la tienen. El 0.1 dice con cuánto cuidado hay que redactar el mensaje, no si hace falta.
+
+  **Decidido**: como no hay ninguna regla en esa forma, el aviso es breve y no necesita explicar una historia que nadie vivió. Dice qué tiene la regla, qué queda y pide confirmación:
+
+  > Esta regla tiene una fecha de fin **y** un límite de vencimientos. Ahora se guarda una sola condición: va a quedar **{la elegida}**, y **{la otra}** se quita. ¿Seguimos?
+
+  Sin confirmación no se guarda nada. El camino se implementa igual (tarea 3.8) y su regresión arma la regla con las dos condiciones a mano, porque en la base no hay ninguna de donde sacarla.
 
 ## 1. La derivación, una sola vez y sin base de datos
 
