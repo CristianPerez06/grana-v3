@@ -1410,6 +1410,63 @@ end $$;
 -- └── END SHARED CONTRACT ───────────────────────────────────────────────────┘
 
 
+-- ── 8.1M · the spent positions, asked for many rules at once (0070) ────────
+-- The recurrences hub derives every rule's shown state from its calendar and its
+-- progress, so it needs this number for every row it lists. 0070 adds a way to
+-- ask for all of them in one round trip. What is pinned here is what makes it
+-- safe to have at all — a function that can be replaced without anyone noticing
+-- is not a frontier.
+do $$
+declare
+  v_body text;
+begin
+  -- ┌── BEGIN 8.1M CONTRACT ──────────────────────────────────────────────────┐
+  if to_regprocedure('public.recurrence_positions_spent_batch(uuid[], date)') is null then
+    raise exception 'recurrence_positions_spent_batch is missing: the hub would ask rule by rule, one round trip per row';
+  end if;
+
+  -- SECURITY INVOKER, and this one is not a formality. The function receives a
+  -- LIST OF IDS from the caller: as `definer` it would run as the owner, RLS on
+  -- `recurrences` would not apply, and anyone who guessed a uuid would be handed
+  -- the progress of somebody else's rule.
+  if exists (
+    select 1 from pg_proc
+     where oid = 'public.recurrence_positions_spent_batch(uuid[], date)'::regprocedure
+       and prosecdef
+  ) then
+    raise exception 'recurrence_positions_spent_batch is SECURITY DEFINER: it takes a list of ids, so RLS is the only thing standing between a caller and another user''s rules';
+  end if;
+
+  -- IT ASKS, IT DOES NOT COUNT. One definition of what `max_occurrences` counts;
+  -- a body that walked the calendar itself would be a copy that drifts, and this
+  -- number decides whether a rule goes on reminding someone about money.
+  select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
+    into v_body
+    from pg_proc
+   where oid = 'public.recurrence_positions_spent_batch(uuid[], date)'::regprocedure;
+  if v_body not like '%recurrence_positions_spent(%' then
+    raise exception 'recurrence_positions_spent_batch no longer calls recurrence_positions_spent: the count has two implementations, and they will disagree';
+  end if;
+  -- And it reads THROUGH the table, which is what applies the caller's RLS: a
+  -- body that walked `p_ids` alone would answer for ids the caller cannot see.
+  if v_body not like '%from public.recurrences%' then
+    raise exception 'recurrence_positions_spent_batch does not read through public.recurrences: RLS never gets a chance to filter the ids it was handed';
+  end if;
+
+  -- 0067's rule, applied at birth: Postgres grants EXECUTE to PUBLIC on every
+  -- new function and Supabase grants it to `anon` directly.
+  if has_function_privilege('anon', 'public.recurrence_positions_spent_batch(uuid[], date)', 'EXECUTE') then
+    raise exception 'COBERTURA RLS: anon conserva EXECUTE sobre recurrence_positions_spent_batch';
+  end if;
+  if not has_function_privilege('authenticated', 'public.recurrence_positions_spent_batch(uuid[], date)', 'EXECUTE') then
+    raise exception 'authenticated cannot execute recurrence_positions_spent_batch: the hub falls back to one call per rule';
+  end if;
+  -- └── END 8.1M CONTRACT ───────────────────────────────────────────────────┘
+
+  raise notice '✓ 8.1M — recurrence_positions_spent_batch: firma, cuerpo y privilegios OK';
+end $$;
+
+
 -- =============================================================================
 -- 8.2 — RLS: políticas en todas las tablas
 -- =============================================================================

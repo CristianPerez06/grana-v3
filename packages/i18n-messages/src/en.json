@@ -1782,13 +1782,26 @@
         "category_required": "Choose a category",
         "destination_required": "Choose the destination account",
         "destination_same": "Source and destination accounts can't be the same",
-        "create_failed": "Couldn't create the recurrence"
+        "create_failed": "Couldn't create the recurrence",
+        "end_date_required": "Choose the date it ends on",
+        "end_count_required": "Enter how many occurrences it has",
+        "end_count_below_spent": "This rule has already had {spent} occurrences: the limit cannot be lower."
       },
       "today": "Today",
       "section_movement": "Movement",
       "section_when": "When it repeats",
       "has_end_date": "Has end date",
-      "no_end_hint": "Repeats indefinitely until you pause it"
+      "no_end_hint": "Repeats indefinitely until you pause it",
+      "end_question": "How does it end?",
+      "end_never": "No limit",
+      "end_never_hint": "It repeats until you pause it",
+      "end_on_date": "On a date",
+      "end_after_count": "After a number of occurrences",
+      "end_count_label": "Number of occurrences",
+      "end_count_hint": "For example, 11 for an 11-instalment plan",
+      "end_both_title": "This rule has both an end date and a limit",
+      "end_both_body": "Only one condition is saved now: «{keeping}» stays and «{dropping}» is removed. Continue?",
+      "end_both_confirm": "Yes, save it like this"
     },
     "next_prefix": "next:",
     "upcoming": {

@@ -1782,13 +1782,26 @@
         "category_required": "Elegí una categoría",
         "destination_required": "Elegí la cuenta destino",
         "destination_same": "La cuenta origen y destino no pueden ser iguales",
-        "create_failed": "No se pudo crear la recurrencia"
+        "create_failed": "No se pudo crear la recurrencia",
+        "end_date_required": "Elegí la fecha en la que termina",
+        "end_count_required": "Escribí cuántos vencimientos tiene",
+        "end_count_below_spent": "Esta regla ya lleva {spent} vencimientos: el límite no puede ser menor."
       },
       "today": "Hoy",
       "section_movement": "Movimiento",
       "section_when": "Cuándo se repite",
       "has_end_date": "Tiene fecha de fin",
-      "no_end_hint": "Se repite indefinidamente hasta que la pauses"
+      "no_end_hint": "Se repite indefinidamente hasta que la pauses",
+      "end_question": "¿Cómo termina?",
+      "end_never": "Sin límite",
+      "end_never_hint": "Se repite hasta que la pauses",
+      "end_on_date": "En una fecha",
+      "end_after_count": "Después de una cantidad de vencimientos",
+      "end_count_label": "Cantidad de vencimientos",
+      "end_count_hint": "Por ejemplo, 11 para un plan de 11 cuotas",
+      "end_both_title": "Esta regla tiene fecha de fin y límite",
+      "end_both_body": "Ahora se guarda una sola condición: va a quedar «{keeping}», y «{dropping}» se quita. ¿Seguimos?",
+      "end_both_confirm": "Sí, guardar así"
     },
     "next_prefix": "próximo:",
     "upcoming": {

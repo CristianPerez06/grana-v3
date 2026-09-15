@@ -27,6 +27,12 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { AccountAvatar } from '@/components/ui/account-avatar'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
+import {
+  endConditionColumns,
+  validateEndCondition,
+  type RecurrenceEndDraft,
+} from '@grana/money-logic'
+import { EndConditionField } from '@/lib/recurrences/components/end-condition-field'
 import { parseMoneyInput } from '@grana/validation'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import {
@@ -151,9 +157,14 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
   const [frequency, setFrequency] = useState<FrequencyPreset>('monthly')
   const [intervalCount, setIntervalCount] = useState(1)
   const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('month')
-  const [hasEndDate, setHasEndDate] = useState(false)
-  const [endDate, setEndDate] = useState('')
-  const [maxOccurrences, setMaxOccurrences] = useState('')
+  // ONE piece of state for the end condition: the chosen answer plus both raw
+  // fields. What gets sent is derived from the answer, so a value typed and then
+  // abandoned cannot reach the payload — see `endConditionColumns`.
+  const [endCondition, setEndCondition] = useState<RecurrenceEndDraft>({
+    answer: 'never',
+    endDate: '',
+    maxOccurrences: '',
+  })
 
   // Shared recurrence (expense only): the split here is the TEMPLATE seeded into
   // each generated instance. Defaults to the household's default split. Same UX
@@ -249,9 +260,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
     setFrequency('monthly')
     setIntervalCount(1)
     setIntervalUnit('month')
-    setHasEndDate(false)
-    setEndDate('')
-    setMaxOccurrences('')
+    setEndCondition({ answer: 'never', endDate: '', maxOccurrences: '' })
     setActivePopover(null)
     setCatDrill(null)
     setFormError(null)
@@ -300,8 +309,18 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
       }
     }
 
-    const trimmedEnd = hasEndDate ? endDate.trim() : ''
-    const trimmedMax = maxOccurrences.trim()
+    const endProblem = validateEndCondition(endCondition, { startDate })
+    if (endProblem != null) {
+      setFormError(
+        endProblem.kind === 'date-before-start'
+          ? tRec('errors.end_before_start')
+          : endProblem.kind === 'date-missing'
+            ? tRec('create.errors.end_date_required')
+            : tRec('create.errors.end_count_required'),
+      )
+      return
+    }
+    const endColumns = endConditionColumns(endCondition)
 
     // Shared template (expense + two-member household only). members[0] is the
     // current user (getHousehold orders self first).
@@ -325,8 +344,10 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
       frequency,
       ...(frequency === 'custom' ? { interval_count: intervalCount, interval_unit: intervalUnit } : {}),
       start_date: startDate,
-      ...(trimmedEnd !== '' ? { end_date: trimmedEnd } : {}),
-      ...(trimmedMax !== '' ? { max_occurrences: Number(trimmedMax) } : {}),
+      ...(endColumns.end_date != null ? { end_date: endColumns.end_date } : {}),
+      ...(endColumns.max_occurrences != null
+        ? { max_occurrences: endColumns.max_occurrences }
+        : {}),
       ...(type === 'transfer'
         ? { transfer_destination_account_id: destinationAccountId }
         : { category_id: categoryId, subcategory_id: subcategoryId || undefined }),
@@ -788,55 +809,18 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
                   }
                 />
 
-                {/* End-date toggle row */}
-                <div className="-mx-4 flex items-center gap-3 border-t px-4 py-3" style={{ borderColor: ROW_DIVIDER }}>
-                  <span
-                    className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
-                    style={{ backgroundColor: FIELD_BG }}
-                  >
-                    <Calendar className="size-[18px]" aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[14px] font-semibold text-text">{tRec('create.has_end_date')}</p>
-                    {!hasEndDate && <p className="text-xs text-text-muted">{tRec('create.no_end_hint')}</p>}
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={hasEndDate}
-                    onChange={(e) => setHasEndDate(e.target.checked)}
-                    aria-label={tRec('create.has_end_date')}
-                    className="size-4 accent-navy"
-                  />
-                </div>
-                {hasEndDate && (
-                  <div className="-mx-4 flex flex-wrap items-end gap-4 px-4 pb-1 pt-3">
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor="rec-end" className="text-xs text-text-muted">{tRec('create.repeat_until')}</label>
-                      <div className="w-44">
-                        <DatePicker
-                          id="rec-end"
-                          value={endDate}
-                          onChange={setEndDate}
-                          min={startDate}
-                          label={tRec('create.repeat_until')}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor="rec-max" className="text-xs text-text-muted">{tRec('create.max_occurrences')}</label>
-                      <input
-                        id="rec-max"
-                        type="number"
-                        min={1}
-                        inputMode="numeric"
-                        value={maxOccurrences}
-                        onChange={(e) => setMaxOccurrences(e.target.value)}
-                        placeholder="—"
-                        className="w-28 rounded-[10px] border border-border bg-card px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      />
-                    </div>
-                  </div>
-                )}
+                {/* «¿Cómo termina?» — one question, three answers (#142).
+                    The limit used to live INSIDE the end-date block, so setting
+                    it meant turning on a switch that says something else; and
+                    turning that switch back off left the number saved and
+                    invisible. That is how a plan of 11 cuotas ended up with a
+                    limit of 1 and stopped reminding after the first one. */}
+                <EndConditionField
+                  value={endCondition}
+                  onChange={setEndCondition}
+                  startDate={startDate}
+                  idPrefix="rec-create"
+                />
               </div>
             </div>
 

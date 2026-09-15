@@ -1,7 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
-import { formatDateISO, getTodayAR } from '@grana/money-logic'
+import {
+  endConditionColumns,
+  formatDateISO,
+  getTodayAR,
+  validateEndCondition,
+  type RecurrenceEndDraft,
+} from '@grana/money-logic'
 import { parseMoneyInput } from '@grana/validation'
 import type {
   CategoryWithSubcategories,
@@ -18,6 +24,7 @@ import { Segmented } from '../ui/Segmented'
 import { Switch } from '../ui/Switch'
 import { FormError } from '../ui/FormError'
 import { Alert } from '../ui/Alert'
+import { EndConditionField } from './EndConditionField'
 import { Spinner } from '../ui/Spinner'
 import { AccountSelectField, CategorySelectField } from '../transactions/form-pickers'
 import { colors } from '../../lib/colors'
@@ -76,9 +83,14 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
   const [frequency, setFrequency] = useState<Frequency>('monthly')
   const [intervalCount, setIntervalCount] = useState(1)
   const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('month')
-  const [hasEndDate, setHasEndDate] = useState(false)
-  const [endDate, setEndDate] = useState('')
-  const [maxOccurrences, setMaxOccurrences] = useState('')
+  // ONE piece of state for the end condition — the chosen answer plus both raw
+  // fields. The payload is derived from the answer, so a value typed and then
+  // abandoned has no way to reach the rule (#142).
+  const [endCondition, setEndCondition] = useState<RecurrenceEndDraft>({
+    answer: 'never',
+    endDate: '',
+    maxOccurrences: '',
+  })
 
   // Shared template (expense + two-member household). members[0] is the current
   // user (getHousehold orders self first); the split seeds each instance.
@@ -155,12 +167,18 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
         return
       }
     }
-    const trimmedEnd = hasEndDate ? endDate.trim() : ''
-    if (trimmedEnd !== '' && trimmedEnd < startDate) {
-      setFormError(t('recurrences.errors.end_before_start'))
+    const endProblem = validateEndCondition(endCondition, { startDate })
+    if (endProblem != null) {
+      setFormError(
+        endProblem.kind === 'date-before-start'
+          ? t('recurrences.errors.end_before_start')
+          : endProblem.kind === 'date-missing'
+            ? t('recurrences.create.errors.end_date_required')
+            : t('recurrences.create.errors.end_count_required'),
+      )
       return
     }
-    const trimmedMax = maxOccurrences.trim()
+    const endColumns = endConditionColumns(endCondition)
 
     const sharedDecl =
       type === 'expense' && sharedEnabled && members && household
@@ -182,8 +200,10 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
       frequency,
       ...(frequency === 'custom' ? { interval_count: intervalCount, interval_unit: intervalUnit } : {}),
       start_date: startDate,
-      ...(trimmedEnd !== '' ? { end_date: trimmedEnd } : {}),
-      ...(trimmedMax !== '' ? { max_occurrences: Number(trimmedMax) } : {}),
+      ...(endColumns.end_date != null ? { end_date: endColumns.end_date } : {}),
+      ...(endColumns.max_occurrences != null
+        ? { max_occurrences: endColumns.max_occurrences }
+        : {}),
       ...(type === 'transfer'
         ? { transfer_destination_account_id: destinationAccountId }
         : { category_id: categoryId, subcategory_id: subcategoryId || undefined }),
@@ -355,40 +375,14 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
         )}
       </View>
 
-      {/* Optional end date */}
-      <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-sm font-semibold text-text">
-            {t('recurrences.create.has_end_date')}
-          </Text>
-          <Switch
-            ariaLabel={t('recurrences.create.has_end_date')}
-            checked={hasEndDate}
-            onValueChange={setHasEndDate}
-          />
-        </View>
-        {hasEndDate && (
-          <View className="border-t border-border-soft pt-3">
-            <DateField
-              value={endDate}
-              onChange={setEndDate}
-              placeholder={t('common.pick_date')}
-              invalid={endDate !== '' && endDate < startDate}
-            />
-          </View>
-        )}
-      </View>
-
-      {/* Optional max occurrences */}
-      <View className="flex-col gap-1.5">
-        <Label>{t('recurrences.create.max_occurrences')}</Label>
-        <Input
-          value={maxOccurrences}
-          onChangeText={(v) => setMaxOccurrences(v.replace(/\D/g, ''))}
-          keyboardType="number-pad"
-          placeholder={t('common.optional')}
-        />
-      </View>
+      {/* «¿Cómo termina?» — one question, three answers (#142). The count used
+          to sit in its own section, always visible and always sent, so a rule
+          could go out with a date AND a limit without anyone choosing that. */}
+      <EndConditionField
+        value={endCondition}
+        onChange={setEndCondition}
+        startDate={startDate}
+      />
 
       {/* Shared split (expense, 2-member household) */}
       {showShared && members && (

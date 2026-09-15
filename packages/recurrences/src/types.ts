@@ -1,5 +1,9 @@
 import type { Database } from '@grana/supabase'
-import type { RecurrenceFrequencyLabel } from '@grana/money-logic'
+import type {
+  LastExpectedOccurrence,
+  RecurrenceFrequencyLabel,
+  RecurrenceLifecycle,
+} from '@grana/money-logic'
 
 type Tables<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Row']
@@ -131,18 +135,34 @@ export type RecurrenceSummary = Recurrence & {
    * and are always <= today.
    */
   next_occurrence: string | null
+  /**
+   * Positions of the rule's calendar already spent — what `max_occurrences`
+   * counts. Asked to the database in ONE call for the whole list
+   * (`recurrence_positions_spent_batch`), never counted from
+   * `pending_instances`: a rule seeded by a movement has no row for its first
+   * occurrence, so counting rows credits a spent plan with cuotas it does not
+   * have.
+   */
+  positions_spent: number
+  /**
+   * What the screens SHOW about this rule: active, paused, finalizada — derived
+   * from the calendar on every read, never from `status`, which goes on saying
+   * what the user did to the rule. Grouping the hub by this is what keeps an
+   * exhausted rule from being counted among the active ones.
+   */
+  lifecycle: RecurrenceLifecycle
+  /**
+   * When the rule's last occurrence is expected, when that can be known.
+   *
+   * A discriminated union and not a nullable date on purpose: "no se puede saber
+   * todavía" (an open pause) is a different answer from "no hay ninguna", and a
+   * UI handed a date for the first case would print an estimate as if it were
+   * certain.
+   */
+  last_expected_occurrence: LastExpectedOccurrence
 }
 
 export type RecurrenceDetail = RecurrenceSummary & {
-  /**
-   * Positions of the rule's calendar already spent — what `max_occurrences`
-   * counts, and NOT `instances.length`. A seeded rule's first occurrence has no
-   * row, and neither has a position the calendar produced while nothing was
-   * generating; counting rows offers a reference date to a rule that will never
-   * fire again. Computed by the database, which is also what the RPC validates
-   * the chosen date against.
-   */
-  positions_spent: number
   /**
    * The rule's whole history, newest first — `confirmed` and `skipped` included,
    * so `due_date` may be NULL. NOT `PendingRecurrenceInstance[]`: that type

@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
 import { RecurringTabs } from './_components/recurring-tabs'
 import { UpcomingRecurrences } from './_components/upcoming-recurrences'
-import { formatDateISO, getTodayAR } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
 import {
   getRecurrences,
@@ -12,10 +11,18 @@ import { getAccounts } from '@/lib/accounts/queries'
 import { toFormAccounts } from '@/lib/accounts/form-accounts'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 
-const isFinished = (rule: RecurrenceSummary) => {
-  if (!rule.end_date) return false
-  return rule.end_date < formatDateISO(getTodayAR())
-}
+/**
+ * The three groups come from the DERIVED state, not from `status` and not from
+ * `end_date`.
+ *
+ * This used to be `end_date < today`, which answered a narrower question than
+ * the tab claims: a rule that spent its `max_occurrences` has no future either,
+ * and it sat among the active ones announcing a next date it was never going to
+ * produce. That is how a plan with a limit of 1 read as «Activa · mensual, sin
+ * fecha de fin» while it had already stopped reminding (#142).
+ */
+const isFinished = (rule: RecurrenceSummary) =>
+  rule.lifecycle.state === 'finished' || rule.lifecycle.state === 'finished-with-pending'
 
 const RecurringPage = async () => {
   const supabase = await createClient()
@@ -31,10 +38,8 @@ const RecurringPage = async () => {
 
   const { cash, bank } = groupedAccounts
 
-  const today = formatDateISO(getTodayAR())
-
-  const active = allRules.filter((r) => r.status === 'active' && (!r.end_date || r.end_date >= today))
-  const paused = allRules.filter((r) => r.status === 'paused' && (!r.end_date || r.end_date >= today))
+  const active = allRules.filter((r) => r.lifecycle.state === 'active')
+  const paused = allRules.filter((r) => r.lifecycle.state === 'paused')
   const finished = allRules.filter(isFinished)
 
   // Available balance for the soft negative-balance warning in the pending block.
