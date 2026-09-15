@@ -1416,6 +1416,43 @@ end $$;
 -- ask for all of them in one round trip. What is pinned here is what makes it
 -- safe to have at all — a function that can be replaced without anyone noticing
 -- is not a frontier.
+-- ── 8.1N · a pause looks forward (0071) ───────────────────────────────────
+-- `recurrence_positions_spent` subtracts pauses, and ONE CHARACTER decides
+-- whether the day a pause was opened on still counts. It used to be `>=`, so a
+-- rule whose occurrence fell today, produced it, and was then paused the same
+-- day lost that position: «0 de 3» over a plan with a cuota already pending, and
+-- three more to generate — four instalments in a plan of three.
+--
+-- Pinned here because nothing on any screen distinguishes the two readings, and
+-- because the twin of this predicate lives in TypeScript (`subtractPauses`): a
+-- database that silently went back to `>=` would disagree with the generator
+-- about how many cuotas a plan has.
+do $$
+declare
+  v_body text;
+begin
+  -- ┌── BEGIN 8.1N CONTRACT ──────────────────────────────────────────────────┐
+  if to_regprocedure('public.recurrence_positions_spent(uuid, date)') is null then
+    raise exception 'recurrence_positions_spent is missing';
+  end if;
+
+  select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
+    into v_body
+    from pg_proc
+   where oid = 'public.recurrence_positions_spent(uuid, date)'::regprocedure;
+
+  if v_body like '%d >= ps.paused_from%' then
+    raise exception 'recurrence_positions_spent subtracts the pause INCLUSIVE of its opening day: a rule paused the day one of its occurrences fell loses that position, and a plan of three grows a fourth';
+  end if;
+  if v_body not like '%d > ps.paused_from%' then
+    raise exception 'recurrence_positions_spent no longer bounds pauses by paused_from at all';
+  end if;
+  -- └── END 8.1N CONTRACT ───────────────────────────────────────────────────┘
+
+  raise notice '✓ 8.1N — una pausa mira hacia adelante: el día en que se abre sigue contando';
+end $$;
+
+
 -- ┌── BEGIN 8.1M CONTRACT ────────────────────────────────────────────────────┐
 -- Everything between these two markers is LIFTED AND RUN by
 -- `packages/recurrences/__tests__/positions-spent-batch.test.ts`, declarations

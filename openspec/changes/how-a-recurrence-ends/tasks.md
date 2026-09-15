@@ -65,9 +65,19 @@ Ver `design.md` para el porqué de cada decisión y `specs/transactions/spec.md`
 - [x] 4.4 Comprobar que `recurrences.status` NO se reescribe en ninguno de los caminos anteriores. Verificar leyendo la columna antes y después en la regresión del 4.3.
 - [x] 4.5 Comprobar que una regla **eliminada** no aparece como finalizada en el listado ni en ninguna superficie de reglas vivas. Verificar con una regresión sobre una regla `deleted` sin futuro.
 
+## 4b. Una pausa mira hacia adelante (encontrado en la QA del 5.2)
+
+- [x] 4b.1 **La pausa deja de tragarse su propio día de apertura.** Una regla que produjo su vencimiento de hoy y se pausó ese mismo día perdía esa posición: «0 de 3» sobre un plan con una cuota ya pendiente, y tres más por generar — cuatro cuotas en un plan de tres. El cambio es de una línea en `subtractPauses` (`@grana/money-logic`) y una en `recurrence_positions_spent`. `paused_from` sigue guardando el día real; lo que cambia es cómo se lee el intervalo.
+- [x] 4b.2 **Auditar las pausas históricas antes de escribir la migración**, porque el cambio podría hacer reaparecer un vencimiento viejo si alguna pausa empezó justo el día en que vencía y nunca se creó su ocurrencia.
+  - **Resultado (2026-09-15, base de producción): ninguna en riesgo.** 5 pausas, 2 abiertas, 4 sin instancia ese día. De esas 4: dos son de una regla cada 3 días anclada al 2026-06-04 y su `paused_from` (2026-09-10) está a 98 días del ancla, que no es múltiplo de 3 — no cae en el calendario; una dura cero días (`13/09 → 13/09`), así que no resta nada ni antes ni después; y la cuarta es del 14/09 sobre un calendario mensual anclado al 13, que tampoco cae. La única fila que cambia es la quinta, que **sí tiene instancia ese día** — es la que el cambio repara.
+- [x] 4b.3 Escribir la migración (`0071`), con el cuerpo de `recurrence_positions_spent` **extraído verbatim de `0068`** y un solo predicado cambiado. En transacción y con autoverificación, como `0070`. Número elegido contra `main` (que llega a `0069`) y contra la `0070` de esta misma rama, ya aplicada.
+- [x] 4b.4 Fijarlo en `validate_schema.sql` (8.1N) y verificar en negativo que una base con el predicado viejo hace fallar el validador.
+- [x] 4b.5 Regresiones: pausar con una pendiente de hoy conserva `1 de 3`; pausar antes de que corra el generador igual permite el vencimiento de hoy; reanudar el mismo día no saltea nada; reanudar dos días después saltea sólo el día intermedio; nunca se genera una cuarta ocurrencia en un plan de tres; y SQL y TypeScript cuentan igual sobre cinco formas de pausa. Más una que demuestra el comportamiento viejo, para que el arreglo no se confunda con un no-op.
+- [ ] 4b.6 Aplicar `0071` a Supabase y validar el esquema. Paso manual del usuario; no avanzar sin su confirmación.
+
 ## 5. Cierre
 
-- [x] 5.1 `pnpm verify` en verde, y la suite de recurrences también con `TZ=America/Argentina/Buenos_Aires`.
+- [ ] 5.1 `pnpm verify` en verde, y la suite de recurrences también con `TZ=America/Argentina/Buenos_Aires`.
 - [ ] 5.2 QA manual en las dos plataformas: crear una regla con límite por cada uno de los tres caminos de alta, ver el avance en la ficha, ampliar el límite y comprobar que vuelve a activa.
 - [ ] 5.3 Archivar el change y aplicar el delta al spec maestro de `transactions`.
 - [ ] 5.4 `pnpm openspec:check` en verde.

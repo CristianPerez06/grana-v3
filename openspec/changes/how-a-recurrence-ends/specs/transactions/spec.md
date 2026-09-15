@@ -192,6 +192,12 @@ Cuando una regla tiene `max_occurrences`, su detalle SHALL mostrar **cuántos ve
 
 El conteo SHALL expresarse en **posiciones del calendario de la regla**, la misma unidad que usa el corte de la generación (ver "La generación de instancias recurrentes usa intervalo+unidad y corta por la primera condición de fin"). NO SHALL contarse por filas de `recurrence_instances`: una regla sembrada por un movimiento no tiene fila para su primera ocurrencia, y una posición producida mientras nada estaba generando tampoco — contar filas le atribuye a una regla agotada vencimientos que no le quedan.
 
+**UNA PAUSA MIRA HACIA ADELANTE.** El día en que se pausa una regla SHALL seguir perteneciendo a su calendario: una pausa afecta los días **posteriores** al que se abre. Una ocurrencia que cae ese mismo día ya fue producida —la regla estuvo activa parte de ese día, y la instancia lo prueba— y una pausa NO SHALL quitarle a la regla una posición que ya gastó.
+
+Esto no es una sutileza de presentación: el mismo conteo corta la generación. Con la lectura anterior, una regla de 3 vencimientos que produjo el primero y se pausó ese mismo día quedaba en «0 de 3» y seguía generando **tres más** — cuatro cuotas en un plan de tres. Una fecha no lleva hora, así que el calendario no puede saber si la pausa fue antes o después de la ocurrencia de ese día; la regla se resuelve en la única dirección que no puede destruir un compromiso ya asumido.
+
+La fecha guardada en `paused_from` SHALL seguir siendo el día real en que el usuario pausó. Lo que cambia es cómo se **lee** el intervalo, no lo que se registra: guardar el día siguiente haría que el historial mienta sobre cuándo ocurrió.
+
 El **último vencimiento previsto** SHALL calcularse con el mismo caminante de calendario que produce las fechas reales, honrando versiones de cronograma, pausas y correcciones de ancla. NO SHALL persistirse: una regla que se pausa o a la que se le corrige el día de vencimiento cambia esa fecha, y un valor guardado quedaría mintiendo.
 
 **UNA REGLA PAUSADA NO TIENE FECHA FINAL, Y ESO NO ES LO MISMO QUE NO TENER FUTURO.** Son dos preguntas distintas y SHALL responderse por separado:
@@ -209,6 +215,18 @@ Una regla **sin** `max_occurrences` NO SHALL mostrar ninguno de estos datos —n
 - **THEN** el detalle muestra que lleva 1 de 11 vencimientos
 - **AND** que le quedan 10
 - **AND** que el último vencimiento previsto es el 10 de julio de 2027
+
+#### Scenario: Pausar el día de un vencimiento no borra ese vencimiento
+
+- **WHEN** una regla mensual con `max_occurrences = 3` produce su primera ocurrencia hoy y el usuario pausa la regla ese mismo día
+- **THEN** el detalle sigue mostrando que lleva 1 de 3
+- **AND** la regla NO genera una cuarta ocurrencia cuando se reanuda
+
+#### Scenario: Una pausa reanudada días después saltea sólo los días intermedios
+
+- **WHEN** una regla se pausa un día y se reanuda dos días más tarde
+- **THEN** la ocurrencia del día en que se pausó sigue contando
+- **AND** sólo el día estrictamente interior a la pausa queda sin producir
 
 #### Scenario: El avance no cuenta filas
 
