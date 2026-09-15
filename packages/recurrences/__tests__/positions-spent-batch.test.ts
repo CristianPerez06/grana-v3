@@ -588,6 +588,62 @@ describe('the hub refuses an answer it cannot trust', () => {
     }
   })
 
+  it('fails on a negative count, which the screen would otherwise disguise', async () => {
+    await actAsAdmin(db)
+    await swapFunction(`
+      select r.id, -1 from public.recurrences r where r.id = any(p_ids)
+    `)
+    await actAs(db, U_A)
+
+    try {
+      // The progress shown saturates at zero and reads as a sober «0 de 11»,
+      // while the last-expected date is walked from `max_occurrences - spent`
+      // and projects ONE OCCURRENCE MORE than the rule has. A screen that is
+      // believable and wrong is the thing this change exists to remove.
+      await expect(
+        getRecurrences(pglitePostgrest(db, U_A), { statuses: ['active', 'paused'] }),
+      ).rejects.toThrow(/whole number and never negative/)
+    } finally {
+      await actAsAdmin(db)
+      await restore()
+      await actAs(db, U_A)
+    }
+  })
+
+  it('fails when a rule nobody asked about comes back', async () => {
+    await actAsAdmin(db)
+    // Every rule in the table, the other user's included — the shape a function
+    // that stopped filtering by `p_ids` would have.
+    await swapFunction(`
+      select r.id, public.recurrence_positions_spent(r.id, p_today)
+        from public.recurrences r
+    `)
+    await actAsAdmin(db)
+    await db.exec(`
+      insert into public.recurrences
+        (id, user_id, start_date, interval_count, interval_unit, status, amount,
+         currency_code, movement_type)
+      values ('00000000-0000-4000-8000-00000000e0ff', '${U_A}', '2026-03-10', 1, 'month',
+              'deleted', 1000, 'ARS', 'expense');
+    `)
+    await actAs(db, U_A)
+
+    try {
+      // The hub asks about active and paused rules; a deleted one coming back
+      // means the answer does not describe the question that was asked.
+      await expect(
+        getRecurrences(pglitePostgrest(db, U_A), { statuses: ['active', 'paused'] }),
+      ).rejects.toThrow(/not asked about/)
+    } finally {
+      await actAsAdmin(db)
+      await db.exec(
+        `delete from public.recurrences where id = '00000000-0000-4000-8000-00000000e0ff';`,
+      )
+      await restore()
+      await actAs(db, U_A)
+    }
+  })
+
   it('and reads normally again once the function is the real one', async () => {
     await actAs(db, U_A)
     const rules = await getRecurrences(pglitePostgrest(db, U_A), {

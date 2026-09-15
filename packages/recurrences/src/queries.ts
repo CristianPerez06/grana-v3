@@ -218,6 +218,18 @@ async function getPositionsSpentByRecurrenceId(
         `recurrence_positions_spent_batch returned no count for rule ${row.recurrence_id}`,
       )
     }
+    // A COUNT OF POSITIONS IS A WHOLE NUMBER, AND NEVER NEGATIVE. Nothing in the
+    // shipped function can produce anything else, which is exactly why a value
+    // that is would go unnoticed: the progress shown on screen saturates at zero
+    // and reads as a sober «0 de 11», while the last-expected date is walked
+    // from `max_occurrences - positionsSpent` and quietly projects one occurrence
+    // MORE than the rule has. Believable and wrong, which is the failure mode
+    // this whole change exists to remove.
+    if (!Number.isInteger(row.positions_spent) || row.positions_spent < 0) {
+      throw new Error(
+        `recurrence_positions_spent_batch returned ${row.positions_spent} spent positions for rule ${row.recurrence_id}: a count of calendar positions is a whole number and never negative`,
+      )
+    }
     if (byRule.has(row.recurrence_id)) {
       throw new Error(
         `recurrence_positions_spent_batch returned rule ${row.recurrence_id} more than once`,
@@ -424,6 +436,20 @@ export async function getRecurrenceDetail(
     { p_id: id, p_today: today },
   )
   if (spentError) throw spentError
+  // The same shape check the batch read applies, for the same reason: the
+  // progress on screen saturates at zero and would read as a sober «0 de 11»,
+  // while the last-expected date is walked from `max_occurrences - spent` and
+  // would project one occurrence MORE than the rule has. One reader guarding
+  // this and the other not is how the two would eventually disagree.
+  if (
+    positionsSpent == null ||
+    !Number.isInteger(positionsSpent) ||
+    positionsSpent < 0
+  ) {
+    throw new Error(
+      `recurrence_positions_spent returned ${positionsSpent} for rule ${id}: a count of calendar positions is a whole number and never negative`,
+    )
+  }
 
   const recurrenceSummary = mapRecurrenceSummary(
     recurrence as unknown as RecurrenceRow,
@@ -439,7 +465,7 @@ export async function getRecurrenceDetail(
     today,
     // The detail asks for one rule, so it keeps the single-rule function. Same
     // definition of the count either way — the batch calls this one per row.
-    new Map([[id, positionsSpent ?? 0]]),
+    new Map([[id, positionsSpent]]),
   )
 
   return {
