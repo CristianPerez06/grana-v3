@@ -42,7 +42,7 @@ Ver `design.md` para el porqué de cada decisión y `specs/transactions/spec.md`
 - [x] 2.2 **La frontera de esa función, declarada y verificada.** `SECURITY INVOKER` —una `DEFINER` que recibe una lista de ids devolvería posiciones de reglas ajenas—, `REVOKE ALL` para `PUBLIC` y para `anon`, `GRANT EXECUTE` sólo para `authenticated`. Verificar con regresiones en el harness, que ya corre con los roles reales: un usuario que pide ids de **otro** usuario recibe vacío, no sus posiciones; `anon` no puede ejecutarla.
 - [x] 2.3 Fijarla en `validate_schema.sql`: firma, cuerpo y privilegios, con el mismo patrón con que ya está fijada `recurrence_positions_spent`. Verificar en negativo que cambiar cualquiera de los tres hace fallar el validador.
 - [x] 2.4 Exponer esa lectura en `@grana/recurrences` y usarla en la consulta del hub de recurrencias. Verificar con una regresión que listar N reglas hace **una** llamada a la base por ese dato, no N.
-- [ ] 2.5 Aplicar la migración a Supabase y validar el esquema. Paso manual del usuario; no avanzar sin su confirmación.
+- [x] 2.5 Aplicar la migración a Supabase y validar el esquema. Paso manual del usuario; no avanzar sin su confirmación.
 
 ## 3. La pregunta «¿Cómo termina?»
 
@@ -73,7 +73,7 @@ Ver `design.md` para el porqué de cada decisión y `specs/transactions/spec.md`
 - [x] 4b.3 Escribir la migración (`0071`), con el cuerpo de `recurrence_positions_spent` **extraído verbatim de `0068`** y un solo predicado cambiado. En transacción y con autoverificación, como `0070`. Número elegido contra `main` (que llega a `0069`) y contra la `0070` de esta misma rama, ya aplicada.
 - [x] 4b.4 Fijarlo en `validate_schema.sql` (8.1N) y verificar en negativo que una base con el predicado viejo hace fallar el validador.
 - [x] 4b.5 Regresiones: pausar con una pendiente de hoy conserva `1 de 3`; pausar antes de que corra el generador igual permite el vencimiento de hoy; reanudar el mismo día no saltea nada; reanudar dos días después saltea sólo el día intermedio; nunca se genera una cuarta ocurrencia en un plan de tres; y SQL y TypeScript cuentan igual sobre cinco formas de pausa. Más una que demuestra el comportamiento viejo, para que el arreglo no se confunda con un no-op.
-- [ ] 4b.6 Aplicar `0071` a Supabase y validar el esquema. Paso manual del usuario; no avanzar sin su confirmación.
+- [x] 4b.6 Aplicar `0071` a Supabase y validar el esquema. Paso manual del usuario; no avanzar sin su confirmación.
 
 ## 4c. El estado mostrado también en la ficha (encontrado en la QA del 5.2)
 
@@ -81,8 +81,8 @@ Ver `design.md` para el porqué de cada decisión y `specs/transactions/spec.md`
 
 ## 5. Cierre
 
-- [ ] 5.1 `pnpm verify` en verde, y la suite de recurrences también con `TZ=America/Argentina/Buenos_Aires`.
-- [ ] 5.2 QA manual en las dos plataformas: crear una regla con límite por cada uno de los tres caminos de alta, ver el avance en la ficha, ampliar el límite y comprobar que vuelve a activa.
-- [ ] 5.3 Archivar el change y aplicar el delta al spec maestro de `transactions`.
-- [ ] 5.4 `pnpm openspec:check` en verde.
+- [x] 5.1 `pnpm verify` en verde, y la suite de recurrences también con `TZ=America/Argentina/Buenos_Aires`.
+- [x] 5.2 QA manual en las dos plataformas: crear una regla con límite por cada uno de los tres caminos de alta, ver el avance en la ficha, ampliar el límite y comprobar que vuelve a activa.
+- [x] 5.3 Archivar el change y aplicar el delta al spec maestro de `transactions`.
+- [x] 5.4 `pnpm openspec:check` en verde.
 - [ ] 5.5 Avisar al usuario que ya puede corregir `Plan de pago - 11 cuotas` desde la app, cambiando su límite de 1 a 11 — sin borrarla ni recrearla, para que el plan conserve una sola historia.
