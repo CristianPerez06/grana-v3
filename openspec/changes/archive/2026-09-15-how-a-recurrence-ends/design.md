@@ -20,7 +20,7 @@ Lo que condiciona el cómo:
 
 **Non-Goals:**
 
-- No se rediseña el generador ni cambia la regla general del corte por límite: ese corte ya existe y funciona. `0071` corrige únicamente qué días excluye una pausa.
+- No se rediseña el mecanismo general de generación ni cambia el corte por límite; durante la QA, `0071` corrigió únicamente qué días excluye una pausa.
 - No se agrega una columna ni un estado nuevo a `recurrences`.
 - No se rediseña el formulario de alta más allá de la pregunta de fin.
 
