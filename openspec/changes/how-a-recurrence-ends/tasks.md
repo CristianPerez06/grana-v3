@@ -6,7 +6,7 @@ Ver `design.md` para el porqué de cada decisión y `specs/transactions/spec.md`
 
 - [x] 0.1 **Auditar las reglas que tienen fecha de fin Y límite a la vez.** El modelo lo permitía y la generación cortaba por la primera condición que se cumpliera; las tres respuestas excluyentes rigen de acá en adelante, pero no pueden descartar en silencio lo que ya está guardado. Correr como lectura sobre la base real —sin importes ni descripciones— y anotar el resultado acá: cuántas reglas tienen las dos, y en qué estado están.
 
-  **Resultado (2026-09-15, base de producción): ninguna.** La consulta agrupada por `status` sobre `end_date is not null and max_occurrences is not null` no devolvió filas. Nadie llegó nunca a esa combinación, lo cual es coherente con el defecto que originó el cambio: el límite estaba escondido adentro del bloque de la fecha de fin, así que quien lo cargaba salía con una sola de las dos.
+  **Resultado (2026-09-15, base de producción): ninguna.** La consulta agrupada por `status` sobre `end_date is not null and max_occurrences is not null` no devolvió filas. Eso es todo lo que el resultado permite afirmar: **no se encontró ninguna regla con las dos condiciones**. No dice que fueran inalcanzables — el formulario nativo mostraba `maxOccurrences` siempre y lo enviaba aunque hubiera `end_date`, así que la combinación se podía producir y simplemente nadie la produjo. Por eso el camino se construye igual (tarea 3.8).
 
   ```sql
   select r.status,

@@ -28,7 +28,9 @@ Lo que condiciona el cómo:
 
 ### 1. El estado mostrado se deriva en TypeScript puro, en `@grana/money-logic`
 
-La función recibe la condición de fin de la regla, las posiciones gastadas y los vencimientos sin resolver, y devuelve el estado mostrado y el avance. No consulta nada: recibe.
+La función recibe **si el calendario de la regla tiene alguna ocurrencia por delante** —la respuesta del caminante, evaluada **como si una regla pausada se reanudara hoy**, porque una pausa abierta hace que no produzca ninguna fecha y preguntarle sin más daría por finalizada a toda regla pausada—, más la condición de fin de la regla, las posiciones gastadas y los vencimientos sin resolver. Devuelve el estado mostrado y el avance. No consulta nada: recibe.
+
+Ese primer dato es el que **decide** el final; los otros dicen **cómo** terminó y qué queda por hacer.
 
 **Por qué ahí y no en SQL**: el spec exige que ampliar o quitar el límite recalcule el estado *sin operación adicional*, y que el caminante que calcula el último vencimiento previsto sea el mismo que produce las fechas reales. Ese caminante ya vive en `@grana/money-logic` y no tiene gemelo en SQL — mover la derivación a la base obligaría a escribirlo dos veces, que es exactamente el patrón que `AGENTS.md` prohíbe («No duplicate, hand-synced logic»).
 
