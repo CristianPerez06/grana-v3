@@ -153,6 +153,14 @@ export const RecurrenceDetail = ({ rule }: Props) => {
   // and never in rows of `recurrence_instances`: a rule seeded by a movement has
   // no row for its first occurrence.
   const { progress } = rule.lifecycle
+  // Null for an active rule: there is nothing to announce about one that is
+  // simply running.
+  const stateLabel =
+    rule.lifecycle.state === 'active'
+      ? null
+      : rule.lifecycle.state === 'finished-with-pending'
+        ? t('limit.finished_with_pending', { count: rule.lifecycle.unresolved })
+        : t(`statuses.${rule.lifecycle.state === 'finished' ? 'finished' : rule.status}`)
   // A rule with NEITHER condition says so. It used to say nothing, which reads
   // the same as a rule whose limit is simply not shown — and that is exactly how
   // a plan with a limit of 1 passed for indefinite.
@@ -225,9 +233,14 @@ export const RecurrenceDetail = ({ rule }: Props) => {
             )}
             {frequencyLabel}
           </span>
-          {rule.status !== 'active' && (
+          {/* THE DERIVED STATE, not the column. `status` says what the user did
+              to the rule — and a rule that spent its limit still says `active`,
+              so this chip showed nothing while the list grouped the same rule
+              under Finalizada. Two screens, two answers, which is the thing this
+              change exists to remove. */}
+          {stateLabel != null && (
             <span className="inline-flex items-center rounded-full bg-warning-soft px-2.5 py-1 text-[11px] font-semibold text-warning-deep">
-              {t(`statuses.${rule.status}`)}
+              {stateLabel}
             </span>
           )}
         </div>

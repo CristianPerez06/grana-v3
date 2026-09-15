@@ -75,6 +75,10 @@ Ver `design.md` para el porqué de cada decisión y `specs/transactions/spec.md`
 - [x] 4b.5 Regresiones: pausar con una pendiente de hoy conserva `1 de 3`; pausar antes de que corra el generador igual permite el vencimiento de hoy; reanudar el mismo día no saltea nada; reanudar dos días después saltea sólo el día intermedio; nunca se genera una cuarta ocurrencia en un plan de tres; y SQL y TypeScript cuentan igual sobre cinco formas de pausa. Más una que demuestra el comportamiento viejo, para que el arreglo no se confunda con un no-op.
 - [ ] 4b.6 Aplicar `0071` a Supabase y validar el esquema. Paso manual del usuario; no avanzar sin su confirmación.
 
+## 4c. El estado mostrado también en la ficha (encontrado en la QA del 5.2)
+
+- [x] 4c.1 **El chip de estado del detalle se derivaba de `rule.status`.** Una regla con el límite gastado sigue teniendo `status = 'active'`, así que la ficha no mostraba nada mientras el listado agrupaba esa misma regla en Finalizada: dos pantallas, dos respuestas sobre una regla. Ahora sale del estado derivado, en web y en nativo, e incluye «Finalizada · N por revisar». Cuatro regresiones de render: finalizada sobre una columna que dice `active`, el conteo de lo que queda por revisar, pausada sigue diciendo Pausada, y una regla activa no anuncia nada.
+
 ## 5. Cierre
 
 - [ ] 5.1 `pnpm verify` en verde, y la suite de recurrences también con `TZ=America/Argentina/Buenos_Aires`.

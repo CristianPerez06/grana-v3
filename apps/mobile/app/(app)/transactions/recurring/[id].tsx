@@ -60,6 +60,19 @@ export default function RecurrenceDetailScreen() {
   const rule = query.data ?? null
   const notFound = query.isError || (query.isSuccess && rule === null)
 
+  // Null for an active rule: there is nothing to announce about one that is
+  // simply running. See the comment where it is drawn.
+  const stateLabel =
+    rule == null || rule.lifecycle.state === 'active'
+      ? null
+      : rule.lifecycle.state === 'finished-with-pending'
+        ? t('recurrences.limit.finished_with_pending', { count: rule.lifecycle.unresolved })
+        : t(
+            `recurrences.statuses.${
+              rule.lifecycle.state === 'finished' ? 'finished' : rule.status
+            }`,
+          )
+
   const onBack = () =>
     router.canGoBack() ? router.back() : router.push('/transactions/recurring')
 
@@ -173,6 +186,11 @@ export default function RecurrenceDetailScreen() {
               </Text>
               <Text className="mt-0.5 text-[13px] font-semibold text-text-muted">
                 {movementLabel(rule.movement_type, t)} · {frequencyLabel(rule.frequency, t)}
+                {/* THE DERIVED STATE, web's twin. `status` says what the user
+                    did to the rule, and a rule that spent its limit still says
+                    `active` — so this line said nothing while the list grouped
+                    the same rule under Finalizada. */}
+                {stateLabel == null ? null : ` · ${stateLabel}`}
               </Text>
 
               <View className="mt-3 border-t border-border-soft">

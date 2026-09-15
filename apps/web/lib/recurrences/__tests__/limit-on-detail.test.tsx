@@ -150,3 +150,73 @@ describe('a PAUSED rule with a limit', () => {
     expect(screen.queryByText(/2027/)).toBeNull()
   })
 })
+
+/**
+ * THE FICHA SAYS WHAT STATE THE RULE IS IN, from the derived state.
+ *
+ * Found in QA. The chip read `rule.status`, and a rule that spent its limit
+ * still has `status = 'active'` — so the detail showed nothing while the list
+ * grouped that same rule under Finalizada. Two screens, two answers about one
+ * rule, which is the thing this change exists to remove.
+ */
+describe('the state chip on the detail', () => {
+  it('says Finalizada on a rule whose column still says active', () => {
+    show({
+      ...plan,
+      status: 'active',
+      lifecycle: {
+        state: 'finished',
+        progress: { spent: 1, total: 1, remaining: 0 },
+        unresolved: 0,
+      },
+      last_expected_occurrence: { kind: 'none' },
+      next_occurrence: null,
+    } as typeof plan)
+
+    expect(screen.getByText('recurrences.statuses.finished')).toBeTruthy()
+    // And never the column's own word, which would read "Activa" on a rule that
+    // has stopped reminding.
+    expect(screen.queryByText('recurrences.statuses.active')).toBeNull()
+  })
+
+  it('counts what is left to review when the rule finished owing something', () => {
+    show({
+      ...plan,
+      status: 'active',
+      lifecycle: {
+        state: 'finished-with-pending',
+        progress: { spent: 1, total: 1, remaining: 0 },
+        unresolved: 1,
+      },
+      last_expected_occurrence: { kind: 'none' },
+      next_occurrence: null,
+    } as typeof plan)
+
+    expect(
+      screen.getByText('recurrences.limit.finished_with_pending({"count":1})'),
+    ).toBeTruthy()
+  })
+
+  it('still says Pausada on a paused rule', () => {
+    show({
+      ...plan,
+      status: 'paused',
+      lifecycle: {
+        state: 'paused',
+        progress: { spent: 1, total: 3, remaining: 2 },
+        unresolved: 0,
+      },
+      last_expected_occurrence: { kind: 'unknown-while-paused' },
+    } as typeof plan)
+
+    expect(screen.getByText('recurrences.statuses.paused')).toBeTruthy()
+  })
+
+  it('says nothing about a rule that is simply running', () => {
+    show(plan)
+
+    expect(screen.queryByText('recurrences.statuses.finished')).toBeNull()
+    expect(screen.queryByText('recurrences.statuses.paused')).toBeNull()
+    expect(screen.queryByText('recurrences.statuses.active')).toBeNull()
+  })
+})
