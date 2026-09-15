@@ -194,9 +194,14 @@ El conteo SHALL expresarse en **posiciones del calendario de la regla**, la mism
 
 El **último vencimiento previsto** SHALL calcularse con el mismo caminante de calendario que produce las fechas reales, honrando versiones de cronograma, pausas y correcciones de ancla. NO SHALL persistirse: una regla que se pausa o a la que se le corrige el día de vencimiento cambia esa fecha, y un valor guardado quedaría mintiendo.
 
-**UNA REGLA PAUSADA NO TIENE FECHA FINAL.** Mientras la pausa esté abierta —sin fecha de reanudación— no existe ninguna fecha cierta para el último vencimiento: depende de cuándo el usuario reanude, y eso todavía no pasó. El sistema SHALL mostrar el avance de todas formas —las posiciones gastadas no dependen del futuro— y en lugar de una fecha SHALL decir que el final se calcula al reanudar. NO SHALL mostrar una fecha estimada como si fuera cierta.
+**UNA REGLA PAUSADA NO TIENE FECHA FINAL, Y ESO NO ES LO MISMO QUE NO TENER FUTURO.** Son dos preguntas distintas y SHALL responderse por separado:
 
-Una regla **sin** `max_occurrences` NO SHALL mostrar ninguno de estos datos, y su detalle SHALL seguir diciendo que se repite sin límite.
+- **«¿le queda algo?»** — se responde igual que en cualquier otra regla, preguntándole al calendario si produciría alguna ocurrencia; para una regla pausada esa pregunta SHALL evaluarse **como si se reanudara hoy**, ignorando la pausa abierta. Una pausa abierta hace que el caminante no produzca ninguna fecha, así que preguntarle sin más daría que toda regla pausada terminó — y una pausa es una interrupción, no un final.
+- **«¿cuándo termina?»** — no tiene respuesta mientras la pausa esté abierta: la fecha del último vencimiento depende de cuándo el usuario reanude, y eso todavía no pasó.
+
+El sistema SHALL mostrar el avance de todas formas —las posiciones gastadas no dependen del futuro— y en lugar de una fecha SHALL decir que el final se calcula al reanudar. NO SHALL mostrar una fecha estimada como si fuera cierta.
+
+Una regla **sin** `max_occurrences` NO SHALL mostrar ninguno de estos datos —no hay tope contra el cual medir un avance—, y lo que su detalle diga sobre el final SHALL depender de su `end_date`: si la tiene, SHALL decir que termina en esa fecha; sólo si no tiene ninguna de las dos SHALL decir que se repite sin límite. Decirle «sin límite» a una regla que termina el 31 de diciembre es afirmar lo contrario de lo que la regla hace.
 
 #### Scenario: El detalle muestra el avance del plan
 
@@ -228,6 +233,13 @@ Una regla **sin** `max_occurrences` NO SHALL mostrar ninguno de estos datos, y s
 - **THEN** el detalle no muestra avance ni último vencimiento previsto
 - **AND** dice que la regla se repite sin límite
 
+#### Scenario: Una regla que termina por fecha no se anuncia como indefinida
+
+- **WHEN** el usuario abre una regla con `end_date` y sin `max_occurrences`
+- **THEN** el detalle no muestra avance ni cuántos vencimientos le quedan
+- **AND** dice que la regla termina en esa fecha
+- **AND** NO dice que se repite sin límite
+
 ### Requirement: El fin de una regla se deriva de su calendario, no de una columna guardada
 
 El sistema SHALL mostrar como **finalizada** toda regla que no pueda producir ninguna ocurrencia futura, aunque su columna `recurrences.status` diga `active` o `paused`. El estado mostrado SHALL derivarse en cada lectura del calendario de la regla y de su condición de fin; el sistema NO SHALL reescribir `recurrences.status` para expresarlo.
@@ -235,6 +247,8 @@ El sistema SHALL mostrar como **finalizada** toda regla que no pueda producir ni
 **UNA REGLA ELIMINADA SIGUE ELIMINADA.** `status = 'deleted'` NO SHALL derivarse a finalizada ni a ningún otro estado: una regla que el usuario borró queda fuera de las superficies que listan reglas vivas, y llamarla «finalizada» la devolvería a una lista de la que fue sacada a propósito. La derivación SHALL aplicarse únicamente a reglas activas y pausadas.
 
 **LA PREGUNTA ES SI EL CALENDARIO TIENE ALGO POR DELANTE**, no si el tope se agotó. Una regla puede quedarse sin futuro por su `end_date`, por su límite, o por las dos. El estado mostrado SHALL derivarse de si el caminante de calendario —el mismo que anuncia la próxima fecha— produce alguna ocurrencia a partir de hoy; las posiciones gastadas y los vencimientos sin resolver dicen **cómo** terminó y qué queda por hacer, no **si** terminó. Inferirlo de `end_date` y del conteo deja afuera a las reglas que terminaron por fecha.
+
+**Para una regla pausada, esa pregunta SHALL hacerse ignorando la pausa abierta**, es decir evaluando el calendario como si la regla se reanudara hoy. Una pausa sin fecha de reanudación hace que el caminante no produzca ninguna ocurrencia, de modo que preguntarle tal cual daría que toda regla pausada está finalizada — el error opuesto al que este requirement corrige. Que no se sepa **cuándo** va a terminar no significa que ya haya terminado.
 
 Esta derivación SHALL aplicarse a **todas** las reglas, sin distinguir cuándo fueron creadas. Aplicarla sólo a las nuevas haría que dos reglas idénticas se muestren distinto según su fecha de alta, y dejaría a las reglas ya agotadas presentándose como activas — que es la situación que este cambio corrige.
 
@@ -293,11 +307,26 @@ Una regla **pausada** NO SHALL mostrarse como finalizada mientras su calendario 
 - **WHEN** el usuario pausa una regla sin límite
 - **THEN** el sistema la muestra como pausada, no como finalizada
 
+#### Scenario: Una pausa abierta no convierte la regla en finalizada
+
+- **WHEN** una regla con límite y posiciones por delante está pausada sin fecha de reanudación, de modo que su calendario hoy no produce ninguna ocurrencia
+- **THEN** el sistema evalúa su calendario como si se reanudara hoy
+- **AND** la muestra como pausada, no como finalizada
+- **AND** no muestra ninguna fecha de último vencimiento
+
+#### Scenario: Una regla pausada que ya no tendría futuro al reanudarse sí está finalizada
+
+- **WHEN** una regla pausada ya gastó todas las posiciones que su límite permite
+- **THEN** el sistema la muestra como finalizada
+- **AND** lo hace porque reanudarla hoy tampoco produciría ninguna ocurrencia
+
 ### Requirement: Cambiar el límite de una regla no puede volver su avance imposible
 
 El sistema SHALL permitir cambiar y quitar el límite de una regla existente desde su edición, en web y en nativo.
 
 **UN LÍMITE NUEVO NO PUEDE SER MENOR QUE LO YA GASTADO.** El sistema SHALL rechazar un `max_occurrences` inferior a las posiciones que la regla ya gastó, y SHALL decir cuántas son. Aceptarlo produciría un avance que se satura contra su propio tope y muestra «3 de 3» sobre una regla que en realidad recorrió cinco: un número que no describe ninguna realidad y que además presentaría como terminada una regla por un motivo falso.
+
+**EL RECHAZO VIVE EN EL CAMINO DE ESCRITURA, NO EN EL FORMULARIO.** La validación SHALL ejecutarse en el punto autoritativo que persiste el cambio —el mismo que ya rechaza un `end_date` anterior al `start_date`—, contando las posiciones gastadas con la lectura normativa y no con un número que el cliente haya mandado. El formulario PUEDE anticiparla para dar un mensaje inmediato, pero esa anticipación NO SHALL ser la garantía: un formulario es una comodidad y se lo puede saltear, y el modelo tiene que quedar íntegro igual. Un invariante que sólo se comprueba en la pantalla donde se carga el dato es exactamente el defecto que originó este cambio.
 
 Igualar el límite a las posiciones ya gastadas SÍ SHALL aceptarse: es la forma de decir «esto ya terminó», y el estado mostrado pasa a finalizada por el camino normal.
 
@@ -308,6 +337,12 @@ Quitar el límite SHALL dejar la regla sin `max_occurrences`, y su final vuelve 
 - **WHEN** una regla ya gastó cinco posiciones y el usuario intenta ponerle un límite de tres
 - **THEN** el sistema rechaza el cambio
 - **AND** le dice que la regla ya lleva cinco vencimientos
+- **AND** la regla conserva el límite que tenía
+
+#### Scenario: El rechazo no depende de haber pasado por el formulario
+
+- **WHEN** una escritura que no pasó por el formulario intenta ponerle a esa misma regla un límite de tres
+- **THEN** el camino de escritura la rechaza igual
 - **AND** la regla conserva el límite que tenía
 
 #### Scenario: Igualar el límite a lo gastado termina la regla

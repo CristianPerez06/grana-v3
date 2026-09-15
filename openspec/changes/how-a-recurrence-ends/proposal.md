@@ -46,6 +46,6 @@ Ninguna.
 
 **Base de datos**: **una migración, sin migración de datos**. Ninguna fila se reescribe: el límite ya se guarda en `max_occurrences` y las piezas para contarlo bien existen desde la migración `0068`. Lo que se agrega es una función para pedir ese conteo de muchas reglas a la vez, porque el listado lo necesita y hoy sólo se puede pedir de a una.
 
-**Un dato que falta antes de empezar**: el modelo permite que una regla lleve fecha de fin **y** límite al mismo tiempo. Hay que mirar la base para saber si alguna las tiene, porque de eso depende qué se le muestra al usuario cuando edite una de esas reglas.
+**Un dato que falta antes de empezar**: el modelo permite que una regla lleve fecha de fin **y** límite al mismo tiempo. Hay que mirar la base para saber si alguna las tiene, para redactar bien lo que se le dice a quien edite una de ellas. El camino se construye igual: mientras la base lo permita, el formulario tiene que saber recibir las dos — prohibirlo sería otro cambio, porque obliga a decidir qué pasa con las filas que ya las tienen.
 
 **Riesgo conocido**: contar «1 de 11» con las filas de la tabla de instancias da un número equivocado —una regla sembrada por un movimiento no tiene fila para su primera ocurrencia—. Ese error ya costó dos rondas de revisión en #121 y la solución correcta está escrita: `recurrence_positions_spent`.

@@ -4,7 +4,7 @@ Ver `proposal.md` — Why para la motivación, y `specs/transactions/spec.md` pa
 
 Lo que condiciona el cómo:
 
-- **El límite ya se guarda y ya corta la generación.** `max_occurrences` funciona; lo que falta es preguntarlo bien, mostrarlo y derivar el final de él. Ninguna migración.
+- **El límite ya se guarda y ya corta la generación.** `max_occurrences` funciona; lo que falta es preguntarlo bien, mostrarlo y derivar el final de él. Ninguna fila se reescribe: la única migración del cambio es aditiva y es la función SQL de la decisión 2.
 - **Ya existe la forma correcta de contar.** `recurrence_positions_spent(p_id, p_today)` (migración `0068`) devuelve las posiciones gastadas de **una** regla. Hoy la llama sólo el detalle (`packages/recurrences/src/queries.ts:295`) y el RPC que valida la fecha de referencia.
 - **El caminante de calendario es compartido y ya compone todo.** `walkOccurrences` / `forEachComposedOccurrence` (`@grana/money-logic`) honra versiones de cronograma, pausas, el piso de reconstrucción y el offset del tope. Es el mismo que produce las fechas reales.
 - **Nativo ya resolvió la mitad de la UI.** `RecurrenceForm.tsx` tiene el campo en su propia sección y filtra dígitos. Web tiene que alinearse, no rediseñar.
