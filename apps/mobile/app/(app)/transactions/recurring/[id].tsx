@@ -28,11 +28,16 @@ import { useLocale, useT } from '../../../../lib/locale-context'
 import { useShowCents } from '../../../../lib/preferences-context'
 
 // Metadata row inside the summary card.
+//
+// Both sides shrink, and the value takes whatever the label leaves. A fixed
+// `max-w` on the value does not bound the ROW: a long label keeps its intrinsic
+// width, so label + 62% overflowed the card and «Se calcula cuando reanudes la
+// regla» was cut off mid-word on the right edge.
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-row items-center justify-between py-2.5">
-      <Text className="text-[13px] font-medium text-text-muted">{label}</Text>
-      <Text className="max-w-[62%] text-right text-[14px] font-semibold text-text">{value}</Text>
+    <View className="flex-row items-center justify-between gap-3 py-2.5">
+      <Text className="shrink text-[13px] font-medium text-text-muted">{label}</Text>
+      <Text className="flex-1 text-right text-[14px] font-semibold text-text">{value}</Text>
     </View>
   )
 }

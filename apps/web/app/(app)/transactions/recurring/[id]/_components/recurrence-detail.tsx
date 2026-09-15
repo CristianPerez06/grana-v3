@@ -255,7 +255,7 @@ export const RecurrenceDetail = ({ rule }: Props) => {
       <div className="flex flex-col overflow-hidden rounded-[15px] border border-border bg-card">
         {rows.map((row) => {
           const label = (
-            <span className="flex items-center gap-2 text-sm text-text-muted">
+            <span className="flex shrink items-center gap-2 text-sm text-text-muted">
               {iconFor(row.key)}
               {row.label}
             </span>
@@ -275,7 +275,7 @@ export const RecurrenceDetail = ({ rule }: Props) => {
           return (
             <div key={row.key} className={rowClass}>
               {label}
-              <span className="text-sm font-semibold text-text">{row.value}</span>
+              <span className="min-w-0 flex-1 text-right text-sm font-semibold text-text">{row.value}</span>
             </div>
           )
         })}
