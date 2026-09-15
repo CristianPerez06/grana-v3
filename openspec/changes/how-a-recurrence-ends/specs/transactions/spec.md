@@ -192,7 +192,7 @@ Cuando una regla tiene `max_occurrences`, su detalle SHALL mostrar **cuántos ve
 
 El conteo SHALL expresarse en **posiciones del calendario de la regla**, la misma unidad que usa el corte de la generación (ver "La generación de instancias recurrentes usa intervalo+unidad y corta por la primera condición de fin"). NO SHALL contarse por filas de `recurrence_instances`: una regla sembrada por un movimiento no tiene fila para su primera ocurrencia, y una posición producida mientras nada estaba generando tampoco — contar filas le atribuye a una regla agotada vencimientos que no le quedan.
 
-**UNA PAUSA MIRA HACIA ADELANTE.** El día en que se pausa una regla SHALL seguir perteneciendo a su calendario: una pausa afecta los días **posteriores** al que se abre. Una ocurrencia que cae ese mismo día ya fue producida —la regla estuvo activa parte de ese día, y la instancia lo prueba— y una pausa NO SHALL quitarle a la regla una posición que ya gastó.
+**UNA PAUSA MIRA HACIA ADELANTE.** El día en que se pausa una regla SHALL seguir perteneciendo a su calendario: una pausa afecta los días **posteriores** al que se abre. La regla estuvo activa parte de ese día, así que la ocurrencia que cae ahí es suya —**haya corrido o no el generador todavía**— y una pausa NO SHALL quitarle a la regla esa posición. Si el generador ya pasó, la instancia existe y la posición está gastada; si todavía no pasó, la posición sigue debida y se va a producir. El estado del generador no cambia de quién es el día.
 
 Esto no es una sutileza de presentación: el mismo conteo corta la generación. Con la lectura anterior, una regla de 3 vencimientos que produjo el primero y se pausó ese mismo día quedaba en «0 de 3» y seguía generando **tres más** — cuatro cuotas en un plan de tres. Una fecha no lleva hora, así que el calendario no puede saber si la pausa fue antes o después de la ocurrencia de ese día; la regla se resuelve en la única dirección que no puede destruir un compromiso ya asumido.
 
@@ -221,6 +221,12 @@ Una regla **sin** `max_occurrences` NO SHALL mostrar ninguno de estos datos —n
 - **WHEN** una regla mensual con `max_occurrences = 3` produce su primera ocurrencia hoy y el usuario pausa la regla ese mismo día
 - **THEN** el detalle sigue mostrando que lleva 1 de 3
 - **AND** la regla NO genera una cuarta ocurrencia cuando se reanuda
+
+#### Scenario: Pausar antes de que corra el generador tampoco borra el vencimiento de ese día
+
+- **WHEN** el usuario pausa una regla el día en que le toca vencer, antes de que el generador haya creado la instancia
+- **THEN** ese vencimiento sigue debido
+- **AND** el avance de la regla lo cuenta igual que si la instancia ya existiera
 
 #### Scenario: Una pausa reanudada días después saltea sólo los días intermedios
 
