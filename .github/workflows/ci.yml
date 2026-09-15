@@ -125,7 +125,11 @@ jobs:
     name: OpenSpec validation
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 because "Check the change was archived" diffs this branch
+      # against its base, and a shallow clone has no merge base to diff from.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
 
@@ -174,6 +178,22 @@ jobs:
       - name: Check the generated OpenSpec workflows
         if: always()
         run: pnpm check:openspec-workflows
+
+      # AGENTS.md: archive happens in the branch, before the merge to main —
+      # "Do not defer the archive to a follow-up PR". Nothing enforced that.
+      # The steps above ask whether a specification is well formed and whether a
+      # Purpose is still TBD; neither notices a change that was applied and never
+      # archived, which is how the sibling `pinpoint` repository ended up with a
+      # master spec stating the opposite of its code for two merges.
+      #
+      # Reads the pull request body so an unfinished apply can declare itself;
+      # see the script for the marker and why it is not spelled "archive later".
+      # `always()` for the same reason as the steps above.
+      - name: Check the change was archived
+        if: always()
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: pnpm check:unarchived
 
   monorepo-health:
     # El nombre del check NO se toca al agregarle un step, por la misma razón
