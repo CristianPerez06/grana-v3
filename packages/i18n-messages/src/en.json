@@ -1807,8 +1807,9 @@
       "end_count_label": "Number of occurrences",
       "end_count_hint": "For example, 11 for an 11-instalment plan",
       "end_both_title": "This rule has both an end date and a limit",
-      "end_both_body": "Only one condition is saved now: «{keeping}» stays and «{dropping}» is removed. Continue?",
-      "end_both_confirm": "Yes, save it like this"
+      "end_both_confirm": "Yes, save it like this",
+      "end_both_body_keep_one": "Only one condition is saved now: «{keeping}» stays and «{dropping}» is removed. Continue?",
+      "end_both_body_drop_all": "You chose «no limit», so both are removed: «{first}» and «{second}». Continue?"
     },
     "next_prefix": "next:",
     "upcoming": {

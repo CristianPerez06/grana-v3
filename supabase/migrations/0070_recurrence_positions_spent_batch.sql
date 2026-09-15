@@ -38,7 +38,24 @@
 -- with the same section that already pins `recurrence_positions_spent`: a
 -- function that can be replaced without anyone noticing is not a frontier.
 --
+-- ONE TRANSACTION, AND IT CHECKS ITSELF BEFORE COMMITTING.
+--
+-- `create or replace` and the three privilege statements are four statements. Run
+-- loose, a failure on the third leaves the function CREATED and its privileges
+-- half applied — and the half that Postgres applies by default is EXECUTE to
+-- PUBLIC, so the failure mode is a function open to everyone that nobody was
+-- told about. Wrapped, either all four land or none does.
+--
+-- The verification block at the end asserts, inside the same transaction, every
+-- part of the contract this file claims: the function exists with this argument
+-- list, it returns these two columns in this order, it is STABLE, it is
+-- SECURITY INVOKER, its `search_path` is pinned, and the three grants are what
+-- they should be. A migration that says what it guarantees and does not check it
+-- is a comment, not a guarantee.
+--
 -- SAFE TO RE-RUN. Creates one function; touches no data and no existing object.
+
+begin;
 
 create or replace function public.recurrence_positions_spent_batch(
   p_ids   uuid[],
@@ -65,3 +82,64 @@ $$;
 revoke all on function public.recurrence_positions_spent_batch(uuid[], date) from public;
 revoke all on function public.recurrence_positions_spent_batch(uuid[], date) from anon;
 grant execute on function public.recurrence_positions_spent_batch(uuid[], date) to authenticated;
+
+
+-- ── Self-check, inside the transaction ──────────────────────────────────────
+do $verify$
+declare
+  v_oid  oid;
+  v_proc pg_proc;
+  v_cols text;
+begin
+  v_oid := to_regprocedure('public.recurrence_positions_spent_batch(uuid[], date)');
+  if v_oid is null then
+    raise exception '0070: the function was not created with the expected argument list';
+  end if;
+
+  select * into v_proc from pg_proc where oid = v_oid;
+
+  -- THE RETURN SHAPE, columns and order. The readers destructure it by name, and
+  -- a replacement that returns the same two columns the other way round type-checks
+  -- everywhere and answers with each rule's progress attributed to another rule.
+  select string_agg(format('%s %s', p.name, format_type(p.type_oid, null)), ', ' order by p.ord)
+    into v_cols
+    from unnest(v_proc.proargnames, v_proc.proallargtypes, v_proc.proargmodes)
+         with ordinality as p(name, type_oid, mode, ord)
+   where p.mode = 't';
+  if v_cols is distinct from 'recurrence_id uuid, positions_spent integer' then
+    raise exception '0070: the function returns %, not (recurrence_id uuid, positions_spent integer)', coalesce(v_cols, '<nothing>');
+  end if;
+
+  -- STABLE: the hub calls it once per read and Postgres may fold it. A VOLATILE
+  -- replacement is not wrong in its answer, it is wrong in what the planner may
+  -- do with it, and nothing on screen would say so.
+  if v_proc.provolatile <> 's' then
+    raise exception '0070: the function is not STABLE (provolatile = %)', v_proc.provolatile;
+  end if;
+
+  -- SECURITY INVOKER: it takes a LIST OF IDS, so RLS on the caller's side is the
+  -- only thing between somebody and another user's rules.
+  if v_proc.prosecdef then
+    raise exception '0070: the function is SECURITY DEFINER; it takes a list of ids, so RLS must stay the authorization';
+  end if;
+
+  if v_proc.proconfig is null
+     or not ('search_path=public, pg_temp' = any(v_proc.proconfig)) then
+    raise exception '0070: search_path is not pinned to "public, pg_temp" (proconfig = %)', v_proc.proconfig;
+  end if;
+
+  -- The three privilege statements above, asserted rather than assumed.
+  if has_function_privilege('anon', v_oid, 'EXECUTE') then
+    raise exception '0070: anon retains EXECUTE — the revoke did not take';
+  end if;
+  if has_function_privilege('public', v_oid, 'EXECUTE') then
+    raise exception '0070: PUBLIC retains EXECUTE — Postgres grants it by default and the revoke did not take';
+  end if;
+  if not has_function_privilege('authenticated', v_oid, 'EXECUTE') then
+    raise exception '0070: authenticated cannot execute it — the grant did not take';
+  end if;
+
+  raise notice '0070 OK: recurrence_positions_spent_batch created, STABLE, SECURITY INVOKER, search_path pinned, privileges as declared';
+end $verify$;
+
+commit;

@@ -93,6 +93,29 @@ export function hasBothEndConditions(rule: {
   return rule.end_date != null && rule.max_occurrences != null
 }
 
+/**
+ * Which of the rule's stored end conditions an answer would REMOVE.
+ *
+ * Shared because the sentence shown to the user has to match the payload
+ * exactly, on both platforms. Saying "«en una fecha» se quita" while the payload
+ * removes both is the same class of defect as #142 — a condition the user never
+ * chose to remove, removed — only this time with a confirmation dialog in front
+ * of it, which makes it worse: they agreed to something that did not happen.
+ *
+ * Returns the answers whose condition the rule HAS and this choice drops, in a
+ * stable order. Empty when nothing is lost.
+ */
+export function endConditionsRemovedBy(
+  rule: { end_date: string | null; max_occurrences: number | null },
+  answer: RecurrenceEndAnswer,
+): RecurrenceEndAnswer[] {
+  const held: RecurrenceEndAnswer[] = []
+  if (rule.end_date != null) held.push('on-date')
+  if (rule.max_occurrences != null) held.push('after-count')
+  // «sin límite» keeps none of them; the other two keep their own.
+  return held.filter((condition) => condition !== answer)
+}
+
 /** The draft an existing rule opens the edit form with. */
 export function endDraftForRule(rule: {
   end_date: string | null

@@ -145,9 +145,35 @@ describe('editing how a rule ends', () => {
 describe('a rule carrying BOTH end conditions', () => {
   const both = { ...plan, max_occurrences: 11, end_date: '2027-12-31' }
 
+  it('EDITING SOMETHING ELSE keeps both, and asks nothing', async () => {
+    openDrawer(both)
+
+    // The defect: the drawer reduced the rule to its seeded draft — one answer —
+    // so a save after touching only the amount sent the exclusive pair and
+    // deleted `end_date`, from a screen where the user never opened the end
+    // condition at all.
+    fireEvent.change(document.getElementById('description') as HTMLInputElement, {
+      target: { value: 'Plan de pago corregido' },
+    })
+
+    expect(screen.queryByText('recurrences.create.end_both_title')).toBeNull()
+    save()
+
+    await waitFor(() => expect(updateRecurrence).toHaveBeenCalled())
+    const patch = updateRecurrence.mock.calls[0][1]
+    expect(patch.max_occurrences).toBe(11)
+    expect(patch.end_date).toBe('2027-12-31')
+  })
+
   it('says so and does not save until the user agrees', () => {
     openDrawer(both)
 
+    // Touching the end condition is what raises the question. The rule already
+    // opens on «después de N», and clicking a radio that is already checked
+    // fires nothing — so the touch goes through the field.
+    fireEvent.change(screen.getByLabelText('recurrences.create.end_count_label'), {
+      target: { value: '12' },
+    })
     expect(screen.getAllByText('recurrences.create.end_both_title').length).toBeGreaterThan(0)
     save()
 
@@ -159,12 +185,59 @@ describe('a rule carrying BOTH end conditions', () => {
   it('saves the chosen one once the user agrees', async () => {
     openDrawer(both)
 
+    fireEvent.change(screen.getByLabelText('recurrences.create.end_count_label'), {
+      target: { value: '12' },
+    })
     fireEvent.click(screen.getByLabelText('recurrences.create.end_both_confirm'))
     save()
 
     await waitFor(() => expect(updateRecurrence).toHaveBeenCalled())
     const patch = updateRecurrence.mock.calls[0][1]
-    expect(patch.max_occurrences).toBe(11)
+    expect(patch.max_occurrences).toBe(12)
+    expect(patch.end_date).toBeNull()
+  })
+
+  it('asks AGAIN when the answer changes after being confirmed', () => {
+    openDrawer(both)
+
+    // Agreed to: keep the limit, drop the date.
+    fireEvent.change(screen.getByLabelText('recurrences.create.end_count_label'), {
+      target: { value: '12' },
+    })
+    fireEvent.click(screen.getByLabelText('recurrences.create.end_both_confirm'))
+
+    // And then a different decision, which drops a different column. A yes given
+    // for one answer is not a yes for this one.
+    fireEvent.click(answer('end_on_date'))
+
+    expect(
+      (screen.getByLabelText('recurrences.create.end_both_confirm') as HTMLInputElement).checked,
+    ).toBe(false)
+    save()
+    expect(updateRecurrence).not.toHaveBeenCalled()
+  })
+
+  it('says BOTH are removed when the answer is «sin límite»', () => {
+    openDrawer(both)
+
+    fireEvent.click(answer('end_never'))
+
+    // The sentence has to match the payload: «sin límite» keeps neither, and the
+    // single-condition wording would have promised one stays.
+    expect(screen.getByText('recurrences.create.end_both_body_drop_all')).toBeTruthy()
+    expect(screen.queryByText('recurrences.create.end_both_body_keep_one')).toBeNull()
+  })
+
+  it('removes both once that is confirmed', async () => {
+    openDrawer(both)
+
+    fireEvent.click(answer('end_never'))
+    fireEvent.click(screen.getByLabelText('recurrences.create.end_both_confirm'))
+    save()
+
+    await waitFor(() => expect(updateRecurrence).toHaveBeenCalled())
+    const patch = updateRecurrence.mock.calls[0][1]
+    expect(patch.max_occurrences).toBeNull()
     expect(patch.end_date).toBeNull()
   })
 })

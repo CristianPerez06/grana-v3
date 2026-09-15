@@ -6,9 +6,11 @@ import { useTranslations } from 'next-intl'
 import { updateRecurrence } from '@/app/_actions/recurrences'
 import {
   endConditionColumns,
-  endDraftForRule,
+  endConditionsRemovedBy,
   hasBothEndConditions,
+  endDraftForRule,
   validateEndCondition,
+  type RecurrenceEndAnswer,
   type RecurrenceEndDraft,
 } from '@grana/money-logic'
 import { EndConditionField } from '@/lib/recurrences/components/end-condition-field'
@@ -43,6 +45,13 @@ type Props = {
 
 const FIELD_BG = '#FAFBFC'
 
+/** One place the three answers are named, so the warning cannot misname them. */
+const ANSWER_LABEL_KEY: Record<RecurrenceEndAnswer, string> = {
+  never: 'create.end_never',
+  'on-date': 'create.end_on_date',
+  'after-count': 'create.end_after_count',
+}
+
 // Edit drawer for a recurring rule. Edits only the mutable field set —
 // amount / frequency / reference date / end_date / description. Account,
 // category and movement type are fixed at creation and intentionally absent
@@ -63,12 +72,26 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
   const [startDate, setStartDate] = useState(rule.start_date)
   const [effectiveFrom, setEffectiveFrom] = useState<string | null>(null)
   // «¿Cómo termina?», seeded from the rule. A rule that carries BOTH conditions
-  // opens on «después de N» — the more specific commitment — and is not quietly
-  // stripped of the other: `showsBothWarning` below names the situation and asks.
-  const [endCondition, setEndCondition] = useState<RecurrenceEndDraft>(() =>
+  // opens on «después de N» — the more specific commitment.
+  const [endCondition, setEndConditionDraft] = useState<RecurrenceEndDraft>(() =>
     endDraftForRule(rule),
   )
-  const [bothAcknowledged, setBothAcknowledged] = useState(false)
+  // UNTOUCHED MEANS UNTOUCHED. Without this flag the drawer reduced every rule
+  // to its seeded draft, and the draft is one answer: saving after editing only
+  // the AMOUNT sent the exclusive pair and silently deleted the rule's
+  // `end_date`. Somebody who never opened the end condition would lose one — the
+  // #142 defect from the other side. While this is false the rule's own two
+  // columns are what travels, and what feeds the calendar below.
+  const [endConditionTouched, setEndConditionTouched] = useState(false)
+  const setEndCondition = (draft: RecurrenceEndDraft) => {
+    setEndConditionTouched(true)
+    setEndConditionDraft(draft)
+  }
+  // THE CONFIRMATION IS FOR ONE ANSWER, not for the dialog. Stored as the answer
+  // that was agreed to, so switching from «después de N» to «en una fecha» —
+  // which drops a different column — asks again instead of riding on a yes given
+  // for something else.
+  const [acknowledgedAnswer, setAcknowledgedAnswer] = useState<RecurrenceEndAnswer | null>(null)
   const [description, setDescription] = useState(rule.description ?? '')
 
   const anchorMoved = startDate !== rule.start_date
@@ -81,12 +104,26 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
   // untouched when the label stays custom, so the calendar being saved is the
   // one the rule already has. Asking `presetToInterval` about it returns nothing
   // and the form throws before it can render.
-  // The pair the save will send, derived from the chosen answer — so the
-  // reference-date options below are computed against the calendar being SAVED,
-  // not the one on the row.
-  const endColumns = endConditionColumns(endCondition)
-  // The rule stored both conditions and the user has not been told yet.
-  const showsBothWarning = hasBothEndConditions(rule) && !bothAcknowledged
+  // The pair the save will send — so the reference-date options below are
+  // computed against the calendar being SAVED. Untouched, that is the rule's own
+  // pair, both columns included.
+  const endColumns = endConditionTouched
+    ? endConditionColumns(endCondition)
+    : { end_date: rule.end_date, max_occurrences: rule.max_occurrences }
+  // What this save would take away from the rule, named by the shared model so
+  // the sentence below and the payload cannot disagree.
+  const removed = endConditionTouched
+    ? endConditionsRemovedBy(rule, endCondition.answer)
+    : []
+  // ONLY when the rule carries BOTH. That is the situation the question cannot
+  // express: whichever answer is chosen, a condition the user never addressed
+  // goes away. Choosing «sin límite» on a rule with ONE condition is not that —
+  // it is a decision made in the open, on the control that names it, and asking
+  // for confirmation there would be noise.
+  const showsBothWarning =
+    hasBothEndConditions(rule) &&
+    removed.length > 0 &&
+    acknowledgedAnswer !== endCondition.answer
 
   const interval =
     frequency === 'custom'
@@ -123,10 +160,12 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
       return
     }
 
-    const endProblem = validateEndCondition(endCondition, {
-      startDate,
-      positionsSpent: rule.positions_spent,
-    })
+    const endProblem = endConditionTouched
+      ? validateEndCondition(endCondition, {
+          startDate,
+          positionsSpent: rule.positions_spent,
+        })
+      : null
     if (endProblem != null) {
       setFormError(
         endProblem.kind === 'date-before-start'
@@ -140,9 +179,9 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
       return
     }
 
-    // A rule carrying both conditions loses one on save. Saying which, and
-    // waiting for a yes, is the whole difference between this and the silent
-    // discard that made #142 — the same defect from the other side.
+    // A condition the user did not choose to remove is about to be removed.
+    // Saying which one, and waiting for a yes about THAT one, is the whole
+    // difference between this and the silent discard that made #142.
     if (showsBothWarning) {
       setFormError(t('create.end_both_title'))
       return
@@ -316,26 +355,27 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
           <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-soft px-4 py-3">
             <p className="text-[13px] font-semibold text-text">{t('create.end_both_title')}</p>
             <p className="text-[12px] text-text-muted">
-              {t('create.end_both_body', {
-                keeping: t(
-                  endCondition.answer === 'after-count'
-                    ? 'create.end_after_count'
-                    : endCondition.answer === 'on-date'
-                      ? 'create.end_on_date'
-                      : 'create.end_never',
-                ),
-                dropping: t(
-                  endCondition.answer === 'after-count'
-                    ? 'create.end_on_date'
-                    : 'create.end_after_count',
-                ),
-              })}
+              {/* Two sentences, because there are two shapes: keeping one of the
+                  rule's conditions, or — with «sin límite» — keeping neither.
+                  One sentence for both cases told the user a single condition
+                  was going while the payload removed two. */}
+              {removed.length === 2
+                ? t('create.end_both_body_drop_all', {
+                    first: t(ANSWER_LABEL_KEY[removed[0]]),
+                    second: t(ANSWER_LABEL_KEY[removed[1]]),
+                  })
+                : t('create.end_both_body_keep_one', {
+                    keeping: t(ANSWER_LABEL_KEY[endCondition.answer]),
+                    dropping: t(ANSWER_LABEL_KEY[removed[0]]),
+                  })}
             </p>
             <label className="flex items-center gap-2 text-[13px] text-text">
               <input
                 type="checkbox"
-                checked={bothAcknowledged}
-                onChange={(event) => setBothAcknowledged(event.target.checked)}
+                checked={acknowledgedAnswer === endCondition.answer}
+                onChange={(event) =>
+                  setAcknowledgedAnswer(event.target.checked ? endCondition.answer : null)
+                }
                 className="size-4 accent-navy"
               />
               {t('create.end_both_confirm')}

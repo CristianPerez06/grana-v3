@@ -1416,34 +1416,60 @@ end $$;
 -- ask for all of them in one round trip. What is pinned here is what makes it
 -- safe to have at all — a function that can be replaced without anyone noticing
 -- is not a frontier.
+-- ┌── BEGIN 8.1M CONTRACT ────────────────────────────────────────────────────┐
+-- Everything between these two markers is LIFTED AND RUN by
+-- `packages/recurrences/__tests__/positions-spent-batch.test.ts`, declarations
+-- included: a validator nobody executes is a validator that drifts, and 8.1J's
+-- check was wrong twice in opposite directions before anyone noticed.
 do $$
 declare
   v_body text;
+  v_oid  oid;
+  v_proc pg_proc;
+  v_cols text;
 begin
-  -- ┌── BEGIN 8.1M CONTRACT ──────────────────────────────────────────────────┐
-  if to_regprocedure('public.recurrence_positions_spent_batch(uuid[], date)') is null then
+  v_oid := to_regprocedure('public.recurrence_positions_spent_batch(uuid[], date)');
+  if v_oid is null then
     raise exception 'recurrence_positions_spent_batch is missing: the hub would ask rule by rule, one round trip per row';
+  end if;
+  select * into v_proc from pg_proc where oid = v_oid;
+
+  -- THE SIGNATURE IS NOT ONLY ITS ARGUMENTS. The line above pins what goes IN;
+  -- these pin what comes OUT and how the planner may treat it. A replacement
+  -- that returns the same two columns the other way round type-checks in every
+  -- reader and hands each rule's progress to a different rule.
+  select string_agg(format('%s %s', p.name, format_type(p.type_oid, null)), ', ' order by p.ord)
+    into v_cols
+    from unnest(v_proc.proargnames, v_proc.proallargtypes, v_proc.proargmodes)
+         with ordinality as p(name, type_oid, mode, ord)
+   where p.mode = 't';
+  if v_cols is distinct from 'recurrence_id uuid, positions_spent integer' then
+    raise exception 'recurrence_positions_spent_batch returns %, not (recurrence_id uuid, positions_spent integer)', coalesce(v_cols, '<nothing>');
+  end if;
+
+  if v_proc.provolatile <> 's' then
+    raise exception 'recurrence_positions_spent_batch is not STABLE (provolatile = %): the planner may re-evaluate or refuse to fold a read the hub makes once per page', v_proc.provolatile;
+  end if;
+
+  -- Pinned, so a caller cannot put a schema of their own in front of the tables
+  -- this reads.
+  if v_proc.proconfig is null
+     or not ('search_path=public, pg_temp' = any(v_proc.proconfig)) then
+    raise exception 'recurrence_positions_spent_batch does not pin search_path to "public, pg_temp" (proconfig = %)', v_proc.proconfig;
   end if;
 
   -- SECURITY INVOKER, and this one is not a formality. The function receives a
   -- LIST OF IDS from the caller: as `definer` it would run as the owner, RLS on
   -- `recurrences` would not apply, and anyone who guessed a uuid would be handed
   -- the progress of somebody else's rule.
-  if exists (
-    select 1 from pg_proc
-     where oid = 'public.recurrence_positions_spent_batch(uuid[], date)'::regprocedure
-       and prosecdef
-  ) then
+  if v_proc.prosecdef then
     raise exception 'recurrence_positions_spent_batch is SECURITY DEFINER: it takes a list of ids, so RLS is the only thing standing between a caller and another user''s rules';
   end if;
 
   -- IT ASKS, IT DOES NOT COUNT. One definition of what `max_occurrences` counts;
   -- a body that walked the calendar itself would be a copy that drifts, and this
   -- number decides whether a rule goes on reminding someone about money.
-  select lower(regexp_replace(regexp_replace(prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'))
-    into v_body
-    from pg_proc
-   where oid = 'public.recurrence_positions_spent_batch(uuid[], date)'::regprocedure;
+  v_body := lower(regexp_replace(regexp_replace(v_proc.prosrc, '--[^\n]*', ' ', 'g'), '\s+', ' ', 'g'));
   if v_body not like '%recurrence_positions_spent(%' then
     raise exception 'recurrence_positions_spent_batch no longer calls recurrence_positions_spent: the count has two implementations, and they will disagree';
   end if;
@@ -1461,10 +1487,9 @@ begin
   if not has_function_privilege('authenticated', 'public.recurrence_positions_spent_batch(uuid[], date)', 'EXECUTE') then
     raise exception 'authenticated cannot execute recurrence_positions_spent_batch: the hub falls back to one call per rule';
   end if;
-  -- └── END 8.1M CONTRACT ───────────────────────────────────────────────────┘
-
-  raise notice '✓ 8.1M — recurrence_positions_spent_batch: firma, cuerpo y privilegios OK';
+  raise notice '✓ 8.1M — recurrence_positions_spent_batch: firma, forma de retorno, cuerpo y privilegios OK';
 end $$;
+-- └── END 8.1M CONTRACT ─────────────────────────────────────────────────────┘
 
 
 -- =============================================================================

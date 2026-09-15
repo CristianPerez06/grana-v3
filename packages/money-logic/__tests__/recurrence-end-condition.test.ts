@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   endAnswerForRule,
   endConditionColumns,
+  endConditionsRemovedBy,
   endDraftForRule,
   hasBothEndConditions,
   parseOccurrenceCount,
@@ -157,5 +158,39 @@ describe('what a draft is refused for', () => {
         positionsSpent: 5,
       }),
     ).toBeNull()
+  })
+})
+
+describe('what an answer takes away from a rule that already exists', () => {
+  const both = { end_date: '2027-12-31', max_occurrences: 11 }
+
+  it('«sin límite» removes BOTH, and says so', () => {
+    // The sentence the user reads has to match the payload. Telling them one
+    // condition goes while the payload drops two is the #142 defect with a
+    // confirmation dialog in front of it — they agreed to something else.
+    expect(endConditionsRemovedBy(both, 'never')).toEqual(['on-date', 'after-count'])
+  })
+
+  it('choosing one of the two removes only the other', () => {
+    expect(endConditionsRemovedBy(both, 'after-count')).toEqual(['on-date'])
+    expect(endConditionsRemovedBy(both, 'on-date')).toEqual(['after-count'])
+  })
+
+  it('takes nothing from a rule that only has one, when that one is kept', () => {
+    expect(endConditionsRemovedBy({ end_date: null, max_occurrences: 11 }, 'after-count')).toEqual(
+      [],
+    )
+    expect(endConditionsRemovedBy({ end_date: '2027-12-31', max_occurrences: null }, 'on-date'))
+      .toEqual([])
+  })
+
+  it('takes the one it has when the answer changes', () => {
+    expect(endConditionsRemovedBy({ end_date: null, max_occurrences: 11 }, 'never')).toEqual([
+      'after-count',
+    ])
+  })
+
+  it('takes nothing from a rule that had no end condition at all', () => {
+    expect(endConditionsRemovedBy({ end_date: null, max_occurrences: null }, 'never')).toEqual([])
   })
 })

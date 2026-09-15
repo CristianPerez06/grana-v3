@@ -1807,8 +1807,9 @@
       "end_count_label": "Cantidad de vencimientos",
       "end_count_hint": "Por ejemplo, 11 para un plan de 11 cuotas",
       "end_both_title": "Esta regla tiene fecha de fin y límite",
-      "end_both_body": "Ahora se guarda una sola condición: va a quedar «{keeping}», y «{dropping}» se quita. ¿Seguimos?",
-      "end_both_confirm": "Sí, guardar así"
+      "end_both_confirm": "Sí, guardar así",
+      "end_both_body_keep_one": "Ahora se guarda una sola condición: va a quedar «{keeping}» y se quita «{dropping}». ¿Seguimos?",
+      "end_both_body_drop_all": "Elegiste «sin límite», así que se quitan las dos: «{first}» y «{second}». ¿Seguimos?"
     },
     "next_prefix": "próximo:",
     "upcoming": {

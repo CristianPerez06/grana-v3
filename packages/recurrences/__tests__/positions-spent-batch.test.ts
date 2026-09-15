@@ -240,10 +240,13 @@ function contractOfValidateSchema(): string {
     resolve(__dirname, '../../../supabase/validate_schema.sql'),
     'utf-8',
   )
-  const start = sql.indexOf('  -- ┌── BEGIN 8.1M CONTRACT')
-  const end = sql.indexOf('  -- └── END 8.1M CONTRACT')
-  if (start < 0 || end < 0) throw new Error('8.1M moved: update this extraction')
-  return `do $$\ndeclare\n  v_body text;\nbegin\n${sql.slice(start, end)}end $$;`
+  const open = sql.indexOf('-- ┌── BEGIN 8.1M CONTRACT')
+  const close = sql.indexOf('-- └── END 8.1M CONTRACT')
+  if (open < 0 || close < 0) throw new Error('8.1M moved: update this extraction')
+  // The WHOLE block, declarations included. Rebuilding the `declare` here would
+  // be a second copy of the section's variables, free to drift from the one the
+  // validator actually runs — which is the thing this lift exists to prevent.
+  return sql.slice(open, close)
 }
 
 describe('validate_schema.sql 8.1M', () => {
@@ -312,6 +315,50 @@ describe('validate_schema.sql 8.1M', () => {
     }
   }, 60_000)
 
+
+  it('REFUSES a replacement whose two return columns are swapped', async () => {
+    const swapped = await createRecurrenceIdentityDb()
+    try {
+      // Type-checks in every reader, and hands each rule's progress to another
+      // rule. Nothing on screen would say so — which is why the shape is pinned
+      // and not only the argument list.
+      await swapped.exec(`
+        drop function if exists public.recurrence_positions_spent_batch(uuid[], date);
+        create function public.recurrence_positions_spent_batch(p_ids uuid[], p_today date)
+        returns table (positions_spent int, recurrence_id uuid)
+        language sql stable security invoker set search_path = public, pg_temp as $fn$
+          select public.recurrence_positions_spent(r.id, p_today), r.id
+            from public.recurrences r where r.id = any(p_ids)
+        $fn$;
+      `)
+
+      await expect(swapped.exec(contractOfValidateSchema())).rejects.toThrow(
+        /returns positions_spent integer, recurrence_id uuid/,
+      )
+    } finally {
+      await swapped.close()
+    }
+  }, 60_000)
+
+  it('REFUSES a VOLATILE replacement', async () => {
+    const volatileOne = await createRecurrenceIdentityDb()
+    try {
+      await volatileOne.exec(`
+        create or replace function public.recurrence_positions_spent_batch(
+          p_ids uuid[], p_today date
+        ) returns table (recurrence_id uuid, positions_spent int)
+        language sql volatile security invoker set search_path = public, pg_temp as $fn$
+          select r.id, public.recurrence_positions_spent(r.id, p_today)
+            from public.recurrences r where r.id = any(p_ids)
+        $fn$;
+      `)
+
+      await expect(volatileOne.exec(contractOfValidateSchema())).rejects.toThrow(/not STABLE/)
+    } finally {
+      await volatileOne.close()
+    }
+  }, 60_000)
+
   it('REFUSES the function left open to anon', async () => {
     await db.exec(
       `grant execute on function public.recurrence_positions_spent_batch(uuid[], date) to anon;`,
@@ -327,6 +374,77 @@ describe('validate_schema.sql 8.1M', () => {
       )
     }
   })
+
+  it('REFUSES a replacement with search_path left open', async () => {
+    const unpinned = await createRecurrenceIdentityDb()
+    try {
+      await unpinned.exec(`
+        create or replace function public.recurrence_positions_spent_batch(
+          p_ids uuid[], p_today date
+        ) returns table (recurrence_id uuid, positions_spent int)
+        language sql stable security invoker as $fn$
+          select r.id, public.recurrence_positions_spent(r.id, p_today)
+            from public.recurrences r where r.id = any(p_ids)
+        $fn$;
+      `)
+
+      await expect(unpinned.exec(contractOfValidateSchema())).rejects.toThrow(
+        /does not pin search_path/,
+      )
+    } finally {
+      await unpinned.close()
+    }
+  }, 60_000)
+})
+
+/**
+ * 0070 CHECKS ITSELF before it commits, and the check has to be able to fail.
+ *
+ * The migration is four statements — the function and three privilege
+ * statements — and run loose a failure on the third leaves the function created
+ * with EXECUTE still granted to PUBLIC, which is what Postgres does by default.
+ * Wrapped in a transaction with this block at the end, either all four land or
+ * none does.
+ */
+describe('0070’s own verification block', () => {
+  /** The `do $verify$ … $verify$;` at the end of the migration, on its own. */
+  function verifyBlockOfMigration(): string {
+    const sql = readFileSync(
+      resolve(__dirname, '../../../supabase/migrations/0070_recurrence_positions_spent_batch.sql'),
+      'utf-8',
+    )
+    const open = sql.indexOf('do $verify$')
+    const close = sql.indexOf('$verify$;')
+    if (open < 0 || close < 0) throw new Error('0070’s verify block moved: update this extraction')
+    return sql.slice(open, close + '$verify$;'.length)
+  }
+
+  it('passes on the database the migration produces', async () => {
+    await expect(db.exec(verifyBlockOfMigration())).resolves.toBeDefined()
+  })
+
+  it('CATCHES the half-applied privileges it exists for', async () => {
+    // The exact state a failed `revoke` would leave: the function created, and
+    // EXECUTE still on PUBLIC because nobody took it away.
+    await db.exec(
+      `grant execute on function public.recurrence_positions_spent_batch(uuid[], date) to public;`,
+    )
+
+    try {
+      // Either message is the right answer: a grant to PUBLIC reaches `anon`
+      // too, so whichever of the two checks runs first is the one that speaks.
+      // What matters is that the block refuses to commit.
+      await expect(db.exec(verifyBlockOfMigration())).rejects.toThrow(/retains EXECUTE/)
+    } finally {
+      await db.exec(
+        `revoke execute on function public.recurrence_positions_spent_batch(uuid[], date) from public;`,
+      )
+      await db.exec(
+        `revoke execute on function public.recurrence_positions_spent_batch(uuid[], date) from anon;`,
+      )
+    }
+  })
+
 })
 
 /**
@@ -380,5 +498,102 @@ describe('the hub asks once for the whole list', () => {
     const paused = rules.find((rule) => rule.id === PAUSED)
     expect(paused?.lifecycle.state).toBe('paused')
     expect(paused?.last_expected_occurrence).toEqual({ kind: 'unknown-while-paused' })
+  })
+})
+
+/**
+ * AN INCOMPLETE ANSWER IS AN ERROR, NOT A ZERO.
+ *
+ * The ids handed to the batch were just read from `recurrences` as this same
+ * caller, so it owes exactly one row for each. If a row went missing — drift, a
+ * miswired call, a function replaced with a narrower one — reading it as zero
+ * would produce a plausible screen instead of a failure: an exhausted rule
+ * showing «0 de 11» and grouped with the active ones, which is the exact defect
+ * this change exists to remove.
+ */
+describe('the hub refuses an answer it cannot trust', () => {
+  const swapFunction = (body: string) =>
+    db.exec(`
+      create or replace function public.recurrence_positions_spent_batch(
+        p_ids uuid[], p_today date
+      ) returns table (recurrence_id uuid, positions_spent int)
+      language sql stable security invoker set search_path = public, pg_temp as $fn$
+        ${body}
+      $fn$;
+    `)
+
+  const restore = () =>
+    swapFunction(`
+      select r.id, public.recurrence_positions_spent(r.id, p_today)
+        from public.recurrences r where r.id = any(p_ids)
+    `)
+
+  it('fails when a rule is missing from the answer', async () => {
+    await actAs(db, U_A)
+    // One rule silently dropped — the shape a partial answer has.
+    await actAsAdmin(db)
+    await swapFunction(`
+      select r.id, public.recurrence_positions_spent(r.id, p_today)
+        from public.recurrences r
+       where r.id = any(p_ids) and r.id <> '${PLAIN}'::uuid
+    `)
+    await actAs(db, U_A)
+
+    try {
+      await expect(
+        getRecurrences(pglitePostgrest(db, U_A), { statuses: ['active', 'paused'] }),
+      ).rejects.toThrow(/missing/)
+    } finally {
+      await actAsAdmin(db)
+      await restore()
+      await actAs(db, U_A)
+    }
+  })
+
+  it('fails when a rule comes back twice', async () => {
+    await actAsAdmin(db)
+    await swapFunction(`
+      select r.id, public.recurrence_positions_spent(r.id, p_today)
+        from public.recurrences r, generate_series(1, 2)
+       where r.id = any(p_ids)
+    `)
+    await actAs(db, U_A)
+
+    try {
+      await expect(
+        getRecurrences(pglitePostgrest(db, U_A), { statuses: ['active', 'paused'] }),
+      ).rejects.toThrow(/more than once/)
+    } finally {
+      await actAsAdmin(db)
+      await restore()
+      await actAs(db, U_A)
+    }
+  })
+
+  it('fails when a count comes back null', async () => {
+    await actAsAdmin(db)
+    await swapFunction(`
+      select r.id, null::int from public.recurrences r where r.id = any(p_ids)
+    `)
+    await actAs(db, U_A)
+
+    try {
+      await expect(
+        getRecurrences(pglitePostgrest(db, U_A), { statuses: ['active', 'paused'] }),
+      ).rejects.toThrow(/no count/)
+    } finally {
+      await actAsAdmin(db)
+      await restore()
+      await actAs(db, U_A)
+    }
+  })
+
+  it('and reads normally again once the function is the real one', async () => {
+    await actAs(db, U_A)
+    const rules = await getRecurrences(pglitePostgrest(db, U_A), {
+      statuses: ['active', 'paused'],
+    })
+
+    expect(rules.length).toBeGreaterThan(2)
   })
 })

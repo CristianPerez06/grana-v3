@@ -91,7 +91,14 @@ function mapRecurrenceSummary(
     schedule_positions_before: recurrence.schedule_positions_before,
   }
   const pending = pendingByRecurrenceId.get(recurrence.id) ?? []
-  const positionsSpent = positionsSpentByRecurrenceId.get(recurrence.id) ?? 0
+  // NOT `?? 0`. A rule with no entry here means the read that was supposed to
+  // provide one did not — and zero is a number that looks like an answer: an
+  // exhausted rule would read «0 de 11» and be shown as active. The reads above
+  // guarantee an entry per rule, so reaching this is a wiring bug, and it says so.
+  const positionsSpent = positionsSpentByRecurrenceId.get(recurrence.id)
+  if (positionsSpent == null) {
+    throw new Error(`no spent-positions count for rule ${recurrence.id}`)
+  }
 
   return {
     ...recurrence,
@@ -182,8 +189,14 @@ async function getUpcomingOccurrenceDates(
  * generating has none either. The count is of POSITIONS, and only the calendar
  * knows them.
  *
- * A rule the RPC does not answer for — RLS filtered it, or it vanished between
- * the two reads — is simply absent here, and the mapper reads that as zero.
+ * AN INCOMPLETE ANSWER IS AN ERROR, NOT A ZERO. The ids handed in were just read
+ * from `recurrences` as this same caller, so every one of them is visible to it
+ * and the RPC owes exactly one row for each. Treating a missing row as zero
+ * would turn a drift or a miswired call into a plausible screen: an exhausted
+ * rule would read «0 de 11» and be shown as active, which is precisely the
+ * defect this whole change exists to remove. So the shape is checked — one row
+ * per id, no extras, no duplicates, no nulls — and a read that cannot answer
+ * fails instead of guessing.
  */
 async function getPositionsSpentByRecurrenceId(
   supabase: GranaSupabaseClient,
@@ -199,7 +212,34 @@ async function getPositionsSpentByRecurrenceId(
   })
   if (error) throw error
 
-  for (const row of data ?? []) byRule.set(row.recurrence_id, row.positions_spent)
+  for (const row of data ?? []) {
+    if (row.positions_spent == null) {
+      throw new Error(
+        `recurrence_positions_spent_batch returned no count for rule ${row.recurrence_id}`,
+      )
+    }
+    if (byRule.has(row.recurrence_id)) {
+      throw new Error(
+        `recurrence_positions_spent_batch returned rule ${row.recurrence_id} more than once`,
+      )
+    }
+    byRule.set(row.recurrence_id, row.positions_spent)
+  }
+
+  const wanted = new Set(recurrenceIds)
+  const missing = recurrenceIds.filter((id) => !byRule.has(id))
+  if (missing.length > 0) {
+    throw new Error(
+      `recurrence_positions_spent_batch answered for ${byRule.size} of ${wanted.size} rules; missing ${missing.join(', ')}`,
+    )
+  }
+  const extra = [...byRule.keys()].filter((id) => !wanted.has(id))
+  if (extra.length > 0) {
+    throw new Error(
+      `recurrence_positions_spent_batch answered for rules that were not asked about: ${extra.join(', ')}`,
+    )
+  }
+
   return byRule
 }
 
