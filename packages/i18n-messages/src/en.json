@@ -1394,7 +1394,10 @@
       "recurrence_failed": "Transaction saved, but the recurring rule couldn't be created: {detail}",
       "recurrence_unknown_error": "unknown error",
       "generic": "Something went wrong. Please try again.",
-      "seeded_recurrence": "This movement created a recurrence. Resolve the rule before deleting it."
+      "seeded_recurrence": "This movement created a recurrence. Resolve the rule before deleting it.",
+      "recurrence_end_date_required": "Choose the date the recurrence ends on.",
+      "recurrence_end_count_required": "Enter how many occurrences the recurrence has.",
+      "recurrence_end_before_start": "The end date cannot be earlier than the movement’s date."
     },
     "empty": {
       "title": "No transactions yet",
@@ -1480,7 +1483,11 @@
         "adjustment": "Register adjustment",
         "exchange": "Register exchange"
       },
-      "repeat_until": "Repeat until (optional)"
+      "repeat_until": "Repeat until (optional)",
+      "end_question": "How does it end?",
+      "end_never_short": "No limit",
+      "end_on_date_short": "On a date",
+      "end_after_count_short": "Count"
     },
     "confirmations": {
       "delete_title": "Delete this transaction?",

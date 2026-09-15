@@ -4,8 +4,23 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { X } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { parseMoneyInput } from '@grana/validation'
-import { formatDateISO, getTodayAR, presetToInterval } from '@grana/money-logic'
-import type { IntervalUnit, RecurrenceFrequency, RecurrenceFrequencyLabel } from '@grana/money-logic'
+import {
+  endConditionColumns,
+  endDraftForRule,
+  formatDateISO,
+  getTodayAR,
+  hasBothEndConditions,
+  presetToInterval,
+  validateEndCondition,
+} from '@grana/money-logic'
+import type {
+  IntervalUnit,
+  RecurrenceEndDraft,
+  RecurrenceFrequency,
+  RecurrenceFrequencyLabel,
+} from '@grana/money-logic'
+import { Switch } from '../ui/Switch'
+import { EndConditionField } from './EndConditionField'
 import { referenceDateChoice } from '@grana/recurrences'
 import type { RecurrenceDetail } from '@grana/recurrences'
 import { Label } from '../ui/Label'
@@ -50,12 +65,24 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
   // because the 10th was a holiday anchors the rule to the 8th forever.
   const [startDate, setStartDate] = useState(rule.start_date)
   const [effectiveFrom, setEffectiveFrom] = useState<string | null>(null)
-  const [endDate, setEndDate] = useState(rule.end_date ?? '')
+  // «¿Cómo termina?», seeded from the rule. A rule carrying BOTH conditions
+  // opens on «después de N» and is not quietly stripped of the other — the
+  // warning below names it and waits for a yes.
+  const [endCondition, setEndCondition] = useState<RecurrenceEndDraft>(() =>
+    endDraftForRule(rule),
+  )
+  const [bothAcknowledged, setBothAcknowledged] = useState(false)
   const [description, setDescription] = useState(rule.description ?? '')
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const anchorMoved = startDate !== rule.start_date
+  // The pair the save will send, derived from the chosen answer — so the
+  // reference-date options below are computed against the calendar being SAVED.
+  const endColumns = endConditionColumns(endCondition)
+  // The rule stored both conditions and the user has not been told yet.
+  const showsBothWarning = hasBothEndConditions(rule) && !bothAcknowledged
+
   // THE CALENDAR BEING SAVED, not the one on the row. The server recomputes the
   // dates it will accept from the patch, so a form that offers dates from the
   // stored frequency offers dates the server refuses — which is what happens the
@@ -74,8 +101,8 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
       status: rule.status,
       interval_count: interval.count,
       interval_unit: interval.unit,
-      end_date: endDate || null,
-      max_occurrences: rule.max_occurrences,
+      end_date: endColumns.end_date,
+      max_occurrences: endColumns.max_occurrences,
       positionsSpent: rule.positions_spent,
     },
     startDate,
@@ -94,6 +121,33 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
     const parsedAmount = parseMoneyInput(amount)
     if (parsedAmount === null || parsedAmount <= 0) {
       setFormError(t('recurrences.errors.amount_invalid'))
+      return
+    }
+
+    const endProblem = validateEndCondition(endCondition, {
+      startDate,
+      positionsSpent: rule.positions_spent,
+    })
+    if (endProblem != null) {
+      setFormError(
+        endProblem.kind === 'date-before-start'
+          ? t('recurrences.errors.end_before_start')
+          : endProblem.kind === 'date-missing'
+            ? t('recurrences.create.errors.end_date_required')
+            : endProblem.kind === 'count-below-spent'
+              ? t('recurrences.create.errors.end_count_below_spent', {
+                  spent: endProblem.spent,
+                })
+              : t('recurrences.create.errors.end_count_required'),
+      )
+      return
+    }
+
+    // A rule carrying both conditions loses one on save. Saying which, and
+    // waiting for a yes, is what keeps this from being the silent discard that
+    // made #142 — the same defect from the other side.
+    if (showsBothWarning) {
+      setFormError(t('recurrences.create.end_both_title'))
       return
     }
 
@@ -124,7 +178,8 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
         // otherwise. `null` is the paused rule's answer — from today, waiting —
         // and the database refuses a date there.
         schedule_effective_from: anchorMoved && choice.kind === 'ask' ? selected : null,
-        end_date: endDate || null,
+        end_date: endColumns.end_date,
+        max_occurrences: endColumns.max_occurrences,
         description: description || null,
       },
       t,
@@ -279,11 +334,48 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
             </Text>
           ) : null}
 
-          {/* End date (optional) */}
-          <View className="flex-col gap-1.5">
-            <Label>{t('recurrences.labels.end_date')}</Label>
-            <DateField value={endDate} onChange={setEndDate} placeholder={t('common.pick_date')} />
-          </View>
+          {/* «¿Cómo termina?» — editable here for the first time. A rule created
+              with a limit could neither have it changed nor removed: this form
+              only ever offered the end date. */}
+          <EndConditionField
+            value={endCondition}
+            onChange={setEndCondition}
+            startDate={startDate}
+          />
+
+          {showsBothWarning ? (
+            <View className="flex-col gap-2 rounded-xl border border-border bg-surface-soft p-4">
+              <Text className="text-sm font-semibold text-text">
+                {t('recurrences.create.end_both_title')}
+              </Text>
+              <Text className="text-xs text-text-muted">
+                {t('recurrences.create.end_both_body', {
+                  keeping: t(
+                    endCondition.answer === 'after-count'
+                      ? 'recurrences.create.end_after_count'
+                      : endCondition.answer === 'on-date'
+                        ? 'recurrences.create.end_on_date'
+                        : 'recurrences.create.end_never',
+                  ),
+                  dropping: t(
+                    endCondition.answer === 'after-count'
+                      ? 'recurrences.create.end_on_date'
+                      : 'recurrences.create.end_after_count',
+                  ),
+                })}
+              </Text>
+              <View className="flex-row items-center justify-between gap-3">
+                <Text className="flex-1 text-sm text-text">
+                  {t('recurrences.create.end_both_confirm')}
+                </Text>
+                <Switch
+                  ariaLabel={t('recurrences.create.end_both_confirm')}
+                  checked={bothAcknowledged}
+                  onValueChange={setBothAcknowledged}
+                />
+              </View>
+            </View>
+          ) : null}
 
           {/* Description (optional) */}
           <View className="flex-col gap-1.5">

@@ -1394,7 +1394,10 @@
       "recurrence_failed": "Movimiento guardado, pero no se pudo crear la regla recurrente: {detail}",
       "recurrence_unknown_error": "error desconocido",
       "generic": "Algo salió mal. Intentá de nuevo.",
-      "seeded_recurrence": "Este movimiento creó una recurrencia. Resolvé la regla antes de eliminarlo."
+      "seeded_recurrence": "Este movimiento creó una recurrencia. Resolvé la regla antes de eliminarlo.",
+      "recurrence_end_date_required": "Elegí la fecha en la que termina la recurrencia.",
+      "recurrence_end_count_required": "Escribí cuántos vencimientos tiene la recurrencia.",
+      "recurrence_end_before_start": "La fecha de fin no puede ser anterior a la del movimiento."
     },
     "empty": {
       "title": "Todavía no hay movimientos",
@@ -1480,7 +1483,11 @@
         "adjustment": "Registrar ajuste",
         "exchange": "Registrar cambio"
       },
-      "repeat_until": "Repetir hasta (opcional)"
+      "repeat_until": "Repetir hasta (opcional)",
+      "end_question": "¿Cómo termina?",
+      "end_never_short": "Sin límite",
+      "end_on_date_short": "En una fecha",
+      "end_after_count_short": "Cantidad"
     },
     "confirmations": {
       "delete_title": "¿Eliminar este movimiento?",

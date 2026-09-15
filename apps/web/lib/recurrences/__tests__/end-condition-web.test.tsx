@@ -17,9 +17,9 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
  */
 
 /** Typed with its payload, so `mock.calls[0][0]` is the thing under test. */
-const createRecurrence = vi.fn(async (_payload: Record<string, unknown>) => ({
+const createRecurrence = vi.fn(async (payload: Record<string, unknown>) => ({
   ok: true as const,
-  id: 'r1',
+  id: String(payload.account_id ?? 'r1'),
 }))
 const checkDuplicateRecurrences = vi.fn(async () => [])
 

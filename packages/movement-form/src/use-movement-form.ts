@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   checkNegativeBalance,
+  endConditionColumns,
   formatDateISO,
   normalizeDescription,
   suggestReimbursementAmount,
+  validateEndCondition,
   type CategorySuggestion,
+  type EndConditionProblem,
+  type RecurrenceEndDraft,
 } from '@grana/money-logic'
 import { Money, parseMoneyInput } from '@grana/validation'
 import { graftArchivedTaxonomy } from './archived-taxonomy'
@@ -98,6 +102,19 @@ function pickReimbursementAccount(
  * Faithful extraction of `apps/web/.../movement-form.tsx`'s state + handlers
  * (kept for parity with web behavior; ground-truth comparison lands in 7.8).
  */
+/**
+ * The message for a rejected end condition, in the movement form's namespace.
+ *
+ * `count-below-spent` cannot happen here — this form only CREATES rules, and a
+ * rule being created has spent nothing — so it falls back to the generic
+ * "escribí cuántos" rather than inventing a message no path can reach.
+ */
+function endConditionProblemKey(problem: EndConditionProblem): string {
+  if (problem.kind === 'date-missing') return 'errors.recurrence_end_date_required'
+  if (problem.kind === 'date-before-start') return 'errors.recurrence_end_before_start'
+  return 'errors.recurrence_end_count_required'
+}
+
 export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
   const {
     mutators,
@@ -166,7 +183,13 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
   const [frequency, setFrequency] = useState<Frequency>('monthly')
   const [intervalCount, setIntervalCount] = useState(1)
   const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('month')
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
+  // One piece of state for the whole end condition — see `recurrenceEnd` in
+  // `types.ts` for why it is not a bare date.
+  const [recurrenceEnd, setRecurrenceEnd] = useState<RecurrenceEndDraft>({
+    answer: 'never',
+    endDate: '',
+    maxOccurrences: '',
+  })
 
   // Prefill from the linked reimbursement when editing. A received/cancelled one
   // is read-only (managed from its own confirm/cancel flow), so its fields load
@@ -232,7 +255,9 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     frequency,
     intervalCount,
     intervalUnit,
-    recurrenceEndDate,
+    recurrenceEnd.answer,
+    recurrenceEnd.endDate,
+    recurrenceEnd.maxOccurrences,
     sharedEnabled,
     sharedEnabled ? splitFirstPct : null,
     reimbursementEnabled,
@@ -709,6 +734,21 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
       }
     }
 
+    // THE END CONDITION IS CHECKED BEFORE ANYTHING IS WRITTEN. It is validated
+    // up here, with the amount and the category, and not inside the recurrence
+    // block below: there the movement has already been inserted, so an
+    // incomplete answer would leave the user with a gasto in the ledger and an
+    // error message about the recurrence.
+    const recurrenceEligibleNow =
+      isRecurrent && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments
+    if (recurrenceEligibleNow) {
+      const endProblem = validateEndCondition(recurrenceEnd, { startDate: date })
+      if (endProblem != null) {
+        setFormError(t(endConditionProblemKey(endProblem)))
+        return
+      }
+    }
+
     let sharedDecl:
       | { household_id: string; splits: { user_id: string; percentage: number }[] }
       | undefined
@@ -731,7 +771,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
       const recurrenceEligible =
         isRecurrent && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments
       if (recurrenceEligible && date > todayStr()) {
-        const trimmedEnd = recurrenceEndDate.trim()
+        const endColumns = endConditionColumns(recurrenceEnd)
         const directResult = await mutators.createRecurrenceDirect({
           movement_type: tab,
           account_id: accountId,
@@ -749,7 +789,10 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
             ? { interval_count: intervalCount, interval_unit: intervalUnit }
             : {}),
           start_date: date,
-          ...(trimmedEnd !== '' ? { end_date: trimmedEnd } : {}),
+          ...(endColumns.end_date != null ? { end_date: endColumns.end_date } : {}),
+          ...(endColumns.max_occurrences != null
+            ? { max_occurrences: endColumns.max_occurrences }
+            : {}),
           ...(sharedDecl && tab === 'expense' ? { shared: sharedDecl } : {}),
         })
         if (!directResult.ok) {
@@ -852,14 +895,21 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
       // Recurrence: not for adjustments, exchanges, or installment purchases.
       const createdId = 'id' in result ? result.id : undefined
       if (recurrenceEligible && createdId) {
-        const trimmedEnd = recurrenceEndDate.trim()
+        // The SAME end condition as the direct path. This path used to send only
+        // `end_date`, so marking a movement recurrent could not express «son 11
+        // cuotas» at all — the user had to abandon the form and create the rule
+        // again from the recurrences screen.
+        const endColumns = endConditionColumns(recurrenceEnd)
         const recurrenceResult = await mutators.createRecurrenceFromMovement({
           transaction_id: createdId,
           frequency,
           ...(frequency === 'custom'
             ? { interval_count: intervalCount, interval_unit: intervalUnit }
             : {}),
-          ...(trimmedEnd !== '' ? { end_date: trimmedEnd } : {}),
+          ...(endColumns.end_date != null ? { end_date: endColumns.end_date } : {}),
+          ...(endColumns.max_occurrences != null
+            ? { max_occurrences: endColumns.max_occurrences }
+            : {}),
         })
         if (!recurrenceResult.ok) {
           setFormError(
@@ -899,7 +949,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     frequency,
     intervalCount,
     intervalUnit,
-    recurrenceEndDate,
+    recurrenceEnd,
     reimbursementEnabled,
     reimbursementTarget,
     reimbursementAmount,
@@ -930,7 +980,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     setFrequency,
     setIntervalCount,
     setIntervalUnit,
-    setRecurrenceEndDate,
+    setRecurrenceEnd,
     setReimbursementEnabled,
     setReimbursementTarget,
     setReimbursementAmount,

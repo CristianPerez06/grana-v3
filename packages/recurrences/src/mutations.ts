@@ -1,5 +1,5 @@
 import type { GranaSupabaseClient } from '@grana/supabase'
-import { getTodayAR, presetToInterval, type IntervalUnit } from '@grana/money-logic'
+import { formatDateISO, getTodayAR, presetToInterval, type IntervalUnit } from '@grana/money-logic'
 import {
   acceptRecurrenceSuggestionSchema,
   confirmRecurrenceInstanceSchema,
@@ -608,6 +608,38 @@ export async function updateRecurrence(
     return {
       ok: false,
       formError: 'La fecha de fin debe ser posterior o igual al inicio.',
+    }
+  }
+
+  // A LIMIT BELOW WHAT THE RULE ALREADY SPENT IS REFUSED HERE, in the write
+  // path, next to the end-date rule — not only in the form.
+  //
+  // The form checks it too, to say so immediately, but a form is a convenience
+  // and can be bypassed; the model has to hold either way. Accepting it would
+  // show «3 de 3» over a rule that walked five positions — a number describing
+  // nothing — and would present the rule as finished for a reason that is not
+  // true.
+  //
+  // Counted with the NORMATIVE read and never with a number the client sent:
+  // `recurrence_positions_spent` counts POSITIONS of the calendar, which is what
+  // `max_occurrences` caps. Equalling what is spent is allowed on purpose — it
+  // is how someone says "esto ya terminó", and the rule finishes through the
+  // ordinary derivation.
+  if ('max_occurrences' in updates && updates.max_occurrences != null) {
+    const { data: spent, error: spentError } = await supabase.rpc(
+      'recurrence_positions_spent',
+      { p_id: id, p_today: formatDateISO(getTodayAR()) },
+    )
+    if (spentError) return { ok: false, formError: spentError.message }
+
+    const positionsSpent = spent ?? 0
+    if (updates.max_occurrences < positionsSpent) {
+      return {
+        ok: false,
+        formError: `Esta regla ya lleva ${positionsSpent} ${
+          positionsSpent === 1 ? 'vencimiento' : 'vencimientos'
+        }: el límite no puede ser menor.`,
+      }
     }
   }
 

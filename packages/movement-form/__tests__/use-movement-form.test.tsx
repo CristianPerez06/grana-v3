@@ -591,3 +591,113 @@ describe('useMovementForm — dirty tracking', () => {
     expect(result.current.isDirty).toBe(true)
   })
 })
+
+/**
+ * «¿Cómo termina?» reaches BOTH «Hacer recurrente» paths (#142).
+ *
+ * The hook used to carry a lone `recurrenceEndDate`, so this form could express
+ * two of the three answers and not the third: a user registering the first of
+ * eleven cuotas had no way to say so, and had to abandon the form and build the
+ * rule again from the recurrences screen. The spec promised the limit here from
+ * the beginning; the implementation never offered it.
+ */
+describe('useMovementForm — how the recurrence ends', () => {
+  const callOf = (fn: unknown) =>
+    (fn as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>
+
+  it('sends the limit through the seeded path (movement today + rule from it)', async () => {
+    const mutators = stubMutators()
+    const { result } = renderHook(() => useMovementForm(baseArgs({ mutators })))
+    act(() => result.current.setAmount('105000'))
+    act(() => result.current.setCategoryId('cat-groceries'))
+    act(() => result.current.setIsRecurrent(true))
+    act(() =>
+      result.current.setRecurrenceEnd({
+        answer: 'after-count',
+        endDate: '',
+        maxOccurrences: '11',
+      }),
+    )
+    await act(async () => {
+      result.current.onSubmit()
+    })
+
+    expect(mutators.createRecurrenceFromMovement).toHaveBeenCalledOnce()
+    const call = callOf(mutators.createRecurrenceFromMovement)
+    expect(call.max_occurrences).toBe(11)
+    expect(call).not.toHaveProperty('end_date')
+  })
+
+  it('sends the limit through the future-dated path (rule only, no seed)', async () => {
+    const mutators = stubMutators()
+    const { result } = renderHook(() => useMovementForm(baseArgs({ mutators })))
+    act(() => result.current.setAmount('105000'))
+    act(() => result.current.setCategoryId('cat-groceries'))
+    act(() => result.current.setIsRecurrent(true))
+    act(() => result.current.setDate('2026-06-10')) // today is 2026-06-01
+    act(() =>
+      result.current.setRecurrenceEnd({
+        answer: 'after-count',
+        endDate: '',
+        maxOccurrences: '11',
+      }),
+    )
+    await act(async () => {
+      result.current.onSubmit()
+    })
+
+    expect(mutators.createRecurrenceDirect).toHaveBeenCalledOnce()
+    const call = callOf(mutators.createRecurrenceDirect)
+    expect(call.max_occurrences).toBe(11)
+    expect(call).not.toHaveProperty('end_date')
+  })
+
+  it('sends NEITHER when a count was typed and then «sin límite» chosen', async () => {
+    const mutators = stubMutators()
+    const { result } = renderHook(() => useMovementForm(baseArgs({ mutators })))
+    act(() => result.current.setAmount('105000'))
+    act(() => result.current.setCategoryId('cat-groceries'))
+    act(() => result.current.setIsRecurrent(true))
+    act(() =>
+      result.current.setRecurrenceEnd({
+        answer: 'after-count',
+        endDate: '2026-12-31',
+        maxOccurrences: '11',
+      }),
+    )
+    // The change of mind. Both raw values stay in the draft on purpose — what
+    // matters is that neither one reaches the rule.
+    act(() =>
+      result.current.setRecurrenceEnd({ ...result.current.recurrenceEnd, answer: 'never' }),
+    )
+    await act(async () => {
+      result.current.onSubmit()
+    })
+
+    const call = callOf(mutators.createRecurrenceFromMovement)
+    expect(call).not.toHaveProperty('max_occurrences')
+    expect(call).not.toHaveProperty('end_date')
+  })
+
+  it('refuses «después de N» with the count left empty, and creates nothing', async () => {
+    const mutators = stubMutators()
+    const { result } = renderHook(() => useMovementForm(baseArgs({ mutators })))
+    act(() => result.current.setAmount('105000'))
+    act(() => result.current.setCategoryId('cat-groceries'))
+    act(() => result.current.setIsRecurrent(true))
+    act(() =>
+      result.current.setRecurrenceEnd({ answer: 'after-count', endDate: '', maxOccurrences: '' }),
+    )
+    await act(async () => {
+      result.current.onSubmit()
+    })
+
+    expect(result.current.formError).toBe('errors.recurrence_end_count_required')
+    expect(mutators.createRecurrenceFromMovement).not.toHaveBeenCalled()
+    // AND the movement is not in the ledger either. The check runs with the
+    // amount and the category, before anything is written: refusing after the
+    // expense had been inserted would leave the user with a gasto they did not
+    // get to finish creating.
+    expect(mutators.createExpense).not.toHaveBeenCalled()
+  })
+})

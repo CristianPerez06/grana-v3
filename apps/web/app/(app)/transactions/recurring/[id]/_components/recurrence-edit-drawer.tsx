@@ -4,6 +4,14 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { updateRecurrence } from '@/app/_actions/recurrences'
+import {
+  endConditionColumns,
+  endDraftForRule,
+  hasBothEndConditions,
+  validateEndCondition,
+  type RecurrenceEndDraft,
+} from '@grana/money-logic'
+import { EndConditionField } from '@/lib/recurrences/components/end-condition-field'
 import { parseMoneyInput } from '@grana/validation'
 import { referenceDateChoice } from '@grana/recurrences'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
@@ -54,7 +62,13 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
   // because the 10th was a holiday anchors the rule to the 8th forever.
   const [startDate, setStartDate] = useState(rule.start_date)
   const [effectiveFrom, setEffectiveFrom] = useState<string | null>(null)
-  const [endDate, setEndDate] = useState(rule.end_date ?? '')
+  // «¿Cómo termina?», seeded from the rule. A rule that carries BOTH conditions
+  // opens on «después de N» — the more specific commitment — and is not quietly
+  // stripped of the other: `showsBothWarning` below names the situation and asks.
+  const [endCondition, setEndCondition] = useState<RecurrenceEndDraft>(() =>
+    endDraftForRule(rule),
+  )
+  const [bothAcknowledged, setBothAcknowledged] = useState(false)
   const [description, setDescription] = useState(rule.description ?? '')
 
   const anchorMoved = startDate !== rule.start_date
@@ -67,6 +81,13 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
   // untouched when the label stays custom, so the calendar being saved is the
   // one the rule already has. Asking `presetToInterval` about it returns nothing
   // and the form throws before it can render.
+  // The pair the save will send, derived from the chosen answer — so the
+  // reference-date options below are computed against the calendar being SAVED,
+  // not the one on the row.
+  const endColumns = endConditionColumns(endCondition)
+  // The rule stored both conditions and the user has not been told yet.
+  const showsBothWarning = hasBothEndConditions(rule) && !bothAcknowledged
+
   const interval =
     frequency === 'custom'
       ? { count: rule.interval_count, unit: rule.interval_unit as IntervalUnit }
@@ -76,8 +97,8 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
       status: rule.status,
       interval_count: interval.count,
       interval_unit: interval.unit,
-      end_date: endDate || null,
-      max_occurrences: rule.max_occurrences,
+      end_date: endColumns.end_date,
+      max_occurrences: endColumns.max_occurrences,
       positionsSpent: rule.positions_spent,
     },
     startDate,
@@ -99,6 +120,31 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
     const parsedAmount = parseMoneyInput(amount)
     if (parsedAmount === null || parsedAmount <= 0) {
       setFormError(t('errors.amount_invalid'))
+      return
+    }
+
+    const endProblem = validateEndCondition(endCondition, {
+      startDate,
+      positionsSpent: rule.positions_spent,
+    })
+    if (endProblem != null) {
+      setFormError(
+        endProblem.kind === 'date-before-start'
+          ? t('errors.end_before_start')
+          : endProblem.kind === 'date-missing'
+            ? t('create.errors.end_date_required')
+            : endProblem.kind === 'count-below-spent'
+              ? t('create.errors.end_count_below_spent', { spent: endProblem.spent })
+              : t('create.errors.end_count_required'),
+      )
+      return
+    }
+
+    // A rule carrying both conditions loses one on save. Saying which, and
+    // waiting for a yes, is the whole difference between this and the silent
+    // discard that made #142 — the same defect from the other side.
+    if (showsBothWarning) {
+      setFormError(t('create.end_both_title'))
       return
     }
 
@@ -128,7 +174,8 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
         // otherwise. `null` is the paused rule's answer — from today, waiting —
         // and the database refuses a date there.
         schedule_effective_from: anchorMoved && choice.kind === 'ask' ? selected : null,
-        end_date: endDate || null,
+        end_date: endColumns.end_date,
+        max_occurrences: endColumns.max_occurrences,
         description: description || null,
       })
       if (!result.ok) {
@@ -254,15 +301,47 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
           <p className="text-[12px] text-text-soft">{t('reference_date_exhausted')}</p>
         )}
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="end_date" className={labelClass}>
-            {t('labels.end_date')}{' '}
-            <span className="font-normal normal-case tracking-normal text-text-soft">
-              {tCommon('optional')}
-            </span>
-          </label>
-          <DatePicker id="end_date" value={endDate} onChange={setEndDate} label={t('labels.end_date')} />
-        </div>
+        {/* «¿Cómo termina?» — editable here for the first time. A rule created
+            with a limit could not have it changed OR removed: the drawer only
+            ever offered the end date. */}
+        <EndConditionField
+          value={endCondition}
+          onChange={setEndCondition}
+          startDate={startDate}
+          idPrefix="rec-edit"
+          variant="plain"
+        />
+
+        {showsBothWarning && (
+          <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-soft px-4 py-3">
+            <p className="text-[13px] font-semibold text-text">{t('create.end_both_title')}</p>
+            <p className="text-[12px] text-text-muted">
+              {t('create.end_both_body', {
+                keeping: t(
+                  endCondition.answer === 'after-count'
+                    ? 'create.end_after_count'
+                    : endCondition.answer === 'on-date'
+                      ? 'create.end_on_date'
+                      : 'create.end_never',
+                ),
+                dropping: t(
+                  endCondition.answer === 'after-count'
+                    ? 'create.end_on_date'
+                    : 'create.end_after_count',
+                ),
+              })}
+            </p>
+            <label className="flex items-center gap-2 text-[13px] text-text">
+              <input
+                type="checkbox"
+                checked={bothAcknowledged}
+                onChange={(event) => setBothAcknowledged(event.target.checked)}
+                className="size-4 accent-navy"
+              />
+              {t('create.end_both_confirm')}
+            </label>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="description" className={labelClass}>

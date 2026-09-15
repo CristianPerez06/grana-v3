@@ -15,6 +15,19 @@ type Props = {
   startDate: string
   /** Prefix for the field ids, so two of these can live on one page. */
   idPrefix?: string
+  /**
+   * How much chrome to draw around the question.
+   *
+   * `row` is the create modal's list-row look (full-bleed, its own divider);
+   * `plain` is the same content with no chrome, for a form that already has a
+   * box around it; `compact` is the movement drawer's chip strip, where the
+   * question shares a narrow card with the frequency chips and three stacked
+   * radios would not fit.
+   *
+   * They differ in DRAWING only — the question, its three answers and what each
+   * one sends come from the same model, which is the point of having one.
+   */
+  variant?: 'row' | 'plain' | 'compact'
 }
 
 const ANSWERS: RecurrenceEndAnswer[] = ['never', 'on-date', 'after-count']
@@ -23,6 +36,13 @@ const LABEL_KEY: Record<RecurrenceEndAnswer, string> = {
   never: 'create.end_never',
   'on-date': 'create.end_on_date',
   'after-count': 'create.end_after_count',
+}
+
+/** The same three answers, named short enough to sit in a chip. */
+const SHORT_LABEL_KEY: Record<RecurrenceEndAnswer, string> = {
+  never: 'drawer.end_never_short',
+  'on-date': 'drawer.end_on_date_short',
+  'after-count': 'drawer.end_after_count_short',
 }
 
 /**
@@ -43,11 +63,80 @@ const LABEL_KEY: Record<RecurrenceEndAnswer, string> = {
  *     same reason money amounts are banned from it. A limit that moved without
  *     anyone typing is a limit nobody knows about.
  */
-export const EndConditionField = ({ value, onChange, startDate, idPrefix = 'rec' }: Props) => {
+export const EndConditionField = ({
+  value,
+  onChange,
+  startDate,
+  idPrefix = 'rec',
+  variant = 'row',
+}: Props) => {
   const tRec = useTranslations('recurrences')
+  const tTx = useTranslations('transactions')
+
+  if (variant === 'compact') {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={tTx('drawer.end_question')}>
+          {ANSWERS.map((answer) => {
+            const active = value.answer === answer
+            return (
+              <button
+                key={answer}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => onChange({ ...value, answer })}
+                className={`rounded-full border px-2.5 py-1.5 text-[11.5px] leading-none transition-colors ${
+                  active ? 'font-semibold text-emerald-deep' : 'border-border font-medium text-text-muted'
+                }`}
+                style={
+                  active
+                    ? { backgroundColor: 'var(--emerald-soft)', borderColor: '#BFE9D6' }
+                    : { backgroundColor: '#fff' }
+                }
+              >
+                {tTx(SHORT_LABEL_KEY[answer])}
+              </button>
+            )
+          })}
+        </div>
+
+        {value.answer === 'on-date' && (
+          <DatePicker
+            id={`${idPrefix}-end-date`}
+            value={value.endDate}
+            onChange={(endDate) => onChange({ ...value, endDate })}
+            min={startDate}
+            modal
+            label={tRec('create.repeat_until')}
+          />
+        )}
+
+        {value.answer === 'after-count' && (
+          <input
+            id={`${idPrefix}-end-count`}
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            aria-label={tRec('create.end_count_label')}
+            value={value.maxOccurrences}
+            onChange={(event) =>
+              onChange({ ...value, maxOccurrences: sanitizeOccurrenceCount(event.target.value) })
+            }
+            placeholder={tRec('create.end_count_label')}
+            className="h-9 w-full rounded-[9px] border border-border px-2.5 text-[12.5px] text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            style={{ backgroundColor: '#FAFBFC' }}
+          />
+        )}
+      </div>
+    )
+  }
 
   return (
-    <fieldset className="-mx-4 border-t px-4 py-3" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+    <fieldset
+      className={variant === 'row' ? '-mx-4 border-t px-4 py-3' : 'py-1'}
+      style={variant === 'row' ? { borderColor: 'rgba(0,0,0,0.06)' } : undefined}
+    >
       <legend className="sr-only">{tRec('create.end_question')}</legend>
       <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
         {tRec('create.end_question')}
