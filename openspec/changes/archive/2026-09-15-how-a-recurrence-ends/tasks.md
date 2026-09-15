@@ -85,4 +85,4 @@ Ver `design.md` para el porqué de cada decisión y `specs/transactions/spec.md`
 - [x] 5.2 QA manual en las dos plataformas: crear una regla con límite por cada uno de los tres caminos de alta, ver el avance en la ficha, ampliar el límite y comprobar que vuelve a activa.
 - [x] 5.3 Archivar el change y aplicar el delta al spec maestro de `transactions`.
 - [x] 5.4 `pnpm openspec:check` en verde.
-- [ ] 5.5 Avisar al usuario que ya puede corregir `Plan de pago - 11 cuotas` desde la app, cambiando su límite de 1 a 11 — sin borrarla ni recrearla, para que el plan conserve una sola historia.
+- [x] 5.5 Avisar al usuario que ya puede corregir `Plan de pago - 11 cuotas` desde la app, cambiando su límite de 1 a 11 — sin borrarla ni recrearla, para que el plan conserve una sola historia.

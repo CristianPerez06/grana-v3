@@ -22,7 +22,8 @@ El límite existe, decide cuándo la regla deja de recordar, y hoy es invisible 
 
 - **No corrige la regla real del usuario.** Eso lo hace él desde la app, una vez que el límite sea editable. No se borra y recrea: partiría el plan de pago en dos historiales.
 - **No toca `recurrences.status`.** «Finalizada» es un estado que se muestra, no uno que se guarda. La columna sigue diciendo activa/pausada/eliminada.
-- **No cambia cómo se generan las ocurrencias.** El corte por límite ya funciona; lo que falta es decirlo.
+- **No cambia el corte por límite en la generación.** Ese corte ya funcionaba; lo que faltaba era decirlo en pantalla.
+  - **Corregido durante la QA:** sí cambió qué días excluye una pausa. Una pausa abierta el mismo día en que caía un vencimiento se tragaba esa posición, y con una cuota menos contada la regla seguía generando — cuatro cuotas en un plan de tres. Desde `0071`, la pausa afecta los días **posteriores** a su apertura. Es un cambio real en cuánto genera una regla, y por eso se nombra acá y no sólo en las tareas.
 
 ## Capabilities
 
@@ -44,7 +45,7 @@ Ninguna.
 
 **Código**: los tres formularios de alta y edición en web y nativo, la ficha de detalle, el listado de recurrencias, y el cálculo compartido que responde «¿le queda algo a esta regla?».
 
-**Base de datos**: **una migración, sin migración de datos**. Ninguna fila se reescribe: el límite ya se guarda en `max_occurrences` y las piezas para contarlo bien existen desde la migración `0068`. Lo que se agrega es una función para pedir ese conteo de muchas reglas a la vez, porque el listado lo necesita y hoy sólo se puede pedir de a una.
+**Base de datos**: **dos migraciones, sin migración de datos**. Ninguna fila se reescribe: el límite ya se guarda en `max_occurrences` y las piezas para contarlo bien existen desde la migración `0068`. `0070` agrega una función para pedir ese conteo de muchas reglas a la vez, porque el listado lo necesita y hoy sólo se puede pedir de a una. `0071` apareció después, en la QA: corrige cómo se lee una pausa para que el día en que se pausa siga perteneciendo al calendario.
 
 **Un dato que falta antes de empezar**: el modelo permite que una regla lleve fecha de fin **y** límite al mismo tiempo. Hay que mirar la base para saber si alguna las tiene, para redactar bien lo que se le dice a quien edite una de ellas. El camino se construye igual: mientras la base lo permita, el formulario tiene que saber recibir las dos — prohibirlo sería otro cambio, porque obliga a decidir qué pasa con las filas que ya las tienen.
 

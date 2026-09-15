@@ -4,7 +4,7 @@ Ver `proposal.md` — Why para la motivación, y `specs/transactions/spec.md` pa
 
 Lo que condiciona el cómo:
 
-- **El límite ya se guarda y ya corta la generación.** `max_occurrences` funciona; lo que falta es preguntarlo bien, mostrarlo y derivar el final de él. Ninguna fila se reescribe: la única migración del cambio es aditiva y es la función SQL de la decisión 2.
+- **El límite ya se guarda y ya corta la generación.** `max_occurrences` funciona; lo que falta es preguntarlo bien, mostrarlo y derivar el final de él. Ninguna fila se reescribe. Son **dos migraciones**: `0070`, aditiva, es la función SQL de la decisión 2; `0071` reemplaza `recurrence_positions_spent` para que una pausa no se trague su propio día de apertura —defecto encontrado en la QA, ver «Migration Plan» y la tarea 4b.1—.
 - **Ya existe la forma correcta de contar.** `recurrence_positions_spent(p_id, p_today)` (migración `0068`) devuelve las posiciones gastadas de **una** regla. Hoy la llama sólo el detalle (`packages/recurrences/src/queries.ts:295`) y el RPC que valida la fecha de referencia.
 - **El caminante de calendario es compartido y ya compone todo.** `walkOccurrences` / `forEachComposedOccurrence` (`@grana/money-logic`) honra versiones de cronograma, pausas, el piso de reconstrucción y el offset del tope. Es el mismo que produce las fechas reales.
 - **Nativo ya resolvió la mitad de la UI.** `RecurrenceForm.tsx` tiene el campo en su propia sección y filtra dígitos. Web tiene que alinearse, no rediseñar.
@@ -80,9 +80,13 @@ Es un hook compartido: agregar ahí el estado y el envío lo resuelve en web y e
 
 ## Migration Plan
 
-**Una migración, ninguna migración de datos.** Ninguna fila se reescribe: `max_occurrences` ya existe y las reglas guardadas conservan el valor que tienen. El estado derivado cambia lo que se muestra desde el primer despliegue, sin escribir nada.
+**Dos migraciones, ninguna migración de datos.** Ninguna fila se reescribe: `max_occurrences` ya existe, las pausas conservan sus fechas y las instancias las suyas. Lo que cambia es la respuesta que dan las funciones de acá en adelante.
 
-La migración es la función SQL batch de la decisión 2, aditiva: crea una función nueva, con sus `REVOKE`/`GRANT`, y no toca ninguna existente. Su número se elige contra `main` al momento de escribirla, no contra el árbol de trabajo.
+`0070` es la función SQL batch de la decisión 2, **aditiva**: crea una función nueva, con sus `REVOKE`/`GRANT`, y no toca ninguna existente.
+
+`0071` apareció después, en la QA del 5.2, y **no es aditiva: reemplaza `recurrence_positions_spent`** (ver tarea 4b.1). Una pausa se leía como `[paused_from, resumed_at)` y se tragaba su propio día de apertura, así que una regla pausada el día en que vencía perdía esa posición — y como ese número es el que corta la generación, un plan de tres habría entregado cuatro. El cuerpo se extrajo verbatim de `0068` y se cambió un solo predicado (`d > ps.paused_from`), con la transacción y la autoverificación de `0070`; el gemelo en TypeScript es `subtractPauses`, y `validate_schema.sql` (8.1N) fija el carácter para que nadie lo revierta leyendo.
+
+El número de cada una se elige contra `main` al momento de escribirla, no contra el árbol de trabajo.
 
 Orden del despliegue, como en `0068`: aplicar la migración a mano en el dashboard, validar el esquema, y recién después desplegar el código que la consume.
 
