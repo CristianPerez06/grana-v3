@@ -26,7 +26,10 @@ Ticket:
 
 Change: `openspec/changes/<nombre>/`
 
-- [ ] El change está **archivado en la rama** (carpeta movida a `openspec/changes/archive/YYYY-MM-DD-<nombre>/`)
+- [ ] El change está **archivado en la rama** (carpeta movida a `openspec/changes/archive/YYYY-MM-DD-<nombre>/`).
+      `pnpm check:unarchived` lo exige cuando el PR además toca código. Si el apply
+      todavía no está terminado y sigue en otro PR, ponelo en una línea propia de este
+      body: `Aplicación parcial: <razón>`. No hay forma de decir "lo archivo después".
 - [ ] Deltas aplicados a los master specs — no quedan secciones `## ADDED/MODIFIED/REMOVED/RENAMED Requirements`
 - [ ] `Purpose` real escrito en cada capability nueva (sin `TBD`)
 - [ ] `AGENTS.md` actualizado si el change completa/agrega un módulo o un package
@@ -60,7 +63,7 @@ Change: `openspec/changes/<nombre>/`
 - [ ] Build de producción de web pasa (`pnpm build`)
 - [ ] `pnpm openspec:check` pasa (sin placeholders `TBD` en los master specs)
 - [ ] `pnpm check:openspec-workflows` pasa (los workflows generados por OpenSpec siguen siendo cinco; `explore` no volvió)
-- [ ] `pnpm check:duplicate-deps` y `pnpm check:test-timezone` pasan
+- [ ] `pnpm check:duplicate-deps`, `pnpm check:test-timezone` y `pnpm check:unarchived` pasan
 - [ ] Si toqué dependencias: `pnpm-lock.yaml` actualizado y commiteado (`pnpm install --frozen-lockfile` pasa). **Es el único step de CI que `verify` no cubre**, a propósito: verificar no debería podar tu `node_modules`.
 
 #### Arquitectura y convenciones
