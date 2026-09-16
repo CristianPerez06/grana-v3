@@ -109,24 +109,28 @@ El hub de recurrencias **web** (`/transactions/recurring`) SHALL mostrar una pro
 
 La segunda ventana SHALL medirse en **días corridos desde hoy**, y NO SHALL recortarse al fin del mes calendario. Una ventana que termina el último día del mes se vacía sola a medida que avanza el mes —desde el día en que `hoy+8` cae en el mes siguiente, su rango empieza después de terminar— y deja al usuario sin ningún horizonte más allá de siete días justo cuando más cerca está lo que viene.
 
-Toda proyección de ocurrencias futuras —esta y cualquier otra superficie que anuncie "lo que viene", en web o en mobile— SHALL descartar las ocurrencias **en o antes de `last_generated_date`**, con el mismo criterio que el cálculo de la próxima fecha esperada: una ocurrencia ya cubierta por un movimiento real (la semilla de la regla) o por una instancia ya confirmada NO SHALL dibujarse como próxima. La proyección y el generador SHALL derivar de un único caminante de calendario, de modo que no puedan divergir: toda fila proyectada corresponde a una ocurrencia que el generador todavía puede producir.
+Toda proyección de ocurrencias futuras —esta y cualquier otra superficie que anuncie "lo que viene", en web o en mobile— SHALL descartar **el conjunto de fechas que la regla ya cubre**, y NO SHALL usar un cursor de avance como `last_generated_date` para decidirlo. Ese conjunto se arma de las dos únicas formas en que una ocurrencia queda cubierta: el **movimiento semilla** de una regla creada a partir de un movimiento —que no tiene fila de instancia y aun así ocupa esa fecha— y cualquier **instancia materializada**, en el estado que sea.
 
-Una ocurrencia que **ya existe** NO SHALL dibujarse como próxima, y eso incluye a las **pendientes sin resolver**: una ocurrencia materializada en cualquier estado ya vive en el bloque de vencimientos por revisar, y anunciarla además como próxima la muestra dos veces en dos pantallas que dicen cosas distintas sobre ella. La redacción anterior de este requirement decía lo contrario —que una pendiente seguía proyectándose— y había quedado desactualizada respecto del comportamiento en vigor.
+Un cursor no sirve porque falla en las dos direcciones. **Cubre de más**: resolver el vencimiento de agosto lo empuja más allá del de julio, que la regla todavía debía, y julio desaparece de la proyección sin haberse resuelto. **Cubre de menos**: una ocurrencia sin resolver nunca lo mueve, así que la proyección vuelve a emitir una fecha que ya tiene fila, y el mismo compromiso se cuenta dos veces —una materializada y otra proyectada—, que es el defecto del #118.
+
+Las ocurrencias ya cubiertas quedan fuera de "lo que viene" **cualquiera sea su estado**, pero no todas están en el mismo lugar: las **sin resolver** viven en el bloque de vencimientos por revisar, y las **confirmadas y las omitidas** viven en el historial. Salen de la proyección por la misma razón —ya existen— y se encuentran en destinos distintos.
+
+La proyección y el generador SHALL derivar de un único caminante de calendario, de modo que no puedan divergir: toda fila proyectada corresponde a una ocurrencia que el generador todavía puede producir.
 
 #### Scenario: Una regla creada desde un movimiento no proyecta su propia semilla
 
-- **WHEN** hoy es `2026-08-04` y existe una regla mensual con `start_date = 2026-08-04` y `last_generated_date = 2026-08-04` (creada desde un movimiento registrado hoy)
+- **WHEN** hoy es `2026-08-04` y existe una regla mensual creada a partir de un movimiento registrado hoy, cuyo movimiento semilla cubre el `2026-08-04`
 - **THEN** "Próximos 7 días" NO muestra una ocurrencia el `2026-08-04`
 - **AND** la próxima ocurrencia proyectada de esa regla es el `2026-09-04`
 
-#### Scenario: Una regla directa sin ocurrencias proyecta su start_date
+#### Scenario: Una regla directa sin nada cubierto proyecta su start_date
 
-- **WHEN** hoy es `2026-08-04` y existe una regla mensual con `start_date = 2026-08-07` y `last_generated_date = NULL`
+- **WHEN** hoy es `2026-08-04` y existe una regla mensual con `start_date = 2026-08-07`, sin movimiento semilla y sin ninguna instancia materializada
 - **THEN** "Próximos 7 días" muestra una ocurrencia el `2026-08-07`
 
-#### Scenario: Una regla cuyo cursor quedó en el futuro no proyecta esa ocurrencia
+#### Scenario: Una ocurrencia futura ya materializada no se proyecta
 
-- **WHEN** hoy es `2026-08-04` y existe una regla mensual con `start_date = 2026-08-07` y `last_generated_date = 2026-08-07`
+- **WHEN** hoy es `2026-08-04` y una regla mensual con `start_date = 2026-08-07` ya tiene materializada la ocurrencia del `2026-08-07`
 - **THEN** ninguna de las dos cards muestra una ocurrencia el `2026-08-07`
 - **AND** la próxima ocurrencia proyectada es el `2026-09-07`
 
@@ -152,6 +156,12 @@ Una ocurrencia que **ya existe** NO SHALL dibujarse como próxima, y eso incluye
 - **WHEN** una regla tiene una instancia pendiente sin resolver fechada dentro de la ventana proyectada
 - **THEN** esa ocurrencia NO aparece en la card de próximas
 - **AND** el bloque de vencimientos por revisar la muestra con sus acciones
+
+#### Scenario: Resolver un vencimiento no esconde a los anteriores
+
+- **WHEN** una regla debe los vencimientos de julio y de agosto, y el usuario resuelve el de agosto
+- **THEN** el de julio sigue apareciendo como pendiente de resolver
+- **AND** no queda cubierto por haberse resuelto uno posterior
 
 #### Scenario: La proyección no suma montos entre monedas
 

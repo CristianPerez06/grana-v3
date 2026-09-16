@@ -17,6 +17,11 @@ Lo que hay hoy y condiciona el enfoque:
 - **El bloque de vencimientos NO agrupa por regla.** Web y nativo muestran una lista
   plana de ocurrencias. No existe una cabecera de grupo donde colgar un aviso por regla,
   y agrupar la lista es otra entrega.
+- **La proyección descarta un conjunto de fechas cubiertas, no un cursor.**
+  `covered` reemplazó a `last_generated_date` justamente porque el cursor fallaba en las
+  dos direcciones (cubría de más al resolver fuera de orden, y de menos con una pendiente
+  sin resolver — el #118). Este change no lo toca: sólo corrige el texto del spec, que
+  seguía pidiendo el cursor.
 - **Las dos tarjetas de «lo que viene» son sólo de web**
   (`upcoming-recurrences.tsx`). El hub nativo muestra la próxima fecha en cada fila de
   regla y no tiene tarjetas equivalentes.
@@ -42,10 +47,11 @@ Lo que hay hoy y condiciona el enfoque:
 
 **1 · «Trabada» es una propiedad de la REGLA, no del bloque.**
 
-El bloque agrupa por regla, así que la pregunta se puede hacer de dos formas y dan
-resultados distintos. Tres reglas con un vencido cada una **no** son tres reglas
-trabadas: es un usuario que estuvo unos días sin entrar, y llamarlo «trabado» sería
-alarmismo. Una regla con veintisiete sin resolver sí lo está.
+La pregunta se puede hacer de dos formas y dan resultados distintos: contando los
+vencidos del bloque, o contando los de cada regla. Tres reglas con un vencido cada una
+**no** son tres reglas trabadas: es un usuario que estuvo unos días sin entrar, y
+llamarlo «trabado» sería alarmismo. Una regla con veintisiete sin resolver sí lo está.
+Así que la cuenta se hace por regla, aunque la lista que el usuario ve sea plana.
 
 **Dónde se dibuja, dado que la lista es plana.** Una línea **por cada regla trabada**, en
 una tira al principio del bloque, cada una con el nombre de su regla, su fecha y su
