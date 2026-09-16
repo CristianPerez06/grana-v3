@@ -172,7 +172,7 @@ describe('stuckRules', () => {
     ]
 
     expect(stuckRules(backlog, TODAY)).toEqual([
-      { recurrence_id: 'r1', since: '2026-06-10', count: 3, countIsPartial: false },
+      { recurrence_id: 'r1', since: '2026-06-10', count: 3 },
     ])
   })
 
@@ -228,15 +228,18 @@ describe('stuckRules', () => {
     expect(stuckRules(paused, TODAY)).toHaveLength(1)
   })
 
-  it('marks the count PARTIAL while the backlog is still materializing', () => {
-    // Overdue occurrences materialize in bounded runs, so a long backlog can
-    // still owe rows. Presenting the count as the total would state a number the
-    // system does not have.
+  it('does NOT carry whether the rebuild is still running', () => {
+    // The only signal for that is the materialization's `remaining`, which is one
+    // number for the whole run and says nothing about WHICH rule owes it — and
+    // the generator only queries active rules. Hanging it off each rule made a
+    // paused one claim we were recovering a backlog nobody was recovering. The
+    // surface says it once, globally, instead.
     const backlog = [owed('r1', '2026-06-10'), owed('r1', '2026-07-10')]
 
-    expect(stuckRules(backlog, TODAY, { reconstructionPending: true })[0]).toMatchObject({
-      count: 2,
-      countIsPartial: true,
-    })
+    expect(Object.keys(stuckRules(backlog, TODAY)[0]).sort()).toEqual([
+      'count',
+      'recurrence_id',
+      'since',
+    ])
   })
 })

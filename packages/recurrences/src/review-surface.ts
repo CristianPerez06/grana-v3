@@ -138,12 +138,6 @@ export type StuckRule = {
   since: string
   /** How many unresolved occurrences of this rule are THERE TO REVIEW. */
   count: number
-  /**
-   * `true` when the materialization still owes occurrences, so `count` is what
-   * exists so far and not the whole backlog. The surface must say so instead of
-   * presenting the number as closed.
-   */
-  countIsPartial: boolean
 }
 
 /**
@@ -166,7 +160,15 @@ export type StuckRule = {
  * THE COUNT IS WHAT EXISTS, NOT THE BACKLOG. Overdue occurrences materialize in
  * bounded runs (`RECONSTRUCTION_BATCH_SIZE`) and continue on the next one, so a
  * long backlog can still owe rows. Counting them is counting what is there to
- * review; `countIsPartial` says when that is less than the whole.
+ * review, which is why the copy says "para revisar" and never "en total".
+ *
+ * WHETHER THE REBUILD IS STILL RUNNING IS NOT ASKED HERE, and that is deliberate.
+ * The only signal available is the materialization's `remaining`, which is a
+ * SINGLE NUMBER FOR THE WHOLE RUN — it does not say which rule owes it, and the
+ * generator only ever queries `status = 'active'` rules. Attributing it to each
+ * rule would make a paused rule announce that we are still recovering "its"
+ * backlog while the generator is not looking at it at all. The surface says it
+ * once, globally, instead.
  *
  * A rule's `status` does not exempt it. A paused rule with occurrences piled up
  * is stuck too: pausing explains why no more arrive, not why the ones already
@@ -175,7 +177,6 @@ export type StuckRule = {
 export function stuckRules(
   instances: Pick<PendingRecurrenceInstance, 'due_date' | 'recurrence'>[],
   today: string,
-  options: { reconstructionPending?: boolean } = {},
 ): StuckRule[] {
   const byRule = new Map<string, string[]>()
   for (const instance of instances) {
@@ -191,12 +192,7 @@ export function stuckRules(
     // ISO dates read as strings, and keeps the comparison textual throughout.
     const since = dates.reduce((oldest, date) => (date < oldest ? date : oldest))
     if (since > today) continue
-    stuck.push({
-      recurrence_id,
-      since,
-      count: dates.length,
-      countIsPartial: options.reconstructionPending === true,
-    })
+    stuck.push({ recurrence_id, since, count: dates.length })
   }
   stuck.sort((a, b) => a.since.localeCompare(b.since) || a.recurrence_id.localeCompare(b.recurrence_id))
   return stuck

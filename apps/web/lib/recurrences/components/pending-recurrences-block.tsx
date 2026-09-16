@@ -102,18 +102,35 @@ export const PendingRecurrencesBlock = ({
   // only what exists so far — the reconstruction runs in bounded batches and
   // continues on the next one.
   const materialization = useRecurrenceMaterialization()
-  const stuck = stuckRules(pending, todayISO, {
-    reconstructionPending: (materialization?.remaining ?? 0) > 0,
-  })
+  const stuck = stuckRules(pending, todayISO)
+  // Said ONCE, not per rule: `remaining` is one number for the whole run and the
+  // generator only looks at active rules, so hanging it off each line would have
+  // a paused rule claim we are recovering a backlog nobody is recovering.
+  const stillRebuilding = (materialization?.remaining ?? 0) > 0
+
+  /**
+   * The rule's name AS IT IS NOW, the same way the hub derives it.
+   *
+   * NOT `instance.description` and NOT `instance.category`: those are the
+   * occurrence's own snapshot, editable one row at a time. Reading them would
+   * let a single edited pendiente rename the notice, and would keep saying
+   * "Internet" after the rule was renamed to "Fibra hogar" — on a sentence whose
+   * whole job is to name the rule.
+   *
+   * The rule's category embed is not on this read, so the occurrence's is used
+   * only when it still POINTS AT the rule's current `category_id`. Equal by id,
+   * it is the rule's category; different, it is a per-occurrence override and the
+   * movement label answers instead.
+   */
   const ruleTitle = (recurrenceId: string): string => {
     const row = pending.find((instance) => instance.recurrence.id === recurrenceId)
-    if (!row) return ''
-    return (
-      row.description ||
-      (row.category ? getCategoryName(row.category, tRoot) : null) ||
-      row.recurrence.description ||
-      t('pending.stuck_unnamed')
-    )
+    if (!row) return t('pending.stuck_unnamed')
+    const rule = row.recurrence
+    if (rule.description) return rule.description
+    if (row.category && row.category.id === rule.category_id) {
+      return getCategoryName(row.category, tRoot)
+    }
+    return tTx(`types.${rule.movement_type}` as 'types.income') || t('pending.stuck_unnamed')
   }
 
   // Edit mode: at most one instance edited at a time, to keep UI focused.
@@ -349,13 +366,18 @@ export const PendingRecurrencesBlock = ({
               className="rounded-[12px] border px-3 py-2 text-[13px] font-medium leading-snug"
               style={{ borderColor: '#EAD9A8', backgroundColor: 'var(--warning-bg)', color: 'var(--warning)' }}
             >
-              {t(rule.countIsPartial ? 'pending.stuck_partial' : 'pending.stuck', {
+              {t('pending.stuck', {
                 rule: ruleTitle(rule.recurrence_id),
                 since: formatShortDate(rule.since),
                 count: rule.count,
               })}
             </p>
           ))}
+          {stillRebuilding && (
+            <p className="text-[12px] font-medium text-text-muted">
+              {t('pending.stuck_rebuilding')}
+            </p>
+          )}
         </div>
       )}
 

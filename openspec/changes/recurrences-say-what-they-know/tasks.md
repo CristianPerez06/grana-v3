@@ -6,7 +6,7 @@ que cada paso tiene que cumplir.
 ## 1. La decisión nueva, en un solo lugar
 
 - [x] 1.1 En `@grana/recurrences` (`review-surface.ts`), agregar la decisión de **regla trabada**: dos o más ocurrencias sin resolver **y** la más vieja ya vencida. Devolver, además del sí/no, la fecha de la más vieja y cuántas hay — el aviso las nombra y no se pueden recalcular en cada plataforma. Verificar con tests los cuatro bordes: una sola vencida (no), dos futuras (no), dos con la más vieja vencida (sí), veintisiete desde junio (sí, con fecha y conteo).
-- [x] 1.1b El conteo se expone como **lo que hay para revisar**, y la decisión lleva si queda reconstrucción pendiente, para que el aviso no dé un total que el sistema no tiene (la materialización corre por lotes de 50 con continuación). Verificar con un test que, con reconstrucción pendiente, el aviso no presenta el conteo como cerrado.
+- [x] 1.1b El conteo se expone como **lo que hay para revisar**, y el aviso de que todavía se está reconstruyendo se dice **una sola vez, global**, NO por regla: el `remaining` de la materialización es un único número de toda la corrida y el generador sólo consulta reglas `active`, así que atribuírselo a cada regla hacía que una pausada afirmara que se estaba recuperando su atraso. Verificado con dos regresiones: el aviso global aparece una sola vez con dos reglas trabadas, y una regla pausada conviviendo con una activa responsable del `remaining` no lo afirma.
 - [x] 1.2 Verificar en negativo que «trabada» NO se decide sobre el bloque entero: tres reglas distintas con una vencida cada una no producen ningún aviso. Es el caso que el `design.md` usa para justificar que la propiedad es de la regla.
 - [x] 1.3 Verificar que el `status` de la regla no la exime: una regla pausada con dos vencidas también cuenta. El aviso describe vencimientos sin resolver, y ninguna condición de la regla los resuelve por su cuenta.
 
@@ -25,7 +25,7 @@ que cada paso tiene que cumplir.
 
 ## 4. Cierre
 
-- [x] 4.1 `pnpm verify` en verde. **Nota de orden**: el gate `check:unarchived` —que entró en `main` con el PR #151— falla mientras el change siga activo y el PR toque código, así que `verify` completo no puede estar en verde ANTES de archivar. Se corrieron acá todos sus pasos menos ése (lint y typecheck de las dos apps, tests del monorepo, build, y los chequeos de specs), y el `verify` completo se corre después del 4.3.
+- [ ] 4.1 `pnpm verify` en verde. **Queda pendiente hasta después del archivado**: **Nota de orden**: el gate `check:unarchived` —que entró en `main` con el PR #151— falla mientras el change siga activo y el PR toque código, así que `verify` completo no puede estar en verde ANTES de archivar. Se corrieron acá todos sus pasos menos ése (lint y typecheck de las dos apps, tests del monorepo, build, y los chequeos de specs), y el `verify` completo se corre después del 4.3.
 - [ ] 4.2 QA manual en las dos plataformas: acumular dos vencidas en una regla y ver el aviso con su fecha y su conteo; comprobar que una sola vencida no lo dispara. En web, además, comprobar la segunda tarjeta pasado el día 22 del mes, que es cuando hoy se vacía.
 - [ ] 4.3 Archivar el change y aplicar el delta al spec maestro de `transactions`.
 - [ ] 4.4 `pnpm openspec:check` en verde.

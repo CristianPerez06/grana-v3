@@ -1749,8 +1749,8 @@
         "transfer": "Al registrarlo: transferencia de {amount} el {date}, de {account} a {destination}"
       },
       "stuck": "«{rule}» está trabada desde el {since}. Hay {count} vencimientos para revisar.",
-      "stuck_partial": "«{rule}» está trabada desde el {since}. Ya hay {count} vencimientos para revisar y todavía estamos recuperando el resto.",
-      "stuck_unnamed": "Esta recurrencia"
+      "stuck_unnamed": "Esta recurrencia",
+      "stuck_rebuilding": "Todavía estamos recuperando vencimientos anteriores; estos conteos pueden aumentar."
     },
     "suggestion": {
       "title": "Parece que esto se repite",

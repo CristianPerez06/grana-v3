@@ -1749,8 +1749,8 @@
         "transfer": "On registering: a transfer of {amount} on {date}, from {account} to {destination}"
       },
       "stuck": "“{rule}” has been stuck since {since}. There are {count} due dates to review.",
-      "stuck_partial": "“{rule}” has been stuck since {since}. There are {count} due dates to review so far, and we are still recovering the rest.",
-      "stuck_unnamed": "This recurrence"
+      "stuck_unnamed": "This recurrence",
+      "stuck_rebuilding": "We are still recovering earlier due dates; these counts may grow."
     },
     "suggestion": {
       "title": "Looks like this is recurring",
