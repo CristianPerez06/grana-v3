@@ -21,21 +21,15 @@ llamarlo "pagos" —lo que afirmaría que hubo pago, que es justamente lo que no
 Cada fila SHALL indicar a qué vencimiento corresponde, y SHALL explicitar qué va a ocurrir al
 resolverla —qué movimiento se crea, con qué fecha y en qué cuenta— antes de que el usuario confirme.
 
-**Una ocurrencia de una regla pausada SHALL decir que lo está.** La ocurrencia sigue listada —el
-usuario todavía puede confirmarla u omitirla, y esconderla le sacaría de la vista algo que puede
-querer resolver— y SHALL llevar una marca visible que la identifique como perteneciente a una regla
-pausada. El sistema NO SHALL retirar del bloque las ocurrencias de reglas pausadas, y NO SHALL
-presentarlas sin distinción de las de reglas activas: sin la marca, pausar no se distingue de no
-haber pausado.
-
 **El sistema SHALL avisar cuando una regla está trabada.** Una regla está trabada cuando acumula
 **dos o más ocurrencias sin resolver y la más vieja ya está vencida**. En ese caso el bloque SHALL
 nombrar la situación con todas sus letras, indicando **desde cuándo** —la fecha de la ocurrencia sin
 resolver más antigua— y **cuántas** ocurrencias sin resolver hay. El aviso NO SHALL bloquear ninguna
 acción, NO SHALL introducir una acción nueva —confirmar, editar, omitir y ponerse al día siguen
 siendo las que hay— y NO SHALL afirmar deuda, por la misma razón que el resto del bloque. Una regla
-pausada con ocurrencias acumuladas SHALL contar para este aviso: estar pausada explica por qué no
-llegan más, no por qué las que ya llegaron siguen sin resolverse.
+con ocurrencias acumuladas SHALL contar para este aviso **cualquiera sea su `status`**: el aviso
+describe vencimientos que quedaron sin resolver, y ninguna condición de la regla los resuelve por su
+cuenta.
 
 Estas reglas SHALL aplicar por igual en web y en la app nativa.
 
@@ -67,18 +61,6 @@ Estas reglas SHALL aplicar por igual en web y en la app nativa.
 - **WHEN** el usuario confirma una instancia recurrente
 - **THEN** se crea una transaccion real
 - **AND** el movimiento aparece en el historial global segun su fecha contable
-
-#### Scenario: El vencimiento de una regla pausada se distingue
-
-- **WHEN** el usuario pausa una regla que tiene una ocurrencia sin resolver
-- **THEN** esa ocurrencia sigue apareciendo en el bloque de vencimientos por revisar
-- **AND** lleva una marca que dice que la regla está pausada
-- **AND** conserva sus acciones de confirmar, editar y omitir
-
-#### Scenario: Reanudar la regla retira la marca
-
-- **WHEN** el usuario reanuda una regla pausada que tenía una ocurrencia sin resolver
-- **THEN** esa ocurrencia sigue en el bloque y ya no lleva la marca de pausada
 
 #### Scenario: Una regla con vencimientos acumulados se nombra como trabada
 

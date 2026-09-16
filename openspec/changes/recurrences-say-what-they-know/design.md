@@ -9,8 +9,6 @@ Lo que hay hoy y condiciona el enfoque:
   cuán vencida está cada fila y qué movimiento va a crear. El comentario del módulo dice
   por qué existe: web y nativo contestaban las mismas preguntas por separado, y así fue
   como se separaron. Lo nuevo entra ahí.
-- **El dato de la pausa ya llega**: cada fila pendiente carga su regla completa, y la
-  regla trae `status`. No hace falta pedirle nada nuevo a la base.
 - **Desde `fix-recurrence-backlog` los vencimientos atrasados existen como filas.**
   Antes se materializaba uno por regla; ahora se materializan todos. Eso importa para
   el aviso de regla trabada: contar filas sin resolver es contar la realidad, no una
@@ -23,8 +21,8 @@ Lo que hay hoy y condiciona el enfoque:
 
 **Goals:**
 
-- Que las tres respuestas nuevas —está pausada, está trabada, qué entra en la ventana—
-  se decidan una sola vez y las dos plataformas las consuman.
+- Que las dos respuestas nuevas —está trabada, qué entra en la ventana— se decidan una
+  sola vez y las dos plataformas las consuman.
 - Que el aviso de regla trabada tenga un umbral escrito y comprobable, no una impresión.
 
 **Non-Goals:**
@@ -32,6 +30,9 @@ Lo que hay hoy y condiciona el enfoque:
 - No se toca la generación, ni el cálculo de la próxima fecha, ni ningún monto.
 - No se agrega ninguna acción. El aviso de trabada usa las que ya existen.
 - No se construyen las tarjetas de «lo que viene» en nativo (ver `proposal.md`).
+- No se toca qué pasa al pausar una regla. Ese comportamiento se separó en un change
+  propio: escribe en la base y necesita un diálogo nuevo, y mezclarlo acá convertiría un
+  cambio que no toca datos en uno que sí.
 
 ## Decisions
 
@@ -57,14 +58,7 @@ El relevamiento decía «dos períodos sin resolverse»; esto lo escribe en tér
 que se puede contar sin ambigüedad —filas sin resolver y la fecha de la más vieja—
 porque «período» no está definido para una regla personalizada de cada 10 días.
 
-**3 · La marca de pausada se deriva de `recurrence.status`, no de un campo nuevo.**
-
-La regla ya dice si está pausada y ese dato viaja con cada fila pendiente. Derivarlo en
-`review-surface.ts` mantiene la propiedad que este repo ya paga en otros lados: una sola
-fuente, imposible que web y nativo digan cosas distintas. Alternativa descartada:
-calcularlo en cada bloque. Es exactamente el patrón que el módulo existe para evitar.
-
-**4 · La segunda ventana pasa a `[hoy+8, hoy+30]` y sigue siendo disjunta de la primera.**
+**3 · La segunda ventana pasa a `[hoy+8, hoy+30]` y sigue siendo disjunta de la primera.**
 
 Lo único que cambia es el final: `hoy+30` en vez de `fin de mes`. El comienzo sigue en
 `hoy+8` para que las dos tarjetas no muestren la misma ocurrencia dos veces, que es lo
@@ -81,16 +75,15 @@ la fecha, no al usuario, y no afirma deuda: «Esta recurrencia está trabada des
 de junio. Hay 27 ocurrencias sin registrar.» Es la misma línea que el bloque ya sostiene
 para el resto de su lenguaje.
 
-**Una regla pausada con vencimientos viejos va a mostrar las dos cosas a la vez** —el
-sello «Pausada» y el aviso de trabada— **y puede leerse como contradicción** → No lo es,
-y conviene que se vea: pausar explica que no vengan más, no que las que ya están se
-resuelvan solas. Es justamente el caso donde el usuario cree que pausar ordenó algo y no
-ordenó nada.
+**Una regla pausada con vencimientos viejos va a mostrarse como trabada** → Es
+correcto mientras pausar no los resuelva, que es como funciona hoy. Cuando entre el
+change de la pausa, esos vencimientos dejarán de existir al pausar y el caso se vuelve
+imposible por construcción — sin que esta regla tenga que cambiar.
 
 **Cambiar la ventana a 30 días hace que la segunda tarjeta casi nunca esté vacía** →
 Deseado. Hoy está vacía una semana de cada cuatro, y esa es la falla.
 
-**Nativo no tiene runner de tests**, así que el sello y el aviso del lado nativo se
-sostienen en el modelo compartido, el typecheck y la QA manual → El umbral y la
+**Nativo no tiene runner de tests**, así que el aviso del lado nativo se
+sostiene en el modelo compartido, el typecheck y la QA manual → El umbral y la
 derivación se pinchan con tests en `@grana/recurrences`, que es donde se decide; lo que
 queda sin cubrir en nativo es el dibujo, no la regla.
