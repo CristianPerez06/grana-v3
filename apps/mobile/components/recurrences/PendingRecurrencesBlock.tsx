@@ -8,6 +8,7 @@ import {
   reviewFeedState,
   reviewUrgency,
   shouldOpenReviewBlock,
+  stuckRules,
 } from '@grana/recurrences'
 import type { PendingRecurrenceInstance } from '@grana/recurrences'
 import { getPendingRecurrences } from '../../lib/recurrences/queries'
@@ -23,6 +24,7 @@ import { fmtMoney, formatShortDate } from '../transactions/detail/format'
 import { amountSign, amountToneClass, categoryName, movementLabel } from './format'
 import { Card } from '../ui/Card'
 import { RecurrenceFailureNotice } from './MaterializationNotice'
+import { useRecurrenceMaterialization } from '../../lib/recurrences/materialization-context'
 
 type DoneAction = 'confirmed' | 'skipped'
 
@@ -191,6 +193,26 @@ export function PendingRecurrencesBlock() {
   const todayISO = formatDateISO(getTodayAR())
   const isOpen = openOverride ?? shouldOpenReviewBlock(instances, todayISO)
 
+  // WHICH RULES STOPPED MOVING — same decision as web, from the same module, so
+  // the two platforms cannot answer it differently. The materialization context
+  // says whether the backlog is still being rebuilt, which is what turns the
+  // count from "this is all of it" into "this is what there is so far".
+  const locale = useLocale()
+  const materialization = useRecurrenceMaterialization()
+  const stuck = stuckRules(instances, todayISO, {
+    reconstructionPending: (materialization?.remaining ?? 0) > 0,
+  })
+  const ruleTitle = (recurrenceId: string): string => {
+    const row = instances.find((instance) => instance.recurrence.id === recurrenceId)
+    if (!row) return t('recurrences.pending.stuck_unnamed')
+    return (
+      row.description ||
+      categoryName(row.category, t) ||
+      row.recurrence.description ||
+      t('recurrences.pending.stuck_unnamed')
+    )
+  }
+
   if (feed.kind === 'unreadable') {
     return (
       <RecurrenceFailureNotice
@@ -291,6 +313,33 @@ export function PendingRecurrencesBlock() {
               >
                 <X size={14} color={colors.emeraldDeep} />
               </Pressable>
+            </View>
+          ) : null}
+
+          {isOpen && stuck.length > 0 ? (
+            <View className="mx-4 mb-3 gap-1.5">
+              {/* ONE LINE PER STUCK RULE, never a total — same rule as web. The
+                  list below stays flat; grouping it by rule is its own
+                  delivery. */}
+              {stuck.map((rule) => (
+                <View
+                  key={rule.recurrence_id}
+                  className="rounded-xl border border-warning/30 bg-warning-bg px-3 py-2"
+                >
+                  <Text className="text-[13px] font-medium leading-snug text-warning">
+                    {t(
+                      rule.countIsPartial
+                        ? 'recurrences.pending.stuck_partial'
+                        : 'recurrences.pending.stuck',
+                      {
+                        rule: ruleTitle(rule.recurrence_id),
+                        since: formatShortDate(rule.since, locale),
+                        count: rule.count,
+                      },
+                    )}
+                  </Text>
+                </View>
+              ))}
             </View>
           ) : null}
 

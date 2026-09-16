@@ -1747,7 +1747,10 @@
         "expense": "On registering: an expense of {amount} on {date} from {account}",
         "income": "On registering: an income of {amount} on {date} into {account}",
         "transfer": "On registering: a transfer of {amount} on {date}, from {account} to {destination}"
-      }
+      },
+      "stuck": "“{rule}” has been stuck since {since}. There are {count} due dates to review.",
+      "stuck_partial": "“{rule}” has been stuck since {since}. There are {count} due dates to review so far, and we are still recovering the rest.",
+      "stuck_unnamed": "This recurrence"
     },
     "suggestion": {
       "title": "Looks like this is recurring",
@@ -1814,7 +1817,7 @@
     "next_prefix": "next:",
     "upcoming": {
       "next_7_days": "Next 7 days",
-      "later_this_month": "Later this month",
+      "next_30_days": "Next 30 days",
       "info_only": "Info only",
       "empty": "Nothing here."
     },

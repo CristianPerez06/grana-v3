@@ -7,6 +7,7 @@ import { Check, ChevronDown, Clock, Pencil, Repeat, Users, X } from 'lucide-reac
 import { useTranslations } from 'next-intl'
 import { formatDateISO, formatShortDate, getTodayAR } from '@/lib/date'
 import { getCategoryName } from '@/lib/categories/display'
+import { useRecurrenceMaterialization } from '@/lib/recurrences/materialization-context'
 import {
   confirmRecurrenceInstance,
   skipRecurrenceInstance,
@@ -16,6 +17,8 @@ import {
   resolutionPreview,
   reviewUrgency,
   shouldOpenReviewBlock,
+  stuckRules,
+  type StuckRule,
 } from '@grana/recurrences'
 import { useShowCents } from '@/lib/preferences-context'
 import { parseMoneyInput } from '@grana/validation'
@@ -93,6 +96,25 @@ export const PendingRecurrencesBlock = ({
   // Only a block made entirely of occurrences that have NOT fallen due yet stays
   // collapsed, and it is not really this block's job to shout about those.
   const [isOpen, setIsOpen] = useState(() => shouldOpenReviewBlock(pending, todayISO))
+
+  // WHICH RULES STOPPED MOVING. Read from the same materialization context the
+  // failure notice uses, so the count can say whether it is the whole backlog or
+  // only what exists so far — the reconstruction runs in bounded batches and
+  // continues on the next one.
+  const materialization = useRecurrenceMaterialization()
+  const stuck = stuckRules(pending, todayISO, {
+    reconstructionPending: (materialization?.remaining ?? 0) > 0,
+  })
+  const ruleTitle = (recurrenceId: string): string => {
+    const row = pending.find((instance) => instance.recurrence.id === recurrenceId)
+    if (!row) return ''
+    return (
+      row.description ||
+      (row.category ? getCategoryName(row.category, tRoot) : null) ||
+      row.recurrence.description ||
+      t('pending.stuck_unnamed')
+    )
+  }
 
   // Edit mode: at most one instance edited at a time, to keep UI focused.
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -311,6 +333,29 @@ export const PendingRecurrencesBlock = ({
           >
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {isOpen && stuck.length > 0 && (
+        <div className="mx-4 mb-3 flex flex-col gap-1.5 sm:mx-6">
+          {/* ONE LINE PER STUCK RULE, never a total. Two stuck rules are two
+              lines: a single "tenés 30 vencimientos trabados" would tell a story
+              that did not happen when what there is is one broken rule and two
+              waiting for a tap. The list below stays flat — grouping it by rule
+              is its own delivery. */}
+          {stuck.map((rule: StuckRule) => (
+            <p
+              key={rule.recurrence_id}
+              className="rounded-[12px] border px-3 py-2 text-[13px] font-medium leading-snug"
+              style={{ borderColor: '#EAD9A8', backgroundColor: 'var(--warning-bg)', color: 'var(--warning)' }}
+            >
+              {t(rule.countIsPartial ? 'pending.stuck_partial' : 'pending.stuck', {
+                rule: ruleTitle(rule.recurrence_id),
+                since: formatShortDate(rule.since),
+                count: rule.count,
+              })}
+            </p>
+          ))}
         </div>
       )}
 

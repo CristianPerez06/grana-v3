@@ -88,10 +88,12 @@ export {
   resolutionPreview,
   materializationOutcome,
   reviewFeedState,
+  stuckRules,
   type ReviewUrgency,
   type ResolutionPreview,
   type MaterializationOutcome,
   type ReviewFeedState,
+  type StuckRule,
 } from './review-surface'
 export { referenceDateChoice } from './schedule-edit'
 export type { ReferenceDateChoice } from './schedule-edit'

@@ -1747,7 +1747,10 @@
         "expense": "Al registrarlo: gasto de {amount} el {date} desde {account}",
         "income": "Al registrarlo: ingreso de {amount} el {date} en {account}",
         "transfer": "Al registrarlo: transferencia de {amount} el {date}, de {account} a {destination}"
-      }
+      },
+      "stuck": "«{rule}» está trabada desde el {since}. Hay {count} vencimientos para revisar.",
+      "stuck_partial": "«{rule}» está trabada desde el {since}. Ya hay {count} vencimientos para revisar y todavía estamos recuperando el resto.",
+      "stuck_unnamed": "Esta recurrencia"
     },
     "suggestion": {
       "title": "Parece que esto se repite",
@@ -1814,7 +1817,7 @@
     "next_prefix": "próximo:",
     "upcoming": {
       "next_7_days": "Próximos 7 días",
-      "later_this_month": "Más adelante este mes",
+      "next_30_days": "Próximos 30 días",
       "info_only": "Solo informativo",
       "empty": "Nada por aquí."
     },
