@@ -57,7 +57,7 @@ const owed = (
   rule: string,
   ruleName: string,
   due_date: string,
-  over: { description?: string | null; category?: unknown; rule_category_id?: string | null } = {},
+  over: { description?: string | null; category?: unknown; ruleCategory?: unknown } = {},
 ) =>
   ({
     id: `${rule}-${due_date}`,
@@ -74,7 +74,10 @@ const owed = (
     recurrence: {
       id: rule,
       description: ruleName,
-      category_id: over.rule_category_id ?? null,
+      // The RULE's own category, attached by the read. Separate from the
+      // occurrence's `category` above, which is its snapshot.
+      category: over.ruleCategory ?? null,
+      category_id: (over.ruleCategory as { id?: string } | undefined)?.id ?? null,
       movement_type: 'expense',
       frequency: 'monthly',
       status: 'active',
@@ -193,26 +196,52 @@ describe('de dónde sale el nombre', () => {
     expect(notice.textContent).not.toContain('expensas de junio')
   })
 
-  it('sin descripción, cae en la categoría sólo si sigue siendo la de la regla', () => {
-    const catOfRule = { id: 'c-rule', name: 'Servicios', canonical_name: null, user_id: 'u1' }
+  it('sin descripción, usa la categoría de la REGLA', () => {
+    const servicios = { id: 'c-serv', name: 'Servicios', canonical_name: null, user_id: 'u1' }
     show([
-      owed('r1', '', '2026-06-10', { description: null, category: catOfRule, rule_category_id: 'c-rule' }),
-      owed('r1', '', '2026-07-10', { description: null, category: catOfRule, rule_category_id: 'c-rule' }),
+      owed('r1', '', '2026-06-10', { description: null, ruleCategory: servicios }),
+      owed('r1', '', '2026-07-10', { description: null, ruleCategory: servicios }),
     ])
 
     expect(screen.getByText(/"rule":"Servicios"/)).toBeTruthy()
   })
 
-  it('una categoría cambiada en la ocurrencia NO nombra al aviso', () => {
-    // The occurrence points somewhere else than the rule does, so it is a
-    // per-occurrence override and cannot speak for the rule.
-    const otherCat = { id: 'c-otra', name: 'Regalos', canonical_name: null, user_id: 'u1' }
+  it('editar la categoría de UNA pendiente no cambia el título', () => {
+    // The reproduction from the review: the rule is "Servicios", the first
+    // pendiente gets moved to "Regalos", and the notice used to fall back to
+    // "Gasto" while the hub went on saying "Servicios" about the same rule.
+    const servicios = { id: 'c-serv', name: 'Servicios', canonical_name: null, user_id: 'u1' }
+    const regalos = { id: 'c-reg', name: 'Regalos', canonical_name: null, user_id: 'u1' }
     show([
-      owed('r1', '', '2026-06-10', { description: null, category: otherCat, rule_category_id: 'c-rule' }),
-      owed('r1', '', '2026-07-10', { description: null, category: otherCat, rule_category_id: 'c-rule' }),
+      owed('r1', '', '2026-06-10', { description: null, ruleCategory: servicios, category: regalos }),
+      owed('r1', '', '2026-07-10', { description: null, ruleCategory: servicios, category: servicios }),
     ])
 
+    expect(screen.getByText(/"rule":"Servicios"/)).toBeTruthy()
     expect(screen.queryByText(/"rule":"Regalos"/)).toBeNull()
+    expect(screen.queryByText(/"rule":"transactions\.types\.expense"/)).toBeNull()
+  })
+
+  it('cambiar la categoría de la REGLA sí cambia el título, con pendientes viejas', () => {
+    // The occurrences still carry the old category — they were materialized
+    // before the edit. The notice is about the rule, so it follows the rule.
+    const vieja = { id: 'c-vieja', name: 'Servicios', canonical_name: null, user_id: 'u1' }
+    const nueva = { id: 'c-nueva', name: 'Hogar', canonical_name: null, user_id: 'u1' }
+    show([
+      owed('r1', '', '2026-06-10', { description: null, ruleCategory: nueva, category: vieja }),
+      owed('r1', '', '2026-07-10', { description: null, ruleCategory: nueva, category: vieja }),
+    ])
+
+    expect(screen.getByText(/"rule":"Hogar"/)).toBeTruthy()
+    expect(screen.queryByText(/"rule":"Servicios"/)).toBeNull()
+  })
+
+  it('sin descripción y sin categoría, cae en la etiqueta del tipo', () => {
+    show([
+      owed('r1', '', '2026-06-10', { description: null }),
+      owed('r1', '', '2026-07-10', { description: null }),
+    ])
+
     expect(screen.getByText(/"rule":"transactions\.types\.expense"/)).toBeTruthy()
   })
 })

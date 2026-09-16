@@ -13,6 +13,7 @@ que cada paso tiene que cumplir.
 ## 2. Que se vea, en las dos plataformas
 
 - [x] 2.1 Web — `pending-recurrences-block.tsx`: dibujar una línea por regla trabada en una tira al principio del bloque, con el nombre de la regla, su fecha y su conteo. La lista de vencimientos sigue plana: no se agrupa por regla, eso es otra entrega. Verificar con una regresión de render que con dos reglas trabadas hay dos líneas y ningún total, y que una regla con una sola vencida no produce ninguna.
+- [x] 2.1b El título del aviso se deriva **igual que el hub** —descripción de la regla, categoría **de la regla**, etiqueta del tipo— y nunca del snapshot de la ocurrencia. La categoría de la regla no venía en la lectura de pendientes: se agrega con una lectura por ids (`attachRuleCategories`) en vez de un embed anidado, porque el adaptador PostgREST del harness resuelve un solo nivel. Verificado con regresiones para editar la categoría de una sola pendiente y para cambiar la categoría de la regla conservando pendientes viejas: las dos conservan el título del hub.
 - [x] 2.2 Nativo — `PendingRecurrencesBlock.tsx`: el mismo aviso, en el mismo commit que 2.1. Verificar abriendo las dos superficies mobile (web a ancho de teléfono y la app nativa) y comprobando que dicen lo mismo. `apps/mobile` no tiene runner de tests: lo que lo sostiene es el modelo del punto 1, el typecheck y la QA del 4.2.
 - [x] 2.3 Claves de i18n del aviso en `es.json` y `en.json`. Verificar que no queda ninguna clave nueva sin su par en los dos catálogos.
 

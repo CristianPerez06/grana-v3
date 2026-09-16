@@ -63,7 +63,12 @@ export type RecurrenceInstance = Omit<
  * `due_date_is_unknown`. The history list renders exactly these.
  */
 export type EnrichedRecurrenceInstance = RecurrenceInstance & {
-  recurrence: Recurrence
+  /**
+   * The rule, with ITS OWN category attached (`attachRuleCategories`). Surfaces
+   * that name the rule read this one; `category` below is the occurrence's
+   * snapshot and can differ after a single pendiente is edited.
+   */
+  recurrence: Recurrence & { category: RecurrenceCategory | null }
   account: RecurrenceAccount | null
   destination_account: RecurrenceAccount | null
   category: RecurrenceCategory | null

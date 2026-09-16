@@ -378,7 +378,44 @@ async function readPendingRecurrenceInstances(
 
   if (error) throw error
 
-  return data
+  return attachRuleCategories(supabase, data)
+}
+
+/**
+ * THE RULE'S OWN CATEGORY, alongside each occurrence's.
+ *
+ * `recurrence:recurrences(*)` brings the rule's columns — `category_id` among
+ * them — but not the category row, and the surfaces that NAME THE RULE need the
+ * name, not the id. They cannot fall back to `instance.category`: that is the
+ * occurrence's snapshot, editable one row at a time, so a single edited pendiente
+ * would rename a sentence that is about the rule.
+ *
+ * It is a separate read rather than a nested embed on purpose. PostgREST would
+ * express it as `recurrences(*, category:categories(...))`, and the shape of that
+ * select is what the reads are tested against — one extra keyed lookup keeps the
+ * select flat and costs one round trip on a list screen, which is the same trade
+ * the spent-positions batch already makes.
+ */
+async function attachRuleCategories<T extends { recurrence: { category_id: string | null } }>(
+  supabase: GranaSupabaseClient,
+  rows: T[],
+): Promise<T[]> {
+  const ids = [...new Set(rows.map((row) => row.recurrence.category_id).filter(Boolean))] as string[]
+  if (ids.length === 0) return rows
+
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, canonical_name, color, icon, user_id')
+    .in('id', ids)
+
+  if (error) throw error
+
+  const byId = new Map((data ?? []).map((category) => [category.id, category]))
+  for (const row of rows) {
+    const id = row.recurrence.category_id
+    ;(row.recurrence as { category?: unknown }).category = id == null ? null : (byId.get(id) ?? null)
+  }
+  return rows
 }
 
 export async function getRecurrenceDetail(
@@ -414,6 +451,8 @@ export async function getRecurrenceDetail(
   )
 
   if (instancesError) throw instancesError
+
+  await attachRuleCategories(supabase, instances)
 
   const pending = instances
     .filter((instance) => instance.status === 'pending')
@@ -472,7 +511,9 @@ export async function getRecurrenceDetail(
     ...recurrenceSummary,
     instances: instances.map((instance) => ({
       ...instance,
-      recurrence: recurrence as unknown as Recurrence,
+      // `RECURRENCE_SELECT` already embeds the rule's own category, which is what
+      // the surfaces that name the rule read.
+      recurrence: recurrence as unknown as EnrichedRecurrenceInstance['recurrence'],
     })),
   }
 }

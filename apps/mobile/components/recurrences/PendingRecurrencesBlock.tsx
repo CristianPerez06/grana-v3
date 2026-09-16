@@ -204,18 +204,19 @@ export function PendingRecurrencesBlock() {
   // single number for the whole run, and the generator only looks at active rules.
   const stillRebuilding = (materialization?.remaining ?? 0) > 0
 
-  // The rule's name AS IT IS NOW, same derivation as web and as the hub. Never
+  // The rule's name AS IT IS NOW, same derivation as web and as the hub — the
+  // rule's description, then the RULE's category, then the movement label. Never
   // the occurrence's own snapshot: editing one pendiente must not rename the
   // notice, and renaming the rule must.
   const ruleTitle = (recurrenceId: string): string => {
-    const row = instances.find((instance) => instance.recurrence.id === recurrenceId)
-    if (!row) return t('recurrences.pending.stuck_unnamed')
-    const rule = row.recurrence
-    if (rule.description) return rule.description
-    if (row.category && row.category.id === rule.category_id) {
-      return categoryName(row.category, t) || t('recurrences.pending.stuck_unnamed')
-    }
-    return movementLabel(rule.movement_type, t) || t('recurrences.pending.stuck_unnamed')
+    const rule = instances.find((instance) => instance.recurrence.id === recurrenceId)?.recurrence
+    if (!rule) return t('recurrences.pending.stuck_unnamed')
+    return (
+      rule.description ||
+      categoryName(rule.category, t) ||
+      movementLabel(rule.movement_type, t) ||
+      t('recurrences.pending.stuck_unnamed')
+    )
   }
 
   if (feed.kind === 'unreadable') {

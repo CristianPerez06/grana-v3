@@ -117,20 +117,19 @@ export const PendingRecurrencesBlock = ({
    * "Internet" after the rule was renamed to "Fibra hogar" — on a sentence whose
    * whole job is to name the rule.
    *
-   * The rule's category embed is not on this read, so the occurrence's is used
-   * only when it still POINTS AT the rule's current `category_id`. Equal by id,
-   * it is the rule's category; different, it is a per-occurrence override and the
-   * movement label answers instead.
+   * The rule carries its OWN category on this read (`attachRuleCategories`), so
+   * the three steps are the rule's all the way down and the notice says exactly
+   * what the hub says about the same rule.
    */
   const ruleTitle = (recurrenceId: string): string => {
-    const row = pending.find((instance) => instance.recurrence.id === recurrenceId)
-    if (!row) return t('pending.stuck_unnamed')
-    const rule = row.recurrence
-    if (rule.description) return rule.description
-    if (row.category && row.category.id === rule.category_id) {
-      return getCategoryName(row.category, tRoot)
-    }
-    return tTx(`types.${rule.movement_type}` as 'types.income') || t('pending.stuck_unnamed')
+    const rule = pending.find((instance) => instance.recurrence.id === recurrenceId)?.recurrence
+    if (!rule) return t('pending.stuck_unnamed')
+    return (
+      rule.description ||
+      (rule.category ? getCategoryName(rule.category, tRoot) : null) ||
+      tTx(`types.${rule.movement_type}` as 'types.income') ||
+      t('pending.stuck_unnamed')
+    )
   }
 
   // Edit mode: at most one instance edited at a time, to keep UI focused.
