@@ -9,10 +9,14 @@ Lo que hay hoy y condiciona el enfoque:
   cuán vencida está cada fila y qué movimiento va a crear. El comentario del módulo dice
   por qué existe: web y nativo contestaban las mismas preguntas por separado, y así fue
   como se separaron. Lo nuevo entra ahí.
-- **Desde `fix-recurrence-backlog` los vencimientos atrasados existen como filas.**
-  Antes se materializaba uno por regla; ahora se materializan todos. Eso importa para
-  el aviso de regla trabada: contar filas sin resolver es contar la realidad, no una
-  estimación.
+- **Desde `fix-recurrence-backlog` los vencimientos atrasados existen como filas**, pero
+  **no necesariamente todos a la vez**: la materialización corre por lotes de
+  `RECONSTRUCTION_BATCH_SIZE = 50` y lo que no entra queda en `remaining` para la
+  corrida siguiente. Eso acota lo que el aviso puede afirmar: contar filas dice cuántas
+  hay **para revisar**, no cuánto es el atraso completo.
+- **El bloque de vencimientos NO agrupa por regla.** Web y nativo muestran una lista
+  plana de ocurrencias. No existe una cabecera de grupo donde colgar un aviso por regla,
+  y agrupar la lista es otra entrega.
 - **Las dos tarjetas de «lo que viene» son sólo de web**
   (`upcoming-recurrences.tsx`). El hub nativo muestra la próxima fecha en cada fila de
   regla y no tiene tarjetas equivalentes.
@@ -43,10 +47,15 @@ resultados distintos. Tres reglas con un vencido cada una **no** son tres reglas
 trabadas: es un usuario que estuvo unos días sin entrar, y llamarlo «trabado» sería
 alarmismo. Una regla con veintisiete sin resolver sí lo está.
 
-El aviso se emite **por regla** y se dibuja en la cabecera del grupo de esa regla, no
-arriba del bloque. Alternativa descartada: un aviso único arriba que sume todo. Contaría
-una historia que no pasó —«tenés 30 vencimientos trabados»— cuando en realidad hay una
-regla rota y dos que esperan un toque.
+**Dónde se dibuja, dado que la lista es plana.** Una línea **por cada regla trabada**, en
+una tira al principio del bloque, cada una con el nombre de su regla, su fecha y su
+conteo. No es un aviso que suma: dos reglas trabadas son dos líneas, no un total.
+
+Alternativa descartada: un aviso único arriba que sume todo. Contaría una historia que no
+pasó —«tenés 30 vencimientos trabados»— cuando en realidad hay una regla rota y dos que
+esperan un toque. Alternativa descartada por alcance: agrupar la lista por regla y poner
+el aviso en cada cabecera. Es la ubicación más natural y no existe hoy; agrupar el bloque
+es una entrega propia y no entra acá.
 
 **2 · El umbral: dos o más sin resolver, y la más vieja ya vencida.**
 
@@ -57,6 +66,13 @@ una vencida» marcaría a cualquiera que se atrasó un día.
 El relevamiento decía «dos períodos sin resolverse»; esto lo escribe en términos de lo
 que se puede contar sin ambigüedad —filas sin resolver y la fecha de la más vieja—
 porque «período» no está definido para una regla personalizada de cada 10 días.
+
+**Y el conteo dice «para revisar», no «en total».** Con la reconstrucción por lotes, un
+atraso largo puede tener ocurrencias todavía sin crear, así que un total sería un número
+que el sistema no tiene. Cuando queda reconstrucción pendiente el aviso lo dice en vez de
+dar el conteo por cerrado. Alternativa descartada: calcular el atraso real caminando el
+calendario en cada lectura del bloque — es trabajo por regla en una pantalla que se abre
+todo el tiempo, para un número que la próxima corrida va a materializar igual.
 
 **3 · La segunda ventana pasa a `[hoy+8, hoy+30]` y sigue siendo disjunta de la primera.**
 
@@ -75,10 +91,12 @@ la fecha, no al usuario, y no afirma deuda: «Esta recurrencia está trabada des
 de junio. Hay 27 ocurrencias sin registrar.» Es la misma línea que el bloque ya sostiene
 para el resto de su lenguaje.
 
-**Una regla pausada con vencimientos viejos va a mostrarse como trabada** → Es
-correcto mientras pausar no los resuelva, que es como funciona hoy. Cuando entre el
-change de la pausa, esos vencimientos dejarán de existir al pausar y el caso se vuelve
-imposible por construcción — sin que esta regla tenga que cambiar.
+**Una regla pausada con vencimientos viejos va a mostrarse como trabada** → Es correcto:
+pausar no resuelve lo que quedó pendiente. El change de la pausa tampoco lo va a volver
+imposible — omitir deja las ocurrencias en el historial como omitidas, y las reglas que
+ya estaban pausadas conservan sus pendientes porque el diálogo nuevo sólo corre cuando
+alguien pausa. Lo que cambia entonces es cuántas veces se da el caso, no si puede darse,
+así que esta regla no depende de aquel change.
 
 **Cambiar la ventana a 30 días hace que la segunda tarjeta casi nunca esté vacía** →
 Deseado. Hoy está vacía una semana de cada cuatro, y esa es la falla.

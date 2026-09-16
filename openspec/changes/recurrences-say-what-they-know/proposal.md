@@ -29,7 +29,10 @@ días. La pregunta real de cualquiera es «qué se me viene», no «qué entra e
 acumula vencimientos sin resolver, aparece un aviso que nombra desde cuándo y cuántos
 son: «Esta recurrencia está trabada desde el 10 de junio. Hay 27 ocurrencias sin
 registrar.» No bloquea nada y no inventa una acción nueva: las que ya existen
-—ponerse al día, omitir, confirmar— siguen siendo las mismas.
+—confirmar, editar y omitir— siguen siendo las mismas. Y el número se presenta como lo
+que hay **para revisar**, no como el total del atraso: los vencimientos vencidos se
+materializan por lotes, así que un atraso largo puede tener todavía ocurrencias sin
+crear.
 
 ### Lo que este cambio NO hace
 
@@ -57,9 +60,15 @@ Ninguna.
 
 ### Modified Capabilities
 
-- `transactions`: dos requirements de recurrencias cambian — el bloque de pendientes
-  pasa a nombrar una regla trabada, y la proyección de próximas ocurrencias del hub pasa
-  de una ventana de mes calendario a una de 30 días corridos.
+- `transactions`: dos requirements de recurrencias cambian.
+  - El del bloque de pendientes se **modifica**: pasa a nombrar una regla trabada.
+  - El de la proyección del hub se **reemplaza** (se retira y se agrega con el nombre
+    corregido). No alcanzaba con modificarlo: uno de sus escenarios afirmaba que una
+    ocurrencia pendiente se sigue anunciando como próxima, y el sistema hace lo
+    contrario desde `fix-recurrence-backlog` —la excluye para no mostrarla en dos
+    pantallas a la vez—. Un `## MODIFIED` no puede retirar un escenario, así que
+    corregirlo en silencio no era una opción. El comportamiento en vigor no cambia:
+    cambia el texto que lo describe.
 
 ## Impact
 
