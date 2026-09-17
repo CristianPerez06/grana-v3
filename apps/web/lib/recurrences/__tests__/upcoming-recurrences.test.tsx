@@ -28,6 +28,12 @@ vi.mock('next-intl/server', () => ({
   getTranslations: async (namespace?: string) => (key: string) =>
     namespace ? `${namespace}.${key}` : key,
 }))
+// The card that caps the rows is a client component and reaches for the client
+// hook, so the server mock alone is not enough to render this tree.
+vi.mock('next-intl', () => ({
+  useTranslations: (namespace?: string) => (key: string) =>
+    namespace ? `${namespace}.${key}` : key,
+}))
 
 const { UpcomingRecurrences } = await import(
   '@/app/(app)/transactions/recurring/_components/upcoming-recurrences'

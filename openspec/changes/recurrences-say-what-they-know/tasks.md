@@ -23,6 +23,7 @@ que cada paso tiene que cumplir.
 - [x] 3.2 Verificar el borde superior con una regresión: el 25 de septiembre, una ocurrencia del 25 de octubre entra y una del 26 de octubre no.
 - [x] 3.3 Verificar que las dos ventanas siguen siendo disjuntas: ninguna ocurrencia aparece en las dos tarjetas.
 - [x] 3.4 Renombrar el rótulo de la segunda tarjeta a «Próximos 30 días» en los dos catálogos de i18n, y retirar la clave `later_this_month` si no la usa nadie más.
+- [x] 3.5 **Cada tarjeta muestra 5 filas y ofrece el resto** («Ver las otras N»), encontrado en la QA del 4.2. Ensanchar la ventana de ~6 a 30 días multiplicó las filas —dieciséis en la captura del usuario— y empujó la lista de reglas tan abajo que entrar a editar una se volvió incómodo: el costo del arreglo cayó en otra parte de la pantalla. Las dos tarjetas llevan el mismo tope, porque aplicarlo a una sola se lee como un error y no como una regla. Verificado con tres regresiones —cinco visibles con el conteo de las que faltan, todas al desplegar, y nada que abrir con cinco o menos— y en negativo quitando el tope.
 
 ## 4. Cierre
 

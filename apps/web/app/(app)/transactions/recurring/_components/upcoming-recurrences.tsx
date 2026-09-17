@@ -9,6 +9,7 @@ import {
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { getCategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
+import { UpcomingCard } from './upcoming-card'
 
 type Props = {
   rules: RecurrenceSummary[]
@@ -124,28 +125,21 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
     )
   }
 
-  const renderCard = (
-    title: string,
-    note: string,
-    rows: { rule_id: string; scheduled_date: string }[],
-  ) => (
-    <div className="overflow-hidden rounded-[18px] border border-border bg-card">
-      <div className="flex items-baseline justify-between px-5 pb-2.5 pt-4">
-        <span className="text-[14px] font-bold tracking-[-0.01em] text-text">{title}</span>
-        <span className="text-[12.5px] font-medium text-text-soft">{note}</span>
-      </div>
-      {rows.length === 0 ? (
-        <p className="px-5 pb-4 text-[13px] text-text-muted">{tRec('upcoming.empty')}</p>
-      ) : (
-        <div className="pb-1.5">{rows.map(renderRow)}</div>
-      )}
-    </div>
+  // The rows are rendered here, on the server; `UpcomingCard` only decides how
+  // many of them show at once.
+  const renderCard = (title: string, rows: { rule_id: string; scheduled_date: string }[]) => (
+    <UpcomingCard
+      title={title}
+      note={tRec('upcoming.info_only')}
+      rows={rows.map(renderRow)}
+      emptyLabel={tRec('upcoming.empty')}
+    />
   )
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {renderCard(tRec('upcoming.next_7_days'), tRec('upcoming.info_only'), next7)}
-      {renderCard(tRec('upcoming.next_30_days'), tRec('upcoming.info_only'), later)}
+      {renderCard(tRec('upcoming.next_7_days'), next7)}
+      {renderCard(tRec('upcoming.next_30_days'), later)}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 
 /**
@@ -25,6 +25,11 @@ vi.mock('@grana/money-logic', async () => {
 })
 vi.mock('next-intl/server', () => ({
   getTranslations: async (namespace?: string) => (key: string) =>
+    namespace ? `${namespace}.${key}` : key,
+}))
+// `UpcomingCard` is a client component and reaches for the client hook.
+vi.mock('next-intl', () => ({
+  useTranslations: (namespace?: string) => (key: string) =>
     namespace ? `${namespace}.${key}` : key,
 }))
 
@@ -106,5 +111,47 @@ describe('la segunda ventana llega a 30 días', () => {
     expect(screen.getAllByText('23 oct')).toHaveLength(1)
     expect(screen.getAllByText('Internet')).toHaveLength(1)
     expect(screen.getAllByText('Alquiler')).toHaveLength(1)
+  })
+})
+
+/**
+ * THE CARD IS CAPPED, because widening the window is what made it long.
+ *
+ * Sixteen rows push the rule list far enough down that someone who came to edit
+ * a rule scrolls past a card they were not looking for. The horizon was the fix;
+ * the length was its cost, and it lands on a different part of the screen.
+ */
+describe('la tarjeta muestra cinco y ofrece el resto', () => {
+  /**
+   * Eight monthly rules falling due 10–17 October: all of them inside the SECOND
+   * window (03–25 Oct from the 25th) and none in the first. Spreading them across
+   * both cards would count the two cards' rows together and say nothing about
+   * either one's cap.
+   */
+  const eight = Array.from({ length: 8 }, (_, i) =>
+    monthly(`r${i}`, `Regla ${i}`, `2026-06-${10 + i}`),
+  )
+
+  it('muestra cinco filas y un botón que dice cuántas faltan', async () => {
+    await show(eight)
+
+    // Five of the eight are drawn; the button names the three that are not.
+    expect(screen.getAllByText(/^Regla /)).toHaveLength(5)
+    expect(screen.getByText('recurrences.upcoming.show_rest')).toBeTruthy()
+  })
+
+  it('al tocarlo aparecen todas', async () => {
+    await show(eight)
+    fireEvent.click(screen.getByText('recurrences.upcoming.show_rest'))
+
+    expect(screen.getAllByText(/^Regla /)).toHaveLength(8)
+    expect(screen.queryByText('recurrences.upcoming.show_rest')).toBeNull()
+  })
+
+  it('con cinco o menos no ofrece nada que abrir', async () => {
+    await show(eight.slice(0, 4))
+
+    expect(screen.getAllByText(/^Regla /)).toHaveLength(4)
+    expect(screen.queryByText('recurrences.upcoming.show_rest')).toBeNull()
   })
 })

@@ -1819,7 +1819,8 @@
       "next_7_days": "Próximos 7 días",
       "next_30_days": "Próximos 30 días",
       "info_only": "Solo informativo",
-      "empty": "Nada por aquí."
+      "empty": "Nada por aquí.",
+      "show_rest": "Ver las otras {count}"
     },
     "created_on": "Creada el {date}",
     "edit_title": "Editar regla recurrente",
