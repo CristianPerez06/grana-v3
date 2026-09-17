@@ -1820,7 +1820,8 @@
       "next_30_days": "Next 30 days",
       "info_only": "Info only",
       "empty": "Nothing here.",
-      "show_rest": "Show the other {count}"
+      "show_rest": "Show the other {count}",
+      "show_less": "Show less"
     },
     "created_on": "Created on {date}",
     "edit_title": "Edit recurring rule",

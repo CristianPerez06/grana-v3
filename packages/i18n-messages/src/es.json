@@ -1820,7 +1820,8 @@
       "next_30_days": "Próximos 30 días",
       "info_only": "Solo informativo",
       "empty": "Nada por aquí.",
-      "show_rest": "Ver las otras {count}"
+      "show_rest": "Ver las otras {count}",
+      "show_less": "Ver menos"
     },
     "created_on": "Creada el {date}",
     "edit_title": "Editar regla recurrente",

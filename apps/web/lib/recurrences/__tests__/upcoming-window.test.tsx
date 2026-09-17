@@ -145,7 +145,17 @@ describe('la tarjeta muestra cinco y ofrece el resto', () => {
     fireEvent.click(screen.getByText('recurrences.upcoming.show_rest'))
 
     expect(screen.getAllByText(/^Regla /)).toHaveLength(8)
-    expect(screen.queryByText('recurrences.upcoming.show_rest')).toBeNull()
+  })
+
+  it('y se puede volver a plegar', async () => {
+    // Thirteen rows opened are the same wall the cap exists to remove, so the
+    // way back has to be there. What is not allowed is the list folding ITSELF.
+    await show(eight)
+    fireEvent.click(screen.getByText('recurrences.upcoming.show_rest'))
+    fireEvent.click(screen.getByText('recurrences.upcoming.show_less'))
+
+    expect(screen.getAllByText(/^Regla /)).toHaveLength(5)
+    expect(screen.getByText('recurrences.upcoming.show_rest')).toBeTruthy()
   })
 
   it('con cinco o menos no ofrece nada que abrir', async () => {

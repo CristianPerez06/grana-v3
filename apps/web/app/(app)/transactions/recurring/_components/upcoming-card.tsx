@@ -17,9 +17,9 @@ import { useTranslations } from 'next-intl'
  * short card is short today and full next week, and a cap that applies to one of
  * two side-by-side cards reads as a glitch rather than a rule.
  *
- * Expanding is one-way on purpose — no "ver menos". Someone who opened the list
- * wants to read it; collapsing it under them as they scroll is the kind of help
- * nobody asked for.
+ * Expanding is a TOGGLE. What must not happen is the list folding itself back
+ * while someone reads it; a control they press is the opposite of that, and
+ * without it thirteen open rows are exactly the wall the cap exists to remove.
  */
 const VISIBLE_ROWS = 5
 
@@ -48,15 +48,16 @@ export const UpcomingCard = ({ title, note, rows, emptyLabel }: Props) => {
       ) : (
         <>
           <div className="pb-1.5">{shown}</div>
-          {hidden > 0 && !expanded && (
+          {hidden > 0 && (
             <button
               type="button"
-              onClick={() => setExpanded(true)}
+              onClick={() => setExpanded((open) => !open)}
+              aria-expanded={expanded}
               className="w-full border-t border-[var(--border-soft)] px-5 py-3 text-left text-[13px] font-semibold text-text-muted transition-colors hover:bg-page/40 hover:text-text"
             >
               {/* The count is in the button, so the size of what you are about to
                   open is known before you open it. */}
-              {tRec('upcoming.show_rest', { count: hidden })}
+              {expanded ? tRec('upcoming.show_less') : tRec('upcoming.show_rest', { count: hidden })}
             </button>
           )}
         </>
