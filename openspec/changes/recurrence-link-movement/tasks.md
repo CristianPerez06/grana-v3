@@ -1,9 +1,9 @@
 ## 1. Conteo de posiciones — la unión, en los dos lados
 
-- [ ] 1.1 Escribir los tests de `occurrencePositionsSpent` (`packages/money-logic`) para los cuatro escenarios del spec —resolver antes, no contar dos veces al llegar la fecha, devolver a revisión antes y después del vencimiento— y verificar que **fallan** contra la implementación actual antes de tocarla
-- [ ] 1.2 Implementar la unión en `occurrencePositionsSpent` y verificar que los tests de 1.1 pasan y que la suite de `money-logic` sigue verde
-- [ ] 1.3 Escribir el espejo SQL en la migración `0072` (`create or replace` de `recurrence_positions_spent`, `0068`) y verificar con el test de paridad SQL↔TS sobre los mismos casos de 1.1
-- [ ] 1.4 Verificar que `recurrence_positions_spent_batch` (`0070`) no se toca y sigue devolviendo lo mismo que la función por fila
+- [x] 1.1 Escribir los tests de `occurrencePositionsSpent` (`packages/money-logic`) para los cuatro escenarios del spec —resolver antes, no contar dos veces al llegar la fecha, devolver a revisión antes y después del vencimiento— y verificar que **fallan** contra la implementación actual antes de tocarla
+- [x] 1.2 Implementar la unión en `occurrencePositionsSpent` y verificar que los tests de 1.1 pasan y que la suite de `money-logic` sigue verde
+- [x] 1.3 Escribir el espejo SQL en la migración `0072` (`create or replace` de `recurrence_positions_spent`, copiada de **`0071`** — 0068 tiene la semántica de pausa vieja) y verificar con el test de paridad SQL↔TS sobre los mismos casos de 1.1
+- [x] 1.4 Verificar que `recurrence_positions_spent_batch` (`0070`) no se toca y sigue devolviendo lo mismo que la función por fila
 
 ## 2. Migración `0072`
 

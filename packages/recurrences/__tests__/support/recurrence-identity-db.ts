@@ -29,6 +29,7 @@ export const MIGRATION_0068 = read('0068_schedule_version_effective_until.sql')
 export const MIGRATION_0069 = read('0069_repair_seed_occurrence_identity.sql')
 export const MIGRATION_0070 = read('0070_recurrence_positions_spent_batch.sql')
 export const MIGRATION_0071 = read('0071_pause_looks_forward.sql')
+export const MIGRATION_0072 = read('0072_recurrence_link_movement.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -217,6 +218,9 @@ export async function createRecurrenceIdentityDb(
       // 0071 too: a pause that swallows its own opening day is not the schema
       // production is going to have.
       await applyPauseLooksForward(db)
+      // And 0072, for the same reason: the count that decides whether a rule
+      // still owes money is the one production runs.
+      await applyLinkMovement(db)
     }
   }
   return db
@@ -301,6 +305,21 @@ export async function applyPositionsBatch(db: PGlite): Promise<void> {
 export async function applyPauseLooksForward(db: PGlite): Promise<void> {
   try {
     await db.exec(MIGRATION_0071)
+  } catch (error) {
+    await db.exec('rollback;').catch(() => undefined)
+    throw error
+  }
+}
+
+/**
+ * 0072: registrar un pago antes del vencimiento, vincular y desvincular. Se
+ * exporta además de aplicarse por defecto, para que un test pueda construir la
+ * base SIN ella y ver el conteo viejo perder una posición resuelta por
+ * anticipado.
+ */
+export async function applyLinkMovement(db: PGlite): Promise<void> {
+  try {
+    await db.exec(MIGRATION_0072)
   } catch (error) {
     await db.exec('rollback;').catch(() => undefined)
     throw error

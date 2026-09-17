@@ -140,7 +140,7 @@ lista, así que la superposición no puede producir una doble resolución.
 
 La regla nueva —una posición se consume al llegar su fecha **o** al resolverse antes, una
 sola vez— vive hoy en dos implementaciones que tienen que seguir coincidiendo:
-`recurrence_positions_spent` (`0068`, la normativa, que además corta la generación) y
+`recurrence_positions_spent` (definida hoy en `0071`, la normativa, que además corta la generación) y
 `occurrencePositionsSpent` (`packages/money-logic`).
 
 Se implementa como unión de conjuntos de **posiciones**, nunca como suma de dos conteos: una
@@ -195,7 +195,10 @@ cada plataforma.
    (`trg_fn_block_shared_delete_with_settlement` y `trg_fn_block_unshare_with_settlement`) con
    la noción de liquidación vigente. Los triggers no se recrean: apuntan a las funciones por
    nombre y toman la definición nueva, igual que hizo `0049` sobre los de `0043` y `0048`.
-5. `create or replace` de **`recurrence_positions_spent`** con la unión. `recurrence_positions_spent_batch` (`0070`) la llama y no se toca: hay una sola definición de qué cuenta `max_occurrences` y el batch es otra forma de preguntarla, no otra forma de calcularla.
+5. `create or replace` de **`recurrence_positions_spent`** con la unión, copiada de
+   **`0071`** y no de `0068`: 0071 corrigió ahí la resta de la pausa (`d > ps.paused_from`) y
+   copiar la versión vieja revierte ese arreglo en silencio — un plan de tres vuelve a generar
+   una cuarta cuota. El self-check de 0071 lo detecta y 0072 repite esa verificación. `recurrence_positions_spent_batch` (`0070`) la llama y no se toca: hay una sola definición de qué cuenta `max_occurrences` y el batch es otra forma de preguntarla, no otra forma de calcularla.
 6. `revoke`/`grant` explícitos en cada función nueva. Postgres concede EXECUTE a PUBLIC por
    defecto y Supabase además expone `anon`; una función que no dice nada sobre sus privilegios
    queda abierta. Es lo que la migración `0067` existió para reparar.
@@ -212,6 +215,6 @@ existir, porque resolver un vencimiento futuro es justamente lo que este change 
 la base actual el cambio del punto 4 es un no-op verificable.
 
 **Rollback.** Revertir los puntos 4 y 5 es volver a `create or replace` las versiones de `0049`
-y `0068`. Las funciones nuevas quedan sin llamadores si se revierte la app; no hace falta
+y `0071`. Las funciones nuevas quedan sin llamadores si se revierte la app; no hace falta
 borrarlas.
 
