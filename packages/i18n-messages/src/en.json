@@ -1681,6 +1681,7 @@
       "account": "Account",
       "destination": "Destination account",
       "category": "Category",
+      "subcategory": "Subcategory",
       "next_date": "Next date",
       "type": "Type",
       "created_at": "Created on",
@@ -1747,7 +1748,10 @@
         "expense": "On registering: an expense of {amount} on {date} from {account}",
         "income": "On registering: an income of {amount} on {date} into {account}",
         "transfer": "On registering: a transfer of {amount} on {date}, from {account} to {destination}"
-      }
+      },
+      "stuck": "“{rule}” has been stuck since {since}. There are {count} due dates to review.",
+      "stuck_unnamed": "This recurrence",
+      "stuck_rebuilding": "We are still recovering earlier due dates; these counts may grow."
     },
     "suggestion": {
       "title": "Looks like this is recurring",
@@ -1814,9 +1818,11 @@
     "next_prefix": "next:",
     "upcoming": {
       "next_7_days": "Next 7 days",
-      "later_this_month": "Later this month",
+      "next_30_days": "Next 30 days",
       "info_only": "Info only",
-      "empty": "Nothing here."
+      "empty": "Nothing here.",
+      "show_rest": "Show the other {count}",
+      "show_less": "Show less"
     },
     "created_on": "Created on {date}",
     "edit_title": "Edit recurring rule",

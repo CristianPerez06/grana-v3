@@ -63,7 +63,17 @@ export type RecurrenceInstance = Omit<
  * `due_date_is_unknown`. The history list renders exactly these.
  */
 export type EnrichedRecurrenceInstance = RecurrenceInstance & {
-  recurrence: Recurrence
+  /**
+   * The rule, with ITS OWN categoría and subcategoría attached
+   * (`attachRuleClassification`). Surfaces that name the rule read these two —
+   * `recurrenceTitle` tries the subcategoría before the categoría. The fields
+   * below are the OCCURRENCE's snapshot and can differ after a single pendiente
+   * is edited.
+   */
+  recurrence: Recurrence & {
+    category: RecurrenceCategory | null
+    subcategory: RecurrenceSubcategory | null
+  }
   account: RecurrenceAccount | null
   destination_account: RecurrenceAccount | null
   category: RecurrenceCategory | null

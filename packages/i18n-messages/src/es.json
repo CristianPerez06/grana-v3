@@ -1681,6 +1681,7 @@
       "account": "Cuenta",
       "destination": "Cuenta destino",
       "category": "Categoría",
+      "subcategory": "Subcategoría",
       "next_date": "Próxima fecha",
       "type": "Tipo",
       "created_at": "Creada el",
@@ -1747,7 +1748,10 @@
         "expense": "Al registrarlo: gasto de {amount} el {date} desde {account}",
         "income": "Al registrarlo: ingreso de {amount} el {date} en {account}",
         "transfer": "Al registrarlo: transferencia de {amount} el {date}, de {account} a {destination}"
-      }
+      },
+      "stuck": "«{rule}» está trabada desde el {since}. Hay {count} vencimientos para revisar.",
+      "stuck_unnamed": "Esta recurrencia",
+      "stuck_rebuilding": "Todavía estamos recuperando vencimientos anteriores; estos conteos pueden aumentar."
     },
     "suggestion": {
       "title": "Parece que esto se repite",
@@ -1814,9 +1818,11 @@
     "next_prefix": "próximo:",
     "upcoming": {
       "next_7_days": "Próximos 7 días",
-      "later_this_month": "Más adelante este mes",
+      "next_30_days": "Próximos 30 días",
       "info_only": "Solo informativo",
-      "empty": "Nada por aquí."
+      "empty": "Nada por aquí.",
+      "show_rest": "Ver las otras {count}",
+      "show_less": "Ver menos"
     },
     "created_on": "Creada el {date}",
     "edit_title": "Editar regla recurrente",

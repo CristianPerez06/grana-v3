@@ -15,8 +15,9 @@ import {
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
+import { recurrenceTitle } from '@grana/recurrences'
 import { useShowCents } from '@/lib/preferences-context'
-import { getCategoryName } from '@/lib/categories/display'
+import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { RecurrenceDetail as RecurrenceDetailType } from '@/lib/recurrences/types'
 import { RecurrenceActions } from './recurrence-actions'
 import { RecurrenceEditDrawer } from './recurrence-edit-drawer'
@@ -104,7 +105,16 @@ export const RecurrenceDetail = ({ rule }: Props) => {
   // outlived the reason for it.
   const frequencyLabel = t(`frequencies.${rule.frequency}`)
 
-  const heroDesc = rule.description || rule.category?.name || typeLabel
+  // The same name the hub and the review block give this rule. It used to read
+  // `rule.category?.name` raw, so a system category showed its stored name
+  // instead of the translated one — the same rule under two spellings.
+  const heroDesc =
+    recurrenceTitle({
+      description: rule.description,
+      subcategory: rule.subcategory ? getSubcategoryName(rule.subcategory, tRoot) : null,
+      category: rule.category ? getCategoryName(rule.category, tRoot) : null,
+      type: typeLabel,
+    }) ?? typeLabel
 
   type Row = { key: string; label: string; value: string; href?: string }
   const rows: Row[] = [{ key: 'frequency', label: t('labels.frequency'), value: frequencyLabel }]
@@ -125,6 +135,16 @@ export const RecurrenceDetail = ({ rule }: Props) => {
         key: 'category',
         label: t('labels.category'),
         value: getCategoryName(rule.category, tRoot),
+      })
+    }
+    // Shown because it NAMES the rule: with no description the title is the
+    // subcategoría, and a ficha that listed only the categoría left the name on
+    // screen with no visible source.
+    if (rule.subcategory) {
+      rows.push({
+        key: 'subcategory',
+        label: t('labels.subcategory'),
+        value: getSubcategoryName(rule.subcategory, tRoot),
       })
     }
   }

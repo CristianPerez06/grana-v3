@@ -378,7 +378,69 @@ async function readPendingRecurrenceInstances(
 
   if (error) throw error
 
-  return data
+  return attachRuleClassification(supabase, data)
+}
+
+/**
+ * THE RULE'S OWN CATEGORÍA AND SUBCATEGORÍA, alongside each occurrence's.
+ *
+ * `recurrence:recurrences(*)` brings the rule's columns — `category_id` and
+ * `subcategory_id` among them — but not the rows, and the surfaces that NAME THE
+ * RULE need the names, not the ids (`recurrenceTitle`). They cannot fall back to
+ * `instance.category`: that is the occurrence's snapshot, editable one row at a
+ * time, so a single edited pendiente would rename a sentence that is about the
+ * rule.
+ *
+ * Both halves travel together because the name needs both: the subcategoría is
+ * the step the title tries before the categoría, so attaching only one of them
+ * leaves the notice one rung below whatever the hub says about the same rule.
+ *
+ * It is a separate read rather than a nested embed on purpose. PostgREST would
+ * express it as `recurrences(*, category:categories(...))`, and the shape of that
+ * select is what the reads are tested against — two extra keyed lookups keep the
+ * select flat and cost one round trip each on a list screen, which is the same
+ * trade the spent-positions batch already makes.
+ */
+async function attachRuleClassification<
+  T extends { recurrence: { category_id: string | null; subcategory_id: string | null } },
+>(supabase: GranaSupabaseClient, rows: T[]): Promise<T[]> {
+  const categoryIds = [
+    ...new Set(rows.map((row) => row.recurrence.category_id).filter(Boolean)),
+  ] as string[]
+  const subcategoryIds = [
+    ...new Set(rows.map((row) => row.recurrence.subcategory_id).filter(Boolean)),
+  ] as string[]
+  if (categoryIds.length === 0 && subcategoryIds.length === 0) return rows
+
+  const categoriesById = new Map<string, unknown>()
+  if (categoryIds.length > 0) {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, canonical_name, color, icon, user_id')
+      .in('id', categoryIds)
+    if (error) throw error
+    for (const category of data ?? []) categoriesById.set(category.id, category)
+  }
+
+  const subcategoriesById = new Map<string, unknown>()
+  if (subcategoryIds.length > 0) {
+    const { data, error } = await supabase
+      .from('subcategories')
+      .select('id, name, canonical_name, category_id, user_id')
+      .in('id', subcategoryIds)
+    if (error) throw error
+    for (const subcategory of data ?? []) subcategoriesById.set(subcategory.id, subcategory)
+  }
+
+  for (const row of rows) {
+    const categoryId = row.recurrence.category_id
+    const subcategoryId = row.recurrence.subcategory_id
+    ;(row.recurrence as { category?: unknown }).category =
+      categoryId == null ? null : (categoriesById.get(categoryId) ?? null)
+    ;(row.recurrence as { subcategory?: unknown }).subcategory =
+      subcategoryId == null ? null : (subcategoriesById.get(subcategoryId) ?? null)
+  }
+  return rows
 }
 
 export async function getRecurrenceDetail(
@@ -414,6 +476,8 @@ export async function getRecurrenceDetail(
   )
 
   if (instancesError) throw instancesError
+
+  await attachRuleClassification(supabase, instances)
 
   const pending = instances
     .filter((instance) => instance.status === 'pending')
@@ -472,7 +536,9 @@ export async function getRecurrenceDetail(
     ...recurrenceSummary,
     instances: instances.map((instance) => ({
       ...instance,
-      recurrence: recurrence as unknown as Recurrence,
+      // `RECURRENCE_SELECT` already embeds the rule's own category, which is what
+      // the surfaces that name the rule read.
+      recurrence: recurrence as unknown as EnrichedRecurrenceInstance['recurrence'],
     })),
   }
 }

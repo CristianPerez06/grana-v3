@@ -128,6 +128,45 @@ describe('getPendingRecurrenceInstances — the global review feed', () => {
 
     expect(mine?.recurrence?.id).toBe(ruleId)
   })
+
+  /**
+   * AND THE RULE'S OWN CLASSIFICATION, which is a different question.
+   *
+   * `recurrence:recurrences(*)` brings `category_id` and `subcategory_id` and
+   * nothing else, so the surfaces that NAME the rule would have ids and no
+   * names. They cannot read the occurrence's own `category`/`subcategory`: that
+   * is its snapshot, and one edited pendiente would rename a sentence about the
+   * rule. `attachRuleClassification` fills both — and the assertion below is on
+   * the READ, not on a component holding hand-built rows, because a component
+   * test is happy with data the query never produces.
+   */
+  it("brings the RULE's own categoría and subcategoría, not only the occurrence's", async () => {
+    const ruleId = await createRule()
+    await db.exec(`
+      insert into public.categories (id, user_id, name, canonical_name)
+      values ('00000000-0000-0000-0000-0000000c0001', '${U_A}', 'Servicios', 'servicios'),
+             ('00000000-0000-0000-0000-0000000c0002', '${U_A}', 'Regalos', 'regalos');
+      insert into public.subcategories (id, user_id, category_id, name, canonical_name)
+      values ('00000000-0000-0000-0000-00000005a001', '${U_A}', '00000000-0000-0000-0000-0000000c0001', 'Internet', 'internet');
+      update public.recurrences
+         set category_id = '00000000-0000-0000-0000-0000000c0001',
+             subcategory_id = '00000000-0000-0000-0000-00000005a001'
+       where id = '${ruleId}';
+      insert into public.recurrence_instances
+        (recurrence_id, user_id, scheduled_date, due_date, status, category_id)
+      values ('${ruleId}', '${U_A}', '2026-05-23', '2026-05-23', 'pending',
+              '00000000-0000-0000-0000-0000000c0002');
+    `)
+
+    const feed = await getPendingRecurrenceInstances(pglitePostgrest(db))
+    const mine = feed.find((instance) => instance.recurrence_id === ruleId)
+
+    expect(mine?.recurrence.category?.name).toBe('Servicios')
+    expect(mine?.recurrence.subcategory?.name).toBe('Internet')
+    // The occurrence keeps its own, and the two are visibly different here so a
+    // read that quietly copied one onto the other could not pass.
+    expect(mine?.category?.name).toBe('Regalos')
+  })
 })
 
 describe('getRecurrenceDetail — the history list', () => {

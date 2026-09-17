@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from 'react-native'
 import { AlertTriangle, ChevronRight, Repeat } from 'lucide-react-native'
-import type { RecurrenceSummary } from '@grana/recurrences'
+import { recurrenceTitle, type RecurrenceSummary } from '@grana/recurrences'
 import { colors } from '../../lib/colors'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
@@ -11,6 +11,7 @@ import {
   categoryName,
   frequencyLabel,
   movementLabel,
+  subcategoryName,
 } from './format'
 
 type Tab = 'active' | 'paused' | 'finished'
@@ -40,8 +41,12 @@ export function RecurrenceRuleCard({
   const tileColor = rule.category?.color ?? '#8C97A4'
   const tileIcon = rule.category?.icon
 
-  const title =
-    rule.description || categoryName(rule.category, t) || movementLabel(rule.movement_type, t)
+  const title = recurrenceTitle({
+    description: rule.description,
+    subcategory: subcategoryName(rule.subcategory, t),
+    category: categoryName(rule.category, t),
+    type: movementLabel(rule.movement_type, t),
+  })
 
   const accountName = rule.account?.name ?? '—'
   const accountLine =

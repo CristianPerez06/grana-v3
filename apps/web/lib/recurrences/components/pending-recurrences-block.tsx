@@ -6,16 +6,20 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, Clock, Pencil, Repeat, Users, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatDateISO, formatShortDate, getTodayAR } from '@/lib/date'
-import { getCategoryName } from '@/lib/categories/display'
+import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
+import { useRecurrenceMaterialization } from '@/lib/recurrences/materialization-context'
 import {
   confirmRecurrenceInstance,
   skipRecurrenceInstance,
 } from '@/app/_actions/recurrences'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
+  recurrenceTitle,
   resolutionPreview,
   reviewUrgency,
   shouldOpenReviewBlock,
+  stuckRules,
+  type StuckRule,
 } from '@grana/recurrences'
 import { useShowCents } from '@/lib/preferences-context'
 import { parseMoneyInput } from '@grana/validation'
@@ -93,6 +97,44 @@ export const PendingRecurrencesBlock = ({
   // Only a block made entirely of occurrences that have NOT fallen due yet stays
   // collapsed, and it is not really this block's job to shout about those.
   const [isOpen, setIsOpen] = useState(() => shouldOpenReviewBlock(pending, todayISO))
+
+  // WHICH RULES STOPPED MOVING. Read from the same materialization context the
+  // failure notice uses, so the count can say whether it is the whole backlog or
+  // only what exists so far — the reconstruction runs in bounded batches and
+  // continues on the next one.
+  const materialization = useRecurrenceMaterialization()
+  const stuck = stuckRules(pending, todayISO)
+  // Said ONCE, not per rule: `remaining` is one number for the whole run and the
+  // generator only looks at active rules, so hanging it off each line would have
+  // a paused rule claim we are recovering a backlog nobody is recovering.
+  const stillRebuilding = (materialization?.remaining ?? 0) > 0
+
+  /**
+   * The rule's name AS IT IS NOW, the same way the hub derives it.
+   *
+   * NOT `instance.description` and NOT `instance.category`: those are the
+   * occurrence's own snapshot, editable one row at a time. Reading them would
+   * let a single edited pendiente rename the notice, and would keep saying
+   * "Internet" after the rule was renamed to "Fibra hogar" — on a sentence whose
+   * whole job is to name the rule.
+   *
+   * The rule carries its OWN categoría and subcategoría on this read
+   * (`attachRuleClassification`), so every step is the rule's and the notice says
+   * exactly what the hub says about the same rule. The ORDER is
+   * `recurrenceTitle`'s, shared with every other surface that names a rule.
+   */
+  const ruleTitle = (recurrenceId: string): string => {
+    const rule = pending.find((instance) => instance.recurrence.id === recurrenceId)?.recurrence
+    if (!rule) return t('pending.stuck_unnamed')
+    return (
+      recurrenceTitle({
+        description: rule.description,
+        subcategory: rule.subcategory ? getSubcategoryName(rule.subcategory, tRoot) : null,
+        category: rule.category ? getCategoryName(rule.category, tRoot) : null,
+        type: tTx(`types.${rule.movement_type}` as 'types.income'),
+      }) ?? t('pending.stuck_unnamed')
+    )
+  }
 
   // Edit mode: at most one instance edited at a time, to keep UI focused.
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -314,6 +356,34 @@ export const PendingRecurrencesBlock = ({
         </div>
       )}
 
+      {isOpen && stuck.length > 0 && (
+        <div className="mx-4 mb-3 flex flex-col gap-1.5 sm:mx-6">
+          {/* ONE LINE PER STUCK RULE, never a total. Two stuck rules are two
+              lines: a single "tenés 30 vencimientos trabados" would tell a story
+              that did not happen when what there is is one broken rule and two
+              waiting for a tap. The list below stays flat — grouping it by rule
+              is its own delivery. */}
+          {stuck.map((rule: StuckRule) => (
+            <p
+              key={rule.recurrence_id}
+              className="rounded-[12px] border px-3 py-2 text-[13px] font-medium leading-snug"
+              style={{ borderColor: '#EAD9A8', backgroundColor: 'var(--warning-bg)', color: 'var(--warning)' }}
+            >
+              {t('pending.stuck', {
+                rule: ruleTitle(rule.recurrence_id),
+                since: formatShortDate(rule.since),
+                count: rule.count,
+              })}
+            </p>
+          ))}
+          {stillRebuilding && (
+            <p className="text-[12px] font-medium text-text-muted">
+              {t('pending.stuck_rebuilding')}
+            </p>
+          )}
+        </div>
+      )}
+
       {isOpen && (pending.length === 0 ? (
         <div
           className="flex items-center gap-3.5 border-t px-4 py-5 text-[15px] font-semibold text-emerald-deep sm:px-6 sm:py-6"
@@ -388,9 +458,20 @@ export const PendingRecurrencesBlock = ({
 
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate text-[16px] font-bold tracking-[-0.01em] text-text">
-                    {instance.description ||
-                      (instance.category ? getCategoryName(instance.category, tRoot) : null) ||
-                      movementLabel}
+                    {/* The OCCURRENCE's own snapshot — its description and its
+                        classification, which the user can edit one row at a
+                        time. Same order as everywhere else; what changes is
+                        whose values are read. */}
+                    {recurrenceTitle({
+                      description: instance.description,
+                      subcategory: instance.subcategory
+                        ? getSubcategoryName(instance.subcategory, tRoot)
+                        : null,
+                      category: instance.category
+                        ? getCategoryName(instance.category, tRoot)
+                        : null,
+                      type: movementLabel,
+                    })}
                   </span>
                   <span className="flex items-center gap-1.5 text-[14px] font-medium text-text-muted">
                     <span className="truncate">

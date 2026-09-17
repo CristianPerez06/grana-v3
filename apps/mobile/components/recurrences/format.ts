@@ -33,6 +33,18 @@ export const categoryName = (
   return category.user_id === null ? t(`categories.${category.canonical_name}`) : category.name
 }
 
+// Same contract one rung down. A system subcategory translates via
+// `subcategories.{canonical_name}`; a user-owned one keeps its stored name.
+export const subcategoryName = (
+  subcategory: NamedCategory | null,
+  t: Translate,
+): string | null => {
+  if (!subcategory) return null
+  return subcategory.user_id === null
+    ? t(`subcategories.${subcategory.canonical_name}`)
+    : subcategory.name
+}
+
 // Amount sign + tone class by movement type (income emerald, transfer navy,
 // expense terracotta) — the structural tokens the rest of the app uses.
 export const amountSign = (type: RecurrenceMovementType): string =>

@@ -4,10 +4,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, Clock, X } from 'lucide-react-native'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import {
+  recurrenceTitle,
   resolutionPreview,
   reviewFeedState,
   reviewUrgency,
   shouldOpenReviewBlock,
+  stuckRules,
 } from '@grana/recurrences'
 import type { PendingRecurrenceInstance } from '@grana/recurrences'
 import { getPendingRecurrences } from '../../lib/recurrences/queries'
@@ -20,9 +22,10 @@ import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { colors } from '../../lib/colors'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
-import { amountSign, amountToneClass, categoryName, movementLabel } from './format'
+import { amountSign, amountToneClass, categoryName, movementLabel, subcategoryName } from './format'
 import { Card } from '../ui/Card'
 import { RecurrenceFailureNotice } from './MaterializationNotice'
+import { useRecurrenceMaterialization } from '../../lib/recurrences/materialization-context'
 
 type DoneAction = 'confirmed' | 'skipped'
 
@@ -52,8 +55,15 @@ function PendingRow({
   const [busy, setBusy] = useState(false)
 
   const type = instance.recurrence.movement_type
-  const title =
-    instance.description || categoryName(instance.category, t) || movementLabel(type, t)
+  // The OCCURRENCE's own snapshot — editable one row at a time. Same order as
+  // every other surface (`recurrenceTitle`); what differs is whose values it
+  // reads. Web's twin.
+  const title = recurrenceTitle({
+    description: instance.description,
+    subcategory: subcategoryName(instance.subcategory, t),
+    category: categoryName(instance.category, t),
+    type: movementLabel(type, t),
+  })
   const amount = fmtMoney(Number(instance.amount), instance.currency_code, showCents)
   const urgency = reviewUrgency(instance.due_date, today)
   const urgencyLabel =
@@ -191,6 +201,34 @@ export function PendingRecurrencesBlock() {
   const todayISO = formatDateISO(getTodayAR())
   const isOpen = openOverride ?? shouldOpenReviewBlock(instances, todayISO)
 
+  // WHICH RULES STOPPED MOVING — same decision as web, from the same module, so
+  // the two platforms cannot answer it differently. The materialization context
+  // says whether the backlog is still being rebuilt, which is what turns the
+  // count from "this is all of it" into "this is what there is so far".
+  const locale = useLocale()
+  const materialization = useRecurrenceMaterialization()
+  const stuck = stuckRules(instances, todayISO)
+  // Said ONCE, not per rule — see the web block and `stuckRules` for why: it is a
+  // single number for the whole run, and the generator only looks at active rules.
+  const stillRebuilding = (materialization?.remaining ?? 0) > 0
+
+  // The rule's name AS IT IS NOW, same derivation as web and as the hub: the
+  // shared `recurrenceTitle` order, read off the RULE's own fields. Never the
+  // occurrence's snapshot — editing one pendiente must not rename the notice,
+  // and renaming the rule must.
+  const ruleTitle = (recurrenceId: string): string => {
+    const rule = instances.find((instance) => instance.recurrence.id === recurrenceId)?.recurrence
+    if (!rule) return t('recurrences.pending.stuck_unnamed')
+    return (
+      recurrenceTitle({
+        description: rule.description,
+        subcategory: subcategoryName(rule.subcategory, t),
+        category: categoryName(rule.category, t),
+        type: movementLabel(rule.movement_type, t),
+      }) ?? t('recurrences.pending.stuck_unnamed')
+    )
+  }
+
   if (feed.kind === 'unreadable') {
     return (
       <RecurrenceFailureNotice
@@ -291,6 +329,33 @@ export function PendingRecurrencesBlock() {
               >
                 <X size={14} color={colors.emeraldDeep} />
               </Pressable>
+            </View>
+          ) : null}
+
+          {isOpen && stuck.length > 0 ? (
+            <View className="mx-4 mb-3 gap-1.5">
+              {/* ONE LINE PER STUCK RULE, never a total — same rule as web. The
+                  list below stays flat; grouping it by rule is its own
+                  delivery. */}
+              {stuck.map((rule) => (
+                <View
+                  key={rule.recurrence_id}
+                  className="rounded-xl border border-warning/30 bg-warning-bg px-3 py-2"
+                >
+                  <Text className="text-[13px] font-medium leading-snug text-warning">
+                    {t('recurrences.pending.stuck', {
+                      rule: ruleTitle(rule.recurrence_id),
+                      since: formatShortDate(rule.since, locale),
+                      count: rule.count,
+                    })}
+                  </Text>
+                </View>
+              ))}
+              {stillRebuilding ? (
+                <Text className="text-[12px] font-medium text-text-muted">
+                  {t('recurrences.pending.stuck_rebuilding')}
+                </Text>
+              ) : null}
             </View>
           ) : null}
 

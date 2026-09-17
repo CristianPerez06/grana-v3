@@ -12,6 +12,7 @@ import {
   amountSign,
   amountToneClass,
   categoryName,
+  subcategoryName,
   frequencyLabel,
   movementLabel,
 } from '../../../../components/recurrences/format'
@@ -212,6 +213,16 @@ export default function RecurrenceDetailScreen() {
                   <Row
                     label={t('recurrences.labels.category')}
                     value={categoryName(rule.category, t) as string}
+                  />
+                ) : null}
+                {/* Shown because it NAMES the rule: with no description the
+                    title is the subcategoría, and a ficha listing only the
+                    categoría left the name on screen with no visible source.
+                    Web's twin. */}
+                {rule.movement_type !== 'transfer' && subcategoryName(rule.subcategory, t) ? (
+                  <Row
+                    label={t('recurrences.labels.subcategory')}
+                    value={subcategoryName(rule.subcategory, t) as string}
                   />
                 ) : null}
                 {rule.next_occurrence ? (

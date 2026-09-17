@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   materializationOutcome,
+  stuckRules,
   resolutionPreview,
   reviewFeedState,
   reviewUrgency,
@@ -151,5 +152,94 @@ describe('reviewFeedState', () => {
       kind: 'list',
       refreshFailed: false,
     })
+  })
+})
+
+/**
+ * WHICH RULES ARE STUCK. The threshold takes two conditions, and each one alone
+ * would be wrong in a way a user would notice, so each has its own test here.
+ */
+describe('stuckRules', () => {
+  /** An unresolved occurrence of `rule`, due on `due_date`. */
+  const owed = (rule: string, due_date: string) =>
+    ({ due_date, recurrence: { id: rule } }) as never
+
+  it('names a rule that piled up, with since and count', () => {
+    const backlog = [
+      owed('r1', '2026-06-10'),
+      owed('r1', '2026-07-10'),
+      owed('r1', '2026-08-10'),
+    ]
+
+    expect(stuckRules(backlog, TODAY)).toEqual([
+      { recurrence_id: 'r1', since: '2026-06-10', count: 3 },
+    ])
+  })
+
+  it('takes the OLDEST vencimiento as "since", whatever order they arrive in', () => {
+    const shuffled = [owed('r1', '2026-08-10'), owed('r1', '2026-06-10'), owed('r1', '2026-07-10')]
+
+    expect(stuckRules(shuffled, TODAY)[0].since).toBe('2026-06-10')
+  })
+
+  it('does NOT name a rule with a single overdue occurrence', () => {
+    // One late vencimiento is not a broken rule — it is someone who did not open
+    // the app over a weekend, and the row already says "venció hace 3 días".
+    expect(stuckRules([owed('r1', '2026-09-05')], TODAY)).toEqual([])
+  })
+
+  it('does NOT name a rule whose two occurrences have not fallen due', () => {
+    // A fortnightly rule that produced the month's two occurrences is up to
+    // date. Counting rows alone would flag it, which is why "oldest is overdue"
+    // is part of the threshold and not a refinement of it.
+    const upToDate = [owed('r1', '2026-09-15'), owed('r1', '2026-09-30')]
+
+    expect(stuckRules(upToDate, TODAY)).toEqual([])
+  })
+
+  it('is decided PER RULE, not over the block', () => {
+    // Three rules with one overdue each is three overdue rows on screen and zero
+    // stuck rules. Deciding this over the block would announce "tenés 3
+    // vencimientos trabados" about a user who was away for a few days.
+    const oneEach = [owed('r1', '2026-09-05'), owed('r2', '2026-09-06'), owed('r3', '2026-09-07')]
+
+    expect(stuckRules(oneEach, TODAY)).toEqual([])
+  })
+
+  it('reports each stuck rule separately, oldest first', () => {
+    const two = [
+      owed('r2', '2026-08-01'),
+      owed('r2', '2026-09-01'),
+      owed('r1', '2026-06-10'),
+      owed('r1', '2026-07-10'),
+    ]
+
+    expect(stuckRules(two, TODAY).map((rule) => rule.recurrence_id)).toEqual(['r1', 'r2'])
+  })
+
+  it('counts a rule that is PAUSED — its status does not exempt it', () => {
+    // Pausing explains why no more arrive. It does not resolve the ones already
+    // there, and this notice is about those.
+    const paused = [
+      { due_date: '2026-06-10', recurrence: { id: 'r1', status: 'paused' } },
+      { due_date: '2026-07-10', recurrence: { id: 'r1', status: 'paused' } },
+    ] as never[]
+
+    expect(stuckRules(paused, TODAY)).toHaveLength(1)
+  })
+
+  it('does NOT carry whether the rebuild is still running', () => {
+    // The only signal for that is the materialization's `remaining`, which is one
+    // number for the whole run and says nothing about WHICH rule owes it — and
+    // the generator only queries active rules. Hanging it off each rule made a
+    // paused one claim we were recovering a backlog nobody was recovering. The
+    // surface says it once, globally, instead.
+    const backlog = [owed('r1', '2026-06-10'), owed('r1', '2026-07-10')]
+
+    expect(Object.keys(stuckRules(backlog, TODAY)[0]).sort()).toEqual([
+      'count',
+      'recurrence_id',
+      'since',
+    ])
   })
 })

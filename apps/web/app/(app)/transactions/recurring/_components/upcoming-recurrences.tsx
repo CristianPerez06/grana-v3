@@ -7,8 +7,10 @@ import {
   type RuleForProjection,
 } from '@grana/money-logic'
 import { formatDateISO, getTodayAR } from '@/lib/date'
-import { getCategoryName } from '@/lib/categories/display'
+import { recurrenceTitle } from '@grana/recurrences'
+import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
+import { UpcomingCard } from './upcoming-card'
 
 type Props = {
   rules: RecurrenceSummary[]
@@ -21,24 +23,20 @@ const addDaysISO = (iso: string, days: number) => {
   return formatDateISO(dt)
 }
 
-const endOfMonthISO = (iso: string) => {
-  const [y, m] = iso.split('-').map(Number)
-  return formatDateISO(new Date(y, m, 0))
-}
-
 /**
  * Informational projection of upcoming recurrence occurrences. Two buckets:
- * the next 7 days and the rest of the current month. Amounts are shown per
+ * the next 7 days and the next 30. Amounts are shown per
  * occurrence in their own currency — never summed (bimoneda invariant). Pure
  * projection via @grana/money-logic; no DB writes, no instance generation.
  */
 export const UpcomingRecurrences = async ({ rules }: Props) => {
   const tRec = await getTranslations('recurrences')
+  const tTx = await getTranslations('transactions')
   const tRoot = await getTranslations()
 
   const today = formatDateISO(getTodayAR())
   const in7 = addDaysISO(today, 7)
-  const monthEnd = endOfMonthISO(today)
+  const in30 = addDaysISO(today, 30)
 
   const ruleById = new Map(rules.map((r) => [r.id, r]))
   const forProjection: RuleForProjection[] = rules.map((r) => ({
@@ -62,13 +60,15 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
     covered: r.covered_occurrences,
   }))
 
-  // Next 7 days, then the remainder of the month (day 8 → month end).
+  // Next 7 days, then days 8 → 30. The second window is measured in DAYS FROM
+  // TODAY, never clipped to the end of the calendar month: a window ending on the
+  // last day of the month empties itself as the month advances — from the day
+  // `today + 8` lands in the next month, its range starts after it ends — and
+  // leaves the user with no horizon past a week exactly when what is coming is
+  // closest. Asked on the 25th, "lo que viene" meant nothing at all.
   const next7 = projectUpcomingOccurrences(forProjection, today, in7)
   const laterStart = addDaysISO(in7, 1)
-  const later =
-    laterStart <= monthEnd
-      ? projectUpcomingOccurrences(forProjection, laterStart, monthEnd)
-      : []
+  const later = projectUpcomingOccurrences(forProjection, laterStart, in30)
 
   if (next7.length === 0 && later.length === 0) return null
 
@@ -94,11 +94,16 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
           : 'text-terracotta'
     const tileColor = rule.category?.color ?? '#8C97A4'
     const tileIcon = rule.category?.icon
+    // Same order, and the same last step, as the hub and the review block: this
+    // card used to end at the ACCOUNT's name, so a transfer with no description
+    // read "Billetera" here and "Transferencia" one card below it.
     const name =
-      rule.description ||
-      (rule.category ? getCategoryName(rule.category, tRoot) : null) ||
-      rule.account?.name ||
-      '—'
+      recurrenceTitle({
+        description: rule.description,
+        subcategory: rule.subcategory ? getSubcategoryName(rule.subcategory, tRoot) : null,
+        category: rule.category ? getCategoryName(rule.category, tRoot) : null,
+        type: tTx(`types.${rule.movement_type}` as 'types.income'),
+      }) ?? '—'
 
     return (
       <div
@@ -127,28 +132,21 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
     )
   }
 
-  const renderCard = (
-    title: string,
-    note: string,
-    rows: { rule_id: string; scheduled_date: string }[],
-  ) => (
-    <div className="overflow-hidden rounded-[18px] border border-border bg-card">
-      <div className="flex items-baseline justify-between px-5 pb-2.5 pt-4">
-        <span className="text-[14px] font-bold tracking-[-0.01em] text-text">{title}</span>
-        <span className="text-[12.5px] font-medium text-text-soft">{note}</span>
-      </div>
-      {rows.length === 0 ? (
-        <p className="px-5 pb-4 text-[13px] text-text-muted">{tRec('upcoming.empty')}</p>
-      ) : (
-        <div className="pb-1.5">{rows.map(renderRow)}</div>
-      )}
-    </div>
+  // The rows are rendered here, on the server; `UpcomingCard` only decides how
+  // many of them show at once.
+  const renderCard = (title: string, rows: { rule_id: string; scheduled_date: string }[]) => (
+    <UpcomingCard
+      title={title}
+      note={tRec('upcoming.info_only')}
+      rows={rows.map(renderRow)}
+      emptyLabel={tRec('upcoming.empty')}
+    />
   )
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {renderCard(tRec('upcoming.next_7_days'), tRec('upcoming.info_only'), next7)}
-      {renderCard(tRec('upcoming.later_this_month'), tRec('upcoming.info_only'), later)}
+      {renderCard(tRec('upcoming.next_7_days'), next7)}
+      {renderCard(tRec('upcoming.next_30_days'), later)}
     </div>
   )
 }
