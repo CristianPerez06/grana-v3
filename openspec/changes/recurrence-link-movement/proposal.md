@@ -48,44 +48,56 @@ vencimiento vuelve a «por revisar».
 lo trata explícitamente: un movimiento con un reparto compatible se vincula directo; uno
 **personal** se convierte a compartido con el reparto de la regla **pidiendo confirmación
 explícita**, porque eso mueve la deuda del hogar; y uno que ya es compartido **con otro
-hogar u otro reparto no se ofrece como candidato**. Desvincular revierte esa conversión
-cuando ocurrió.
+hogar u otro reparto no se ofrece como candidato**.
+
+**Desvincular revierte esa conversión, y las dos cosas van juntas o no va ninguna.** Soltar
+el vínculo y devolver el gasto a personal SHALL completarse como una sola operación. Si la
+reversión no se puede hacer, la operación **no se hace en absoluto**: el estado queda como
+estaba y la app explica qué hay que resolver primero. Una vinculación equivocada convirtió
+un gasto personal en deuda para la otra persona; un deshacer que suelte el vínculo pero deje
+la deuda corrige la mitad del error y deja la mitad que más duele.
 
 **El límite de vencimientos cuenta cada posición una sola vez.** Una posición se consume
 **cuando llega su fecha o cuando se resuelve antes, lo que pase primero**. Sin esto, pagar
 septiembre el día 3 dejaría la regla mostrando «0 de 3» con un vencimiento ya resuelto, y
 el avance atrasado hasta un mes entero.
 
-### Decisión abierta: el guard de liquidaciones
+### La corrección del bloqueo de liquidaciones entra como dependencia
 
-**Hay un caso en que la base se niega a desvincular, y la salida que el spec promete no
-funciona.** Cuando la conversión a compartido tiene que revertirse pero existe una
-liquidación del hogar posterior al gasto, un trigger la rechaza (`GRN01`). El spec de
-`shared` dice que la aplicación debe indicar «revertir esa liquidación primero».
+**Hoy la salida que el spec promete no funciona**, y sin arreglarla no hay forma de que
+desvincular complete las dos cosas.
 
-Eso **no destraba nada**. Los guards de `0049` no filtran por estado de la liquidación, y
-`reverse_settlement` (`0044`) conserva la original marcada `reversed` **y agrega una fila
-`contra` fechada hoy**. Después de revertir hay *dos* filas que bloquean, una de ellas
-posterior a cualquier gasto del pasado. El usuario queda trabado para siempre, y peor que
-antes de revertir.
+Cuando la conversión a compartido tiene que revertirse pero existe una liquidación del hogar
+posterior al gasto, un trigger la rechaza (`GRN01`). El spec de `shared` dice que la
+aplicación debe indicar «revertir esa liquidación primero». Eso **no destraba nada**: los
+guards de `0049` no filtran por estado de la liquidación, y `reverse_settlement` (`0044`)
+conserva la original marcada `reversed` **y agrega una fila `contra` fechada hoy**. Después
+de revertir hay *dos* filas que bloquean, una de ellas posterior a cualquier gasto del
+pasado. El usuario queda trabado para siempre, y peor que antes de revertir.
 
-Es un defecto **pre-existente** del módulo Compartido: ya afecta al toggle «Compartir →
-off» hoy, sin que exista nada de este change. Hay dos caminos y **la elección es del
-usuario**:
+Es un defecto **pre-existente** del módulo Compartido —ya afecta al toggle «Compartir → off»
+hoy, sin nada de este change— pero es **dependencia** suyo: sin él, desvincular no tendría
+manera de cumplir «las dos cosas o ninguna» en un hogar que alguna vez liquidó.
 
-- **Acotado (recomendado).** Este change no toca el guard. Desvincular nunca deja sin
-  salida: si la base se niega, **el vínculo se suelta igual y el gasto queda compartido**,
-  diciéndolo con todas las letras. El vencimiento vuelve a «por revisar», que es lo que el
-  usuario fue a buscar. Se defiende solo: la plata efectivamente cambió de manos, y
-  revertir el reparto sería lo que mentiría. Esta rama **hay que construirla igual**,
-  porque la liquidación puede ocurrir *después* de haber vinculado y ninguna validación
-  previa puede prevenir eso.
-- **Ampliado.** Además, arreglar el guard para que una liquidación `reversed` y su `contra`
-  dejen de bloquear, y corregir el spec de `shared`. Es el arreglo de fondo, toca la
-  integridad de la cuenta corriente y **agrega `shared` a las capabilities modificadas**.
+**La corrección es acotada y conserva toda la protección que tiene sentido.** Deja de
+bloquear únicamente lo que ya no protege nada: una liquidación **correctamente revertida**
+—marcada `reversed` y con su contraasiento presente— y la fila `contra` que la neutraliza.
+Las liquidaciones **vigentes siguen bloqueando igual**: las `completed`, y también las
+`pending_receipt`, donde la plata ya salió de la cuenta del pagador aunque el receptor no
+haya asignado la suya.
 
-Verificado leyendo `0044`, `0048`, `0049` y el spec de `shared`; **no probado contra la
-base online**.
+La corrección alcanza a **las dos guardas gemelas** —borrar y descompartir—, que comparten el
+mismo predicado y el mismo requirement en el spec. Arreglar una sola dejaría el requirement
+diciendo una verdad a medias.
+
+**No cambia cómo se calcula la deuda.** El original revertido y su contra siguen contando y
+siguen cancelándose. Lo único que cambia es qué considera la guarda que hay para proteger.
+
+Con esto, «revertí esa liquidación primero» pasa a ser un consejo **verdadero**, y el spec
+de `shared` pasa a describir lo que el sistema hace.
+
+Verificado leyendo `0023`, `0043`, `0044`, `0048`, `0049` y el spec de `shared`; **no probado
+contra la base online**.
 
 ### Lo que este cambio NO hace
 
@@ -122,17 +134,20 @@ Ninguna.
   - El requirement del **límite** se modifica: una posición se consume al llegar su fecha
     **o** al resolverse antes, una sola vez.
 - `shared-recurrences`: se **agrega** el requirement de vincular a una regla compartida —
-  las tres ramas (reparto compatible, conversión con confirmación, exclusión) y la
-  reversión al desvincular, incluida la salida cuando la base la rechaza.
-- `shared`: **sólo si se elige el camino ampliado** de la decisión abierta.
+  las tres ramas (reparto compatible, conversión con confirmación, exclusión) y el de
+  desvincular, que revierte la conversión o no hace nada.
+- `shared`: se **modifica** el requirement del bloqueo por liquidación posterior, para que
+  una liquidación correctamente revertida y su contraasiento dejen de bloquear, y las
+  vigentes sigan haciéndolo.
 
 ## Impact
 
-- **Migración nueva** (número elegido contra `main`, no contra el working tree). Dos
-  funciones de Postgres `SECURITY INVOKER`: convertir-a-compartido + vincular, y
-  revertir + desvincular. La decisión 22 de `fix-recurrence-backlog` exige que sean una
-  transacción de base y no rollback compensatorio, porque la compensación también puede
-  fallar y dejar la deuda del hogar movida por una operación que el usuario no aprobó.
+- **Migración nueva** (número elegido contra `main`, no contra el working tree). Funciones de
+  Postgres `SECURITY INVOKER` para convertir-a-compartido + vincular y para revertir +
+  desvincular: la decisión 22 de `fix-recurrence-backlog` exige que sean una transacción de
+  base y no rollback compensatorio, porque la compensación también puede fallar y dejar la
+  deuda del hogar movida por una operación que el usuario no aprobó. Y el reemplazo de las
+  **dos funciones de guarda** de `0049`, con el predicado corregido.
 - `packages/recurrences` — la selección de candidatos, las mutations de vincular y
   desvincular, y el modelo de vista de la fila. Una sola implementación para las dos apps.
 - `packages/money-logic` — el conteo de posiciones consumidas, más la función SQL espejo

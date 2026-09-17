@@ -54,40 +54,44 @@ hace desvincular y ese dato no se puede reconstruir después.
   ventana de candidatos
 - **THEN** ese movimiento no aparece en la lista de candidatos
 
-### Requirement: Desvincular revierte la conversión a compartido, y cuando no puede lo dice
+### Requirement: Desvincular revierte la conversión a compartido, o no hace nada
 
-Desvincular un movimiento de una ocurrencia compartida SHALL deshacer también la conversión, **cuando
-la vinculación la produjo**: el movimiento SHALL volver a ser personal y la deuda del hogar SHALL
-volver a donde estaba. Si el movimiento **ya era compartido** antes de vincularse, la conversión no
-ocurrió y desvincular SHALL limitarse a romper el vínculo. La reversión y la desvinculación SHALL ser
-atómicas, con la misma garantía de base de datos que su operación inversa.
+Desvincular un movimiento de una ocurrencia compartida SHALL deshacer también la conversión,
+**cuando la vinculación la produjo**: el movimiento SHALL volver a ser personal y la deuda del
+hogar SHALL volver a donde estaba. Si el movimiento **ya era compartido** antes de vincularse,
+la conversión no ocurrió y desvincular SHALL limitarse a romper el vínculo.
 
-**DESVINCULAR NUNCA DEJA AL USUARIO SIN SALIDA.** El sistema impide devolver a personal un gasto
-compartido cubierto por una liquidación posterior del hogar, porque esa liquidación se calculó sobre
-un saldo que lo incluía. Cuando esa guarda rechaza la reversión, el sistema SHALL **romper el vínculo
-igual** y dejar el movimiento compartido, explicando que sigue siéndolo porque la deuda que generó ya
-fue saldada. La ocurrencia SHALL volver a *sin resolver* en ese caso igual que en cualquier otro: es
-lo que el usuario fue a buscar, y negárselo por completo lo dejaría con un vencimiento resuelto por un
-movimiento que sabe que no corresponde.
+**LAS DOS COSAS VAN JUNTAS O NO VA NINGUNA.** Romper el vínculo y revertir la conversión SHALL
+completarse en una sola operación atómica. Si la reversión no se puede realizar, el sistema NO
+SHALL romper el vínculo igual: SHALL dejar el estado **exactamente como estaba** y explicar qué
+hay que resolver primero.
 
-Esta rama existe con independencia de lo que se valide al vincular: la liquidación puede registrarse
-**después** de la vinculación, de modo que ninguna comprobación previa puede evitarla.
+Un deshacer parcial es peor que no deshacer. La vinculación equivocada convirtió un gasto
+personal en deuda para el otro miembro del hogar; soltar el vínculo y dejar el gasto compartido
+corrige lo que el usuario ve y conserva lo que le cuesta plata a otra persona, sin que nadie
+vuelva a mirarlo. El usuario cree que deshizo y no deshizo.
 
-El sistema NO SHALL indicarle al usuario que revierta esa liquidación para destrabar la operación,
-salvo que revertirla efectivamente la destrabe. Una salida que no funciona es peor que no ofrecer
-ninguna: manda al usuario a hacer algo irreversible que lo deja igual de trabado.
+**LO QUE PUEDE IMPEDIR LA REVERSIÓN ES UNA LIQUIDACIÓN VIGENTE, Y SÓLO ESA.** El sistema impide
+devolver a personal un gasto compartido cubierto por una liquidación posterior del hogar, porque
+esa liquidación se calculó sobre un saldo que lo incluía. Cuando eso ocurre, el sistema SHALL
+decirle al usuario que revierta esa liquidación para poder deshacer la vinculación — y ese
+consejo SHALL ser cierto: una liquidación correctamente revertida NO SHALL seguir impidiendo la
+operación (ver la capability `shared`). El sistema NO SHALL ofrecer una salida que deje al
+usuario en el mismo lugar después de seguirla.
 
-Cuando la situación ya es conocida al momento de vincular —existe una liquidación que cubriría la
-fecha del movimiento—, la pantalla que pide confirmación para convertir SHALL advertirlo antes, de
-modo que el usuario sepa que esa conversión no se va a poder revertir.
+Cuando la situación ya es conocida al momento de vincular —existe una liquidación vigente que
+cubriría la fecha del movimiento—, la pantalla que pide confirmación para convertir SHALL
+advertirlo antes, de modo que el usuario sepa que para deshacer esa conversión va a tener que
+revertir la liquidación primero.
 
 #### Scenario: Desvincular un movimiento convertido lo devuelve a personal
 
-- **WHEN** el usuario desvincula un movimiento que la vinculación había convertido en compartido, sin
-  liquidaciones posteriores en el hogar
+- **WHEN** el usuario desvincula un movimiento que la vinculación había convertido en compartido,
+  sin liquidaciones vigentes que lo cubran
 - **THEN** el movimiento vuelve a ser personal, sin reparto
 - **AND** la deuda del hogar vuelve a lo que era antes de vincular
 - **AND** el movimiento sigue existiendo
+- **AND** la ocurrencia queda *sin resolver*
 
 #### Scenario: Desvincular un movimiento que ya era compartido no toca el reparto
 
@@ -95,17 +99,23 @@ modo que el usuario sepa que esa conversión no se va a poder revertir.
 - **THEN** el vínculo se rompe
 - **AND** el movimiento conserva su reparto y la deuda del hogar no cambia
 
-#### Scenario: Una liquidación posterior deja el movimiento compartido, sin trabar la desvinculación
+#### Scenario: Una liquidación vigente conserva el estado anterior por completo
 
-- **WHEN** el usuario desvincula un movimiento convertido y existe una liquidación del hogar en esa
-  moneda con fecha igual o posterior a la del movimiento
-- **THEN** el vínculo se rompe y la ocurrencia queda *sin resolver*
-- **AND** el movimiento sigue existiendo y sigue siendo compartido
-- **AND** el sistema explica que sigue compartido porque la deuda que generó ya fue saldada
-- **AND** NO le indica al usuario revertir esa liquidación
+- **WHEN** el usuario desvincula un movimiento convertido y existe una liquidación **vigente** del
+  hogar en esa moneda con fecha igual o posterior a la del movimiento
+- **THEN** el movimiento sigue compartido **y el vínculo sigue en pie**
+- **AND** la ocurrencia sigue resuelta
+- **AND** el sistema explica que primero hay que revertir esa liquidación
+- **AND** NO deja el movimiento compartido con el vínculo roto
 
-#### Scenario: La conversión avisa cuando ya se sabe que no va a poder revertirse
+#### Scenario: Revertir la liquidación destraba la desvinculación
+
+- **WHEN** el usuario revierte la liquidación que impedía desvincular y vuelve a intentarlo
+- **THEN** la desvinculación se completa: el movimiento vuelve a ser personal y el vínculo se rompe
+
+#### Scenario: La conversión avisa cuando ya hay una liquidación que la cubriría
 
 - **WHEN** el usuario va a convertir un movimiento personal cuya fecha ya está cubierta por una
-  liquidación del hogar
-- **THEN** la pantalla de confirmación advierte que esa conversión no se va a poder revertir
+  liquidación vigente del hogar
+- **THEN** la pantalla de confirmación advierte que para deshacer esa conversión va a tener que
+  revertir esa liquidación primero

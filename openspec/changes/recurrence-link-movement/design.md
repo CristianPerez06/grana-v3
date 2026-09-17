@@ -43,8 +43,10 @@ base online**.
 **Non-Goals:**
 
 - Deshacer un pago que la recurrencia creó (#104) — ver `proposal.md`.
-- Arreglar la guarda de liquidaciones — decisión abierta en `proposal.md`.
 - Vincular desde la ficha del movimiento.
+- Rediseñar el modelo de la cuenta corriente. La corrección de las guardas es de su predicado
+  de vigencia y nada más: no toca cómo se calcula la deuda, ni el contraasiento, ni los
+  estados de `settlement`.
 
 ## Decisions
 
@@ -78,23 +80,40 @@ Es la decisión 22 de `fix-recurrence-backlog` aplicada donde ella misma la nomb
 caminos. El caso simple es el compartido sin conversión; separarlos duplicaría la validación
 de elegibilidad y dejaría dos lugares donde escribir `resolution_kind`.
 
-### 3. Desvincular atrapa `GRN01` en una subtransacción y sigue
+### 3. Se corrige el predicado de las guardas, y desvincular es todo o nada
 
-El RPC de desvincular intenta la reversión dentro de un bloque `BEGIN … EXCEPTION WHEN
-sqlstate 'GRN01'`. Si la guarda la rechaza, la subtransacción revierte **sólo esa parte** y
-el RPC continúa rompiendo el vínculo. Devuelve qué pasó, para que la app diga la verdad en
-lugar de un error genérico.
+El RPC de desvincular **no atrapa `GRN01`**: si la guarda se dispara, la transacción entera
+falla y nada cambia. La app traduce ese error a qué hay que resolver primero. Es la única
+forma de cumplir «las dos cosas o ninguna» sin inventar un estado intermedio.
 
-Funciona porque `trg_block_unshare_with_settlement` es un trigger **inmediato**: lanza dentro
-del bloque y es atrapable. **Ojo con no confundirlo** con `trg_no_splits_when_unshared`
-(`0048`), que es `deferrable initially deferred` y se evalúa recién en el COMMIT, fuera del
-alcance de cualquier `EXCEPTION`. No hace falta atraparlo: al revertir la subtransacción, los
-cambios que lo dispararían dejan de existir.
+Para que ese consejo sea cierto, la migración reemplaza las dos funciones de guarda de `0049`
+agregando al predicado la noción de **liquidación vigente**:
 
-**Alternativa descartada: chequear la guarda antes y no ofrecer desvincular.** Deja al
-usuario con un vencimiento resuelto por un movimiento que sabe que no corresponde, y no cubre
-el caso real —que la liquidación se registre **después** de haber vinculado—, que ninguna
-comprobación previa puede evitar.
+- **Deja de contar** una liquidación `reversed` cuyo contraasiento existe, y toda fila
+  `contra`. Un par revertido suma cero: no saldó nada, así que no hay saldo que proteger.
+- **Sigue contando** `completed` y `pending_receipt`. En la segunda la plata ya salió de la
+  cuenta del pagador (`0023`, `0043`); que el receptor no haya asignado la suya no la vuelve
+  inofensiva.
+
+Se exige el contraasiento presente, y no sólo `status = 'reversed'`, porque eso es
+literalmente lo que significa «correctamente revertida» y descarta un estado a medio escribir.
+
+**El cálculo de la deuda no se toca.** `0044` hace que el original y su contra cuenten los dos
+y se cancelen; eso sigue igual. La corrección es del predicado de la guarda, no del modelo de
+la cuenta corriente. Confundirlas —«si no bloquea, que tampoco cuente»— rompería el neteo.
+
+**Alternativa descartada: que desvincular suelte el vínculo y deje el gasto compartido.** Fue
+la propuesta anterior y el usuario la rechazó con razón. Una vinculación equivocada convierte
+un gasto personal en deuda para la otra persona; soltar el vínculo y dejar el reparto corrige
+lo que el usuario ve y conserva lo que le cuesta plata a alguien más, sin que nadie vuelva a
+mirarlo. Y el mensaje que la acompañaba —«la deuda ya fue saldada»— es falso justo en el caso
+que más importa: cuando el bloqueo venía de una liquidación ya revertida, que no saldó nada.
+
+**Nota para quien implemente**: `trg_block_unshare_with_settlement` es un trigger inmediato,
+pero `trg_no_splits_when_unshared` (`0048`) es `deferrable initially deferred` y se evalúa en
+el COMMIT. Cualquier intento futuro de manejar estos errores dentro de un `EXCEPTION` sólo
+alcanzaría al primero — otra razón para que desvincular falle entero en lugar de simular una
+recuperación parcial.
 
 ### 4. Los candidatos salen de un RPC de lectura
 
@@ -146,13 +165,18 @@ cada plataforma.
   dos lados, en el mismo commit.
 - **Registrar anticipado puede dejar un movimiento sin ocurrencia si falla el INSERT.** →
   Mismo modo de falla y misma compensación que confirmar hoy; no se introduce una clase nueva.
-- **Atrapar `GRN01` deja al usuario con un gasto compartido que quería personal.** → Es la
-  única respuesta verdadera: la plata cambió de manos y la deuda se saldó. La app lo dice; el
-  vencimiento vuelve a revisión igual, que es lo que el usuario fue a buscar.
-- **La guarda que atrapamos tiene un defecto de fondo que este change no arregla.** Mientras
-  siga sin filtrar por estado, un hogar que liquidó y revirtió no puede descompartir nada
-  anterior, ni desde acá ni desde el toggle que ya existe. → Decisión abierta en el proposal;
-  si se elige el camino acotado, queda ticket propio y el change no repite el consejo falso.
+- **Con una liquidación vigente, desvincular no se puede y el usuario queda con el vínculo
+  puesto.** → Es el estado correcto —nada a medias— y ahora tiene salida real: revertir esa
+  liquidación destraba, cosa que antes no pasaba. La pantalla de conversión avisa antes cuando
+  ya se sabe.
+- **Tocamos una guarda de integridad del módulo Compartido, que este change no vino a
+  cambiar.** Aflojar de más reabriría la reescritura silenciosa de un saldo ya liquidado. →
+  El predicado sólo excluye lo que suma cero (revertida con su contra, y la contra misma);
+  `completed` y `pending_receipt` siguen bloqueando, con escenarios propios en el spec de
+  `shared` que lo fijan. El arreglo alcanza a las dos guardas gemelas para que no contesten
+  distinto.
+- **Confundir «no bloquea» con «no cuenta para la deuda» rompería el neteo** del contraasiento.
+  → El spec lo dice explícitamente y el cálculo de la deuda no se toca en esta entrega.
 - **La ventana en una regla `custom` de intervalo largo** (cada 2 años) ofrece una ventana
   enorme. → El orden por proximidad pone lo relevante arriba y la lista se muestra acotada.
 - **La conversión a compartido mueve deuda que la otra persona ve.** → Confirmación explícita
@@ -166,15 +190,20 @@ cada plataforma.
 
 1. RPC de **candidatos** (lectura, `SECURITY INVOKER`).
 2. RPC de **vincular**, con la rama de conversión a compartido.
-3. RPC de **desvincular**, con la reversión y el `EXCEPTION WHEN sqlstate 'GRN01'`.
-4. `create or replace` de **`recurrence_positions_spent`** con la unión. `recurrence_positions_spent_batch` (`0070`) la llama y no se toca: hay una sola definición de qué cuenta `max_occurrences` y el batch es otra forma de preguntarla, no otra forma de calcularla.
-5. `revoke`/`grant` explícitos en cada función nueva. Postgres concede EXECUTE a PUBLIC por
+3. RPC de **desvincular**, con la reversión en la misma transacción y sin atrapar `GRN01`.
+4. `create or replace` de las **dos funciones de guarda** de `0049`
+   (`trg_fn_block_shared_delete_with_settlement` y `trg_fn_block_unshare_with_settlement`) con
+   la noción de liquidación vigente. Los triggers no se recrean: apuntan a las funciones por
+   nombre y toman la definición nueva, igual que hizo `0049` sobre los de `0043` y `0048`.
+5. `create or replace` de **`recurrence_positions_spent`** con la unión. `recurrence_positions_spent_batch` (`0070`) la llama y no se toca: hay una sola definición de qué cuenta `max_occurrences` y el batch es otra forma de preguntarla, no otra forma de calcularla.
+6. `revoke`/`grant` explícitos en cada función nueva. Postgres concede EXECUTE a PUBLIC por
    defecto y Supabase además expone `anon`; una función que no dice nada sobre sus privilegios
    queda abierta. Es lo que la migración `0067` existió para reparar.
-6. Self-check antes del COMMIT, como `0068` y `0070`.
+7. Self-check antes del COMMIT, como `0068` y `0070`.
 
-**No es destructiva**: agrega funciones y reemplaza una por su versión corregida. No borra
-filas, no cambia tipos, no elimina columnas.
+**No es destructiva**: agrega funciones y reemplaza tres por su versión corregida. No borra
+filas, no cambia tipos, no elimina columnas. Las dos guardas siguen existiendo y siguen
+bloqueando — dejan de hacerlo sólo donde ya no protegían nada.
 
 **Orden de despliegue.** La migración va primero y es compatible hacia atrás: las funciones
 nuevas no las llama nadie hasta que se despliega la app, y el conteo corregido sólo mueve el
@@ -182,11 +211,7 @@ avance de una regla que tenga un vencimiento futuro ya resuelto — algo que hoy
 existir, porque resolver un vencimiento futuro es justamente lo que este change introduce. En
 la base actual el cambio del punto 4 es un no-op verificable.
 
-**Rollback.** Revertir el punto 4 es volver a `create or replace` la versión de `0068`. Las
-funciones nuevas quedan sin llamadores si se revierte la app; no hace falta borrarlas.
+**Rollback.** Revertir los puntos 4 y 5 es volver a `create or replace` las versiones de `0049`
+y `0068`. Las funciones nuevas quedan sin llamadores si se revierte la app; no hace falta
+borrarlas.
 
-## Open Questions
-
-- **La elección entre el camino acotado y el ampliado de la decisión abierta** (`proposal.md`
-  § Decisión abierta). No bloquea escribir las tareas del camino acotado, que hay que
-  construir en los dos casos; el camino ampliado agrega tareas y una capability.
