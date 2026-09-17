@@ -89,12 +89,28 @@ export {
   materializationOutcome,
   reviewFeedState,
   stuckRules,
+  canUnlink,
+  recurrenceLinkLabelKey,
   type ReviewUrgency,
   type ResolutionPreview,
   type MaterializationOutcome,
   type ReviewFeedState,
   type StuckRule,
 } from './review-surface'
+export {
+  getRecurrenceLinkCandidates,
+  linkMovementToRecurrence,
+  unlinkMovementFromRecurrence,
+  registerRecurrenceAhead,
+  describeBlockingSettlements,
+  type LinkCandidate,
+  type LinkErrorCode,
+  type LinkResult,
+  type UnlinkResult,
+  type RegisterAheadResult,
+  type BlockingSettlements,
+} from './link'
+
 export { recurrenceTitle, type RecurrenceTitleParts } from './display-title'
 export { referenceDateChoice } from './schedule-edit'
 export type { ReferenceDateChoice } from './schedule-edit'

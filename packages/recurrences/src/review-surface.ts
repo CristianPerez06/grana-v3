@@ -1,4 +1,4 @@
-import type { PendingRecurrenceInstance } from './types'
+import type { PendingRecurrenceInstance, RecurrenceInstance } from './types'
 
 /**
  * The decisions the "vencimientos por revisar" surfaces make, in one place.
@@ -196,4 +196,37 @@ export function stuckRules(
   }
   stuck.sort((a, b) => a.since.localeCompare(b.since) || a.recurrence_id.localeCompare(b.recurrence_id))
   return stuck
+}
+
+// ── Qué se puede hacer para deshacer una resolución ──────────────────────────
+
+/**
+ * Las dos formas de resolver un vencimiento dejan estados que se ven iguales en
+ * pantalla y se deshacen distinto, y esa diferencia se decide en UN solo lugar
+ * para las dos plataformas.
+ *
+ *   `created`  la recurrencia creó el movimiento → deshacerlo sería BORRARLO,
+ *              que es otra operación y tiene su propio alcance (#104).
+ *   `linked`   el usuario señaló un movimiento suyo → soltar el vínculo lo deja
+ *              como estaba, y eso sí se ofrece.
+ *
+ * Una superficie que ofreciera «Desvincular» sobre una resolución `created`
+ * borraría un gasto real del historial del usuario.
+ */
+export function canUnlink(
+  instance: Pick<RecurrenceInstance, 'status' | 'resolution_kind'>,
+): boolean {
+  return instance.status === 'confirmed' && instance.resolution_kind === 'linked'
+}
+
+/**
+ * Cómo nombrar el vínculo de un movimiento con su regla. Un movimiento que
+ * existía ANTES no fue originado por la recurrencia: el usuario lo cargó por su
+ * cuenta, y llamarlo «originado» hace que dos filas idénticas en pantalla se
+ * comporten distinto sin explicación.
+ */
+export function recurrenceLinkLabelKey(
+  resolutionKind: string | null,
+): 'linked' | 'originated' {
+  return resolutionKind === 'linked' ? 'linked' : 'originated'
 }

@@ -18,13 +18,13 @@
 
 ## 3. Lógica compartida (`@grana/recurrences`)
 
-- [ ] 3.1 Read de candidatos sobre el RPC de 2.2, con su tipo de dominio. Verificar con tests que cubran ventana, exclusión de vinculados y orden
-- [ ] 3.2 Mutation de **registrar anticipado**: crear el movimiento con los orquestadores existentes e insertar la ocurrencia ya `confirmed` con su `due_date` real. Verificar que en ningún momento existe una fila `pending` con fecha futura, y que un fallo del INSERT compensa borrando el movimiento como hace hoy `confirmRecurrenceInstance`
-- [ ] 3.3 Mutation de **vincular** sobre el RPC de 2.3, incluida la elegibilidad de las tres ramas de compartido. Verificar que un movimiento compartido con otro reparto no llega a ofrecerse y que el personal exige la confirmación
-- [ ] 3.4 Mutation de **desvincular** sobre el RPC de 2.6. Verificar que el camino feliz revierte la conversión y que el rechazo deja el estado intacto
-- [ ] 3.5 Resolver el mensaje del rechazo según el estado de la liquidación que bloquea: `completed` → revertir; `pending_receipt` propia → cancelar; `pending_receipt` ajena → lo cancela quien la registró; varias → decirlo. Verificar los cuatro casos con tests, y que ningún camino dice «revertir» sobre una pendiente
-- [ ] 3.6 Extender el modelo de vista de la fila (`review-surface.ts`) para que diga qué acciones ofrece un vencimiento según cómo se resolvió, en un solo lugar para las dos plataformas. Verificar que una ocurrencia resuelta por `created` no ofrece desvincular
-- [ ] 3.7 Exportar lo nuevo desde `packages/recurrences/src/index.ts` y verificar que `pnpm test` pasa en todo el monorepo
+- [x] 3.1 Read de candidatos sobre el RPC de 2.2, con su tipo de dominio. Verificar con tests que cubran ventana, exclusión de vinculados y orden
+- [x] 3.2 Mutation de **registrar anticipado**: crear el movimiento con los orquestadores existentes e insertar la ocurrencia ya `confirmed` con su `due_date` real. Verificar que en ningún momento existe una fila `pending` con fecha futura, y que un fallo del INSERT compensa borrando el movimiento como hace hoy `confirmRecurrenceInstance`
+- [x] 3.3 Mutation de **vincular** sobre el RPC de 2.3, incluida la elegibilidad de las tres ramas de compartido. Verificar que un movimiento compartido con otro reparto no llega a ofrecerse y que el personal exige la confirmación
+- [x] 3.4 Mutation de **desvincular** sobre el RPC de 2.6. Verificar que el camino feliz revierte la conversión y que el rechazo deja el estado intacto
+- [x] 3.5 Resolver el mensaje del rechazo según el estado de la liquidación que bloquea: `completed` → revertir; `pending_receipt` propia → cancelar; `pending_receipt` ajena → lo cancela quien la registró; varias → decirlo. Verificar los cuatro casos con tests, y que ningún camino dice «revertir» sobre una pendiente
+- [x] 3.6 Extender el modelo de vista de la fila (`review-surface.ts`) para que diga qué acciones ofrece un vencimiento según cómo se resolvió, en un solo lugar para las dos plataformas. Verificar que una ocurrencia resuelta por `created` no ofrece desvincular
+- [x] 3.7 Exportar lo nuevo desde `packages/recurrences/src/index.ts` y verificar que `pnpm test` pasa en todo el monorepo
 
 ## 4. Web
 
