@@ -80,6 +80,32 @@ dar el conteo por cerrado. Alternativa descartada: calcular el atraso real camin
 calendario en cada lectura del bloque — es trabajo por regla en una pantalla que se abre
 todo el tiempo, para un número que la próxima corrida va a materializar igual.
 
+**2b · El orden con que se nombra una regla vive en el paquete, y la subcategoría entra antes que la categoría.**
+
+Apareció en la QA. El aviso de trabada tenía que nombrar la regla «igual que el hub», y para eso
+hacía falta preguntarse qué hace el hub — que resultó ser la décima copia de la misma cadena: nueve
+lugares entre las dos apps retipean `descripción → categoría → tipo`. Ya había divergido sin que
+nadie lo notara: los «Compromisos» del dashboard leen `descripción → subcategoría → categoría` para
+**esas mismas reglas**, así que una regla sin descripción se llamaba «Internet» en el inicio y
+«Servicios» en el hub. Retipear la cadena una vez más es cómo vuelve a pasar, así que el orden pasa
+a `@grana/recurrences` y las superficies lo consumen.
+
+La función toma los nombres **ya resueltos**, no las filas: una categoría del sistema se nombra por
+el traductor (`categories.{canonical_name}`) y cada app tiene el suyo. Lo que hay que decidir una
+sola vez es el ORDEN, y es lo único que está ahí.
+
+Y el orden gana un escalón: la **subcategoría antes que la categoría**. Una regla sin descripción se
+nombra por su clasificación, y la mitad angosta es la que distingue —«Internet» y «Gas» dicen qué es
+cada una; las dos se llaman «Servicios»—. La categoría queda como el paso siguiente, porque una regla
+puede estar clasificada sólo hasta ahí.
+
+Consecuencia que no es opcional: la regla tiene que **viajar con su subcategoría**, no sólo con su
+categoría (`attachRuleClassification`). Traer una sola deja el aviso un escalón por debajo del hub,
+que es exactamente la divergencia que este punto vino a cerrar.
+
+Y la **ficha muestra la subcategoría**. Si el título sale de ella, una ficha que lista sólo la
+categoría deja el nombre de arriba sin origen visible en la pantalla cuyo trabajo es explicarlo.
+
 **3 · La segunda ventana pasa a `[hoy+8, hoy+30]` y sigue siendo disjunta de la primera.**
 
 Lo único que cambia es el final: `hoy+30` en vez de `fin de mes`. El comienzo sigue en

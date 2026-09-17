@@ -1681,6 +1681,7 @@
       "account": "Cuenta",
       "destination": "Cuenta destino",
       "category": "Categoría",
+      "subcategory": "Subcategoría",
       "next_date": "Próxima fecha",
       "type": "Tipo",
       "created_at": "Creada el",

@@ -10,6 +10,7 @@ import {
   dismissRecurrenceSuggestion,
 } from '@/app/_actions/recurrences'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
+import { recurrenceTitle } from '@grana/recurrences'
 import { useShowCents } from '@/lib/preferences-context'
 import { getCategoryName } from '@/lib/categories/display'
 import { Button } from '@/components/ui/button'
@@ -64,10 +65,16 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
   const freqLabel = t(
     `frequencies_lower.${suggestion.frequency}` as 'frequencies_lower.weekly',
   )
+  // A SUGGESTION has no subcategoría: it is detected by grouping movements by
+  // categoría, so there is no narrower step to try. Said here, rather than by
+  // leaving the field out, so the chain reads the same as everywhere else.
   const title =
-    suggestion.description ||
-    (suggestion.category ? getCategoryName(suggestion.category, tRoot) : null) ||
-    movementLabel
+    recurrenceTitle({
+      description: suggestion.description,
+      subcategory: null,
+      category: suggestion.category ? getCategoryName(suggestion.category, tRoot) : null,
+      type: movementLabel,
+    }) ?? movementLabel
   const accountName = suggestion.account?.name ?? '—'
   const destinationName = suggestion.destination_account?.name
 

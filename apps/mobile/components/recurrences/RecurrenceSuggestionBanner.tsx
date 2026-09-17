@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
+import { recurrenceTitle } from '@grana/recurrences'
 import { getTopRecurrenceSuggestion } from '../../lib/recurrences/queries'
 import {
   acceptRecurrenceSuggestion,
@@ -35,10 +36,15 @@ export function RecurrenceSuggestionBanner() {
       ? formatARS(suggestion.amount, showCents)
       : formatUSD(suggestion.amount, showCents)
 
+  // A SUGGESTION has no subcategoría: it is detected by grouping movements by
+  // categoría, so there is no narrower step to try. Web's twin.
   const title =
-    suggestion.description ||
-    categoryName(suggestion.category, t) ||
-    movementLabel(suggestion.movement_type, t)
+    recurrenceTitle({
+      description: suggestion.description,
+      subcategory: null,
+      category: categoryName(suggestion.category, t),
+      type: movementLabel(suggestion.movement_type, t),
+    }) ?? movementLabel(suggestion.movement_type, t)
 
   const onAccept = async () => {
     setBusy(true)

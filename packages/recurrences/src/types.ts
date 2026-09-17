@@ -64,11 +64,16 @@ export type RecurrenceInstance = Omit<
  */
 export type EnrichedRecurrenceInstance = RecurrenceInstance & {
   /**
-   * The rule, with ITS OWN category attached (`attachRuleCategories`). Surfaces
-   * that name the rule read this one; `category` below is the occurrence's
-   * snapshot and can differ after a single pendiente is edited.
+   * The rule, with ITS OWN categoría and subcategoría attached
+   * (`attachRuleClassification`). Surfaces that name the rule read these two —
+   * `recurrenceTitle` tries the subcategoría before the categoría. The fields
+   * below are the OCCURRENCE's snapshot and can differ after a single pendiente
+   * is edited.
    */
-  recurrence: Recurrence & { category: RecurrenceCategory | null }
+  recurrence: Recurrence & {
+    category: RecurrenceCategory | null
+    subcategory: RecurrenceSubcategory | null
+  }
   account: RecurrenceAccount | null
   destination_account: RecurrenceAccount | null
   category: RecurrenceCategory | null

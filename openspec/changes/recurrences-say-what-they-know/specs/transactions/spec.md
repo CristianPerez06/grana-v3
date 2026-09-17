@@ -167,3 +167,57 @@ La proyección y el generador SHALL derivar de un único caminante de calendario
 
 - **WHEN** las ocurrencias proyectadas incluyen reglas en ARS y en USD
 - **THEN** cada fila muestra su propio monto en su moneda y el sistema no muestra ningún total combinado
+
+### Requirement: Una regla recurrente se nombra de una sola manera en toda la aplicación
+
+El sistema SHALL derivar el nombre visible de una regla recurrente en este orden, y NO SHALL usar
+otro en ninguna superficie: **descripción** → **subcategoría** → **categoría** → **etiqueta del tipo
+de movimiento**. El mismo orden SHALL aplicar al nombre de una ocurrencia, leído de los valores
+propios de esa ocurrencia.
+
+La descripción va primero porque es lo único que el usuario escribió sobre esa regla en particular.
+La subcategoría va antes que la categoría porque es la que distingue: «Internet» y «Gas» dicen qué
+es cada regla, mientras que las dos se llaman «Servicios» —tres reglas de servicios bajo el mismo
+nombre son tres filas que hay que abrir para saber cuál es cuál—. La etiqueta del tipo va última:
+no identifica nada, y por eso mismo nunca falta.
+
+Un valor **en blanco** SHALL contar como ausente: una descripción de espacios no es un nombre y el
+sistema SHALL seguir bajando por la lista en lugar de dibujar una fila sin texto.
+
+Toda superficie que nombre una regla SHALL leer los valores **de la regla**, nunca los de una de sus
+ocurrencias: la clasificación y la descripción de una ocurrencia son su propia foto, editable de a
+una fila, de modo que leerlas haría que editar una pendiente renombre una frase que habla de la
+regla, y que renombrar la regla no la cambie.
+
+La **ficha de la regla** SHALL mostrar la subcategoría cuando la tenga, junto a la categoría: sin ese
+dato el nombre que aparece arriba no tiene origen visible en la pantalla que lo explica.
+
+Estas reglas SHALL aplicar por igual en web y en la app nativa.
+
+#### Scenario: Sin descripción, la subcategoría le gana a la categoría
+
+- **WHEN** una regla sin descripción tiene categoría «Servicios» y subcategoría «Internet»
+- **THEN** las superficies que la nombran la llaman «Internet»
+- **AND** no la llaman «Servicios»
+
+#### Scenario: La descripción le gana a la clasificación
+
+- **WHEN** una regla con descripción «Fibra hogar» tiene subcategoría «Internet»
+- **THEN** se la nombra «Fibra hogar»
+
+#### Scenario: Sin descripción ni clasificación, queda la etiqueta del tipo
+
+- **WHEN** una regla de transferencia no tiene descripción ni categoría ni subcategoría
+- **THEN** se la nombra «Transferencia»
+
+#### Scenario: El aviso de regla trabada nombra la regla, no una ocurrencia
+
+- **WHEN** una regla llamada «Fibra hogar» tiene ocurrencias sin resolver cuya descripción quedó en
+  «Internet», y la regla está trabada
+- **THEN** el aviso dice «Fibra hogar»
+- **AND** las filas de esas ocurrencias siguen mostrando «Internet», que es lo que describe a cada una
+
+#### Scenario: La ficha muestra de dónde sale el nombre
+
+- **WHEN** el usuario abre una regla sin descripción, con categoría «Servicios» y subcategoría «Internet»
+- **THEN** la ficha muestra las dos, categoría y subcategoría

@@ -7,7 +7,8 @@ import {
   type RuleForProjection,
 } from '@grana/money-logic'
 import { formatDateISO, getTodayAR } from '@/lib/date'
-import { getCategoryName } from '@/lib/categories/display'
+import { recurrenceTitle } from '@grana/recurrences'
+import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 import { UpcomingCard } from './upcoming-card'
 
@@ -30,6 +31,7 @@ const addDaysISO = (iso: string, days: number) => {
  */
 export const UpcomingRecurrences = async ({ rules }: Props) => {
   const tRec = await getTranslations('recurrences')
+  const tTx = await getTranslations('transactions')
   const tRoot = await getTranslations()
 
   const today = formatDateISO(getTodayAR())
@@ -92,11 +94,16 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
           : 'text-terracotta'
     const tileColor = rule.category?.color ?? '#8C97A4'
     const tileIcon = rule.category?.icon
+    // Same order, and the same last step, as the hub and the review block: this
+    // card used to end at the ACCOUNT's name, so a transfer with no description
+    // read "Billetera" here and "Transferencia" one card below it.
     const name =
-      rule.description ||
-      (rule.category ? getCategoryName(rule.category, tRoot) : null) ||
-      rule.account?.name ||
-      '—'
+      recurrenceTitle({
+        description: rule.description,
+        subcategory: rule.subcategory ? getSubcategoryName(rule.subcategory, tRoot) : null,
+        category: rule.category ? getCategoryName(rule.category, tRoot) : null,
+        type: tTx(`types.${rule.movement_type}` as 'types.income'),
+      }) ?? '—'
 
     return (
       <div

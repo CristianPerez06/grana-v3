@@ -1681,6 +1681,7 @@
       "account": "Account",
       "destination": "Destination account",
       "category": "Category",
+      "subcategory": "Subcategory",
       "next_date": "Next date",
       "type": "Type",
       "created_at": "Created on",

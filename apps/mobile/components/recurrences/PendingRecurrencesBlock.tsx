@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, Clock, X } from 'lucide-react-native'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import {
+  recurrenceTitle,
   resolutionPreview,
   reviewFeedState,
   reviewUrgency,
@@ -21,7 +22,7 @@ import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { colors } from '../../lib/colors'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
-import { amountSign, amountToneClass, categoryName, movementLabel } from './format'
+import { amountSign, amountToneClass, categoryName, movementLabel, subcategoryName } from './format'
 import { Card } from '../ui/Card'
 import { RecurrenceFailureNotice } from './MaterializationNotice'
 import { useRecurrenceMaterialization } from '../../lib/recurrences/materialization-context'
@@ -54,8 +55,15 @@ function PendingRow({
   const [busy, setBusy] = useState(false)
 
   const type = instance.recurrence.movement_type
-  const title =
-    instance.description || categoryName(instance.category, t) || movementLabel(type, t)
+  // The OCCURRENCE's own snapshot — editable one row at a time. Same order as
+  // every other surface (`recurrenceTitle`); what differs is whose values it
+  // reads. Web's twin.
+  const title = recurrenceTitle({
+    description: instance.description,
+    subcategory: subcategoryName(instance.subcategory, t),
+    category: categoryName(instance.category, t),
+    type: movementLabel(type, t),
+  })
   const amount = fmtMoney(Number(instance.amount), instance.currency_code, showCents)
   const urgency = reviewUrgency(instance.due_date, today)
   const urgencyLabel =
@@ -204,18 +212,20 @@ export function PendingRecurrencesBlock() {
   // single number for the whole run, and the generator only looks at active rules.
   const stillRebuilding = (materialization?.remaining ?? 0) > 0
 
-  // The rule's name AS IT IS NOW, same derivation as web and as the hub — the
-  // rule's description, then the RULE's category, then the movement label. Never
-  // the occurrence's own snapshot: editing one pendiente must not rename the
-  // notice, and renaming the rule must.
+  // The rule's name AS IT IS NOW, same derivation as web and as the hub: the
+  // shared `recurrenceTitle` order, read off the RULE's own fields. Never the
+  // occurrence's snapshot — editing one pendiente must not rename the notice,
+  // and renaming the rule must.
   const ruleTitle = (recurrenceId: string): string => {
     const rule = instances.find((instance) => instance.recurrence.id === recurrenceId)?.recurrence
     if (!rule) return t('recurrences.pending.stuck_unnamed')
     return (
-      rule.description ||
-      categoryName(rule.category, t) ||
-      movementLabel(rule.movement_type, t) ||
-      t('recurrences.pending.stuck_unnamed')
+      recurrenceTitle({
+        description: rule.description,
+        subcategory: subcategoryName(rule.subcategory, t),
+        category: categoryName(rule.category, t),
+        type: movementLabel(rule.movement_type, t),
+      }) ?? t('recurrences.pending.stuck_unnamed')
     )
   }
 

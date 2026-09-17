@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, Clock, Pencil, Repeat, Users, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatDateISO, formatShortDate, getTodayAR } from '@/lib/date'
-import { getCategoryName } from '@/lib/categories/display'
+import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import { useRecurrenceMaterialization } from '@/lib/recurrences/materialization-context'
 import {
   confirmRecurrenceInstance,
@@ -14,6 +14,7 @@ import {
 } from '@/app/_actions/recurrences'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
+  recurrenceTitle,
   resolutionPreview,
   reviewUrgency,
   shouldOpenReviewBlock,
@@ -117,18 +118,21 @@ export const PendingRecurrencesBlock = ({
    * "Internet" after the rule was renamed to "Fibra hogar" — on a sentence whose
    * whole job is to name the rule.
    *
-   * The rule carries its OWN category on this read (`attachRuleCategories`), so
-   * the three steps are the rule's all the way down and the notice says exactly
-   * what the hub says about the same rule.
+   * The rule carries its OWN categoría and subcategoría on this read
+   * (`attachRuleClassification`), so every step is the rule's and the notice says
+   * exactly what the hub says about the same rule. The ORDER is
+   * `recurrenceTitle`'s, shared with every other surface that names a rule.
    */
   const ruleTitle = (recurrenceId: string): string => {
     const rule = pending.find((instance) => instance.recurrence.id === recurrenceId)?.recurrence
     if (!rule) return t('pending.stuck_unnamed')
     return (
-      rule.description ||
-      (rule.category ? getCategoryName(rule.category, tRoot) : null) ||
-      tTx(`types.${rule.movement_type}` as 'types.income') ||
-      t('pending.stuck_unnamed')
+      recurrenceTitle({
+        description: rule.description,
+        subcategory: rule.subcategory ? getSubcategoryName(rule.subcategory, tRoot) : null,
+        category: rule.category ? getCategoryName(rule.category, tRoot) : null,
+        type: tTx(`types.${rule.movement_type}` as 'types.income'),
+      }) ?? t('pending.stuck_unnamed')
     )
   }
 
@@ -454,9 +458,20 @@ export const PendingRecurrencesBlock = ({
 
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate text-[16px] font-bold tracking-[-0.01em] text-text">
-                    {instance.description ||
-                      (instance.category ? getCategoryName(instance.category, tRoot) : null) ||
-                      movementLabel}
+                    {/* The OCCURRENCE's own snapshot — its description and its
+                        classification, which the user can edit one row at a
+                        time. Same order as everywhere else; what changes is
+                        whose values are read. */}
+                    {recurrenceTitle({
+                      description: instance.description,
+                      subcategory: instance.subcategory
+                        ? getSubcategoryName(instance.subcategory, tRoot)
+                        : null,
+                      category: instance.category
+                        ? getCategoryName(instance.category, tRoot)
+                        : null,
+                      type: movementLabel,
+                    })}
                   </span>
                   <span className="flex items-center gap-1.5 text-[14px] font-medium text-text-muted">
                     <span className="truncate">

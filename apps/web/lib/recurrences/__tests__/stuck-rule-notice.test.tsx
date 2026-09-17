@@ -57,7 +57,12 @@ const owed = (
   rule: string,
   ruleName: string,
   due_date: string,
-  over: { description?: string | null; category?: unknown; ruleCategory?: unknown } = {},
+  over: {
+    description?: string | null
+    category?: unknown
+    ruleCategory?: unknown
+    ruleSubcategory?: unknown
+  } = {},
 ) =>
   ({
     id: `${rule}-${due_date}`,
@@ -74,10 +79,12 @@ const owed = (
     recurrence: {
       id: rule,
       description: ruleName,
-      // The RULE's own category, attached by the read. Separate from the
+      // The RULE's own classification, attached by the read. Separate from the
       // occurrence's `category` above, which is its snapshot.
       category: over.ruleCategory ?? null,
       category_id: (over.ruleCategory as { id?: string } | undefined)?.id ?? null,
+      subcategory: over.ruleSubcategory ?? null,
+      subcategory_id: (over.ruleSubcategory as { id?: string } | undefined)?.id ?? null,
       movement_type: 'expense',
       frequency: 'monthly',
       status: 'active',
@@ -196,7 +203,42 @@ describe('de dónde sale el nombre', () => {
     expect(notice.textContent).not.toContain('expensas de junio')
   })
 
-  it('sin descripción, usa la categoría de la REGLA', () => {
+  it('sin descripción, la SUBCATEGORÍA de la regla le gana a la categoría', () => {
+    // "Internet" identifies the rule; "Servicios" is what the internet, the gas
+    // and the water rule would all be called. The dashboard's Compromisos
+    // already read it this way, so stopping at the categoría here had one rule
+    // answering to two names depending on the screen.
+    const servicios = { id: 'c-serv', name: 'Servicios', canonical_name: null, user_id: 'u1' }
+    const internet = { id: 's-int', name: 'Internet', canonical_name: null, user_id: 'u1' }
+    show([
+      owed('r1', '', '2026-06-10', {
+        description: null,
+        ruleCategory: servicios,
+        ruleSubcategory: internet,
+      }),
+      owed('r1', '', '2026-07-10', {
+        description: null,
+        ruleCategory: servicios,
+        ruleSubcategory: internet,
+      }),
+    ])
+
+    expect(screen.getByText(/"rule":"Internet"/)).toBeTruthy()
+    expect(screen.queryByText(/"rule":"Servicios"/)).toBeNull()
+  })
+
+  it('la descripción le sigue ganando a la subcategoría', () => {
+    const internet = { id: 's-int', name: 'Internet', canonical_name: null, user_id: 'u1' }
+    show([
+      owed('r1', 'Fibra hogar', '2026-06-10', { ruleSubcategory: internet }),
+      owed('r1', 'Fibra hogar', '2026-07-10', { ruleSubcategory: internet }),
+    ])
+
+    expect(screen.getByText(/"rule":"Fibra hogar"/)).toBeTruthy()
+    expect(screen.queryByText(/"rule":"Internet"/)).toBeNull()
+  })
+
+  it('sin descripción ni subcategoría, usa la categoría de la REGLA', () => {
     const servicios = { id: 'c-serv', name: 'Servicios', canonical_name: null, user_id: 'u1' }
     show([
       owed('r1', '', '2026-06-10', { description: null, ruleCategory: servicios }),

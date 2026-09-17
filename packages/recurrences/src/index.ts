@@ -95,5 +95,6 @@ export {
   type ReviewFeedState,
   type StuckRule,
 } from './review-surface'
+export { recurrenceTitle, type RecurrenceTitleParts } from './display-title'
 export { referenceDateChoice } from './schedule-edit'
 export type { ReferenceDateChoice } from './schedule-edit'
