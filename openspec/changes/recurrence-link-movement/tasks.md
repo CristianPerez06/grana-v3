@@ -28,12 +28,12 @@
 
 ## 4. Web
 
-- [ ] 4.1 Acción «Ya lo pagué» en la fila de una regla cuyo próximo vencimiento no llegó (hub y detalle), reusando el formulario de registro con la fecha en hoy. Verificar a ancho de escritorio y **a ancho de teléfono**
-- [ ] 4.2 Superficie de candidatos con «Ampliar la búsqueda» siempre visible, la diferencia de importe como información y el orden por proximidad. Verificar que con la lista llena el control de ampliar sigue estando
-- [ ] 4.3 Confirmación explícita de la conversión a compartido, con el aviso previo cuando ya hay una liquidación vigente que cubre la fecha. Verificar que cancelar no convierte ni vincula
-- [ ] 4.4 Acción «Desvincular», con el mensaje del caso bloqueado que nombra la acción disponible según el estado de la liquidación. Verificar que el gasto sigue existiendo, que el vencimiento vuelve a «por revisar» en el camino feliz, y que en el bloqueado no cambia nada
-- [ ] 4.5 Rótulo «vinculado a esta recurrencia» en la ficha del movimiento (`tile-recurrence.tsx`), distinto del de origen. Verificar los dos casos
-- [ ] 4.6 Server actions en `app/_actions/recurrences.ts` como wrappers finos con auth, `revalidatePath` e invalidación. Verificar que `pnpm lint` y `pnpm typecheck` pasan
+- [x] 4.1 Acción «Ya lo pagué» en la fila de una regla cuyo próximo vencimiento no llegó (hub y detalle), reusando el formulario de registro con la fecha en hoy. Verificar a ancho de escritorio y **a ancho de teléfono**
+- [x] 4.2 Superficie de candidatos con «Ampliar la búsqueda» siempre visible, la diferencia de importe como información y el orden por proximidad. Verificar que con la lista llena el control de ampliar sigue estando
+- [x] 4.3 Confirmación explícita de la conversión a compartido, con el aviso previo cuando ya hay una liquidación vigente que cubre la fecha. Verificar que cancelar no convierte ni vincula
+- [x] 4.4 Acción «Desvincular», con el mensaje del caso bloqueado que nombra la acción disponible según el estado de la liquidación. Verificar que el gasto sigue existiendo, que el vencimiento vuelve a «por revisar» en el camino feliz, y que en el bloqueado no cambia nada
+- [x] 4.5 Rótulo «vinculado a esta recurrencia» en la ficha del movimiento (`tile-recurrence.tsx`), distinto del de origen. Verificar los dos casos
+- [x] 4.6 Server actions en `app/_actions/recurrences.ts` como wrappers finos con auth, `revalidatePath` e invalidación. Verificar que `pnpm lint` y `pnpm typecheck` pasan
 
 ## 5. App nativa
 
@@ -45,7 +45,7 @@
 
 ## 6. Copys
 
-- [ ] 6.1 Claves de las tres acciones, la lista de candidatos, el rótulo «vinculado» y los mensajes del caso compartido en `es.json` **y** `en.json`. Verificar que ninguna superficie arma el nombre de una regla a mano en lugar de usar `recurrenceTitle`
+- [x] 6.1 Claves de las tres acciones, la lista de candidatos, el rótulo «vinculado» y los mensajes del caso compartido en `es.json` **y** `en.json`. Verificar que ninguna superficie arma el nombre de una regla a mano en lugar de usar `recurrenceTitle`
 
 ## 7. Cierre
 

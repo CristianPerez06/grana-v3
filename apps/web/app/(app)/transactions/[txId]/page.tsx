@@ -38,6 +38,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
 
   const t = await getTranslations('transactions')
   const tRec = await getTranslations('recurrences')
+  const tLink = await getTranslations('recurrences.link')
 
   const getFrequencyLowerLabel = (freq: string) => {
     if (freq === 'weekly' || freq === 'biweekly' || freq === 'monthly' || freq === 'annual') {
@@ -128,7 +129,11 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
           className="mx-4 flex items-center gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm hover:bg-muted/50 transition-colors"
         >
           <Repeat className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <span className="text-muted-foreground">{t('generated_by_rule')}</span>{' '}
+          <span className="text-muted-foreground">
+            {recurrenceLink.resolution_kind === 'linked'
+              ? tLink('label_linked')
+              : t('generated_by_rule')}
+          </span>{' '}
           <span className="font-medium">
             ({getFrequencyLowerLabel(recurrenceLink.frequency)})
           </span>

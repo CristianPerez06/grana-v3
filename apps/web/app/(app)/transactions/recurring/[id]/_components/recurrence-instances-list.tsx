@@ -1,7 +1,9 @@
 import { getTranslations } from 'next-intl/server'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatShortDate } from '@/lib/date'
+import { canUnlink } from '@grana/recurrences'
 import type { EnrichedRecurrenceInstance } from '@/lib/recurrences/types'
+import { UnlinkInstanceButton } from './unlink-instance-button'
 
 type Props = {
   /**
@@ -26,6 +28,7 @@ const statusClass: Record<string, string> = {
  */
 export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props) => {
   const tRec = await getTranslations('recurrences')
+  const tLink = await getTranslations('recurrences.link')
 
   const fmtAmount = (amount: number) =>
     currencyCode === 'ARS' ? formatARS(amount, false) : formatUSD(amount, false)
@@ -52,6 +55,12 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
                 {instance.description && (
                   <span className="truncate text-xs text-text-muted">
                     {instance.description}
+                  </span>
+                )}
+                {/* Vinculado, no originado: el movimiento existía antes. */}
+                {instance.resolution_kind === 'linked' && (
+                  <span className="text-[11px] font-medium text-text-soft">
+                    {tLink('label_linked')}
                   </span>
                 )}
               </div>
@@ -81,6 +90,9 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
                 >
                   {tRec(`instance_statuses.${instance.status}`)}
                 </span>
+                {/* Sólo sobre lo que el usuario vinculó: sobre un pago que creó
+                    la recurrencia, deshacer sería BORRAR ese movimiento. */}
+                {canUnlink(instance) && <UnlinkInstanceButton instanceId={instance.id} />}
               </div>
             </li>
           ))}

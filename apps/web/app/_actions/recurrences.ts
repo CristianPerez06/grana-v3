@@ -32,8 +32,15 @@ import {
   skipRecurrenceInstance as skipRecurrenceInstanceImpl,
   updateRecurrence as updateRecurrenceImpl,
   getDuplicateRulesFor,
+  getRecurrenceLinkCandidates as getRecurrenceLinkCandidatesImpl,
+  linkMovementToRecurrence as linkMovementToRecurrenceImpl,
+  unlinkMovementFromRecurrence as unlinkMovementFromRecurrenceImpl,
+  registerRecurrenceAhead as registerRecurrenceAheadImpl,
   type DuplicateCandidate,
   type DuplicateMatch,
+  type LinkCandidate,
+  type LinkErrorCode,
+  type BlockingSettlements,
 } from '@grana/recurrences'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
@@ -227,4 +234,103 @@ export async function dismissRecurrenceSuggestion(
 
 export async function generateDueRecurrenceInstancesAction(): Promise<GenerationResult> {
   return generateDueRecurrenceInstances(await createClient())
+}
+
+// ── Vincular, desvincular y registrar antes del vencimiento ───────────────────
+//
+// Shells finos: auth + cliente + la implementación compartida + revalidación. La
+// traducción del rechazo vive acá porque el package no conoce el catálogo.
+
+async function translateLinkError(
+  code: LinkErrorCode | undefined,
+  blockedBy: BlockingSettlements | undefined,
+  errorCode: string | undefined,
+): Promise<string | undefined> {
+  const t = await getTranslations('recurrences.link.errors')
+  if (code) return t(code)
+  if (errorCode === 'GRN01') {
+    // El mensaje NOMBRA LA ACCIÓN DISPONIBLE para el estado de la liquidación que
+    // bloquea: una completada se revierte, una pendiente se cancela, y una
+    // pendiente ajena la cancela quien la registró. Decir siempre «revertí» manda
+    // al usuario a una operación que el sistema no ofrece para ese estado.
+    const key =
+      blockedBy?.action === 'cancel_own'
+        ? 'blocked_cancel_own'
+        : blockedBy?.action === 'cancel_other'
+          ? 'blocked_cancel_other'
+          : 'blocked_revert'
+    return blockedBy?.multiple ? `${t(key)} ${t('blocked_multiple')}` : t(key)
+  }
+  return undefined
+}
+
+export async function getRecurrenceLinkCandidates(
+  recurrenceId: string,
+  dueDate: string,
+  widen = false,
+): Promise<LinkCandidate[]> {
+  await getAuthenticatedUserId()
+  const supabase = await createClient()
+  return getRecurrenceLinkCandidatesImpl(supabase, { recurrenceId, dueDate, widen })
+}
+
+export async function linkMovementToRecurrence(args: {
+  recurrenceId: string
+  dueDate: string
+  transactionId: string
+  confirmConversion?: boolean
+}): Promise<ActionResult<never>> {
+  await getAuthenticatedUserId()
+  const supabase = await createClient()
+  const result = await linkMovementToRecurrenceImpl(supabase, args)
+  if (result.ok) {
+    // Vincular no crea movimientos, pero cambia de qué está hecho el historial de
+    // la regla y —cuando convierte— la deuda del hogar.
+    revalidateAfterRecurrenceMutation()
+    revalidateAfterMovementMutation()
+    return { ok: true }
+  }
+  const formError = await translateLinkError(result.linkErrorCode, undefined, result.errorCode)
+  return { ok: false, formError: formError ?? result.formError }
+}
+
+export async function unlinkMovementFromRecurrence(
+  instanceId: string,
+): Promise<ActionResult<never>> {
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+  const result = await unlinkMovementFromRecurrenceImpl(supabase, { instanceId, userId })
+  if (result.ok) {
+    revalidateAfterRecurrenceMutation()
+    revalidateAfterMovementMutation()
+    return { ok: true }
+  }
+  const formError = await translateLinkError(
+    result.linkErrorCode,
+    result.blockedBy,
+    result.errorCode,
+  )
+  return { ok: false, formError: formError ?? result.formError }
+}
+
+export async function registerRecurrenceAhead(args: {
+  recurrenceId: string
+  dueDate: string
+  date?: string
+  amount?: number
+  accountId?: string
+}): Promise<ActionResult<never> & { transactionId?: string }> {
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+  const result = await registerRecurrenceAheadImpl(supabase, userId, args)
+  if (!result.ok && result.mapErrorCode) {
+    const tm = await getTranslations('recurrences.mapper_errors')
+    return { ok: false, formError: tm(result.mapErrorCode) }
+  }
+  if (result.ok) {
+    revalidateAfterRecurrenceMutation()
+    revalidateAfterMovementMutation()
+    return { ok: true, transactionId: result.transactionId }
+  }
+  return { ok: false, formError: result.formError }
 }

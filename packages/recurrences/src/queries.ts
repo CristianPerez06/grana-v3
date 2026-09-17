@@ -590,11 +590,20 @@ export async function getRecurrenceLinkForTransaction(
   recurrence_id: string
   movement_type: string
   frequency: string
+  /**
+   * CÓMO se resolvió la ocurrencia. Un movimiento que existía ANTES no fue
+   * originado por la recurrencia —el usuario lo cargó por su cuenta— y llamarlo
+   * «originado» hace que dos filas idénticas en pantalla se comporten distinto
+   * sin explicación. Es además la misma distinción que decide qué acción de
+   * deshacer se ofrece.
+   */
+  resolution_kind: string | null
 } | null> {
   const { data: instance, error } = await supabase
     .from('recurrence_instances')
     .select(`
       recurrence_id,
+      resolution_kind,
       recurrence:recurrences!inner(movement_type, frequency)
     `)
     .eq('confirmed_transaction_id', transactionId)
@@ -610,6 +619,7 @@ export async function getRecurrenceLinkForTransaction(
     recurrence_id: instance.recurrence_id as string,
     movement_type: recurrence.movement_type,
     frequency: recurrence.frequency,
+    resolution_kind: (instance.resolution_kind as string | null) ?? null,
   }
 }
 

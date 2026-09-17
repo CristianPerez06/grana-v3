@@ -11,6 +11,7 @@ import { recurrenceTitle } from '@grana/recurrences'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 import { UpcomingCard } from './upcoming-card'
+import { ResolveAheadActions } from './resolve-ahead-actions'
 
 type Props = {
   rules: RecurrenceSummary[]
@@ -108,8 +109,9 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
     return (
       <div
         key={`${occ.rule_id}-${occ.scheduled_date}-${i}`}
-        className="flex items-center gap-3.5 px-5 py-3 [&+&]:border-t [&+&]:border-[var(--border-soft)]"
+        className="[&+&]:border-t [&+&]:border-[var(--border-soft)]"
       >
+      <div className="flex items-center gap-3.5 px-5 pb-1.5 pt-3">
         <span
           className="flex size-[38px] shrink-0 items-center justify-center rounded-[11px] text-[18px]"
           style={{ backgroundColor: `${tileColor}1A` }}
@@ -129,6 +131,19 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
           <span className="text-[12px] font-semibold text-text-soft">{formatWhen(occ.scheduled_date)}</span>
         </div>
       </div>
+      {/* Las dos salidas para un vencimiento que todavía no llegó. Van debajo de
+          la fila y no al lado del importe: a ancho de teléfono, dos botones
+          compitiendo con el monto por la misma línea dejan los tres ilegibles. */}
+      <div className="px-5 pb-3 pl-[66px]">
+        <ResolveAheadActions
+          recurrenceId={rule.id}
+          dueDate={occ.scheduled_date}
+          ruleAmount={amount}
+          ruleCurrency={rule.currency_code}
+          shared={rule.household_id != null}
+        />
+      </div>
+    </div>
     )
   }
 
