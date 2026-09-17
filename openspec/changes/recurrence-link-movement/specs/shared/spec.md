@@ -10,16 +10,22 @@ Una liquidación revertida no saldó nada: junto con su contraasiento suma cero.
 
 Esto NO SHALL cambiar **cómo se calcula la deuda**: el original revertido y su contraasiento siguen contando los dos y siguen cancelándose entre sí. Lo único que cambia es qué considera la guarda que hay para proteger.
 
-El mensaje que la aplicación muestra al dispararse una guarda SHALL indicar revertir esa liquidación primero **únicamente porque revertirla efectivamente destraba la operación**. El sistema NO SHALL indicar una salida que deje al usuario en el mismo lugar después de seguirla.
+El mensaje que la aplicación muestra al dispararse una guarda SHALL nombrar **la acción disponible para el estado de la liquidación que bloquea**, y NO SHALL decir siempre «revertir»: una liquidación **completada** se revierte con un contraasiento; una **pendiente de asignación** se cancela, borrando la pata del pagador —su propio movimiento—, lo que retira la fila entera. La operación de reversión sólo acepta liquidaciones completadas, de modo que indicar «revertir» sobre una pendiente manda al usuario a algo que el sistema no ofrece para ese estado.
 
-Ambas guardas SHALL vivir en la base: un trigger `BEFORE DELETE` y un trigger `BEFORE UPDATE` (acotado a la transición de `is_shared` a `false`) sobre `transactions`, evaluados **por fila**, de modo que solo se guarden las filas que **portan splits** (cada cuota hija por su propia fecha de impacto; la madre de cuotas y las patas `settlement`, que no portan splits, quedan exentas). Las guardas SHALL lanzar un `SQLSTATE` distinguible (`GRN01`) que la capa de aplicación mapea a un mensaje explicativo indicando revertir esa liquidación primero.
+Cancelar una pendiente SHALL ser potestad de quien la registró. Cuando la que bloquea la registró el otro miembro, el mensaje SHALL decir que tiene que cancelarla esa persona, y NO SHALL pedirle al usuario una acción que no puede ejecutar.
+
+Cuando más de una liquidación vigente bloquea, el mensaje SHALL decirlo, para que resolver una y volver a chocar con la siguiente no se lea como que la primera no sirvió.
+
+En todos los casos el consejo SHALL ser cierto: la acción indicada SHALL destrabar efectivamente la operación. El sistema NO SHALL indicar una salida que deje al usuario en el mismo lugar después de seguirla.
+
+Ambas guardas SHALL vivir en la base: un trigger `BEFORE DELETE` y un trigger `BEFORE UPDATE` (acotado a la transición de `is_shared` a `false`) sobre `transactions`, evaluados **por fila**, de modo que solo se guarden las filas que **portan splits** (cada cuota hija por su propia fecha de impacto; la madre de cuotas y las patas `settlement`, que no portan splits, quedan exentas). Las guardas SHALL lanzar un `SQLSTATE` distinguible (`GRN01`) que la capa de aplicación mapea al mensaje explicativo descripto arriba, resuelto según el estado de la liquidación que bloquea.
 
 Las dos guardas SHALL compartir el mismo criterio de vigencia. Corregir una sola dejaría el sistema contestando distinto a dos preguntas que este requirement define juntas.
 
 #### Scenario: Borrado bloqueado por una liquidación posterior en la misma moneda
 
 - **WHEN** un usuario intenta borrar un gasto compartido y existe una liquidación en la misma moneda con fecha igual o posterior a la del gasto
-- **THEN** la base rechaza el borrado (SQLSTATE `GRN01`) y la aplicación explica que primero debe revertir esa liquidación
+- **THEN** la base rechaza el borrado (SQLSTATE `GRN01`) y la aplicación explica qué hay que hacer con esa liquidación según su estado
 
 #### Scenario: Descompartir bloqueado por una liquidación posterior en la misma moneda
 
@@ -65,3 +71,24 @@ Las dos guardas SHALL compartir el mismo criterio de vigencia. Corregir una sola
 
 - **WHEN** dos liquidaciones cubren la fecha del gasto, el usuario revierte una y la otra sigue `completed`
 - **THEN** la guarda se sigue disparando
+- **AND** el mensaje dice que hay más de una liquidación bloqueando
+
+#### Scenario: El mensaje nombra revertir ante una liquidación completada
+
+- **WHEN** la guarda se dispara por una liquidación `completed`
+- **THEN** el mensaje indica revertir esa liquidación
+
+#### Scenario: El mensaje nombra cancelar ante una liquidación pendiente propia
+
+- **WHEN** la guarda se dispara por una liquidación `pending_receipt` registrada por el propio usuario
+- **THEN** el mensaje indica cancelar esa liquidación, no revertirla
+
+#### Scenario: El mensaje no pide cancelar una liquidación pendiente ajena
+
+- **WHEN** la guarda se dispara por una liquidación `pending_receipt` registrada por el otro miembro del hogar
+- **THEN** el mensaje dice que esa liquidación tiene que cancelarla quien la registró
+
+#### Scenario: Cancelar una liquidación pendiente destraba sin tocar el predicado
+
+- **WHEN** el pagador cancela la liquidación `pending_receipt` que bloqueaba y vuelve a intentar la operación
+- **THEN** la guarda no se dispara, porque la fila de liquidación ya no existe

@@ -21,16 +21,17 @@
 - [ ] 3.1 Read de candidatos sobre el RPC de 2.2, con su tipo de dominio. Verificar con tests que cubran ventana, exclusión de vinculados y orden
 - [ ] 3.2 Mutation de **registrar anticipado**: crear el movimiento con los orquestadores existentes e insertar la ocurrencia ya `confirmed` con su `due_date` real. Verificar que en ningún momento existe una fila `pending` con fecha futura, y que un fallo del INSERT compensa borrando el movimiento como hace hoy `confirmRecurrenceInstance`
 - [ ] 3.3 Mutation de **vincular** sobre el RPC de 2.3, incluida la elegibilidad de las tres ramas de compartido. Verificar que un movimiento compartido con otro reparto no llega a ofrecerse y que el personal exige la confirmación
-- [ ] 3.4 Mutation de **desvincular** sobre el RPC de 2.6, traduciendo el rechazo por liquidación vigente a qué hay que resolver primero. Verificar que el camino feliz revierte la conversión y que el rechazo deja el estado intacto
-- [ ] 3.5 Extender el modelo de vista de la fila (`review-surface.ts`) para que diga qué acciones ofrece un vencimiento según cómo se resolvió, en un solo lugar para las dos plataformas. Verificar que una ocurrencia resuelta por `created` no ofrece desvincular
-- [ ] 3.6 Exportar lo nuevo desde `packages/recurrences/src/index.ts` y verificar que `pnpm test` pasa en todo el monorepo
+- [ ] 3.4 Mutation de **desvincular** sobre el RPC de 2.6. Verificar que el camino feliz revierte la conversión y que el rechazo deja el estado intacto
+- [ ] 3.5 Resolver el mensaje del rechazo según el estado de la liquidación que bloquea: `completed` → revertir; `pending_receipt` propia → cancelar; `pending_receipt` ajena → lo cancela quien la registró; varias → decirlo. Verificar los cuatro casos con tests, y que ningún camino dice «revertir» sobre una pendiente
+- [ ] 3.6 Extender el modelo de vista de la fila (`review-surface.ts`) para que diga qué acciones ofrece un vencimiento según cómo se resolvió, en un solo lugar para las dos plataformas. Verificar que una ocurrencia resuelta por `created` no ofrece desvincular
+- [ ] 3.7 Exportar lo nuevo desde `packages/recurrences/src/index.ts` y verificar que `pnpm test` pasa en todo el monorepo
 
 ## 4. Web
 
 - [ ] 4.1 Acción «Ya lo pagué» en la fila de una regla cuyo próximo vencimiento no llegó (hub y detalle), reusando el formulario de registro con la fecha en hoy. Verificar a ancho de escritorio y **a ancho de teléfono**
 - [ ] 4.2 Superficie de candidatos con «Ampliar la búsqueda» siempre visible, la diferencia de importe como información y el orden por proximidad. Verificar que con la lista llena el control de ampliar sigue estando
 - [ ] 4.3 Confirmación explícita de la conversión a compartido, con el aviso previo cuando ya hay una liquidación vigente que cubre la fecha. Verificar que cancelar no convierte ni vincula
-- [ ] 4.4 Acción «Desvincular», con el mensaje del caso bloqueado que nombra la liquidación a revertir. Verificar que el gasto sigue existiendo, que el vencimiento vuelve a «por revisar» en el camino feliz, y que en el bloqueado no cambia nada
+- [ ] 4.4 Acción «Desvincular», con el mensaje del caso bloqueado que nombra la acción disponible según el estado de la liquidación. Verificar que el gasto sigue existiendo, que el vencimiento vuelve a «por revisar» en el camino feliz, y que en el bloqueado no cambia nada
 - [ ] 4.5 Rótulo «vinculado a esta recurrencia» en la ficha del movimiento (`tile-recurrence.tsx`), distinto del de origen. Verificar los dos casos
 - [ ] 4.6 Server actions en `app/_actions/recurrences.ts` como wrappers finos con auth, `revalidatePath` e invalidación. Verificar que `pnpm lint` y `pnpm typecheck` pasan
 
@@ -48,6 +49,7 @@
 
 ## 7. Cierre
 
-- [ ] 7.1 Correr `pnpm verify` completo y dejarlo verde
-- [ ] 7.2 Aplicar los deltas a `openspec/specs/transactions/spec.md`, `openspec/specs/shared-recurrences/spec.md` y `openspec/specs/shared/spec.md`, mover la carpeta a `openspec/changes/archive/YYYY-MM-DD-recurrence-link-movement/` y verificar con `pnpm openspec:check`
-- [ ] 7.3 Presentar `findings.md` al usuario y borrarlo según lo que decida
+- [ ] 7.1 Recorrer el circuito completo de punta a punta: vincular → convertir a compartido → liquidar → cancelar o revertir → desvincular, más pago anticipado y límite. Verificar que cada paso deja el estado que el spec describe
+- [ ] 7.2 Correr `pnpm verify` completo y dejarlo verde
+- [ ] 7.3 Aplicar los deltas a `openspec/specs/transactions/spec.md`, `openspec/specs/shared-recurrences/spec.md` y `openspec/specs/shared/spec.md`, mover la carpeta a `openspec/changes/archive/YYYY-MM-DD-recurrence-link-movement/` y verificar con `pnpm openspec:check`
+- [ ] 7.4 Presentar `findings.md` al usuario y borrarlo según lo que decida
