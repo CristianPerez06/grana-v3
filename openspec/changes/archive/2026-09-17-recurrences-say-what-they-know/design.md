@@ -88,7 +88,16 @@ lugares entre las dos apps retipean `descripción → categoría → tipo`. Ya h
 nadie lo notara: los «Compromisos» del dashboard leen `descripción → subcategoría → categoría` para
 **esas mismas reglas**, así que una regla sin descripción se llamaba «Internet» en el inicio y
 «Servicios» en el hub. Retipear la cadena una vez más es cómo vuelve a pasar, así que el orden pasa
-a `@grana/recurrences` y las superficies lo consumen.
+a `@grana/recurrences` y las superficies de recurrencias lo consumen.
+
+**Hasta dónde llega, dicho con todas las letras.** Los «Compromisos» del inicio quedan afuera: es una
+lectura de `@grana/dashboard`, que arma el nombre en la query y devuelve texto ya resuelto, no la
+clasificación. Respeta el mismo orden, pero usa el nombre **guardado** de la categoría en vez del
+traducido, así que en inglés dice «Servicios» donde el hub dice «Services». Cerrarlo pide cambiar qué
+devuelve esa lectura y resolver el nombre en cada superficie con su catálogo —trabajo propio, en una
+pantalla que este change no toca y que habría que volver a QA-ear—. Se deja anotado como divergencia
+conocida en el spec en lugar de afirmar un alcance que no tiene: media verdad escrita como requisito
+es peor que la divergencia, porque la siguiente sesión deja de buscarla.
 
 La función toma los nombres **ya resueltos**, no las filas: una categoría del sistema se nombra por
 el traductor (`categories.{canonical_name}`) y cada app tiene el suyo. Lo que hay que decidir una

@@ -1638,8 +1638,14 @@ resolver más antigua— y **cuántas** ocurrencias sin resolver hay.
 El conteo SHALL expresarse como **lo que hay para revisar**, y NO SHALL presentarse como el total del
 atraso. La materialización de vencimientos vencidos corre por lotes acotados y continúa en corridas
 siguientes, de modo que un atraso largo puede tener todavía ocurrencias sin crear: afirmar un total
-sería afirmar un número que el sistema no tiene. Cuando queda reconstrucción pendiente, el aviso
-SHALL decirlo en lugar de dar el conteo por completo.
+sería afirmar un número que el sistema no tiene.
+
+Cuando queda reconstrucción pendiente, el bloque SHALL decirlo **una sola vez, para toda la
+pantalla**, y NO SHALL atribuirla a ninguna regla. Lo que falta reconstruir es un único número de la
+corrida completa y no identifica reglas; además el generador sólo consulta reglas **activas**, de
+modo que colgárselo a cada línea haría que una regla pausada afirmara que se está recuperando un
+atraso que nadie está recuperando. Las líneas por regla SHALL limitarse a nombrar la regla, su fecha
+y su conteo.
 
 El aviso NO SHALL bloquear ninguna acción, NO SHALL introducir una acción nueva —las que hay son
 confirmar, editar y omitir— y NO SHALL afirmar deuda, por la misma razón que el resto del bloque. Una
@@ -1685,11 +1691,17 @@ Estas reglas SHALL aplicar por igual en web y en la app nativa.
 - **AND** dice que hay veintisiete ocurrencias para revisar
 - **AND** no afirma que el usuario deba esa suma
 
-#### Scenario: Con reconstrucción pendiente el aviso no da el conteo por completo
+#### Scenario: Con reconstrucción pendiente se dice una sola vez, y de nadie en particular
 
-- **WHEN** una regla está trabada y la materialización de su atraso todavía tiene ocurrencias por crear
-- **THEN** el aviso dice desde cuándo está trabada
-- **AND** presenta el conteo como lo que hay para revisar hasta ahora, no como el total del atraso
+- **WHEN** dos reglas están trabadas y la materialización todavía tiene ocurrencias por crear
+- **THEN** el bloque dice una sola vez que la reconstrucción sigue en curso
+- **AND** cada línea por regla dice desde cuándo está trabada y cuántos vencimientos hay para revisar
+- **AND** ninguna línea atribuye la reconstrucción a su propia regla
+
+#### Scenario: Una regla pausada no afirma que se está recuperando su atraso
+
+- **WHEN** una regla pausada y una activa están trabadas, y lo que falta reconstruir corresponde a la activa
+- **THEN** la línea de la regla pausada no afirma que se esté recuperando su atraso
 
 #### Scenario: Una sola ocurrencia vencida no es una regla trabada
 
@@ -1757,6 +1769,10 @@ Las ocurrencias ya cubiertas quedan fuera de "lo que viene" **cualquiera sea su 
 
 La proyección y el generador SHALL derivar de un único caminante de calendario, de modo que no puedan divergir: toda fila proyectada corresponde a una ocurrencia que el generador todavía puede producir.
 
+Cada tarjeta SHALL mostrar **como máximo cinco filas** y ofrecer el resto detrás de un control que diga **cuántas faltan**. El control SHALL ser un interruptor: despliega la lista completa y vuelve a plegarla. La lista NO SHALL plegarse sola mientras alguien la está leyendo. Con cinco filas o menos la tarjeta NO SHALL ofrecer nada que abrir. El tope SHALL regir en **las dos** tarjetas por igual, aunque una de ellas hoy sea corta: un tope que rige en una sola se lee como un error y no como una regla.
+
+El tope existe porque la ventana de treinta días es lo que hizo largas a estas tarjetas, y el hub es también donde se entra a editar una regla: una tarjeta de dieciséis filas empuja la lista de reglas fuera de la pantalla, de modo que el costo del arreglo cae sobre una parte de la pantalla que no tenía el problema.
+
 #### Scenario: Una regla creada desde un movimiento no proyecta su propia semilla
 
 - **WHEN** hoy es `2026-08-04` y existe una regla mensual creada a partir de un movimiento registrado hoy, cuyo movimiento semilla cubre el `2026-08-04`
@@ -1803,17 +1819,39 @@ La proyección y el generador SHALL derivar de un único caminante de calendario
 - **THEN** el de julio sigue apareciendo como pendiente de resolver
 - **AND** no queda cubierto por haberse resuelto uno posterior
 
+#### Scenario: La tarjeta muestra cinco y ofrece el resto
+
+- **WHEN** una tarjeta proyecta ocho ocurrencias
+- **THEN** muestra cinco filas
+- **AND** ofrece un control que dice que faltan tres
+
+#### Scenario: El control despliega y vuelve a plegar
+
+- **WHEN** el usuario despliega una tarjeta de ocho ocurrencias
+- **THEN** ve las ocho
+- **AND** con el mismo control vuelve a dejarla en cinco
+
+#### Scenario: Con cinco o menos no hay nada que abrir
+
+- **WHEN** una tarjeta proyecta cuatro ocurrencias
+- **THEN** las muestra todas
+- **AND** no ofrece ningún control para ver más
+
 #### Scenario: La proyección no suma montos entre monedas
 
 - **WHEN** las ocurrencias proyectadas incluyen reglas en ARS y en USD
 - **THEN** cada fila muestra su propio monto en su moneda y el sistema no muestra ningún total combinado
 
-### Requirement: Una regla recurrente se nombra de una sola manera en toda la aplicación
+### Requirement: Una regla recurrente se nombra con un orden único en las superficies de recurrencias
 
-El sistema SHALL derivar el nombre visible de una regla recurrente en este orden, y NO SHALL usar
-otro en ninguna superficie: **descripción** → **subcategoría** → **categoría** → **etiqueta del tipo
-de movimiento**. El mismo orden SHALL aplicar al nombre de una ocurrencia, leído de los valores
-propios de esa ocurrencia.
+El sistema SHALL derivar el nombre visible de una regla recurrente en este orden: **descripción** →
+**subcategoría** → **categoría** → **etiqueta del tipo de movimiento**. El mismo orden SHALL aplicar
+al nombre de una ocurrencia, leído de los valores propios de esa ocurrencia.
+
+El alcance SHALL ser **las superficies de recurrencias** —el hub y sus tarjetas de lo que viene, el
+bloque de vencimientos por revisar, la ficha de la regla y el banner de sugerencia, en web y en la
+app nativa—, y todas SHALL derivar el nombre de **una misma decisión**, de modo que no puedan
+divergir entre sí.
 
 La descripción va primero porque es lo único que el usuario escribió sobre esa regla en particular.
 La subcategoría va antes que la categoría porque es la que distingue: «Internet» y «Gas» dicen qué
@@ -1833,6 +1871,14 @@ La **ficha de la regla** SHALL mostrar la subcategoría cuando la tenga, junto a
 dato el nombre que aparece arriba no tiene origen visible en la pantalla que lo explica.
 
 Estas reglas SHALL aplicar por igual en web y en la app nativa.
+
+**Los «Compromisos del próximo mes» del inicio quedan FUERA de ese alcance, y es una divergencia
+conocida.** Esa lectura arma el nombre por su cuenta: respeta el mismo orden, pero toma el nombre
+**guardado** de la categoría en lugar del traducido y no tiene última instancia. En inglés el hub
+dice «Services» y el inicio sigue diciendo «Servicios» sobre la misma regla, y una transferencia sin
+clasificación queda sin nombre. Cerrarla exige que esa lectura entregue la **clasificación** en vez
+del texto ya armado, para que cada superficie lo resuelva con su propio catálogo; es trabajo propio y
+hasta que se haga el sistema NO SHALL darse por cumplido en esa pantalla.
 
 #### Scenario: Sin descripción, la subcategoría le gana a la categoría
 
