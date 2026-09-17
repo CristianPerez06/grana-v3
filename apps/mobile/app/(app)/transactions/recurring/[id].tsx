@@ -7,6 +7,7 @@ import { PageHeader } from '../../../../components/ui/PageHeader'
 import { Drawer } from '../../../../components/ui/Drawer'
 import { SkeletonBlock } from '../../../../components/ui/SkeletonBlock'
 import { RecurrenceInstancesList } from '../../../../components/recurrences/RecurrenceInstancesList'
+import { ResolveAheadActions } from '../../../../components/recurrences/ResolveAheadActions'
 import { RecurrenceEditForm } from '../../../../components/recurrences/RecurrenceEditForm'
 import {
   amountSign,
@@ -231,6 +232,22 @@ export default function RecurrenceDetailScreen() {
                     value={formatShortDate(rule.next_occurrence, locale)}
                   />
                 ) : null}
+                {/* LAS DOS SALIDAS PARA UN VENCIMIENTO QUE NO LLEGÓ. Sin esto el
+                    usuario que paga el alquiler el 3 tiene que esperar al 23 o
+                    cargarlo a mano — y cargarlo a mano es peor, porque el 23 la
+                    app se lo vuelve a proponer. Mismo commit que web. */}
+                {rule.next_occurrence && rule.status === 'active' ? (
+                  <View className="pt-2">
+                    <ResolveAheadActions
+                      recurrenceId={rule.id}
+                      dueDate={rule.next_occurrence}
+                      ruleAmount={Number(rule.amount)}
+                      ruleCurrency={rule.currency_code}
+                      shared={rule.household_id != null}
+                      onResolved={() => invalidateAfterRecurrenceMutation(queryClient)}
+                    />
+                  </View>
+                ) : null}
                 {rule.end_date ? (
                   <Row
                     label={t('recurrences.labels.end_date')}
@@ -291,7 +308,10 @@ export default function RecurrenceDetailScreen() {
               </View>
             </View>
 
-            <RecurrenceInstancesList instances={rule.instances} />
+            <RecurrenceInstancesList
+              instances={rule.instances}
+              onUnlinked={() => invalidateAfterRecurrenceMutation(queryClient)}
+            />
           </>
         )}
       </ScrollView>

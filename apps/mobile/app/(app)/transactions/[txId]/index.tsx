@@ -4,7 +4,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2 } from 'lucide-react-native'
 import type { MovementKind } from '@grana/money-logic'
 import type { SeededRecurrenceInfo } from '@grana/transactions-mutations'
-import type { SeededRecurrenceResolution } from '@grana/recurrences'
+import {
+  getRecurrenceLinkForTransaction,
+  recurrenceLinkLabelKey,
+  type SeededRecurrenceResolution,
+} from '@grana/recurrences'
+import { supabase } from '../../../../lib/supabase'
 import { PageHeader } from '../../../../components/ui/PageHeader'
 import { MovementDetailView } from '../../../../components/transactions/detail/MovementDetailView'
 import { MovementDetailSkeleton } from '../../../../components/transactions/detail/MovementDetailSkeleton'
@@ -50,6 +55,14 @@ export default function MovementDetailScreen() {
   const query = useQuery({
     queryKey: ['transactions', 'detail', txId] as const,
     queryFn: () => getMovementDetail(txId),
+  })
+
+  // DE QUÉ REGLA VIENE ESTE MOVIMIENTO, y si lo originó o el usuario lo vinculó.
+  // Web lo muestra desde siempre; nativo no mostraba nada, así que el mismo
+  // movimiento decía «generado por una regla» en una pantalla y nada en la otra.
+  const linkQuery = useQuery({
+    queryKey: ['transactions', 'recurrence-link', txId] as const,
+    queryFn: () => getRecurrenceLinkForTransaction(supabase, txId),
   })
 
   const data = query.data ?? null
@@ -203,7 +216,25 @@ export default function MovementDetailScreen() {
             </Text>
           </View>
         ) : (
-          <MovementDetailView data={data} />
+          <>
+            {linkQuery.data ? (
+              <Pressable
+                onPress={() =>
+                  router.push(`/transactions/recurring/${linkQuery.data!.recurrence_id}`)
+                }
+                className="mx-4 mb-3 flex-row items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5"
+              >
+                <Text className="flex-1 text-[13px] text-text-muted">
+                  {t(
+                    `recurrences.link.label_${recurrenceLinkLabelKey(
+                      linkQuery.data.resolution_kind,
+                    )}`,
+                  )}
+                </Text>
+              </Pressable>
+            ) : null}
+            <MovementDetailView data={data} />
+          </>
         )}
       </ScrollView>
     </View>

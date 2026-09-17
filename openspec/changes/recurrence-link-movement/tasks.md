@@ -37,11 +37,11 @@
 
 ## 5. App nativa
 
-- [ ] 5.1 Acción «Ya lo pagué» en la fila del hub nativo (`RecurrenceRuleCard`) y en el detalle, con paridad de comportamiento con 4.1
-- [ ] 5.2 Superficie de candidatos como overlay, componiendo `FormSheetBody`/`FormSheetKeyboardView` según lo que lleve adentro — nunca un `ScrollView` a mano — y con el tope de altura en píxeles sobre el scroller. Verificar que el teclado no tapa el contenido
-- [ ] 5.3 Confirmación de la conversión a compartido y acción «Desvincular», con los mismos mensajes que 4.3 y 4.4
-- [ ] 5.4 Rótulo «vinculado» en el detalle del movimiento nativo (`apps/mobile/app/(app)/transactions/[txId]/index.tsx`), que hoy no muestra el vínculo con la recurrencia
-- [ ] 5.5 Mutators en `apps/mobile/lib/recurrences/mutators.ts` e invalidación de cache. Verificar que `pnpm typecheck:mobile` y `pnpm lint:mobile` pasan
+- [x] 5.1 Acción «Ya lo pagué» en la fila del hub nativo (`RecurrenceRuleCard`) y en el detalle, con paridad de comportamiento con 4.1
+- [x] 5.2 Superficie de candidatos como overlay, componiendo `FormSheetBody`/`FormSheetKeyboardView` según lo que lleve adentro — nunca un `ScrollView` a mano — y con el tope de altura en píxeles sobre el scroller. Verificar que el teclado no tapa el contenido
+- [x] 5.3 Confirmación de la conversión a compartido y acción «Desvincular», con los mismos mensajes que 4.3 y 4.4
+- [x] 5.4 Rótulo «vinculado» en el detalle del movimiento nativo (`apps/mobile/app/(app)/transactions/[txId]/index.tsx`), que hoy no muestra el vínculo con la recurrencia
+- [x] 5.5 Mutators en `apps/mobile/lib/recurrences/mutators.ts` e invalidación de cache. Verificar que `pnpm typecheck:mobile` y `pnpm lint:mobile` pasan
 
 ## 6. Copys
 
@@ -49,7 +49,7 @@
 
 ## 7. Cierre
 
-- [ ] 7.1 Recorrer el circuito completo de punta a punta: vincular → convertir a compartido → liquidar → cancelar o revertir → desvincular, más pago anticipado y límite. Verificar que cada paso deja el estado que el spec describe
-- [ ] 7.2 Correr `pnpm verify` completo y dejarlo verde
+- [x] 7.1 Recorrer el circuito completo de punta a punta: vincular → convertir a compartido → liquidar → cancelar o revertir → desvincular, más pago anticipado y límite. Verificar que cada paso deja el estado que el spec describe
+- [x] 7.2 Correr `pnpm verify` completo y dejarlo verde
 - [ ] 7.3 Aplicar los deltas a `openspec/specs/transactions/spec.md`, `openspec/specs/shared-recurrences/spec.md` y `openspec/specs/shared/spec.md`, mover la carpeta a `openspec/changes/archive/YYYY-MM-DD-recurrence-link-movement/` y verificar con `pnpm openspec:check`
 - [ ] 7.4 Presentar `findings.md` al usuario y borrarlo según lo que decida

@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { Text, View } from 'react-native'
-import type {
-  EnrichedRecurrenceInstance,
-  RecurrenceInstanceStatus,
+import {
+  canUnlink,
+  type EnrichedRecurrenceInstance,
+  type RecurrenceInstanceStatus,
 } from '@grana/recurrences'
+import { Button } from '../ui/Button'
+import { unlinkMovementFromRecurrence } from '../../lib/recurrences/mutators'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
@@ -19,7 +23,10 @@ const STATUS_TONE: Record<RecurrenceInstanceStatus, string> = {
 // the feed's pending block, not here.
 export function RecurrenceInstancesList({
   instances,
+  onUnlinked,
 }: {
+  /** Invalidación del cache tras desvincular. La hace la pantalla, como el resto. */
+  onUnlinked?: () => void
   /**
    * The whole history, so `due_date` may be NULL — an occurrence resolved before
    * 0064 has no recoverable vencimiento. This list renders `scheduled_date`,
@@ -30,6 +37,20 @@ export function RecurrenceInstancesList({
   const t = useT()
   const locale = useLocale()
   const showCents = useShowCents()
+  const [pendingId, setPendingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const unlink = async (instanceId: string) => {
+    setError(null)
+    setPendingId(instanceId)
+    const result = await unlinkMovementFromRecurrence(instanceId, t)
+    setPendingId(null)
+    if (!result.ok) {
+      setError(result.formError)
+      return
+    }
+    onUnlinked?.()
+  }
 
   return (
     <View className="gap-3">
@@ -60,6 +81,12 @@ export function RecurrenceInstancesList({
                     {instance.description}
                   </Text>
                 ) : null}
+                {/* Vinculado, no originado: el movimiento existía antes. */}
+                {instance.resolution_kind === 'linked' ? (
+                  <Text className="text-[11px] text-text-soft">
+                    {t('recurrences.link.label_linked')}
+                  </Text>
+                ) : null}
               </View>
               <View className="items-end">
                 <Text className="text-[14px] font-bold text-text">
@@ -68,11 +95,25 @@ export function RecurrenceInstancesList({
                 <Text className={`text-[11px] font-bold ${STATUS_TONE[instance.status]}`}>
                   {t(`recurrences.instance_statuses.${instance.status}`)}
                 </Text>
+                {/* Sólo sobre lo que el usuario vinculó: sobre un pago que creó
+                    la recurrencia, deshacer sería BORRAR ese movimiento. */}
+                {canUnlink(instance) ? (
+                  <Button
+                    variant="ghost"
+                    onPress={() => unlink(instance.id)}
+                    disabled={pendingId === instance.id}
+                  >
+                    {pendingId === instance.id
+                      ? t('recurrences.link.unlinking')
+                      : t('recurrences.link.unlink')}
+                  </Button>
+                ) : null}
               </View>
             </View>
           ))}
         </View>
       )}
+      {error ? <Text className="text-[13px] text-terracotta">{error}</Text> : null}
     </View>
   )
 }

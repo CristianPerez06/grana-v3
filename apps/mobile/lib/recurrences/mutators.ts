@@ -9,8 +9,15 @@ import {
   resumeRecurrence as resumeRecurrenceImpl,
   skipRecurrenceInstance as skipRecurrenceInstanceImpl,
   updateRecurrence as updateRecurrenceImpl,
+  getRecurrenceLinkCandidates as getRecurrenceLinkCandidatesImpl,
+  linkMovementToRecurrence as linkMovementToRecurrenceImpl,
+  unlinkMovementFromRecurrence as unlinkMovementFromRecurrenceImpl,
+  registerRecurrenceAhead as registerRecurrenceAheadImpl,
   type RecurrenceHousehold,
   type GenerationResult,
+  type LinkCandidate,
+  type LinkErrorCode,
+  type BlockingSettlements,
 } from '@grana/recurrences'
 import { supabase } from '../supabase'
 import { getHousehold } from '../shared/queries'
@@ -190,4 +197,90 @@ export async function dismissRecurrenceSuggestion(
   const userId = await currentUserId()
   if (!userId) return authError(t)
   return localize(await dismissRecurrenceSuggestionImpl(supabase, userId, input), t)
+}
+
+// ── Vincular, desvincular y registrar antes del vencimiento ───────────────────
+//
+// Paridad con las server actions de web: la implementación compartida hace el
+// trabajo y este shell resuelve auth y traduce el rechazo. La invalidación de
+// cache la hace la pantalla, como el resto de los mutators de acá.
+
+function localizeLinkError(
+  code: LinkErrorCode | undefined,
+  blockedBy: BlockingSettlements | undefined,
+  errorCode: string | undefined,
+  t: Translate,
+): string {
+  if (code) return t(`recurrences.link.errors.${code}`)
+  if (errorCode === 'GRN01') {
+    // Se nombra LA ACCIÓN DISPONIBLE para el estado de la liquidación que
+    // bloquea. Decir siempre «revertí» manda al usuario a una operación que el
+    // sistema no ofrece sobre una pendiente.
+    const key =
+      blockedBy?.action === 'cancel_own'
+        ? 'blocked_cancel_own'
+        : blockedBy?.action === 'cancel_other'
+          ? 'blocked_cancel_other'
+          : 'blocked_revert'
+    const base = t(`recurrences.link.errors.${key}`)
+    return blockedBy?.multiple
+      ? `${base} ${t('recurrences.link.errors.blocked_multiple')}`
+      : base
+  }
+  return t('recurrences.errors.generic')
+}
+
+export async function getRecurrenceLinkCandidates(
+  recurrenceId: string,
+  dueDate: string,
+  widen = false,
+): Promise<LinkCandidate[]> {
+  return getRecurrenceLinkCandidatesImpl(supabase, { recurrenceId, dueDate, widen })
+}
+
+export async function linkMovementToRecurrence(
+  args: {
+    recurrenceId: string
+    dueDate: string
+    transactionId: string
+    confirmConversion?: boolean
+  },
+  t: Translate,
+): Promise<RecurrenceMutationOutcome> {
+  const userId = await currentUserId()
+  if (!userId) return authError(t)
+  const result = await linkMovementToRecurrenceImpl(supabase, args)
+  if (result.ok) return { ok: true }
+  return {
+    ok: false,
+    formError: localizeLinkError(result.linkErrorCode, undefined, result.errorCode, t),
+  }
+}
+
+export async function unlinkMovementFromRecurrence(
+  instanceId: string,
+  t: Translate,
+): Promise<RecurrenceMutationOutcome> {
+  const userId = await currentUserId()
+  if (!userId) return authError(t)
+  const result = await unlinkMovementFromRecurrenceImpl(supabase, { instanceId, userId })
+  if (result.ok) return { ok: true }
+  return {
+    ok: false,
+    formError: localizeLinkError(
+      result.linkErrorCode,
+      result.blockedBy,
+      result.errorCode,
+      t,
+    ),
+  }
+}
+
+export async function registerRecurrenceAhead(
+  args: { recurrenceId: string; dueDate: string; date?: string; amount?: number },
+  t: Translate,
+): Promise<RecurrenceMutationOutcome> {
+  const userId = await currentUserId()
+  if (!userId) return authError(t)
+  return localize(await registerRecurrenceAheadImpl(supabase, userId, args), t)
 }
