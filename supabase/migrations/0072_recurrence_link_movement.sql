@@ -321,6 +321,377 @@ revoke all on function public.recurrence_positions_spent(uuid, date) from public
 grant execute on function public.recurrence_positions_spent(uuid, date) to authenticated;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- 4 · La ventana de candidatos, y si un reparto es compatible
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- La ventana va DEL VENCIMIENTO ANTERIOR AL SIGUIENTE, derivada del calendario de
+-- la regla. Un número fijo de días no sirve: quince dejan afuera el caso que
+-- motiva todo esto —pagar el 3 lo que vence el 23— y serían absurdos en una regla
+-- semanal.
+--
+-- Que dos vencimientos consecutivos vean ventanas superpuestas está ACEPTADO: la
+-- app no sabe a qué período correspondió un pago y el usuario sí. Un movimiento
+-- ya vinculado sale de toda otra lista, así que la superposición no puede
+-- resolver dos vencimientos con el mismo gasto.
+
+create or replace function public.recurrence_link_window(
+  p_interval_count int,
+  p_interval_unit  text,
+  p_widen          boolean
+)
+returns interval
+language sql
+immutable
+as $$
+  select (case p_interval_unit
+            when 'day'   then make_interval(days   => p_interval_count)
+            when 'week'  then make_interval(weeks  => p_interval_count)
+            when 'month' then make_interval(months => p_interval_count)
+            when 'year'  then make_interval(years  => p_interval_count)
+          end) * (case when p_widen then 3 else 1 end);
+$$;
+
+-- Un reparto es compatible cuando es el MISMO hogar y los MISMOS porcentajes por
+-- miembro. Se compara como conjunto, no como texto: el orden del jsonb no es
+-- significativo y compararlo como string haría incompatible un reparto idéntico
+-- escrito al revés.
+create or replace function public.recurrence_split_matches(
+  p_transaction_id uuid,
+  p_default_split  jsonb
+)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+  select not exists (
+    (select (s.user_id)::text as u, s.percentage::numeric as p
+       from public.shared_expense_split s
+      where s.transaction_id = p_transaction_id
+     except
+     select d.value ->> 'user_id', (d.value ->> 'percentage')::numeric
+       from jsonb_array_elements(coalesce(p_default_split, '[]'::jsonb)) d)
+    union all
+    (select d.value ->> 'user_id', (d.value ->> 'percentage')::numeric
+       from jsonb_array_elements(coalesce(p_default_split, '[]'::jsonb)) d
+     except
+     select (s.user_id)::text, s.percentage::numeric
+       from public.shared_expense_split s
+      where s.transaction_id = p_transaction_id)
+  );
+$$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 5 · recurrence_link_candidates — qué movimientos se pueden ofrecer
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- Es un RPC y no un `.select()` porque la lista necesita tres cosas que PostgREST
+-- no da bien juntas: un NOT EXISTS («no vinculado a NINGUNA ocurrencia»), la
+-- ventana derivada del calendario, y el orden por proximidad. Y porque un select
+-- de filas de detalle queda recortado en silencio por `max-rows`: acá eso no
+-- produce un número mal, produce UN CANDIDATO QUE NO APARECE — el usuario
+-- concluye que su movimiento no está y lo carga de nuevo, que es exactamente el
+-- duplicado que este change existe para evitar.
+--
+-- EL MONTO Y LA CUENTA ORDENAN, NO EXCLUYEN. Un alquiler que aumentó es el caso
+-- en que el usuario más necesita encontrar su movimiento, y filtrar por importe
+-- lo esconde justo ahí.
+
+create or replace function public.recurrence_link_candidates(
+  p_recurrence_id uuid,
+  p_due_date      date,
+  p_widen         boolean default false
+)
+returns table (
+  id            uuid,
+  date          date,
+  amount        numeric,
+  currency_code text,
+  account_id    uuid,
+  description   text,
+  category_id   uuid,
+  is_shared     boolean,
+  needs_conversion boolean
+)
+language sql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+  with rule as (
+    select * from public.recurrences
+     where id = p_recurrence_id and user_id = auth.uid()
+  ), win as (
+    select p_due_date - public.recurrence_link_window(r.interval_count, r.interval_unit, p_widen) as lo,
+           p_due_date + public.recurrence_link_window(r.interval_count, r.interval_unit, p_widen) as hi,
+           r.*
+      from rule r
+  )
+  select t.id, t.date, t.amount, t.currency_code, t.account_id, t.description,
+         t.category_id, t.is_shared,
+         (w.household_id is not null and not t.is_shared) as needs_conversion
+    from public.transactions t
+   cross join win w
+   where t.user_id = auth.uid()
+     -- Mismo tipo funcional y misma moneda: vincular un ingreso a una regla de
+     -- gasto haría que el historial afirme algo falso.
+     and t.type = w.movement_type
+     and t.currency_code = w.currency_code
+     -- La madre de cuotas no es un movimiento que alguien haya pagado.
+     and coalesce(t.is_parent, false) = false
+     -- Los tipos que no son movimientos del usuario en este sentido.
+     and t.type not in ('settlement', 'reimbursement')
+     and t.date >= w.lo::date
+     and t.date <= w.hi::date
+     -- NO VINCULADO A NINGUNA OCURRENCIA, de ninguna regla.
+     and not exists (
+       select 1 from public.recurrence_instances i
+        where i.confirmed_transaction_id = t.id
+     )
+     -- Un movimiento ya compartido con otro hogar u otro reparto NO se ofrece
+     -- (decisión 13 de fix-recurrence-backlog): pisarlo destruiría una deuda que
+     -- el otro miembro ya ve, y deshacerlo exigiría restaurar un estado
+     -- compartido arbitrario. Excluirlo cuesta un candidato menos en una lista.
+     and (
+       w.household_id is null
+       or not t.is_shared
+       or (
+         t.household_id = w.household_id
+         and public.recurrence_split_matches(t.id, w.default_split)
+       )
+     )
+   order by
+     -- Misma cuenta primero, después importe más parecido, después fecha más
+     -- cercana al vencimiento.
+     (t.account_id is distinct from w.account_id),
+     abs(t.amount - w.amount),
+     abs(t.date - p_due_date),
+     t.id;
+$$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 6 · recurrence_link_movement — vincular, y convertir si corresponde
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- Toma la REGLA y el VENCIMIENTO, no una fila de ocurrencia: el vencimiento puede
+-- no estar materializado todavía (vincular desde el hub una fecha que aún no
+-- llegó), y en los dos casos el resultado tiene que ser el mismo.
+--
+-- LA CONVERSIÓN Y LA VINCULACIÓN SON UNA SOLA OPERACIÓN. Un movimiento convertido
+-- a compartido pero no vinculado deja la deuda del hogar movida por algo que el
+-- usuario no aprobó. La atomicidad la da la transacción, no un rollback
+-- compensatorio: la compensación también puede fallar, y el estado que deja es
+-- precisamente el que esto prohíbe (decisión 22 de fix-recurrence-backlog).
+
+create or replace function public.recurrence_link_movement(
+  p_recurrence_id      uuid,
+  p_due_date           date,
+  p_transaction_id     uuid,
+  p_confirm_conversion boolean default false
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  v_uid        uuid := auth.uid();
+  v_rule       public.recurrences;
+  v_tx         public.transactions;
+  v_converted  boolean := false;
+  v_instance   uuid;
+  v_split      jsonb;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = 'GRN10';
+  end if;
+
+  select * into v_rule from public.recurrences
+   where id = p_recurrence_id and user_id = v_uid for update;
+  if not found then
+    raise exception 'rule_not_found' using errcode = 'GRN10';
+  end if;
+  if v_rule.status = 'deleted' then
+    raise exception 'rule_deleted' using errcode = 'GRN10';
+  end if;
+
+  select * into v_tx from public.transactions
+   where id = p_transaction_id and user_id = v_uid for update;
+  if not found then
+    raise exception 'movement_not_found' using errcode = 'GRN10';
+  end if;
+
+  if v_tx.type <> v_rule.movement_type or v_tx.currency_code <> v_rule.currency_code then
+    raise exception 'movement_incompatible' using errcode = 'GRN11';
+  end if;
+
+  -- Un movimiento resuelve UN vencimiento. Sin esto, el mismo gasto podría saldar
+  -- dos meses y la regla parecería al día con la mitad de los pagos.
+  if exists (select 1 from public.recurrence_instances i
+              where i.confirmed_transaction_id = p_transaction_id) then
+    raise exception 'movement_already_linked' using errcode = 'GRN12';
+  end if;
+
+  -- ── Compartido: las tres ramas de la decisión 13 ─────────────────────────
+  if v_rule.household_id is not null then
+    if v_tx.is_shared then
+      if v_tx.household_id is distinct from v_rule.household_id
+         or not public.recurrence_split_matches(v_tx.id, v_rule.default_split) then
+        raise exception 'movement_shared_elsewhere' using errcode = 'GRN13';
+      end if;
+      -- Reparto compatible: se vincula sin tocar nada.
+    else
+      -- Personal: se convierte, pero SÓLO con confirmación explícita. Esto mueve
+      -- la deuda del hogar, y nadie puede descubrirlo después de que pasó.
+      if not p_confirm_conversion then
+        raise exception 'conversion_not_confirmed' using errcode = 'GRN14';
+      end if;
+
+      update public.transactions
+         set is_shared = true, household_id = v_rule.household_id
+       where id = v_tx.id;
+
+      for v_split in
+        select value from jsonb_array_elements(v_rule.default_split)
+      loop
+        insert into public.shared_expense_split
+          (transaction_id, household_id, user_id, percentage, amount_assigned)
+        values (
+          v_tx.id, v_rule.household_id, (v_split ->> 'user_id')::uuid,
+          (v_split ->> 'percentage')::numeric,
+          round(v_tx.amount * (v_split ->> 'percentage')::numeric / 100, 2)
+        )
+        on conflict (transaction_id, user_id) do update
+          set percentage = excluded.percentage,
+              amount_assigned = excluded.amount_assigned;
+      end loop;
+
+      -- El resto por diferencia, a la primera parte: la suma de los splits tiene
+      -- que dar el total exacto o el invariante diferido rechaza el commit.
+      update public.shared_expense_split s
+         set amount_assigned = s.amount_assigned + (
+               v_tx.amount - (select sum(x.amount_assigned)
+                                from public.shared_expense_split x
+                               where x.transaction_id = v_tx.id)
+             )
+       where s.transaction_id = v_tx.id
+         and s.user_id = (select (value ->> 'user_id')::uuid
+                            from jsonb_array_elements(v_rule.default_split)
+                           limit 1);
+
+      v_converted := true;
+    end if;
+  end if;
+
+  -- ── La ocurrencia ────────────────────────────────────────────────────────
+  --
+  -- `resolution_kind = 'linked'` se escribe EXPLÍCITAMENTE: el trigger de
+  -- compatibilidad de 0064 pone 'created' a toda confirmación que no lo declare,
+  -- y esa distinción es la que decide qué hace deshacer.
+  update public.recurrence_instances
+     set status = 'confirmed',
+         confirmed_transaction_id = p_transaction_id,
+         resolution_kind = 'linked',
+         linked_conversion = v_converted,
+         resolved_at = now()
+   where recurrence_id = p_recurrence_id
+     and due_date = p_due_date
+     and user_id = v_uid
+     and status = 'pending'
+   returning id into v_instance;
+
+  if v_instance is null then
+    insert into public.recurrence_instances
+      (recurrence_id, user_id, due_date, scheduled_date, status,
+       confirmed_transaction_id, resolution_kind, linked_conversion, resolved_at,
+       amount, account_id, transfer_destination_account_id, currency_code,
+       category_id, subcategory_id, description, household_id, split)
+    values
+      (p_recurrence_id, v_uid, p_due_date, p_due_date, 'confirmed',
+       p_transaction_id, 'linked', v_converted, now(),
+       v_tx.amount, v_tx.account_id, v_rule.transfer_destination_account_id,
+       v_tx.currency_code, v_tx.category_id, v_tx.subcategory_id, v_tx.description,
+       v_rule.household_id, v_rule.default_split)
+    returning id into v_instance;
+  end if;
+
+  return v_instance;
+end $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 7 · recurrence_unlink_movement — desvincular, todo o nada
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- NO ATRAPA `GRN01`. Si la guarda de liquidaciones rechaza devolver el gasto a
+-- personal, la transacción entera falla y NADA cambia.
+--
+-- Soltar el vínculo igual y dejar el gasto compartido sería un deshacer parcial:
+-- la vinculación equivocada convirtió un gasto personal en deuda para la otra
+-- persona, y corregir sólo lo que el usuario ve conserva lo que le cuesta plata a
+-- alguien más, sin que nadie vuelva a mirarlo. El usuario cree que deshizo y no
+-- deshizo.
+--
+-- Es también la razón de que no haya un bloque EXCEPTION: `trg_no_splits_when_unshared`
+-- (0048) es `deferrable initially deferred` y se evalúa recién en el COMMIT, así
+-- que un EXCEPTION sólo alcanzaría a una de las dos guardas y simularía una
+-- recuperación que no ocurrió.
+
+create or replace function public.recurrence_unlink_movement(p_instance_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  v_uid      uuid := auth.uid();
+  v_instance public.recurrence_instances;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = 'GRN10';
+  end if;
+
+  select * into v_instance from public.recurrence_instances
+   where id = p_instance_id and user_id = v_uid for update;
+  if not found then
+    raise exception 'instance_not_found' using errcode = 'GRN10';
+  end if;
+
+  -- Desvincular se ofrece SÓLO sobre lo que el usuario vinculó. Deshacer un pago
+  -- que la recurrencia creó significa borrar ese movimiento, que es otra
+  -- operación y tiene su propio alcance (#104).
+  if v_instance.resolution_kind is distinct from 'linked' then
+    raise exception 'not_linked' using errcode = 'GRN15';
+  end if;
+
+  -- Si vincular convirtió el movimiento, desvincular revierte la conversión. Si
+  -- ya era compartido, no hubo conversión y no hay nada que revertir.
+  if v_instance.linked_conversion then
+    perform public.unshare_movement(v_instance.confirmed_transaction_id);
+  end if;
+
+  update public.recurrence_instances
+     set status = 'pending',
+         confirmed_transaction_id = null,
+         resolution_kind = null,
+         linked_conversion = false,
+         resolved_at = null
+   where id = p_instance_id;
+end $$;
+
+revoke all on function public.recurrence_link_window(int, text, boolean) from public, anon;
+revoke all on function public.recurrence_split_matches(uuid, jsonb) from public, anon;
+revoke all on function public.recurrence_link_candidates(uuid, date, boolean) from public, anon;
+revoke all on function public.recurrence_link_movement(uuid, date, uuid, boolean) from public, anon;
+revoke all on function public.recurrence_unlink_movement(uuid) from public, anon;
+grant execute on function public.recurrence_link_window(int, text, boolean) to authenticated;
+grant execute on function public.recurrence_split_matches(uuid, jsonb) to authenticated;
+grant execute on function public.recurrence_link_candidates(uuid, date, boolean) to authenticated;
+grant execute on function public.recurrence_link_movement(uuid, date, uuid, boolean) to authenticated;
+grant execute on function public.recurrence_unlink_movement(uuid) to authenticated;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- Self-check — antes del COMMIT
 -- ═══════════════════════════════════════════════════════════════════════════
 
@@ -349,6 +720,51 @@ begin
   -- Y el agregado propio: sin esto la migración es un no-op silencioso.
   if v_body not like '%due_date > p_today%' then
     raise exception '0072: la funcion no cuenta los vencimientos resueltos por anticipado';
+  end if;
+
+  -- Las funciones nuevas existen, con su firma exacta. Una firma distinta no
+  -- rompe nada al aplicar y falla recién cuando el cliente la llama.
+  if to_regprocedure('public.settlement_is_live(public.settlement)') is null then
+    raise exception '0072: settlement_is_live falta';
+  end if;
+  if to_regprocedure('public.recurrence_link_candidates(uuid, date, boolean)') is null then
+    raise exception '0072: recurrence_link_candidates falta';
+  end if;
+  if to_regprocedure('public.recurrence_link_movement(uuid, date, uuid, boolean)') is null then
+    raise exception '0072: recurrence_link_movement falta';
+  end if;
+  if to_regprocedure('public.recurrence_unlink_movement(uuid)') is null then
+    raise exception '0072: recurrence_unlink_movement falta';
+  end if;
+
+  -- Las dos guardas comparten el criterio de vigencia. Corregir una sola deja el
+  -- sistema contestando distinto a dos preguntas que el spec define juntas.
+  if (select prosrc from pg_proc
+       where oid = 'public.trg_fn_block_unshare_with_settlement()'::regprocedure)
+       not like '%settlement_is_live%' then
+    raise exception '0072: la guarda de descompartir no usa el criterio de vigencia';
+  end if;
+  if (select prosrc from pg_proc
+       where oid = 'public.trg_fn_block_shared_delete_with_settlement()'::regprocedure)
+       not like '%settlement_is_live%' then
+    raise exception '0072: la guarda de borrado no usa el criterio de vigencia';
+  end if;
+
+  -- Vincular tiene que escribir 'linked' EXPLÍCITAMENTE: el trigger de
+  -- compatibilidad de 0064 pone 'created' a toda confirmación que no lo declare,
+  -- y esa distinción es la que decide si deshacer borra un movimiento del usuario.
+  if (select prosrc from pg_proc
+       where oid = 'public.recurrence_link_movement(uuid, date, uuid, boolean)'::regprocedure)
+       not like '%''linked''%' then
+    raise exception '0072: recurrence_link_movement no marca la resolucion como vinculada';
+  end if;
+
+  -- Y desvincular NO puede atrapar GRN01: hacerlo convierte «las dos cosas o
+  -- ninguna» en un deshacer parcial que conserva la deuda.
+  if (select prosrc from pg_proc
+       where oid = 'public.recurrence_unlink_movement(uuid)'::regprocedure)
+       like '%exception%when%GRN01%' then
+    raise exception '0072: desvincular atrapa GRN01 y dejaria el gasto compartido';
   end if;
 end $selfcheck$;
 

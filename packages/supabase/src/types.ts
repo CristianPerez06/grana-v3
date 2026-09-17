@@ -1366,6 +1366,39 @@ export type Database = {
         }
         Returns: number
       }
+      recurrence_link_candidates: {
+        Args: {
+          p_recurrence_id: string
+          p_due_date: string
+          p_widen?: boolean
+        }
+        Returns: {
+          id: string
+          date: string
+          amount: number
+          currency_code: string
+          account_id: string | null
+          description: string | null
+          category_id: string | null
+          is_shared: boolean
+          needs_conversion: boolean
+        }[]
+      }
+      recurrence_link_movement: {
+        Args: {
+          p_recurrence_id: string
+          p_due_date: string
+          p_transaction_id: string
+          p_confirm_conversion?: boolean
+        }
+        Returns: string
+      }
+      recurrence_unlink_movement: {
+        Args: {
+          p_instance_id: string
+        }
+        Returns: undefined
+      }
       recurrence_positions_spent_batch: {
         Args: {
           p_ids: string[]

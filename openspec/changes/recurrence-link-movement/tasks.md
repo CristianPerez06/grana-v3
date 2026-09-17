@@ -8,13 +8,13 @@
 ## 2. Migración `0072`
 
 - [x] 2.1 Confirmar contra `origin/main` que `0071` sigue siendo la más alta antes de fijar el número, y dejar el encabezado con el change y el orden de aplicación
-- [ ] 2.2 RPC de **candidatos** (`SECURITY INVOKER`): mismo tipo funcional y moneda, no vinculado a ninguna ocurrencia, ventana de vencimiento anterior a siguiente, orden por proximidad, y el parámetro de ampliar. Verificar que excluye un movimiento ya vinculado y que incluye uno fechado veinte días antes del vencimiento
-- [ ] 2.3 RPC de **vincular**, con la rama de conversión a compartido en la misma transacción. Verificar que un fallo en cualquiera de los dos pasos no deja ni el reparto aplicado ni el vínculo escrito
+- [x] 2.2 RPC de **candidatos** (`SECURITY INVOKER`): mismo tipo funcional y moneda, no vinculado a ninguna ocurrencia, ventana de vencimiento anterior a siguiente, orden por proximidad, y el parámetro de ampliar. Verificar que excluye un movimiento ya vinculado y que incluye uno fechado veinte días antes del vencimiento
+- [x] 2.3 RPC de **vincular**, con la rama de conversión a compartido en la misma transacción. Verificar que un fallo en cualquiera de los dos pasos no deja ni el reparto aplicado ni el vínculo escrito
 - [x] 2.4 Reemplazar las **dos funciones de guarda** de `0049` con la noción de liquidación vigente: dejan de contar una `reversed` con su contraasiento presente y toda fila `contra`; siguen contando `completed` y `pending_receipt`. Verificar los cinco escenarios del delta de `shared`, incluido que revertir una de dos liquidaciones no destraba
 - [x] 2.5 Verificar que la corrección de 2.4 **no cambia el cálculo de la deuda**: el original revertido y su contra siguen contando y cancelándose. Un test sobre la deuda derivada antes y después
-- [ ] 2.6 RPC de **desvincular**: rompe el vínculo y revierte la conversión en la misma transacción, **sin** atrapar `GRN01`. Verificar que con una liquidación vigente falla entero —el movimiento sigue compartido y el vínculo sigue puesto— y que tras revertir esa liquidación la operación se completa
-- [ ] 2.7 `revoke`/`grant` explícitos en cada función nueva, y self-check antes del COMMIT. Verificar que el self-check falla si se le saca una función a propósito
-- [ ] 2.8 Regenerar `packages/supabase/src/types.ts` contra el proyecto remoto y verificar que `pnpm typecheck` pasa
+- [x] 2.6 RPC de **desvincular**: rompe el vínculo y revierte la conversión en la misma transacción, **sin** atrapar `GRN01`. Verificar que con una liquidación vigente falla entero —el movimiento sigue compartido y el vínculo sigue puesto— y que tras revertir esa liquidación la operación se completa
+- [x] 2.7 `revoke`/`grant` explícitos en cada función nueva, y self-check antes del COMMIT. Verificar que el self-check falla si se le saca una función a propósito
+- [ ] 2.8 Regenerar `packages/supabase/src/types.ts` contra el proyecto remoto y verificar que `pnpm typecheck` pasa — **las firmas de los tres RPC nuevos están escritas a mano y `typecheck` pasa; falta la regeneración real, que necesita credenciales del proyecto y la hace el usuario tras aplicar la migración**
 
 ## 3. Lógica compartida (`@grana/recurrences`)
 

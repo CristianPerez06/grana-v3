@@ -150,8 +150,54 @@ const SCHEMA = `
     id uuid primary key default gen_random_uuid(),
     user_id uuid not null references auth.users(id) on delete cascade,
     date date not null default current_date,
-    amount numeric(18,2) not null default 1
+    amount numeric(18,2) not null default 1,
+    -- Columnas que leen los RPC de vinculación (0072). Nullable y con default:
+    -- los tests del seed link no las nombran y siguen viendo la misma tabla.
+    type text not null default 'expense',
+    currency_code text not null default 'ARS',
+    account_id uuid,
+    category_id uuid,
+    subcategory_id uuid,
+    description text,
+    is_shared boolean not null default false,
+    household_id uuid,
+    is_parent boolean not null default false,
+    due_date date
   );
+
+  -- El reparto por miembro, y la liquidación: lo que la rama compartida de
+  -- vincular escribe y lo que la guarda de 0049/0072 protege.
+  create table public.shared_expense_split (
+    transaction_id uuid not null references public.transactions(id) on delete cascade,
+    household_id   uuid not null,
+    user_id        uuid not null,
+    percentage     numeric(5,2) not null,
+    amount_assigned numeric(18,2) not null,
+    primary key (transaction_id, user_id)
+  );
+
+  create table public.settlement (
+    id                     uuid primary key default gen_random_uuid(),
+    household_id           uuid not null,
+    payer_id               uuid not null,
+    receiver_id            uuid not null,
+    payer_movement_id      uuid references public.transactions(id) on delete set null,
+    receiver_movement_id   uuid references public.transactions(id) on delete set null,
+    amount                 numeric(18,2) not null default 1000,
+    currency_code          text not null default 'ARS',
+    status                 text not null default 'pending_receipt',
+    reversed_at            timestamptz,
+    reverses_settlement_id uuid references public.settlement(id) on delete set null,
+    constraint chk_settlement_status
+      check (status in ('pending_receipt', 'completed', 'reversed', 'contra'))
+  );
+
+  alter table public.shared_expense_split enable row level security;
+  create policy "own splits" on public.shared_expense_split for all to authenticated
+    using (true) with check (true);
+  alter table public.settlement enable row level security;
+  create policy "own settlements" on public.settlement for all to authenticated
+    using (true) with check (true);
   alter table public.recurrences
     add constraint recurrences_created_from_transaction_fk
     foreign key (created_from_transaction_id)
@@ -173,6 +219,18 @@ const SCHEMA = `
     with check (user_id = auth.uid());
   create policy "users delete own recurrences" on public.recurrences for delete to authenticated
     using (user_id = auth.uid());
+
+  -- unshare_movement reducido a lo que el RPC de desvincular le pide: bajar la
+  -- bandera y borrar los repartos. Lo que NO se estira es la guarda: los triggers
+  -- reales de 0049/0072 se cuelgan abajo, así que el camino GRN01 —el que decide
+  -- si desvincular se completa o no cambia nada— se ejercita de verdad.
+  create or replace function public.unshare_movement(p_root_id uuid)
+  returns void language plpgsql security invoker as $unshare$
+  begin
+    update public.transactions set is_shared = false, household_id = null
+     where id = p_root_id;
+    delete from public.shared_expense_split where transaction_id = p_root_id;
+  end $unshare$;
 
   alter table public.recurrence_instances enable row level security;
   create policy "own instances" on public.recurrence_instances for all to authenticated
@@ -324,6 +382,20 @@ export async function applyLinkMovement(db: PGlite): Promise<void> {
     await db.exec('rollback;').catch(() => undefined)
     throw error
   }
+  // 0072 crea funciones nuevas, así que necesitan el grant que el harness inicial
+  // no pudo darles.
+  await grantAll(db)
+  // Las guardas de liquidación viven en 0043/0048, que arrastran medio módulo
+  // Compartido. Se cuelgan acá los triggers sobre las funciones que 0072 acaba de
+  // definir: lo que se está probando es el predicado, no el alta del trigger.
+  await db.exec(`
+    drop trigger if exists trg_block_unshare_with_settlement on public.transactions;
+    create trigger trg_block_unshare_with_settlement
+      before update on public.transactions
+      for each row
+      when (OLD.is_shared is true and NEW.is_shared is false)
+      execute function public.trg_fn_block_unshare_with_settlement();
+  `)
 }
 
 export async function applyActivation(db: PGlite): Promise<void> {
