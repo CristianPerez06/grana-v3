@@ -196,6 +196,123 @@ begin
   return v_produced;
 end $$;
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2 · settlement_is_live — qué liquidación protege algo, en un solo lugar
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- Las dos guardas de 0049 preguntan lo mismo y hasta ahora no preguntaban NADA
+-- sobre el estado de la liquidación: cero referencias a `s.status`. Eso dejaba
+-- bloqueando dos filas que no protegen ningún saldo, y convertía en falso el
+-- único consejo que las guardas obligan a dar.
+--
+-- `reverse_settlement` (0044) CONSERVA la original marcada `reversed` y ADEMÁS
+-- inserta un contraasiento cuya pata de pagador está fechada **el día de la
+-- reversión**. Con el predicado viejo, entonces, revertir no destrababa nada y
+-- encima agregaba un bloqueo más nuevo que cualquier gasto del pasado: al usuario
+-- se le pedía hacer algo irreversible que lo dejaba igual de trabado, o peor.
+--
+-- Qué sigue siendo vigente, y por qué:
+--
+--   completed        Saldó deuda. Protege.
+--   pending_receipt  La plata YA SALIÓ de la cuenta del pagador (0023/0043); que
+--                    el receptor no haya asignado la suya no la vuelve inofensiva.
+--   reversed SIN su contraasiento  Estado a medio escribir. Se protege por
+--                    conservador: no se puede afirmar que sumó cero.
+--
+-- Qué deja de serlo:
+--
+--   reversed CON su contraasiento  «Correctamente revertida». El par suma cero.
+--   contra                         Es el neteo, no un saldo. Y su fecha es la de
+--                                  la reversión, así que dejarlo adentro bloquea
+--                                  todo el pasado para siempre.
+--
+-- ESTO NO CAMBIA CÓMO SE CALCULA LA DEUDA. El original revertido y su contra
+-- siguen contando los dos y siguen cancelándose entre sí (0044). Lo único que
+-- cambia es qué considera la guarda que hay para proteger. Confundir las dos
+-- cosas —«si no bloquea, que tampoco cuente»— rompe el neteo.
+--
+-- Vive en una función y no copiada en cada guarda para que las dos no puedan
+-- contestar distinto: el requirement del spec las define juntas.
+
+create or replace function public.settlement_is_live(s public.settlement)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+  select s.status in ('completed', 'pending_receipt')
+      or (
+        s.status = 'reversed'
+        and not exists (
+          select 1
+            from public.settlement c
+           where c.reverses_settlement_id = s.id
+             and c.status = 'contra'
+        )
+      );
+$$;
+
+revoke all on function public.settlement_is_live(public.settlement) from public, anon;
+grant execute on function public.settlement_is_live(public.settlement) to authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 3 · Las dos guardas de 0049, con el criterio de vigencia
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- Copia literal de 0049 con UNA línea agregada en cada predicado. Los triggers
+-- NO se recrean: apuntan a estas funciones por nombre y toman la definición
+-- nueva, igual que hizo 0049 sobre los de 0043 y 0048.
+
+create or replace function public.trg_fn_block_shared_delete_with_settlement()
+returns trigger language plpgsql as $trg$
+begin
+  -- Only rows that carry debt (splits) can rewrite settled history. Exempts the
+  -- installment parent and settlement legs, and keys each row by its own date.
+  if OLD.is_shared
+     and OLD.household_id is not null
+     and exists (select 1 from public.shared_expense_split where transaction_id = OLD.id)
+     and exists (
+       select 1
+         from public.settlement s
+         join public.transactions pm on pm.id = s.payer_movement_id
+        where s.household_id = OLD.household_id
+          and s.currency_code = OLD.currency_code
+          and pm.date >= coalesce(OLD.due_date, OLD.date)
+          and public.settlement_is_live(s)
+     ) then
+    raise exception
+      'cannot delete shared movement % covered by a later settlement in household %',
+      OLD.id, OLD.household_id
+      using errcode = 'GRN01';
+  end if;
+  return OLD;
+end;
+$trg$;
+
+create or replace function public.trg_fn_block_unshare_with_settlement()
+returns trigger language plpgsql as $trg$
+begin
+  if OLD.household_id is not null
+     and exists (select 1 from public.shared_expense_split where transaction_id = OLD.id)
+     and exists (
+       select 1
+         from public.settlement s
+         join public.transactions pm on pm.id = s.payer_movement_id
+        where s.household_id = OLD.household_id
+          and s.currency_code = OLD.currency_code
+          and pm.date >= coalesce(OLD.due_date, OLD.date)
+          and public.settlement_is_live(s)
+     ) then
+    raise exception
+      'cannot unshare movement % covered by a later settlement in household %',
+      OLD.id, OLD.household_id
+      using errcode = 'GRN01';
+  end if;
+  return NEW;
+end;
+$trg$;
+
 -- `recurrence_positions_spent_batch` (0070) llama a ésta y NO se toca: hay una
 -- sola definición de qué cuenta `max_occurrences`, y el batch es otra forma de
 -- preguntarla, no otra forma de calcularla.
