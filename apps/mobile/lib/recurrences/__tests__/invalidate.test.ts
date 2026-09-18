@@ -32,14 +32,26 @@ describe('invalidación después de una mutación de recurrencia', () => {
     invalidateAfterRecurrenceResolution(client)
 
     // El movimiento que queda colgado de la ocurrencia corre el saldo de la
-    // cuenta, el feed, los agregados del dashboard y el resumen de la tarjeta.
+    // cuenta, el feed, los agregados del dashboard, el resumen de la tarjeta y
+    // la deuda del hogar.
     expect(keys.map(([prefix]) => prefix).sort()).toEqual([
       'accounts',
       'cards',
       'dashboard',
       'recurrences',
+      'shared',
       'transactions',
     ])
+  })
+
+  it('la deuda del hogar entra, porque es derivada y nadie la guarda', () => {
+    // Vincular un gasto personal a una regla compartida lo convierte, y
+    // desvincular lo devuelve a personal: las dos cosas mueven lo que cada
+    // miembro le debe al otro. Sin este prefijo, Compartido seguía mostrando la
+    // deuda de antes —el gemelo en web revalida `/shared` desde siempre—.
+    const { client, keys } = spy()
+    invalidateAfterRecurrenceResolution(client)
+    expect(keys).toContainEqual(['shared'])
   })
 
   it('cada clave es un PREFIJO, que es como TanStack empareja', () => {

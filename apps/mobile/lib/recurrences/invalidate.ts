@@ -12,7 +12,9 @@ export function invalidateAfterRecurrenceMutation(queryClient: QueryClient): voi
 // registrar por anticipado y vincular dejan un movimiento colgado de la
 // ocurrencia; desvincular lo suelta y —si la vinculación lo había convertido en
 // compartido— mueve la deuda del hogar. Todo eso corre el saldo de la cuenta, el
-// feed de movimientos, los agregados del dashboard y el resumen de la tarjeta.
+// feed de movimientos, los agregados del dashboard, el resumen de la tarjeta y
+// —porque la deuda entre los dos miembros es DERIVADA, no guardada— todo lo que
+// cuelga de `['shared']`: la deuda, la cuenta corriente y lo que hay por liquidar.
 //
 // Se llama «resolution» y no «confirm» porque el nombre viejo describía UN camino
 // de los cuatro, y los tres que llegaron después se colgaron del helper angosto:
@@ -20,7 +22,14 @@ export function invalidateAfterRecurrenceMutation(queryClient: QueryClient): voi
 // registrar un pago. El gemelo en web es `revalidateAfterRecurrenceMutation` +
 // `revalidateAfterMovementMutation`, que las server actions llaman siempre juntos.
 export function invalidateAfterRecurrenceResolution(queryClient: QueryClient): void {
-  for (const key of [['recurrences'], ['transactions'], ['dashboard'], ['accounts'], ['cards']]) {
+  for (const key of [
+    ['recurrences'],
+    ['transactions'],
+    ['dashboard'],
+    ['accounts'],
+    ['cards'],
+    ['shared'],
+  ]) {
     void queryClient.invalidateQueries({ queryKey: key })
   }
 }
