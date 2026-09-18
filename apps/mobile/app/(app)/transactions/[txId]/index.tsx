@@ -217,12 +217,18 @@ export default function MovementDetailScreen() {
           </View>
         ) : (
           <>
+            {/* DE QUÉ REGLA VIENE ESTE MOVIMIENTO. En web esta frase se mudó
+                adentro de la tarjeta «Recurrencia», que allá existe; acá el
+                detalle nativo no tiene esa tarjeta, así que la frase sigue
+                siendo su propia fila —primera del contenido, debajo del
+                encabezado— y ya no más angosta que el resto: el `mx-4` se
+                sumaba al `px-6` del scroll y la dejaba metida hacia adentro. */}
             {linkQuery.data ? (
               <Pressable
                 onPress={() =>
                   router.push(`/transactions/recurring/${linkQuery.data!.recurrence_id}`)
                 }
-                className="mx-4 mb-3 flex-row items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5"
+                className="mb-1 flex-row items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5"
               >
                 <Text className="flex-1 text-[13px] text-text-muted">
                   {t(

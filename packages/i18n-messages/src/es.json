@@ -1882,6 +1882,7 @@
       "unlinked_success": "Listo: el movimiento quedó suelto y el vencimiento volvió a por revisar.",
       "label_linked": "Vinculado a esta recurrencia",
       "label_originated": "Generado por una regla recurrente",
+      "relation_row_label": "Este movimiento",
       "convert_title": "Este gasto va a pasar a ser compartido",
       "convert_body": "Vincularlo lo reparte con tu hogar según la regla, así que va a mover la deuda entre ustedes.",
       "convert_warning_settlement": "Ojo: ya hay una liquidación que cubre esta fecha, así que para deshacer esta conversión vas a tener que resolverla primero.",

@@ -1,18 +1,48 @@
+import Link from 'next/link'
 import { Clock, Repeat } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Tile, TileHead, DetailRow } from './glance'
 import { formatLongDate, formatMonthShort, formatMonthYear } from './helpers'
 import type { RecurrenceSummaryVM } from './recurrence-summary'
 
-// Tile "Recurrencia": próximo cobro · activa desde · nº de cobros.
-export const TileRecurrence = ({ summary }: { summary: RecurrenceSummaryVM }) => {
+/**
+ * Tile "Recurrencia": de qué regla viene este movimiento · próximo cobro ·
+ * activa desde · nº de cobros.
+ *
+ * LA RELACIÓN VA ACÁ Y NO ARRIBA DE TODO. Antes era una línea que la página
+ * dibujaba ANTES del detalle, así que caía encima del «‹ Movimientos» y fuera de
+ * la grilla, flotando; y decía, en otras palabras, lo mismo que esta tarjeta.
+ * Una sola vez, en el lugar donde el usuario ya viene a preguntar de qué regla
+ * se trata.
+ */
+export const TileRecurrence = ({
+  summary,
+  relation,
+}: {
+  summary: RecurrenceSummaryVM
+  /** Cómo quedó atado a la regla, y adónde ir para verla. */
+  relation?: { href: string; text: string } | null
+}) => {
   const t = useTranslations('transactions.detail')
+  const tLink = useTranslations('recurrences.link')
 
   return (
     <Tile>
       <TileHead eyebrow={t('recurrence.eyebrow')} />
+      {relation ? (
+        <DetailRow
+          first
+          icon={<Repeat size={16} strokeWidth={2} aria-hidden />}
+          label={tLink('relation_row_label')}
+          value={
+            <Link href={relation.href} className="underline decoration-border underline-offset-4 hover:decoration-text">
+              {relation.text}
+            </Link>
+          }
+        />
+      ) : null}
       <DetailRow
-        first
+        first={!relation}
         icon={<Clock size={16} strokeWidth={2} aria-hidden />}
         label={t('recurrence.next_charge')}
         value={summary.nextDate ? formatLongDate(summary.nextDate) : '—'}

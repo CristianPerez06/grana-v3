@@ -1,6 +1,4 @@
-import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { Repeat } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -121,25 +119,22 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
       periodDetail?.paymentDebits.find((d) => d.transactionId === transaction.id)?.allocations ?? []
   }
 
+  // De qué regla viene el movimiento, resuelto acá porque es donde están el
+  // catálogo y la ruta. Se dibuja DENTRO de la tarjeta de recurrencia; ya no
+  // como una línea suelta arriba del encabezado.
+  const recurrenceRelation = recurrenceLink
+    ? {
+        href: `/transactions/recurring/${recurrenceLink.recurrence_id}`,
+        text: `${
+          recurrenceLink.resolution_kind === 'linked'
+            ? tLink('label_linked')
+            : t('generated_by_rule')
+        } (${getFrequencyLowerLabel(recurrenceLink.frequency)})`,
+      }
+    : null
+
   return (
     <>
-      {recurrenceLink && (
-        <Link
-          href={`/transactions/recurring/${recurrenceLink.recurrence_id}`}
-          className="mx-4 flex items-center gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm hover:bg-muted/50 transition-colors"
-        >
-          <Repeat className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <span className="text-muted-foreground">
-            {recurrenceLink.resolution_kind === 'linked'
-              ? tLink('label_linked')
-              : t('generated_by_rule')}
-          </span>{' '}
-          <span className="font-medium">
-            ({getFrequencyLowerLabel(recurrenceLink.frequency)})
-          </span>
-        </Link>
-      )}
-
       <GlobalTransactionDetail
         transaction={transaction}
         canManage={transaction.user_id === user.id}
@@ -156,6 +151,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         paymentAllocations={paymentAllocations}
         monthWeightSlices={monthWeightSlices}
         recurrence={recurrenceSummary}
+        recurrenceRelation={recurrenceRelation}
         contextPeriodLabel={contextPeriodLabel}
       />
     </>
