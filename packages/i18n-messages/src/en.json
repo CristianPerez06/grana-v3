@@ -1819,7 +1819,7 @@
     "upcoming": {
       "next_7_days": "Next 7 days",
       "next_30_days": "Next 30 days",
-      "info_only": "Info only",
+      "note_actions": "You can record or link before the due date",
       "empty": "Nothing here.",
       "show_rest": "Show the other {count}",
       "show_less": "Show less"
@@ -1899,7 +1899,9 @@
         "not_an_occurrence": "That date is not a due date of this rule.",
         "beyond_limit": "This rule has already used every due date in its plan.",
         "already_resolved": "That due date was already resolved."
-      }
+      },
+      "accounts_loading": "Reading your accounts…",
+      "accounts_unavailable": "We could not read your accounts. Close and try again."
     }
   },
   "subcategories": {

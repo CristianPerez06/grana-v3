@@ -116,6 +116,14 @@ const PayAheadForm = ({
 
   const selectedAccount = eligibleAccounts.find((a) => a.id === accountId) ?? null
 
+  // NO SE PUEDE CONFIRMAR HASTA TENER EL SALDO. La advertencia de saldo negativo
+  // se calcula sobre `availableByAccount`, que no existe mientras la lectura de
+  // cuentas está en vuelo: confirmar en ese hueco registra el pago sin la
+  // advertencia que el spec exige. Y si la lectura falló, no hay cuentas que
+  // elegir ni saldo con que avisar — se dice, en vez de dejar un botón que
+  // registra a ciegas.
+  const accountsReady = accountsQ.isSuccess
+
   // Advertencia blanda, no bloqueante: el pago dejaría la cuenta en negativo.
   // Los consumos de tarjeta —fuera del ledger— y los ingresos nunca avisan.
   const warning = (() => {
@@ -217,7 +225,11 @@ const PayAheadForm = ({
             </button>
           }
         >
-          {eligibleAccounts.length === 0 ? (
+          {accountsQ.isPending ? (
+            <p className="px-2.5 py-2 text-sm text-text-muted">{t('accounts_loading')}</p>
+          ) : accountsQ.isError ? (
+            <p className="px-2.5 py-2 text-sm text-terracotta">{t('accounts_unavailable')}</p>
+          ) : eligibleAccounts.length === 0 ? (
             <p className="px-2.5 py-2 text-sm text-text-muted">
               {tRec('pending.account_none_eligible')}
             </p>
@@ -272,10 +284,11 @@ const PayAheadForm = ({
       </div>
 
       {warning && <NegativeBalanceNotice projected={warning.projected} currency={warning.currency} />}
+      {accountsQ.isError && <Alert variant="error">{t('accounts_unavailable')}</Alert>}
       {formError && <Alert variant="error">{formError}</Alert>}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button onPress={submit} disabled={pending}>
+        <Button onPress={submit} disabled={pending || !accountsReady}>
           {pending ? tRec('pending.confirming') : tRec('pending.confirm')}
         </Button>
         <Button variant="ghost" onPress={onCancel} disabled={pending}>

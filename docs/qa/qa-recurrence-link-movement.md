@@ -1,8 +1,10 @@
 # QA — `recurrence-link-movement`
 
-> **Este código nunca se ejecutó contra la base real.** El change está implementado, archivado y
-> `pnpm verify` da verde, pero eso no dibuja ninguna pantalla: los 65 tests nuevos corren SQL en un
-> Postgres embebido (PGlite) y TypeScript compara tipos. Todo lo de acá abajo se mira corriendo la app.
+> **Este código nunca se ejecutó contra la base real.** El change está implementado y archivado, y
+> `pnpm verify` corrió **de punta a punta en verde** después de la segunda ronda de revisión (tests
+> del monorepo, lint y typecheck de web y nativo, build, checks de salud y el validador de OpenSpec).
+> Nada de eso dibuja una pantalla: los tests nuevos corren SQL en un Postgres embebido (PGlite) y
+> TypeScript compara tipos. Todo lo de acá abajo se mira corriendo la app.
 >
 > Lo que **ya está probado y no hace falta re-verificar a mano**: el conteo de posiciones
 > (SQL↔TS, 10 casos), las guardas de liquidación (11 casos, incluido el defecto que reparan), y los
@@ -28,8 +30,12 @@ Es el síntoma original: el alquiler vence el 23 y lo pagás el 3.
 
 | | Qué hacer | Qué tiene que pasar |
 |---|---|---|
-| A1 | Abrir el hub de recurrencias | La fila del vencimiento futuro ahora ofrece **«Ya lo pagué»** y **«Ya lo tengo cargado»**. Antes no ofrecía nada: la tarjeta decía «Solo informativo» |
-| A2 | Tocar «Ya lo pagué» | Se crea el movimiento **con fecha de hoy**, y el saldo baja hoy |
+| A1 | Abrir el hub de recurrencias | La fila del vencimiento futuro ahora ofrece **«Ya lo pagué»** y **«Ya lo tengo cargado»**. Antes no ofrecía nada, y la tarjeta decía «Solo informativo»; ahora la nota dice que se puede registrar o vincular |
+| A2 | Tocar «Ya lo pagué» | **Se abre un formulario**, no se crea nada todavía: fecha de pago en **hoy** y editable, importe y cuenta de la regla, editables. El botón de confirmar queda **deshabilitado hasta que carguen las cuentas** |
+| A2b | Cambiar el importe y confirmar | El movimiento se crea con el importe que pusiste y **el importe de la regla no cambia** |
+| A2c | Elegir una cuenta cuyo saldo no alcanza | Aparece la advertencia de saldo negativo **antes** de confirmar. No bloquea |
+| A2d | Confirmar | Se crea el movimiento con la fecha de pago elegida, y el saldo de esa cuenta baja |
+| A2e | Lo mismo desde **el detalle de la regla** | Las dos acciones también están ahí, con el mismo formulario |
 | A3 | Volver al hub | **El próximo vencimiento NO se movió.** Si la regla vencía el 23 de octubre, sigue siendo el 23 de octubre — no «un mes desde hoy» |
 | A4 | Mirar «Vencimientos por revisar» | **No aparece nada nuevo de esa regla.** Este es el caso trampa: una ocurrencia pendiente con fecha futura le pediría al usuario algo que acaba de pagar |
 | A5 | Correr el check SQL de abajo | La ocurrencia existe con `status='confirmed'`, `resolution_kind='created'` y el `due_date` **original** (el 23), no la fecha de pago |
@@ -58,7 +64,7 @@ Es el síntoma original: el alquiler vence el 23 y lo pagás el 3.
 |---|---|---|
 | C1 | En el detalle de la regla, sobre la ocurrencia vinculada en B, tocar **«Desvincular»** | El **movimiento sigue existiendo** y vuelve a estar suelto. No se borra: la recurrencia no lo creó |
 | C2 | Mirar la ocurrencia | Volvió a **«por revisar»**, conservando su vencimiento. **No quedó omitida** |
-| C3 | Buscar «Desvincular» sobre la ocurrencia de **A2** (la que la app creó) | **No se ofrece.** Deshacer eso significaría borrar un gasto real, que es otra operación (#104) |
+| C3 | Buscar «Desvincular» sobre la ocurrencia de **A2d** (la que la app creó) | **No se ofrece.** Deshacer eso significaría borrar un gasto real, que es otra operación (#104) |
 | C4 | Volver a vincular otro movimiento al mismo vencimiento | Se resuelve, y **la regla no gana un vencimiento extra** |
 
 ---
@@ -106,7 +112,8 @@ En los cuatro casos el plan conserva **tres** posiciones. **Falla si** aparece u
 
 | | Qué mirar |
 |---|---|
-| F1 | Los dos botones entran en la fila sin romper el monto ni el nombre de la regla |
+| F1 | Los dos botones entran en la fila sin romper el monto ni el nombre de la regla — en el hub web, en el **hub nativo** (debajo de cada regla activa) y en los dos detalles |
+| F1b | En nativo, «Ya lo pagué» registra directo con los valores de la regla y la fecha de hoy, **sin formulario**: es la divergencia que el spec fija para la app nativa |
 | F2 | En nativo, la hoja de candidatos **scrollea** — si la lista es larga y no se mueve, el tope de altura no está haciendo efecto |
 | F3 | El rótulo «Vinculado» aparece en la ficha del movimiento **también en nativo** (antes no mostraba ningún vínculo) |
 | F4 | Los mensajes de error son los mismos textos en las dos plataformas |

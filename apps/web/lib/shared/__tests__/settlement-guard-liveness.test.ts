@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { PGlite } from '@electric-sql/pglite'
 import {
   cancelPendingSettlement,
@@ -24,6 +24,8 @@ import {
 const GASTO = '2026-09-10'
 const LIQUIDACION = '2026-09-20'
 const HOY = '2026-10-01'
+/** For the one case that boots Postgres in its body. */
+const BOOTS_POSTGRES = 30_000
 
 let db: PGlite
 
@@ -35,8 +37,15 @@ const unshare = (id: string) =>
   `update public.transactions set is_shared = false, household_id = null where id = '${id}';`
 
 describe('guardas de liquidación — qué sigue protegiendo', () => {
-  it('una liquidación completada sigue bloqueando', async () => {
+  // The boot lives in a HOOK, under `hookTimeout`, and not in the test body:
+  // a WASM Postgres takes seconds to come up when the whole monorepo suite is
+  // competing for CPU, and the 5s `testTimeout` is not for that. Measured: the
+  // first case failed in the full run and passed alone, on the same commit.
+  beforeEach(async () => {
     db = await createSettlementGuardDb()
+  })
+
+  it('una liquidación completada sigue bloqueando', async () => {
     const gasto = await seedSharedExpense(db, { date: GASTO })
     await seedSettlement(db, { date: LIQUIDACION, status: 'completed' })
 
@@ -46,7 +55,6 @@ describe('guardas de liquidación — qué sigue protegiendo', () => {
   it('una liquidación pendiente de asignación sigue bloqueando', async () => {
     // La plata ya salió de la cuenta del pagador: que el receptor no haya
     // asignado la suya no la vuelve inofensiva.
-    db = await createSettlementGuardDb()
     const gasto = await seedSharedExpense(db, { date: GASTO })
     await seedSettlement(db, { date: LIQUIDACION, status: 'pending_receipt' })
 
@@ -54,7 +62,6 @@ describe('guardas de liquidación — qué sigue protegiendo', () => {
   })
 
   it('una liquidación correctamente revertida deja de bloquear', async () => {
-    db = await createSettlementGuardDb()
     const gasto = await seedSharedExpense(db, { date: GASTO })
     const liquidacion = await seedSettlement(db, { date: LIQUIDACION, status: 'completed' })
     await reverseSettlement(db, liquidacion, HOY)
@@ -66,7 +73,6 @@ describe('guardas de liquidación — qué sigue protegiendo', () => {
     // Es el corazón del defecto: la pata del contraasiento está fechada el día de
     // la reversión, posterior a cualquier gasto del pasado. Si contara, el hogar
     // quedaría trabado para siempre justo después de destrabarse.
-    db = await createSettlementGuardDb()
     const gasto = await seedSharedExpense(db, { date: GASTO })
     const liquidacion = await seedSettlement(db, { date: LIQUIDACION, status: 'completed' })
     await reverseSettlement(db, liquidacion, HOY)
@@ -79,7 +85,6 @@ describe('guardas de liquidación — qué sigue protegiendo', () => {
   })
 
   it('revertir una de dos no destraba si la otra sigue vigente', async () => {
-    db = await createSettlementGuardDb()
     const gasto = await seedSharedExpense(db, { date: GASTO })
     const primera = await seedSettlement(db, { date: LIQUIDACION, status: 'completed' })
     await seedSettlement(db, { date: LIQUIDACION, status: 'completed' })
@@ -89,7 +94,6 @@ describe('guardas de liquidación — qué sigue protegiendo', () => {
   })
 
   it('cancelar una pendiente destraba sin depender del predicado', async () => {
-    db = await createSettlementGuardDb()
     const gasto = await seedSharedExpense(db, { date: GASTO })
     const liquidacion = await seedSettlement(db, { date: LIQUIDACION, status: 'pending_receipt' })
     expect(await sqlstateOf(db, unshare(gasto))).toBe('GRN01')
@@ -101,7 +105,6 @@ describe('guardas de liquidación — qué sigue protegiendo', () => {
   it('una `reversed` a la que le falta el contraasiento se sigue protegiendo', async () => {
     // Estado a medio escribir: no se puede afirmar que el par sumó cero, así que
     // la guarda se queda del lado conservador.
-    db = await createSettlementGuardDb()
     const gasto = await seedSharedExpense(db, { date: GASTO })
     const liquidacion = await seedSettlement(db, { date: LIQUIDACION, status: 'completed' })
     await db.exec(`update public.settlement set status = 'reversed' where id = '${liquidacion}';`)
@@ -110,7 +113,6 @@ describe('guardas de liquidación — qué sigue protegiendo', () => {
   })
 
   it('una liquidación en otra moneda sigue sin bloquear', async () => {
-    db = await createSettlementGuardDb()
     const gasto = await seedSharedExpense(db, { date: GASTO, currency: 'ARS' })
     await seedSettlement(db, { date: LIQUIDACION, status: 'completed', currency: 'USD' })
 
@@ -118,7 +120,6 @@ describe('guardas de liquidación — qué sigue protegiendo', () => {
   })
 
   it('un gasto posterior a toda liquidación sigue sin bloquearse', async () => {
-    db = await createSettlementGuardDb()
     const gasto = await seedSharedExpense(db, { date: '2026-09-25' })
     await seedSettlement(db, { date: LIQUIDACION, status: 'completed' })
 
@@ -128,7 +129,6 @@ describe('guardas de liquidación — qué sigue protegiendo', () => {
   it('la guarda de BORRADO comparte el criterio', async () => {
     // El requirement las define juntas: si sólo se corrigiera una, el sistema
     // contestaría distinto a dos preguntas que son la misma.
-    db = await createSettlementGuardDb()
     const gasto = await seedSharedExpense(db, { date: GASTO })
     const liquidacion = await seedSettlement(db, { date: LIQUIDACION, status: 'completed' })
 
@@ -141,6 +141,9 @@ describe('guardas de liquidación — qué sigue protegiendo', () => {
 })
 
 describe('sin la corrección — el defecto que 0072 repara', () => {
+  // This one boots WITHOUT the fix, so it cannot share the hook above; the
+  // boot is in the body and the case gets the time it needs, and nothing else
+  // does (the same shape as `migration-0064-phase-guard.test.ts`).
   it('revertir NO destrababa, y encima agregaba un bloqueo más nuevo', async () => {
     db = await createSettlementGuardDb({ applyFix: false })
     const gasto = await seedSharedExpense(db, { date: GASTO })
@@ -150,5 +153,5 @@ describe('sin la corrección — el defecto que 0072 repara', () => {
     // Con el predicado viejo el usuario queda trabado después de haber hecho lo
     // único que la app le decía que hiciera.
     expect(await sqlstateOf(db, unshare(gasto))).toBe('GRN01')
-  })
+  }, BOOTS_POSTGRES)
 })

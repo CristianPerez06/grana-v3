@@ -19,6 +19,7 @@ import { recurrenceTitle } from '@grana/recurrences'
 import { useShowCents } from '@/lib/preferences-context'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { RecurrenceDetail as RecurrenceDetailType } from '@/lib/recurrences/types'
+import { ResolveAheadActions } from '../../_components/resolve-ahead-actions'
 import { RecurrenceActions } from './recurrence-actions'
 import { RecurrenceEditDrawer } from './recurrence-edit-drawer'
 
@@ -300,6 +301,23 @@ export const RecurrenceDetail = ({ rule }: Props) => {
           )
         })}
       </div>
+
+      {/* THE TWO WAYS OUT FOR A DUE DATE THAT HAS NOT ARRIVED — the hub's twin,
+          on the rule's own page. Without it, someone who pays the rent on the
+          3rd has to go back to the hub or wait for the 23rd, and this is the
+          screen that names that date. Same commit as the native detail. */}
+      {rule.next_occurrence && rule.status === 'active' && (
+        <ResolveAheadActions
+          recurrenceId={rule.id}
+          dueDate={rule.next_occurrence}
+          ruleAmount={Number(rule.amount)}
+          ruleCurrency={rule.currency_code}
+          movementType={rule.movement_type as 'expense' | 'income' | 'transfer'}
+          ruleAccountId={rule.account?.id ?? null}
+          transferDestinationAccountId={rule.transfer_destination_account_id ?? null}
+          shared={rule.household_id != null}
+        />
+      )}
 
       <RecurrenceEditDrawer rule={rule} open={editOpen} onClose={() => setEditOpen(false)} />
     </div>

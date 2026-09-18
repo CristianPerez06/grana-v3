@@ -1819,7 +1819,7 @@
     "upcoming": {
       "next_7_days": "Próximos 7 días",
       "next_30_days": "Próximos 30 días",
-      "info_only": "Solo informativo",
+      "note_actions": "Podés registrar o vincular antes del vencimiento",
       "empty": "Nada por aquí.",
       "show_rest": "Ver las otras {count}",
       "show_less": "Ver menos"
@@ -1899,7 +1899,9 @@
         "not_an_occurrence": "Esa fecha no es un vencimiento de esta regla.",
         "beyond_limit": "Esta regla ya usó todos los vencimientos de su plan.",
         "already_resolved": "Ese vencimiento ya fue resuelto."
-      }
+      },
+      "accounts_loading": "Leyendo tus cuentas…",
+      "accounts_unavailable": "No pudimos leer tus cuentas. Cerrá y volvé a intentar."
     }
   },
   "subcategories": {

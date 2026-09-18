@@ -28,7 +28,7 @@
 
 ## 4. Web
 
-- [x] 4.1 Acción «Ya lo pagué» en la fila de una regla cuyo próximo vencimiento no llegó (hub y detalle), reusando el formulario de registro con la fecha en hoy. Verificar a ancho de escritorio y **a ancho de teléfono**
+- [x] 4.1 Acción «Ya lo pagué» en la fila de una regla cuyo próximo vencimiento no llegó (hub y detalle), reusando el formulario de registro con la fecha en hoy. **Corregido en revisión (18-09): la primera entrega disparaba sin formulario y sólo en el hub; el detalle y el formulario entraron en la segunda ronda.** Verificar a ancho de escritorio y **a ancho de teléfono**
 - [x] 4.2 Superficie de candidatos con «Ampliar la búsqueda» siempre visible, la diferencia de importe como información y el orden por proximidad. Verificar que con la lista llena el control de ampliar sigue estando
 - [x] 4.3 Confirmación explícita de la conversión a compartido, con el aviso previo cuando ya hay una liquidación vigente que cubre la fecha. Verificar que cancelar no convierte ni vincula
 - [x] 4.4 Acción «Desvincular», con el mensaje del caso bloqueado que nombra la acción disponible según el estado de la liquidación. Verificar que el gasto sigue existiendo, que el vencimiento vuelve a «por revisar» en el camino feliz, y que en el bloqueado no cambia nada
@@ -37,7 +37,7 @@
 
 ## 5. App nativa
 
-- [x] 5.1 Acción «Ya lo pagué» en la fila del hub nativo (`RecurrenceRuleCard`) y en el detalle, con paridad de comportamiento con 4.1
+- [x] 5.1 Acción «Ya lo pagué» en la fila del hub nativo (`RecurrenceRuleCard`) y en el detalle, con paridad de comportamiento con 4.1. **Corregido en revisión (18-09): la primera entrega sólo cubría el detalle; el hub entró en la segunda ronda.**
 - [x] 5.2 Superficie de candidatos como overlay, componiendo `FormSheetBody`/`FormSheetKeyboardView` según lo que lleve adentro — nunca un `ScrollView` a mano — y con el tope de altura en píxeles sobre el scroller. Verificar que el teclado no tapa el contenido
 - [x] 5.3 Confirmación de la conversión a compartido y acción «Desvincular», con los mismos mensajes que 4.3 y 4.4
 - [x] 5.4 Rótulo «vinculado» en el detalle del movimiento nativo (`apps/mobile/app/(app)/transactions/[txId]/index.tsx`), que hoy no muestra el vínculo con la recurrencia
@@ -50,6 +50,6 @@
 ## 7. Cierre
 
 - [x] 7.1 Recorrer el circuito completo de punta a punta: vincular → convertir a compartido → liquidar → cancelar o revertir → desvincular, más pago anticipado y límite. Verificar que cada paso deja el estado que el spec describe
-- [x] 7.2 Correr `pnpm verify` completo y dejarlo verde
+- [x] 7.2 Correr `pnpm verify` completo y dejarlo verde — **corrió de punta a punta en verde el 18-09, después de la segunda ronda de revisión (en la ronda anterior el registro de npm devolvía 503 y sólo se pudo correr eslabón por eslabón).**
 - [x] 7.3 Aplicar los deltas a `openspec/specs/transactions/spec.md`, `openspec/specs/shared-recurrences/spec.md` y `openspec/specs/shared/spec.md`, mover la carpeta a `openspec/changes/archive/YYYY-MM-DD-recurrence-link-movement/` y verificar con `pnpm openspec:check`
 - [ ] 7.4 Presentar `findings.md` al usuario y borrarlo según lo que decida

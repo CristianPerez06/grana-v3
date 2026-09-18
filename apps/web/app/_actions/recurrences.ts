@@ -332,5 +332,9 @@ export async function registerRecurrenceAhead(args: {
     revalidateAfterMovementMutation()
     return { ok: true, transactionId: result.transactionId }
   }
-  return { ok: false, formError: result.formError }
+  // El rechazo de la validación del vencimiento —no es una posición del
+  // calendario, excede el tope, ya está resuelto— llega como código y se
+  // traduce acá, igual que en vincular. Sin esto el formulario mostraba nada.
+  const formError = await translateLinkError(result.linkErrorCode, undefined, result.errorCode)
+  return { ok: false, formError: formError ?? result.formError }
 }
