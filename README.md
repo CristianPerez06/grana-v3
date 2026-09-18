@@ -74,7 +74,7 @@ Antes de levantar la app por primera vez, en el panel de Supabase:
 
 **Authentication → Email Templates**
 
-Los templates viven versionados en el repo bajo `supabase/templates/`. **El repo es la source of truth** — el dashboard de Supabase es un mirror manual, y lo va a seguir siendo: el proyecto no usa la CLI de Supabase, así que nadie va a subirlos por vos.
+Los templates viven versionados en el repo bajo `supabase/templates/`. **El repo es la source of truth** — el dashboard de Supabase es un mirror manual: mantenerlo al día es un paso que hace una persona, cada vez. Los asuntos de los mails, en cambio, hoy viven sólo en el dashboard: no están versionados acá.
 
 Para cada uno de estos dos templates, abrí el archivo del repo, copiá el contenido completo del body y pegalo en el campo correspondiente del dashboard:
 

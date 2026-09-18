@@ -304,12 +304,12 @@ Both gates always run, and the command fails if either did. The grep runs even w
 
 ## Email templates
 
-- Supabase email templates used by the app live versioned under `supabase/templates/` (`confirm-signup.html`, `reset-password.html`). The repo is the **source of truth**; the dashboard is a **manual mirror, permanently** — the Supabase CLI is not used here, so nothing will ever push these for you.
+- Supabase email templates used by the app live versioned under `supabase/templates/` (`confirm-signup.html`, `reset-password.html`). The repo is the **source of truth**; the dashboard is a **manual mirror** — keeping it in step is a step a person takes, every time, and nothing in the repo or in CI will notice if nobody does.
 - When you change a template: edit the file in the repo, commit, then paste the new content into the matching field in the Supabase dashboard. Never the other way around.
 - **The auth flow is OTP, not magic links.** Both templates render an 8-digit code via `{{ .Token }}` — never a confirmation link. There is no `/auth/callback` route in the app; do not add one, and do not reintroduce `{{ .ConfirmationURL }}`, `{{ .TokenHash }}`, `token_hash`/`code`/`next` query params, or any `<a href="...">` link into the templates. The code is what the user reads off the email and types into the in-app verify screen.
   - `confirm-signup.html` → code from `{{ .Token }}`, verified by `supabase.auth.verifyOtp({ type: 'signup' })` in `apps/web/app/(auth)/_components/otp-verify-form.tsx`. Resend uses `supabase.auth.resend({ type: 'signup' })`.
   - `reset-password.html` → code from `{{ .Token }}`, verified by `verifyOtp({ type: 'recovery' })`. The email is sent by `requestPasswordResetAction` (`app/_actions/request-password-reset.ts`), which **intentionally omits `redirectTo`** so there is no link to follow — only the code. Resend uses `supabase.auth.resetPasswordForEmail(email)`.
-- Subjects live only in the dashboard, and will keep living there: versioning them would need the CLI, which this project does not use. Changing a subject is a dashboard edit with no counterpart in the repo.
+- **Subjects are not in the repo**: today they live only in the dashboard, so changing one is a dashboard edit with no counterpart here. Nothing stops them from being versioned — a file plus the same manual copy the HTML already gets — it simply has not been done.
 
 ## Language conventions
 

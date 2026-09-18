@@ -6,7 +6,7 @@ Define los flujos de autenticación de Grana: alta de usuario con confirmación 
 ## Requirements
 ### Requirement: Los templates de email viven versionados en el repo
 
-Los templates de email que dispara Supabase para los flujos de auth de esta app SHALL estar versionados bajo `supabase/templates/<nombre>.html`. Esa carpeta es la **fuente de verdad**; el dashboard de Supabase es un mirror manual de forma permanente, porque el proyecto no usa la CLI de Supabase. Cualquier cambio a un template SHALL hacerse primero en el repo y luego copiarse al dashboard. Si el dashboard y el repo divergen, el contenido del repo gana — la resolución es sobrescribir el dashboard, nunca al revés.
+Los templates de email que dispara Supabase para los flujos de auth de esta app SHALL estar versionados bajo `supabase/templates/<nombre>.html`. Esa carpeta es la **fuente de verdad**; el dashboard de Supabase es un mirror manual, que una persona sincroniza a mano cada vez. Cualquier cambio a un template SHALL hacerse primero en el repo y luego copiarse al dashboard. Si el dashboard y el repo divergen, el contenido del repo gana — la resolución es sobrescribir el dashboard, nunca al revés.
 
 La regla aplica como mínimo a los templates que la app usa hoy:
 
