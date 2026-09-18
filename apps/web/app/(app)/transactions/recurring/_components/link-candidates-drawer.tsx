@@ -115,7 +115,11 @@ export const LinkCandidatesDrawer = ({
           <div className="flex flex-1 flex-col gap-3 px-5 py-5">
             <h3 className="text-[15px] font-bold text-text">{t('convert_title')}</h3>
             <p className="text-[13.5px] text-text-muted">{t('convert_body')}</p>
-            <div className="mt-2 flex gap-2">
+            {/* APILADOS, no en una fila: el `Button` es `w-full`, así que dos en
+                la misma línea se llevan media hoja cada uno y el texto de
+                confirmar —que es una frase, no una palabra— no entra. El gemelo
+                nativo hace lo mismo. */}
+            <div className="mt-2 flex flex-col gap-2">
               <Button onPress={() => commit(confirming, true)} disabled={pending}>
                 {pending ? t('linking') : t('convert_confirm')}
               </Button>
@@ -162,7 +166,7 @@ export const LinkCandidatesDrawer = ({
                               nombre y otra como subtítulo, y esa fila no decía
                               nada de lo que se está eligiendo. */}
                           <span className="truncate text-[14.5px] font-semibold text-text">
-                            {candidate.description ?? t('no_description')}
+                            {candidate.description?.trim() || t('no_description')}
                           </span>
                           <span className="text-[12.5px] text-text-muted">
                             {formatDay(candidate.date)}

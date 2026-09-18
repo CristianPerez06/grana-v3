@@ -91,7 +91,11 @@ export function LinkCandidatesSheet({
               {t('recurrences.link.convert_body')}
             </Text>
             {error ? <Text className="text-[13px] text-terracotta">{error}</Text> : null}
-            <View className="flex-row gap-2">
+            {/* APILADOS, no en una fila: el `Button` es `w-full`, así que dos en
+                la misma línea se llevan media hoja cada uno y el texto de
+                confirmar —que es una frase, no una palabra— se desborda. Igual
+                que en web. */}
+            <View className="gap-2">
               <Button onPress={() => onPick(confirming, true)} disabled={pending}>
                 {pending
                   ? t('recurrences.link.linking')
@@ -143,7 +147,9 @@ export function LinkCandidatesSheet({
           >
             <View className="min-w-0 flex-1">
               <Text className="text-[14.5px] font-semibold text-text" numberOfLines={1}>
-                {candidate.description ?? t('recurrences.link.no_description')}
+                {/* `trim() ||` y no `??`: una descripción de puros espacios no
+                    es null, y dejaba la fila con el nombre en blanco. */}
+                {candidate.description?.trim() || t('recurrences.link.no_description')}
               </Text>
               <Text className="text-[12.5px] text-text-muted">
                 {formatShortDate(candidate.date, locale)}
