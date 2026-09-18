@@ -1870,6 +1870,7 @@
       "candidates_title": "Which one is it?",
       "candidates_subtitle": "Your movements around the {date} due date",
       "candidates_empty": "We found no movements near that date.",
+      "no_description": "Movement with no description",
       "widen": "Widen the search",
       "widened": "Showing a wider period",
       "amount_differs": "The rule was at {ruleAmount}; this movement is {amount}.",

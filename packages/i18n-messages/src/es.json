@@ -1870,6 +1870,7 @@
       "candidates_title": "¿Cuál de estos es?",
       "candidates_subtitle": "Movimientos tuyos cerca del vencimiento del {date}",
       "candidates_empty": "No encontramos movimientos cerca de esa fecha.",
+      "no_description": "Movimiento sin descripción",
       "widen": "Ampliar la búsqueda",
       "widened": "Mostrando un período más amplio",
       "amount_differs": "La regla venía de {ruleAmount}; este movimiento es de {amount}.",

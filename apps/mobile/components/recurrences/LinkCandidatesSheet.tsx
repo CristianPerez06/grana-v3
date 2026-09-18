@@ -28,6 +28,11 @@ type Props = {
 /**
  * Paridad nativa del drawer de candidatos de web.
  *
+ * NADA de acá adentro repite el margen lateral: `SelectSheet` ya lo pone en el
+ * contenedor de su lista (`px-5`), así que ponerlo otra vez en el encabezado, en
+ * las filas y en el pie daba 40px de cada lado y el importe quedaba cortado
+ * contra el borde.
+ *
  * Se compone sobre `SelectSheet` y no sobre un `ScrollView` a mano: esa hoja ya
  * resuelve el tope de altura del scroller EN PÍXELES, que es lo que hace que una
  * lista dentro de una hoja de contenido pueda scrollear — un `maxHeight` en
@@ -81,7 +86,7 @@ export function LinkCandidatesSheet({
         keyExtractor={(candidate) => candidate.id}
         renderRow={() => null}
         header={
-          <View className="gap-3 px-5 py-4">
+          <View className="gap-3 py-4">
             <Text className="text-[13.5px] text-text-muted">
               {t('recurrences.link.convert_body')}
             </Text>
@@ -110,7 +115,7 @@ export function LinkCandidatesSheet({
       items={candidates ?? []}
       keyExtractor={(candidate) => candidate.id}
       header={
-        <View className="gap-1 px-5 pb-2">
+        <View className="gap-1 pb-2">
           <Text className="text-[13px] text-text-muted">
             {t('recurrences.link.candidates_subtitle', {
               date: formatShortDate(dueDate, locale),
@@ -134,11 +139,11 @@ export function LinkCandidatesSheet({
           <Pressable
             onPress={() => pick(candidate)}
             disabled={pending}
-            className="flex-row items-center gap-3 px-5 py-3"
+            className="flex-row items-center gap-3 py-3"
           >
             <View className="min-w-0 flex-1">
               <Text className="text-[14.5px] font-semibold text-text" numberOfLines={1}>
-                {candidate.description ?? formatShortDate(candidate.date, locale)}
+                {candidate.description ?? t('recurrences.link.no_description')}
               </Text>
               <Text className="text-[12.5px] text-text-muted">
                 {formatShortDate(candidate.date, locale)}
@@ -152,14 +157,20 @@ export function LinkCandidatesSheet({
                 </Text>
               ) : null}
             </View>
-            <Text className="text-[14.5px] font-bold text-text">
+            {/* El importe NO se achica ni se parte: es el dato con el que se
+                elige la fila. `shrink-0` lo protege del nombre largo, y una sola
+                línea evita que un monto grande se corte en dos. */}
+            <Text
+              className="shrink-0 text-[14.5px] font-bold tabular-nums text-text"
+              numberOfLines={1}
+            >
               {money(candidate.amount, candidate.currency_code)}
             </Text>
           </Pressable>
         )
       }}
       footer={
-        <View className="border-t border-border px-5 py-3">
+        <View className="border-t border-border py-3">
           {candidates != null && candidates.length === 0 ? (
             <Text className="pb-3 text-center text-[13.5px] text-text-muted">
               {t('recurrences.link.candidates_empty')}
