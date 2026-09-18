@@ -26,11 +26,8 @@ Desde la raíz del proyecto:
 pnpm add @supabase/supabase-js @supabase/ssr
 ```
 
-Opcional, para acceso tipado a la base (recomendado):
-
-```bash
-pnpm add -D supabase
-```
+No instales la CLI de Supabase: este proyecto no la usa (ver § 8). El acceso tipado a la base
+sale de `packages/supabase/src/types.ts`, que se mantiene a mano.
 
 ---
 
@@ -394,13 +391,11 @@ La migración vive en `supabase/migrations/0008_transactions.sql`. Para aplicarl
 
 Si algún flag es `false` o el bloque `DO $$ ... $$` de self-check lanzó una excepción, revisá la consola de errores del SQL Editor.
 
-### 11.2 Regenerar tipos TypeScript
+### 11.2 Actualizar los tipos TypeScript
 
-Después de aplicar la migración, regenerá los tipos:
-
-```bash
-./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts
-```
+Después de aplicar la migración, editá a mano `packages/supabase/src/types.ts` con lo que la
+migración agregó o cambió, copiándolo del SQL que acabás de pegar (ver § 8). Después corré
+`pnpm typecheck` y `pnpm typecheck:mobile`.
 
 Verificá que `packages/supabase/src/types.ts` incluye ahora la tabla `transactions` y el enum `transaction_type`.
 
@@ -427,13 +422,11 @@ La migración vive en `supabase/migrations/0009_transactions_transfer_adjustment
 
 Si algún flag es `false` o el bloque `DO $$ ... $$` de self-check lanzó una excepción, revisá la consola de errores del SQL Editor.
 
-### 12.2 Regenerar tipos TypeScript
+### 12.2 Actualizar los tipos TypeScript
 
-Después de aplicar la migración, regenerá los tipos:
-
-```bash
-./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts
-```
+Después de aplicar la migración, editá a mano `packages/supabase/src/types.ts` con lo que la
+migración agregó o cambió, copiándolo del SQL que acabás de pegar (ver § 8). Después corré
+`pnpm typecheck` y `pnpm typecheck:mobile`.
 
 Verificá que `packages/supabase/src/types.ts` incluye ahora:
 - La columna `transfer_destination_account_id` en `transactions`.
@@ -465,11 +458,10 @@ Para aplicarla:
 
 Si el self-check falla con `% account(s) named Efectivo still exist`, alguien creó manualmente una cuenta `Efectivo` que no es del trigger — revisarlo antes de continuar.
 
-### 12.5.2 Regenerar tipos TypeScript
+### 12.5.2 Actualizar los tipos TypeScript
 
-```bash
-./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts
-```
+A mano, con lo que esta migración cambió, copiándolo del SQL aplicado (ver § 8). Después,
+`pnpm typecheck` y `pnpm typecheck:mobile`.
 
 `packages/supabase/src/types.ts` debe incluir ahora `mode`, `financial_timezone` y `onboarding_completed_at` en `profiles` (Row / Insert / Update).
 
@@ -503,18 +495,17 @@ no vale es suponer que existe algo que no está.
 
 1. **Aplicar `0061`** en ese proyecto, pegando el archivo completo en el **SQL Editor**.
    Al final se ve `✓ 0061 card payment legs applied`.
-2. **Regenerar los tipos y comparar drift.** Las columnas de pata, `isOneToOne: false` en
-   `period_payments.period_id` y las cuatro funciones se escribieron **a mano** mientras
-   la migración no estaba aplicada:
+2. **Comparar los tipos contra el SQL aplicado.** Las columnas de pata, `isOneToOne: false` en
+   `period_payments.period_id` y las cuatro funciones se escribieron a mano mientras la
+   migración no estaba aplicada — como todo en ese archivo, porque el proyecto no usa la CLI
+   de Supabase (§ 8). Así que la comparación es a ojo, entrada por entrada, contra las
+   declaraciones de la migración: nombres, tipos, nulabilidad, y la firma y el retorno de
+   cada función.
 
-   ```bash
-   pnpm --filter @grana/supabase types:gen
-   git diff packages/supabase/src/types.ts
-   ```
-
-   Un diff acá **no es cosmético**: significa que la base no quedó como el código la
-   asume. Este paso va ACÁ y no en la ventana de producción: si aparece drift, se
-   arregla con calma, no con el pago de resúmenes caído.
+   Una diferencia acá **no es cosmética**: significa que la base no quedó como el código la
+   asume, y ningún typecheck lo va a decir, porque compara el código con el archivo y no el
+   archivo con la base. Este paso va ACÁ y no en la ventana de producción: si aparece una
+   diferencia, se arregla con calma, no con el pago de resúmenes caído.
 3. **QA de los cuatro recorridos**: resumen solo ARS, mixto pagando USD en USD, mixto
    pesificado en ARS, y sin cuenta USD activa. Más la **reversión** de los dos mixtos, en
    web (mobile no tiene ese flujo — ver la brecha anotada en la change).
