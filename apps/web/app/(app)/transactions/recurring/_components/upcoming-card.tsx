@@ -25,13 +25,12 @@ const VISIBLE_ROWS = 5
 
 type Props = {
   title: string
-  note: string
   /** Rendered by the server component — this one only decides how many show. */
   rows: ReactNode[]
   emptyLabel: string
 }
 
-export const UpcomingCard = ({ title, note, rows, emptyLabel }: Props) => {
+export const UpcomingCard = ({ title, rows, emptyLabel }: Props) => {
   const tRec = useTranslations('recurrences')
   const [expanded, setExpanded] = useState(false)
   const hidden = rows.length - VISIBLE_ROWS
@@ -39,9 +38,12 @@ export const UpcomingCard = ({ title, note, rows, emptyLabel }: Props) => {
 
   return (
     <div className="overflow-hidden rounded-[18px] border border-border bg-card">
-      <div className="flex items-baseline justify-between px-5 pb-2.5 pt-4">
+      {/* Sólo el título. La nota que explicaba que se puede registrar o vincular
+          se fue cuando cada fila pasó a tener sus dos botones: con la acción a la
+          vista, la frase repite lo que el botón ya dice y le roba la mitad de la
+          línea al título. */}
+      <div className="px-5 pb-2.5 pt-4">
         <span className="text-[14px] font-bold tracking-[-0.01em] text-text">{title}</span>
-        <span className="text-[12.5px] font-medium text-text-soft">{note}</span>
       </div>
       {rows.length === 0 ? (
         <p className="px-5 pb-4 text-[13px] text-text-muted">{emptyLabel}</p>

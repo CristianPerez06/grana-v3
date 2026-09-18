@@ -158,7 +158,6 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
       // Ya no es «solo informativo»: cada fila ofrece registrar o vincular. La
       // proyección sigue siendo una lectura pura; las acciones escriben por su
       // cuenta, a través de las server actions.
-      note={tRec('upcoming.note_actions')}
       rows={rows.map(renderRow)}
       emptyLabel={tRec('upcoming.empty')}
     />

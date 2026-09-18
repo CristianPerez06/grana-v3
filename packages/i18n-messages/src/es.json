@@ -1819,7 +1819,6 @@
     "upcoming": {
       "next_7_days": "Próximos 7 días",
       "next_30_days": "Próximos 30 días",
-      "note_actions": "Podés registrar o vincular antes del vencimiento",
       "empty": "Nada por aquí.",
       "show_rest": "Ver las otras {count}",
       "show_less": "Ver menos"

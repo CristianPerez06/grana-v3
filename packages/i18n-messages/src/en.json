@@ -1819,7 +1819,6 @@
     "upcoming": {
       "next_7_days": "Next 7 days",
       "next_30_days": "Next 30 days",
-      "note_actions": "You can record or link before the due date",
       "empty": "Nothing here.",
       "show_rest": "Show the other {count}",
       "show_less": "Show less"
