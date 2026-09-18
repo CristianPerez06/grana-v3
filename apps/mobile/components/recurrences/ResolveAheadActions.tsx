@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Text, View } from 'react-native'
+import { useQueryClient } from '@tanstack/react-query'
 import type { LinkCandidate } from '@grana/recurrences'
 import { Button } from '../ui/Button'
 import { useT } from '../../lib/locale-context'
@@ -8,6 +9,7 @@ import {
   linkMovementToRecurrence,
   registerRecurrenceAhead,
 } from '../../lib/recurrences/mutators'
+import { invalidateAfterRecurrenceResolution } from '../../lib/recurrences/invalidate'
 import { LinkCandidatesSheet } from './LinkCandidatesSheet'
 
 type Props = {
@@ -17,7 +19,6 @@ type Props = {
   ruleAmount: number
   ruleCurrency: string
   shared: boolean
-  onResolved: () => void
 }
 
 /**
@@ -32,9 +33,13 @@ export function ResolveAheadActions({
   ruleAmount,
   ruleCurrency,
   shared,
-  onResolved,
 }: Props) {
   const t = useT()
+  // LA INVALIDACIÓN VIVE ACÁ, no en cada pantalla que monta el componente. Las
+  // dos que lo montan —el hub y el detalle— la pasaban como prop, y una de las
+  // dos podía elegir mal: elegían el helper angosto y el saldo quedaba viejo.
+  // Acá no hay nada que elegir.
+  const queryClient = useQueryClient()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [candidates, setCandidates] = useState<LinkCandidate[] | null>(null)
   const [loadError, setLoadError] = useState(false)
@@ -77,7 +82,7 @@ export function ResolveAheadActions({
       setError(result.formError)
       return
     }
-    onResolved()
+    invalidateAfterRecurrenceResolution(queryClient)
   }
 
   const pick = async (candidate: LinkCandidate, confirmConversion: boolean) => {
@@ -93,7 +98,7 @@ export function ResolveAheadActions({
       return
     }
     setSheetOpen(false)
-    onResolved()
+    invalidateAfterRecurrenceResolution(queryClient)
   }
 
   return (

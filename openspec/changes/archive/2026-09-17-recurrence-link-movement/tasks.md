@@ -38,6 +38,7 @@
 ## 5. App nativa
 
 - [x] 5.1 Acción «Ya lo pagué» en la fila del hub nativo (`RecurrenceRuleCard`) y en el detalle, con paridad de comportamiento con 4.1. **Corregido en revisión (18-09): la primera entrega sólo cubría el detalle; el hub entró en la segunda ronda.**
+- [x] 5.1b Paridad del RECHAZO y del refresco en nativo, corregido en la tercera ronda (18-09): la tabla de mensajes pasó a `@grana/recurrences` (`linkErrorMessageKeys`) porque estaba copiada a mano en las dos apps y la copia nativa se había quedado atrás; y la invalidación de cache pasó a vivir dentro de los componentes nativos, con un helper que relee también saldos y movimientos. Cubierto por tests: la tabla de decisión y el catálogo en los dos idiomas, y el arnés nuevo de `apps/mobile`
 - [x] 5.2 Superficie de candidatos como overlay, componiendo `FormSheetBody`/`FormSheetKeyboardView` según lo que lleve adentro — nunca un `ScrollView` a mano — y con el tope de altura en píxeles sobre el scroller. Verificar que el teclado no tapa el contenido
 - [x] 5.3 Confirmación de la conversión a compartido y acción «Desvincular», con los mismos mensajes que 4.3 y 4.4
 - [x] 5.4 Rótulo «vinculado» en el detalle del movimiento nativo (`apps/mobile/app/(app)/transactions/[txId]/index.tsx`), que hoy no muestra el vínculo con la recurrencia

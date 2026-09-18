@@ -111,6 +111,7 @@ export {
   type RegisterAheadResult,
   type BlockingSettlements,
 } from './link'
+export { linkErrorMessageKeys, LINK_ERROR_MESSAGE_KEYS } from './link-messages'
 
 export { recurrenceTitle, type RecurrenceTitleParts } from './display-title'
 export { referenceDateChoice } from './schedule-edit'

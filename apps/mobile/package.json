@@ -9,6 +9,8 @@
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "TZ=America/Argentina/Buenos_Aires vitest run --passWithNoTests",
+    "test:watch": "vitest",
     "build:android": "eas build --profile production --platform android",
     "build:android:local": "eas build --profile production --platform android --local",
     "build:ios": "eas build --profile production --platform ios",
@@ -64,7 +66,8 @@
     "eslint-config-expo": "^55.0.1",
     "sharp": "^0.33.5",
     "tailwindcss": "^3.4.19",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^3.0.0"
   },
   "private": true
 }

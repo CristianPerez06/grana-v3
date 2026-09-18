@@ -157,7 +157,7 @@ All scripts work from the repo root (orchestrator forwards to `pnpm --filter web
 - `pnpm dev` — Next dev server (web)
 - `pnpm build` — production build (web)
 - `pnpm lint` — ESLint (web)
-- `pnpm test` — **vitest across the whole monorepo**: `apps/web` AND every package
+- `pnpm test` — **vitest across the whole monorepo**: `apps/web`, `apps/mobile` AND every package
 - `pnpm test:web` — only `apps/web`, when you are iterating on one suite
 - `pnpm storybook` — Storybook on :6006 (web)
 - `pnpm --filter web <script>` — explicit form if you ever add another app
@@ -172,6 +172,17 @@ new CI step goes into `verify` as well as into the workflow**; its own
 `comment:verify` in `package.json` says so. The one step `verify` leaves out is
 `pnpm install --frozen-lockfile`, on purpose — verifying should not prune your
 `node_modules`. Run it yourself when you touch dependencies.
+
+`apps/mobile` has a suite too, and it is new: the app shipped for months with
+none, which is not neutral — the two defects the 18-09 review found (a rejection
+that read «algo salió mal» and a stale balance after registering a payment) both
+live in native glue, exactly what no package test can see. It runs on `node` and
+covers `lib/` only: the pure modules. Rendering React Native screens needs a
+runtime this harness deliberately does not bring, so a screen's wiring is pinned
+by reading its source (`lib/recurrences/__tests__/invalidation-wiring.test.ts`) —
+a coarser net than rendering, and the one that catches the omission that happened.
+`expo-secure-store` is aliased to a stub because it drags `react-native`, which
+ships as Flow and does not parse outside Metro.
 
 `pnpm test` runs what CI runs, on purpose. It used to be `--filter web` alone,
 and the packages' tests — where the money logic lives — were written but guarded

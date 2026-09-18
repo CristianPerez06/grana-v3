@@ -5,7 +5,9 @@ import {
   type EnrichedRecurrenceInstance,
   type RecurrenceInstanceStatus,
 } from '@grana/recurrences'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '../ui/Button'
+import { invalidateAfterRecurrenceResolution } from '../../lib/recurrences/invalidate'
 import { unlinkMovementFromRecurrence } from '../../lib/recurrences/mutators'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
@@ -23,10 +25,7 @@ const STATUS_TONE: Record<RecurrenceInstanceStatus, string> = {
 // the feed's pending block, not here.
 export function RecurrenceInstancesList({
   instances,
-  onUnlinked,
 }: {
-  /** Invalidación del cache tras desvincular. La hace la pantalla, como el resto. */
-  onUnlinked?: () => void
   /**
    * The whole history, so `due_date` may be NULL — an occurrence resolved before
    * 0064 has no recoverable vencimiento. This list renders `scheduled_date`,
@@ -39,6 +38,7 @@ export function RecurrenceInstancesList({
   const showCents = useShowCents()
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const unlink = async (instanceId: string) => {
     setError(null)
@@ -49,7 +49,9 @@ export function RecurrenceInstancesList({
       setError(result.formError)
       return
     }
-    onUnlinked?.()
+    // Desvincular suelta un movimiento real y puede devolverlo a personal: el
+    // saldo, el feed y la deuda del hogar cambian con él.
+    invalidateAfterRecurrenceResolution(queryClient)
   }
 
   return (

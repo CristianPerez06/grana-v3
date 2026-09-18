@@ -36,6 +36,7 @@ import {
   linkMovementToRecurrence as linkMovementToRecurrenceImpl,
   unlinkMovementFromRecurrence as unlinkMovementFromRecurrenceImpl,
   registerRecurrenceAhead as registerRecurrenceAheadImpl,
+  linkErrorMessageKeys,
   type DuplicateCandidate,
   type DuplicateMatch,
   type LinkCandidate,
@@ -246,22 +247,13 @@ async function translateLinkError(
   blockedBy: BlockingSettlements | undefined,
   errorCode: string | undefined,
 ): Promise<string | undefined> {
-  const t = await getTranslations('recurrences.link.errors')
-  if (code) return t(code)
-  if (errorCode === 'GRN01') {
-    // El mensaje NOMBRA LA ACCIÓN DISPONIBLE para el estado de la liquidación que
-    // bloquea: una completada se revierte, una pendiente se cancela, y una
-    // pendiente ajena la cancela quien la registró. Decir siempre «revertí» manda
-    // al usuario a una operación que el sistema no ofrece para ese estado.
-    const key =
-      blockedBy?.action === 'cancel_own'
-        ? 'blocked_cancel_own'
-        : blockedBy?.action === 'cancel_other'
-          ? 'blocked_cancel_other'
-          : 'blocked_revert'
-    return blockedBy?.multiple ? `${t(key)} ${t('blocked_multiple')}` : t(key)
-  }
-  return undefined
+  // QUÉ mensaje corresponde lo decide el package (`linkErrorMessageKeys`), que
+  // es donde nativo lee la misma tabla; acá sólo se traduce. Estaba escrita dos
+  // veces, y la copia de nativo se quedó atrás sin que nada avisara.
+  const keys = linkErrorMessageKeys({ linkErrorCode: code, blockedBy, errorCode })
+  if (!keys) return undefined
+  const t = await getTranslations('recurrences.link')
+  return keys.map((key) => t(key)).join(' ')
 }
 
 export async function getRecurrenceLinkCandidates(

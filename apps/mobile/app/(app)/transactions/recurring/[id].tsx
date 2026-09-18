@@ -244,7 +244,6 @@ export default function RecurrenceDetailScreen() {
                       ruleAmount={Number(rule.amount)}
                       ruleCurrency={rule.currency_code}
                       shared={rule.household_id != null}
-                      onResolved={() => invalidateAfterRecurrenceMutation(queryClient)}
                     />
                   </View>
                 ) : null}
@@ -308,10 +307,7 @@ export default function RecurrenceDetailScreen() {
               </View>
             </View>
 
-            <RecurrenceInstancesList
-              instances={rule.instances}
-              onUnlinked={() => invalidateAfterRecurrenceMutation(queryClient)}
-            />
+            <RecurrenceInstancesList instances={rule.instances} />
           </>
         )}
       </ScrollView>

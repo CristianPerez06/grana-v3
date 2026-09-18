@@ -29,15 +29,12 @@ export function RecurrenceRuleCard({
   tab,
   duplicate = false,
   onPress,
-  onResolved,
 }: {
   rule: RecurrenceSummary
   tab: Tab
   /** The rule collides with another active one (see `duplicateRuleIds`). Informative badge, mirror of web's hub. */
   duplicate?: boolean
   onPress: () => void
-  /** A due date was registered or linked ahead of time: the list has to re-read. */
-  onResolved: () => void
 }) {
   const t = useT()
   const locale = useLocale()
@@ -155,7 +152,6 @@ export function RecurrenceRuleCard({
           ruleAmount={Number(rule.amount)}
           ruleCurrency={rule.currency_code}
           shared={rule.household_id != null}
-          onResolved={onResolved}
         />
       </View>
     ) : null}
