@@ -1,20 +1,10 @@
-import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
-
-const RecurrenceDetailLayout = async ({ children }: { children: React.ReactNode }) => {
-  const tRec = await getTranslations('recurrences')
-
-  return (
-    <div className="flex max-w-2xl flex-col gap-8">
-      <Link
-        href="/transactions/recurring"
-        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        {`← ${tRec('title')}`}
-      </Link>
-      {children}
-    </div>
-  )
-}
+/**
+ * Encuadre del detalle de una regla. El «volver» NO vive acá: un layout no
+ * recibe los parámetros de la URL, y adónde se vuelve depende de cómo se llegó
+ * —del hub o de la ficha de un movimiento vinculado—. Lo dibuja la página.
+ */
+const RecurrenceDetailLayout = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex max-w-2xl flex-col gap-8">{children}</div>
+)
 
 export default RecurrenceDetailLayout

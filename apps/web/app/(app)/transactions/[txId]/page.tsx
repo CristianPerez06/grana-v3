@@ -124,7 +124,8 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
   // como una línea suelta arriba del encabezado.
   const recurrenceRelation = recurrenceLink
     ? {
-        href: `/transactions/recurring/${recurrenceLink.recurrence_id}`,
+        // Con `from` para que la regla sepa volver a ESTE movimiento y no al hub.
+        href: `/transactions/recurring/${recurrenceLink.recurrence_id}?from=transaction:${transaction.id}`,
         text: `${
           recurrenceLink.resolution_kind === 'linked'
             ? tLink('label_linked')

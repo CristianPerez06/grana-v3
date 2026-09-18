@@ -226,7 +226,12 @@ export default function MovementDetailScreen() {
             {linkQuery.data ? (
               <Pressable
                 onPress={() =>
-                  router.push(`/transactions/recurring/${linkQuery.data!.recurrence_id}`)
+                  // `from` para que la regla rotule su «volver» con este
+                  // movimiento, igual que en web. Ir hacia atrás ya funcionaba
+                  // —la pila lo resuelve—, pero el rótulo decía «Recurrencias».
+                  router.push(
+                    `/transactions/recurring/${linkQuery.data!.recurrence_id}?from=transaction:${txId}`,
+                  )
                 }
                 className="mb-1 flex-row items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5"
               >

@@ -1621,6 +1621,7 @@
     "title": "Recurrencias",
     "description": "Reglas que generan movimientos pendientes para que confirmes u omitas.",
     "back_label": "Movimientos",
+    "back_to_movement": "Movimiento",
     "empty": "Todavía no tenés reglas recurrentes. Creá una con el botón \"Crear recurrencia\" o activá el toggle \"Hacer recurrente\" cuando registres un movimiento.",
     "empty_active": "No tenés reglas activas. Creá una con el botón \"Crear recurrencia\".",
     "empty_paused": "No tenés reglas pausadas.",

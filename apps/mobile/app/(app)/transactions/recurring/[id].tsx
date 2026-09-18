@@ -56,7 +56,7 @@ export default function RecurrenceDetailScreen() {
   const showCents = useShowCents()
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>()
   const [editOpen, setEditOpen] = useState(false)
 
   const query = useQuery({
@@ -164,7 +164,14 @@ export default function RecurrenceDetailScreen() {
     <View className="flex-1 bg-page">
       <PageHeader
         title={t('recurrences.title')}
-        backLink={{ href: '/transactions/recurring', label: t('recurrences.back_label') }}
+        backLink={
+          from?.startsWith('transaction:')
+            ? {
+                href: `/transactions/${from.slice('transaction:'.length)}`,
+                label: t('recurrences.back_to_movement'),
+              }
+            : { href: '/transactions/recurring', label: t('recurrences.back_label') }
+        }
         onBackPress={onBack}
         actions={actions}
       />

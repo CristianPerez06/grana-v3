@@ -1621,6 +1621,7 @@
     "title": "Recurring",
     "description": "Rules that generate pending transactions for you to confirm or skip.",
     "back_label": "Transactions",
+    "back_to_movement": "Movement",
     "empty": "No recurring rules yet. Create one with the \"Create recurrence\" button or toggle \"Make recurring\" when recording a transaction.",
     "empty_active": "No active rules. Create one with the \"Create recurrence\" button.",
     "empty_paused": "No paused rules.",
