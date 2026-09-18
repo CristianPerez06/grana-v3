@@ -41,6 +41,10 @@ export function ResolveAheadActions({
   // Acá no hay nada que elegir.
   const queryClient = useQueryClient()
   const [sheetOpen, setSheetOpen] = useState(false)
+  // Cada apertura monta una hoja NUEVA. Cerrarla ya limpia su confirmación, pero
+  // vincular con éxito la cierra desde acá, sin pasar por ese cierre: sin esto,
+  // el estado interno de la hoja sobreviviría a la apertura siguiente.
+  const [sheetKey, setSheetKey] = useState(0)
   const [candidates, setCandidates] = useState<LinkCandidate[] | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [widened, setWidened] = useState(false)
@@ -64,6 +68,7 @@ export function ResolveAheadActions({
   const openSheet = () => {
     setError(null)
     setWidened(false)
+    setSheetKey((n) => n + 1)
     setSheetOpen(true)
     load(false)
   }
@@ -125,6 +130,7 @@ export function ResolveAheadActions({
       ) : null}
 
       <LinkCandidatesSheet
+        key={sheetKey}
         visible={sheetOpen}
         onClose={() => setSheetOpen(false)}
         dueDate={dueDate}

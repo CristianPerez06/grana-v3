@@ -70,6 +70,16 @@ export const LinkCandidatesDrawer = ({
   const [confirming, setConfirming] = useState<LinkCandidate | null>(null)
   const [pending, startTransition] = useTransition()
 
+  // CERRAR ES EMPEZAR DE NUEVO. La confirmación de conversión y el error viven
+  // dentro de este componente, que no se desmonta al cerrarse: sin limpiarlos,
+  // volver a abrir mostraba la confirmación del movimiento anterior —de otro
+  // vencimiento, incluso— en lugar de la lista.
+  const close = () => {
+    setConfirming(null)
+    setError(null)
+    onClose()
+  }
+
   const commit = (candidate: LinkCandidate, confirmConversion: boolean) => {
     setError(null)
     startTransition(async () => {
@@ -85,7 +95,7 @@ export const LinkCandidatesDrawer = ({
         return
       }
       onLinked?.()
-      onClose()
+      close()
     })
   }
 
@@ -100,7 +110,7 @@ export const LinkCandidatesDrawer = ({
   }
 
   return (
-    <Drawer open={open} onClose={onClose} ariaLabel={t('candidates_title')}>
+    <Drawer open={open} onClose={close} ariaLabel={t('candidates_title')}>
       <div className="flex h-full flex-col">
         <header className="border-b border-border px-5 py-4">
           <h2 className="text-[17px] font-bold tracking-[-0.01em] text-text">

@@ -60,6 +60,15 @@ export function LinkCandidatesSheet({
   const showCents = useShowCents()
   const [confirming, setConfirming] = useState<LinkCandidate | null>(null)
 
+  // CERRAR ES EMPEZAR DE NUEVO. `confirming` vive acá y la hoja no se desmonta
+  // al cerrarse: sin limpiarlo, volver a abrir mostraba la confirmación del
+  // movimiento anterior en vez de la lista. El error lo maneja el padre, que lo
+  // limpia al abrir.
+  const close = () => {
+    setConfirming(null)
+    onClose()
+  }
+
   const money = (amount: number, currency: string) =>
     fmtMoney(amount, currency as 'ARS' | 'USD', showCents)
 
@@ -80,7 +89,7 @@ export function LinkCandidatesSheet({
     return (
       <SelectSheet<LinkCandidate>
         visible={visible}
-        onClose={onClose}
+        onClose={close}
         title={t('recurrences.link.convert_title')}
         items={[]}
         keyExtractor={(candidate) => candidate.id}
@@ -114,7 +123,7 @@ export function LinkCandidatesSheet({
   return (
     <SelectSheet<LinkCandidate>
       visible={visible}
-      onClose={onClose}
+      onClose={close}
       title={t('recurrences.link.candidates_title')}
       items={candidates ?? []}
       keyExtractor={(candidate) => candidate.id}
