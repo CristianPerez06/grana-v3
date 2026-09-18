@@ -44,12 +44,16 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
       ) : (
         <ul className="flex flex-col gap-2">
           {instances.map((instance) => (
+            // DOS PISOS, no una sola línea. Con el botón compitiendo por el
+            // ancho, a ancho de teléfono la fecha se partía en cuatro renglones
+            // y la fila entera se amontonaba. Arriba el dato, abajo la acción.
             <li
               key={instance.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3"
+              className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3"
             >
+              <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-sm font-semibold text-text">
+                <span className="whitespace-nowrap text-sm font-semibold text-text">
                   {formatShortDate(instance.scheduled_date)}
                 </span>
                 {instance.description && (
@@ -90,10 +94,11 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
                 >
                   {tRec(`instance_statuses.${instance.status}`)}
                 </span>
-                {/* Sólo sobre lo que el usuario vinculó: sobre un pago que creó
-                    la recurrencia, deshacer sería BORRAR ese movimiento. */}
-                {canUnlink(instance) && <UnlinkInstanceButton instanceId={instance.id} />}
               </div>
+              </div>
+              {/* Sólo sobre lo que el usuario vinculó: sobre un pago que creó
+                  la recurrencia, deshacer sería BORRAR ese movimiento. */}
+              {canUnlink(instance) && <UnlinkInstanceButton instanceId={instance.id} />}
             </li>
           ))}
         </ul>

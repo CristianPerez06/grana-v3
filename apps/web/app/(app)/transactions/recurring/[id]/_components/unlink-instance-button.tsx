@@ -43,7 +43,7 @@ export const UnlinkInstanceButton = ({ instanceId }: { instanceId: string }) => 
 
   return (
     <div className="flex flex-col items-end gap-1.5">
-      <Button variant="ghost" onPress={unlink} disabled={pending}>
+      <Button variant="secondary" size="xs" onPress={unlink} disabled={pending}>
         {pending ? t('unlinking') : t('unlink')}
       </Button>
       {error ? <Alert variant="error">{error}</Alert> : null}

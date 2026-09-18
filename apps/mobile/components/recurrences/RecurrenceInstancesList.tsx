@@ -71,12 +71,13 @@ export function RecurrenceInstancesList({
       ) : (
         <View className="overflow-hidden rounded-2xl border border-border bg-card">
           {instances.map((instance, i) => (
+            // DOS PISOS, como en web: el botón abajo, no disputando el ancho
+            // con la fecha y el importe.
             <View
               key={instance.id}
-              className={`flex-row items-center justify-between px-4 py-3 ${
-                i > 0 ? 'border-t border-border-soft' : ''
-              }`}
+              className={`gap-2 px-4 py-3 ${i > 0 ? 'border-t border-border-soft' : ''}`}
             >
+              <View className="flex-row items-center justify-between">
               <View className="min-w-0 flex-1 pr-3">
                 <Text className="text-[14px] font-semibold text-text">
                   {formatShortDate(instance.scheduled_date, locale)}
@@ -100,20 +101,26 @@ export function RecurrenceInstancesList({
                 <Text className={`text-[11px] font-bold ${STATUS_TONE[instance.status]}`}>
                   {t(`recurrences.instance_statuses.${instance.status}`)}
                 </Text>
-                {/* Sólo sobre lo que el usuario vinculó: sobre un pago que creó
-                    la recurrencia, deshacer sería BORRAR ese movimiento. */}
-                {canUnlink(instance) ? (
-                  <Button
-                    variant="ghost"
-                    onPress={() => unlink(instance.id)}
-                    disabled={pendingId === instance.id}
-                  >
-                    {pendingId === instance.id
-                      ? t('recurrences.link.unlinking')
-                      : t('recurrences.link.unlink')}
-                  </Button>
-                ) : null}
               </View>
+              </View>
+              {/* Sólo sobre lo que el usuario vinculó: sobre un pago que creó
+                  la recurrencia, deshacer sería BORRAR ese movimiento. */}
+              {canUnlink(instance) ? (
+                <View className="flex-row justify-end">
+                  <View>
+                    <Button
+                      variant="secondary"
+                      size="xs"
+                      onPress={() => unlink(instance.id)}
+                      disabled={pendingId === instance.id}
+                    >
+                      {pendingId === instance.id
+                        ? t('recurrences.link.unlinking')
+                        : t('recurrences.link.unlink')}
+                    </Button>
+                  </View>
+                </View>
+              ) : null}
             </View>
           ))}
         </View>
