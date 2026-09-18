@@ -357,13 +357,21 @@ export const ResolveAheadActions = ({ shared, ...rule }: Props) => {
           onCancel={() => setFormOpen(false)}
         />
       ) : (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onPress={() => setFormOpen(true)}>
-            {t('already_paid')}
-          </Button>
-          <Button variant="ghost" onPress={openDrawer}>
-            {t('already_loaded')}
-          </Button>
+        // LAS DOS SALIDAS, UNA AL LADO DE LA OTRA. El primitivo `Button` es
+        // `w-full` por diseño, así que dos botones sueltos se apilan y cada uno
+        // ocupa el ancho entero: quedaban dos bloques enormes bajo cada fila.
+        // Cada uno va en su mitad, y el gemelo nativo hace exactamente lo mismo.
+        <div className="flex items-stretch gap-2">
+          <div className="flex-1">
+            <Button variant="secondary" size="sm" onPress={() => setFormOpen(true)}>
+              {t('already_paid')}
+            </Button>
+          </div>
+          <div className="flex-1">
+            <Button variant="ghost" size="sm" onPress={openDrawer}>
+              {t('already_loaded')}
+            </Button>
+          </div>
         </div>
       )}
 

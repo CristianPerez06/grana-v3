@@ -103,13 +103,20 @@ export function ResolveAheadActions({
 
   return (
     <View className="gap-2">
-      <View className="flex-row flex-wrap gap-2">
-        <Button variant="secondary" onPress={payNow} disabled={pending}>
-          {t('recurrences.link.already_paid')}
-        </Button>
-        <Button variant="ghost" onPress={openSheet} disabled={pending}>
-          {t('recurrences.link.already_loaded')}
-        </Button>
+      {/* Una sola fila, mitad y mitad — el gemelo de web. El `Button` nativo es
+          `w-full` igual que el de web, así que sin la mitad cada uno se comería
+          la fila entera y quedarían apilados. */}
+      <View className="flex-row gap-2">
+        <View className="flex-1">
+          <Button variant="secondary" size="sm" onPress={payNow} disabled={pending}>
+            {t('recurrences.link.already_paid')}
+          </Button>
+        </View>
+        <View className="flex-1">
+          <Button variant="ghost" size="sm" onPress={openSheet} disabled={pending}>
+            {t('recurrences.link.already_loaded')}
+          </Button>
+        </View>
       </View>
       {error && !sheetOpen ? (
         <Text className="text-[13px] text-terracotta">{error}</Text>
