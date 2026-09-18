@@ -48,7 +48,8 @@ Es el síntoma original: el alquiler vence el 23 y lo pagás el 3.
 
 | | Qué hacer | Qué tiene que pasar |
 |---|---|---|
-| B1 | Cargar un gasto suelto ~20 días **antes** del vencimiento, con la misma cuenta y moneda | — |
+| B0 | Correr `qa-recurrence-link-movement-bloque-b.sql` (misma carpeta) | Dice con qué regla conviene probar y **con qué fecha, cuenta, moneda e importe** cargar el movimiento. La ventana sale del calendario real de la regla, así que «20 días antes» sólo entra en una mensual |
+| B1 | Cargar ese gasto DESDE LA APP, con los datos que dio B0 | — |
 | B2 | Tocar «Ya lo tengo cargado» | El gasto aparece en la lista. **Veinte días antes tiene que entrar**: es el caso que motiva todo el change |
 | B3 | Cargar otro gasto con un importe **muy distinto** (el alquiler aumentó) | **También aparece.** El monto ordena, no filtra. Debajo dice en qué difiere, como información — no como advertencia |
 | B4 | Mirar el pie de la lista | **«Ampliar la búsqueda» está visible aunque la lista ya tenga candidatos**, no sólo cuando queda vacía |
