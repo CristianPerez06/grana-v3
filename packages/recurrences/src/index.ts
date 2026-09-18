@@ -103,6 +103,7 @@ export {
   unlinkMovementFromRecurrence,
   registerRecurrenceAhead,
   describeBlockingSettlements,
+  admitsOccurrence,
   type LinkCandidate,
   type LinkErrorCode,
   type LinkResult,

@@ -25,12 +25,14 @@ where n.nspname = 'public'
     'recurrence_link_candidates',
     'recurrence_link_movement',
     'recurrence_unlink_movement',
-    'settlement_is_live',
-    'recurrence_link_window',
-    'recurrence_split_matches'
+    'recurrence_calendar_around',
+    'recurrence_admits_occurrence',
+    'recurrence_step_interval',
+    'recurrence_split_matches',
+    'settlement_is_live'
   )
 order by p.proname;
--- Esperado: 6 filas, todas INVOKER.
+-- Esperado: 8 filas, todas INVOKER.
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2 · ¿Las guardas usan el criterio de vigencia?

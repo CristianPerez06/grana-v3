@@ -133,6 +133,9 @@ export type LinkErrorCode =
   | 'movement_shared_elsewhere'
   | 'conversion_not_confirmed'
   | 'not_linked'
+  | 'not_an_occurrence'
+  | 'beyond_limit'
+  | 'already_resolved'
 
 const RPC_ERROR_BY_SQLSTATE: Record<string, LinkErrorCode> = {
   GRN11: 'movement_incompatible',
@@ -140,6 +143,27 @@ const RPC_ERROR_BY_SQLSTATE: Record<string, LinkErrorCode> = {
   GRN13: 'movement_shared_elsewhere',
   GRN14: 'conversion_not_confirmed',
   GRN15: 'not_linked',
+  GRN16: 'not_an_occurrence',
+  GRN17: 'beyond_limit',
+  GRN18: 'already_resolved',
+}
+
+/**
+ * ¿Se puede resolver este vencimiento? La respuesta vive en SQL
+ * (`recurrence_admits_occurrence`) y la comparten vincular y registrar por
+ * anticipado, para que los dos caminos no puedan contestar distinto. Devuelve el
+ * motivo del rechazo, o null si se puede.
+ */
+export async function admitsOccurrence(
+  supabase: GranaSupabaseClient,
+  args: { recurrenceId: string; dueDate: string },
+): Promise<Extract<LinkErrorCode, 'not_an_occurrence' | 'beyond_limit' | 'already_resolved'> | null> {
+  const { data, error } = await supabase.rpc('recurrence_admits_occurrence', {
+    p_id: args.recurrenceId,
+    p_date: args.dueDate,
+  })
+  if (error) throw new Error(error.message)
+  return (data as unknown as 'not_an_occurrence' | 'beyond_limit' | 'already_resolved' | null) ?? null
 }
 
 export type LinkResult = RecurrenceActionResult<never> & {
@@ -237,6 +261,7 @@ export async function unlinkMovementFromRecurrence(
 export type RegisterAheadResult = RecurrenceActionResult<never> & {
   transactionId?: string
   instanceId?: string
+  linkErrorCode?: LinkErrorCode
 }
 
 /**
@@ -279,19 +304,23 @@ export async function registerRecurrenceAhead(
     return { ok: false, formError: 'La regla recurrente fue eliminada.' }
   }
 
-  // Una ocurrencia ya resuelta para ese vencimiento significa que alguien lo
-  // registró en el medio. Registrarlo otra vez es el duplicado que este change
-  // existe para evitar.
+  // VALIDAR EL VENCIMIENTO ANTES DE CREAR NADA, con la misma regla SQL que usa
+  // vincular: que sea una posición real del calendario, que no supere el
+  // límite, y que no esté ya resuelta (registrarla otra vez sería el duplicado
+  // que este change existe para evitar). Se pregunta ANTES de crear el
+  // movimiento: rechazar después dejaría un gasto huérfano que compensar.
+  const reason = await admitsOccurrence(supabase, {
+    recurrenceId: args.recurrenceId,
+    dueDate: args.dueDate,
+  })
+  if (reason) return { ok: false, linkErrorCode: reason }
+
   const { data: existing } = await supabase
     .from('recurrence_instances')
     .select('id, status')
     .eq('recurrence_id', args.recurrenceId)
     .eq('due_date', args.dueDate)
     .maybeSingle()
-
-  if (existing && existing.status !== 'pending') {
-    return { ok: false, formError: 'Ese vencimiento ya fue resuelto.' }
-  }
 
   const accountId = args.accountId ?? (rule.account_id as string)
   const { data: account } = await supabase

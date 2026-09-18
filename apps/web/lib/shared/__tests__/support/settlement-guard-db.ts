@@ -18,7 +18,11 @@ import { PGlite } from '@electric-sql/pglite'
  */
 
 const MIGRATIONS = resolve(__dirname, '../../../../../../supabase/migrations')
-const read = (file: string) => readFileSync(resolve(MIGRATIONS, file), 'utf-8')
+// Normalizado a LF: en Windows con autocrlf el archivo llega con \r\n, y todo
+// regex de acá abajo que busque un salto de línea literal deja de encontrarlo.
+// Once tests rojos en Windows y verdes en Linux sobre el mismo commit.
+const read = (file: string) =>
+  readFileSync(resolve(MIGRATIONS, file), 'utf-8').replace(/\r\n/g, '\n')
 
 export const MIGRATION_0049 = read('0049_shared_settlement_guard_temporal.sql')
 export const MIGRATION_0072 = read('0072_recurrence_link_movement.sql')

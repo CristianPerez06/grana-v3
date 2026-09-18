@@ -140,6 +140,9 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
           dueDate={occ.scheduled_date}
           ruleAmount={amount}
           ruleCurrency={rule.currency_code}
+          movementType={rule.movement_type as 'expense' | 'income' | 'transfer'}
+          ruleAccountId={rule.account?.id ?? null}
+          transferDestinationAccountId={rule.transfer_destination_account_id ?? null}
           shared={rule.household_id != null}
         />
       </div>

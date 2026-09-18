@@ -334,22 +334,203 @@ grant execute on function public.recurrence_positions_spent(uuid, date) to authe
 -- ya vinculado sale de toda otra lista, así que la superposición no puede
 -- resolver dos vencimientos con el mismo gasto.
 
-create or replace function public.recurrence_link_window(
-  p_interval_count int,
+create or replace function public.recurrence_step_interval(
   p_interval_unit  text,
-  p_widen          boolean
+  p_interval_count int
 )
 returns interval
 language sql
 immutable
 as $$
-  select (case p_interval_unit
-            when 'day'   then make_interval(days   => p_interval_count)
-            when 'week'  then make_interval(weeks  => p_interval_count)
-            when 'month' then make_interval(months => p_interval_count)
-            when 'year'  then make_interval(years  => p_interval_count)
-          end) * (case when p_widen then 3 else 1 end);
+  select case p_interval_unit
+           when 'day'   then make_interval(days   => p_interval_count)
+           when 'week'  then make_interval(weeks  => p_interval_count)
+           when 'month' then make_interval(months => p_interval_count)
+           when 'year'  then make_interval(years  => p_interval_count)
+         end;
 $$;
+
+-- LA VENTANA Y LA PERTENENCIA SALEN DEL CALENDARIO REAL, no de `p_date ±
+-- intervalo`. Esa aritmética ignora dos cosas que el calendario sí sabe: que la
+-- regla pudo cambiar de frecuencia (el vencimiento anterior cae bajo OTRA versión
+-- del cronograma) y que una pausa se come posiciones (el «anterior» está más
+-- atrás de lo que dice el intervalo). Acá se enumeran las posiciones de cada
+-- versión dentro de su propio tramo, se restan las pausas con la misma lectura
+-- que 0071 —la pausa cubre los días DESPUÉS de `paused_from`— y se toman los
+-- vecinos de ese conjunto.
+--
+-- `is_occurrence` dice si `p_date` es una posición REAL de la regla. Sin este
+-- chequeo, vincular o registrar a cualquier fecha crearía una ocurrencia con
+-- una identidad que el calendario nunca produce — y con el conteo nuevo, una
+-- fecha fantasma resuelta gastaría una posición del límite.
+--
+-- La semilla no es vinculable: ya la cubre el movimiento que creó la regla.
+
+create or replace function public.recurrence_calendar_around(
+  p_id     uuid,
+  p_date   date,
+  p_before int default 1,
+  p_after  int default 1
+)
+returns table (is_occurrence boolean, lo date, hi date)
+language plpgsql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  v_rule   public.recurrences;
+  v_cover  public.recurrence_schedule_versions;
+  v_step   interval;
+  v_reach  date;
+  v_before int := greatest(p_before, 1);
+  v_after  int := greatest(p_after, 1);
+begin
+  select * into v_rule from public.recurrences where id = p_id;
+  if not found then
+    return;
+  end if;
+
+  -- La versión vigente en `p_date`; si ninguna empezó todavía, la primera.
+  select * into v_cover
+    from public.recurrence_schedule_versions v
+   where v.recurrence_id = p_id and v.effective_from <= p_date
+   order by v.effective_from desc
+   limit 1;
+  if not found then
+    select * into v_cover
+      from public.recurrence_schedule_versions v
+     where v.recurrence_id = p_id
+     order by v.effective_from
+     limit 1;
+  end if;
+  if not found then
+    return query select false, p_date, p_date;
+    return;
+  end if;
+
+  v_step  := public.recurrence_step_interval(v_cover.interval_unit, v_cover.interval_count);
+  -- Hasta dónde hace falta enumerar para tener `p_after` vecinos por delante.
+  v_reach := (p_date + v_step * (v_after + 1))::date;
+
+  return query
+  with positions as (
+    select (v.anchor_date + (public.recurrence_step_interval(v.interval_unit, v.interval_count) * n))::date as d,
+           v.effective_from,
+           v.effective_until
+      from public.recurrence_schedule_versions v
+      cross join lateral generate_series(
+        0,
+        -- Mismo acotamiento que recurrence_positions_spent: días hasta el
+        -- alcance, divididos por el largo mínimo del paso, más margen.
+        (case v.interval_unit
+           when 'day'   then greatest(0, v_reach - v.anchor_date) / v.interval_count
+           when 'week'  then greatest(0, v_reach - v.anchor_date) / (v.interval_count * 7)
+           when 'month' then greatest(0, v_reach - v.anchor_date) / (v.interval_count * 28)
+           when 'year'  then greatest(0, v_reach - v.anchor_date) / (v.interval_count * 365)
+         end) + 2
+      ) n
+     where v.recurrence_id = p_id
+  ), real as (
+    select distinct p.d
+      from positions p
+     where p.d >= p.effective_from
+       and (p.effective_until is null or p.d <= p.effective_until)
+       and (v_rule.end_date is null or p.d <= v_rule.end_date)
+       and (v_rule.seed_occurrence_date is null or p.d <> v_rule.seed_occurrence_date)
+       and not exists (
+         select 1 from public.recurrence_pauses ps
+          where ps.recurrence_id = p_id
+            and p.d > ps.paused_from
+            and (ps.resumed_at is null or p.d < ps.resumed_at)
+       )
+  )
+  select
+    exists (select 1 from real r where r.d = p_date),
+    coalesce(
+      (select r.d from real r where r.d < p_date order by r.d desc offset v_before - 1 limit 1),
+      -- Sin vencimiento anterior (es el PRIMERO de la regla): un paso hacia atrás
+      -- por cada vecino pedido, igual que hacia adelante cuando no hay siguiente.
+      -- No `start_date`: en una regla nueva coincide con el primer vencimiento, y
+      -- la ventana no llegaría al pago del 3 de algo que vence el 23 — el caso
+      -- que motiva todo esto.
+      (p_date - v_step * v_before)::date
+    ),
+    coalesce(
+      (select r.d from real r where r.d > p_date order by r.d asc offset v_after - 1 limit 1),
+      -- Sin vencimiento siguiente (último de un plan con tope): un paso más.
+      (p_date + v_step * v_after)::date
+    );
+end $$;
+
+-- ¿SE PUEDE RESOLVER ESTE VENCIMIENTO? Una sola respuesta para los DOS caminos
+-- —vincular (RPC) y registrar por anticipado (desde la app)— para que no puedan
+-- contestar distinto. Devuelve NULL si se puede, o el código del motivo:
+--
+--   not_an_occurrence  no es una posición del calendario, está pausada, o es la
+--                      semilla
+--   beyond_limit       la regla ya gastó todas las posiciones de su tope antes
+--                      de esta fecha
+--   already_resolved   ya hay una ocurrencia resuelta con esa identidad
+--
+-- El tope se pregunta a `recurrence_positions_spent` —el conteo normativo— y no
+-- a una copia: las posiciones gastadas ANTES de `p_date` son las que esa función
+-- cuenta hasta el día anterior, menos las resueltas por anticipado que ella suma
+-- y que acá no cuentan (están después). Si eso ya llega al tope, `p_date` sería
+-- la posición de más. Se pregunta al día anterior y no a `p_date` a propósito:
+-- la función satura en el tope, y preguntada en la fecha de la posición de más
+-- devolvería el tope igual y la dejaría pasar.
+
+create or replace function public.recurrence_admits_occurrence(
+  p_id   uuid,
+  p_date date
+)
+returns text
+language plpgsql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  v_rule         public.recurrences;
+  v_is_occ       boolean;
+  v_spent_before int;
+begin
+  select * into v_rule from public.recurrences where id = p_id;
+  if not found then
+    return 'not_an_occurrence';
+  end if;
+
+  if exists (
+    select 1 from public.recurrence_instances i
+     where i.recurrence_id = p_id and i.due_date = p_date and i.status <> 'pending'
+  ) then
+    return 'already_resolved';
+  end if;
+
+  select a.is_occurrence into v_is_occ
+    from public.recurrence_calendar_around(p_id, p_date, 0, 0) a;
+  if not coalesce(v_is_occ, false) then
+    return 'not_an_occurrence';
+  end if;
+
+  if v_rule.max_occurrences is not null then
+    select public.recurrence_positions_spent(p_id, p_date - 1)
+         - (select count(distinct i.due_date)::int
+              from public.recurrence_instances i
+             where i.recurrence_id = p_id
+               and i.status in ('confirmed', 'skipped')
+               and i.due_date is not null
+               and i.due_date > p_date - 1
+               and (v_rule.seed_occurrence_date is null or i.due_date <> v_rule.seed_occurrence_date))
+      into v_spent_before;
+    if coalesce(v_spent_before, 0) >= v_rule.max_occurrences then
+      return 'beyond_limit';
+    end if;
+  end if;
+
+  return null;
+end $$;
 
 -- Un reparto es compatible cuando es el MISMO hogar y los MISMOS porcentajes por
 -- miembro. Se compara como conjunto, no como texto: el orden del jsonb no es
@@ -423,10 +604,15 @@ as $$
     select * from public.recurrences
      where id = p_recurrence_id and user_id = auth.uid()
   ), win as (
-    select p_due_date - public.recurrence_link_window(r.interval_count, r.interval_unit, p_widen) as lo,
-           p_due_date + public.recurrence_link_window(r.interval_count, r.interval_unit, p_widen) as hi,
-           r.*
+    -- Del vencimiento ANTERIOR al SIGUIENTE, tomados del calendario real.
+    -- Ampliar lleva tres vecinos para cada lado.
+    select a.lo, a.hi, r.*
       from rule r
+      cross join lateral public.recurrence_calendar_around(
+        r.id, p_due_date,
+        case when p_widen then 3 else 1 end,
+        case when p_widen then 3 else 1 end
+      ) a
   )
   select t.id, t.date, t.amount, t.currency_code, t.account_id, t.description,
          t.category_id, t.is_shared,
@@ -502,6 +688,7 @@ declare
   v_converted  boolean := false;
   v_instance   uuid;
   v_split      jsonb;
+  v_reason     text;
 begin
   if v_uid is null then
     raise exception 'not_authenticated' using errcode = 'GRN10';
@@ -602,6 +789,19 @@ begin
    returning id into v_instance;
 
   if v_instance is null then
+    -- VALIDAR EL VENCIMIENTO ANTES DE CREARLE UNA IDENTIDAD. Un `p_due_date` que
+    -- el calendario no produce dejaría una ocurrencia fantasma, y con el conteo
+    -- nuevo esa ocurrencia resuelta gastaría una posición del límite.
+    v_reason := public.recurrence_admits_occurrence(p_recurrence_id, p_due_date);
+    if v_reason is not null then
+      raise exception '%', v_reason
+        using errcode = case v_reason
+                          when 'beyond_limit'     then 'GRN17'
+                          when 'already_resolved' then 'GRN18'
+                          else                         'GRN16'
+                        end;
+    end if;
+
     insert into public.recurrence_instances
       (recurrence_id, user_id, due_date, scheduled_date, status,
        confirmed_transaction_id, resolution_kind, linked_conversion, resolved_at,
@@ -679,12 +879,16 @@ begin
    where id = p_instance_id;
 end $$;
 
-revoke all on function public.recurrence_link_window(int, text, boolean) from public, anon;
+revoke all on function public.recurrence_step_interval(text, int) from public, anon;
+revoke all on function public.recurrence_calendar_around(uuid, date, int, int) from public, anon;
+revoke all on function public.recurrence_admits_occurrence(uuid, date) from public, anon;
 revoke all on function public.recurrence_split_matches(uuid, jsonb) from public, anon;
 revoke all on function public.recurrence_link_candidates(uuid, date, boolean) from public, anon;
 revoke all on function public.recurrence_link_movement(uuid, date, uuid, boolean) from public, anon;
 revoke all on function public.recurrence_unlink_movement(uuid) from public, anon;
-grant execute on function public.recurrence_link_window(int, text, boolean) to authenticated;
+grant execute on function public.recurrence_step_interval(text, int) to authenticated;
+grant execute on function public.recurrence_calendar_around(uuid, date, int, int) to authenticated;
+grant execute on function public.recurrence_admits_occurrence(uuid, date) to authenticated;
 grant execute on function public.recurrence_split_matches(uuid, jsonb) to authenticated;
 grant execute on function public.recurrence_link_candidates(uuid, date, boolean) to authenticated;
 grant execute on function public.recurrence_link_movement(uuid, date, uuid, boolean) to authenticated;
@@ -735,6 +939,26 @@ begin
   end if;
   if to_regprocedure('public.recurrence_unlink_movement(uuid)') is null then
     raise exception '0072: recurrence_unlink_movement falta';
+  end if;
+  if to_regprocedure('public.recurrence_calendar_around(uuid, date, int, int)') is null then
+    raise exception '0072: recurrence_calendar_around falta';
+  end if;
+  if to_regprocedure('public.recurrence_admits_occurrence(uuid, date)') is null then
+    raise exception '0072: recurrence_admits_occurrence falta';
+  end if;
+
+  -- Vincular valida el vencimiento antes de crearle una identidad. Sin esto una
+  -- fecha que el calendario no produce queda como ocurrencia fantasma.
+  if (select prosrc from pg_proc
+       where oid = 'public.recurrence_link_movement(uuid, date, uuid, boolean)'::regprocedure)
+       not like '%recurrence_admits_occurrence%' then
+    raise exception '0072: recurrence_link_movement no valida el vencimiento';
+  end if;
+  -- Y la ventana de candidatos sale del calendario real, no de una aritmetica.
+  if (select prosrc from pg_proc
+       where oid = 'public.recurrence_link_candidates(uuid, date, boolean)'::regprocedure)
+       not like '%recurrence_calendar_around%' then
+    raise exception '0072: recurrence_link_candidates no toma la ventana del calendario';
   end if;
 
   -- Las dos guardas comparten el criterio de vigencia. Corregir una sola deja el

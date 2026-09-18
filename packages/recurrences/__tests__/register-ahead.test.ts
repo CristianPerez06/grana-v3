@@ -26,6 +26,8 @@ type Written = { table: string; op: 'insert' | 'update'; payload: Record<string,
 let written: Written[]
 let deleted: string[]
 let instanceWriteFails: boolean
+/** Lo que contesta `recurrence_admits_occurrence`: null = se puede. */
+let admits: string | null
 
 const RULE = {
   id: REGLA,
@@ -44,6 +46,10 @@ const RULE = {
 
 const client = () =>
   ({
+    rpc: async (name: string) => {
+      if (name !== 'recurrence_admits_occurrence') throw new Error(`rpc inesperado: ${name}`)
+      return { data: admits, error: null }
+    },
     from: (table: string) => ({
       select: () => ({
         eq: (_c: string, value: string) => ({
@@ -93,6 +99,7 @@ beforeEach(() => {
   deleted = []
   instanceWriteFails = false
   createFails.value = false
+  admits = null
 })
 
 describe('registerRecurrenceAhead', () => {
@@ -129,6 +136,32 @@ describe('registerRecurrenceAhead', () => {
     await registerRecurrenceAhead(client(), 'u1', { recurrenceId: REGLA, dueDate: VENCE })
     const instance = written.find((w) => w.table === 'recurrence_instances')
     expect(instance?.payload.resolution_kind).toBe('created')
+  })
+
+  it('valida el vencimiento ANTES de crear el movimiento, con la misma regla SQL que vincular', async () => {
+    // Rechazar después dejaría un gasto huérfano que compensar. Y la regla es una
+    // sola —`recurrence_admits_occurrence`— para que registrar por anticipado y
+    // vincular no puedan contestar distinto sobre la misma fecha.
+    admits = 'not_an_occurrence'
+    const result = await registerRecurrenceAhead(client(), 'u1', {
+      recurrenceId: REGLA,
+      dueDate: '2026-09-15',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.ok ? null : result.linkErrorCode).toBe('not_an_occurrence')
+    // Ni movimiento ni ocurrencia.
+    expect(written).toHaveLength(0)
+    expect(deleted).toHaveLength(0)
+  })
+
+  it('una posición más allá del tope se rechaza igual', async () => {
+    admits = 'beyond_limit'
+    const result = await registerRecurrenceAhead(client(), 'u1', {
+      recurrenceId: REGLA,
+      dueDate: '2026-12-23',
+    })
+    expect(result.ok).toBe(false)
+    expect(written).toHaveLength(0)
   })
 
   it('si falla el alta del movimiento no escribe ninguna ocurrencia', async () => {

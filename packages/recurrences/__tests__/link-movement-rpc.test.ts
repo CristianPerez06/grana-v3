@@ -41,20 +41,81 @@ const sqlstateOf = async (fn: () => Promise<unknown>): Promise<string | null> =>
   }
 }
 
-const makeRule = async (opts: { shared?: boolean; amount?: number } = {}) => {
+const makeRule = async (
+  opts: {
+    shared?: boolean
+    amount?: number
+    maxOccurrences?: number | null
+    /** Extra schedule versions, for a rule whose frequency changed over time. */
+    versions?: Array<{
+      effective_from: string
+      effective_until?: string | null
+      anchor_date: string
+      interval_count: number
+      interval_unit: string
+    }>
+    pauses?: Array<{ paused_from: string; resumed_at: string | null }>
+  } = {},
+) => {
   const split = opts.shared
     ? `'[{"user_id":"${U_A}","percentage":50},{"user_id":"${U_B}","percentage":50}]'::jsonb`
     : 'null'
+  // The sync trigger is off so the versions below are the ONLY calendar the rule
+  // has — like the parity harness. A rule with no version at all is not a state
+  // production has (0064 backfilled one, the trigger keeps it), and the
+  // calendar helper rightly treats every date of such a rule as not an
+  // occurrence.
+  const versions = opts.versions ?? [
+    { effective_from: VENCE, effective_until: null, anchor_date: VENCE, interval_count: 1, interval_unit: 'month' },
+  ]
   await db.exec(`
     alter table public.recurrences disable trigger trg_recurrence_sync_schedule_and_pauses;
     insert into public.recurrences
       (id, user_id, start_date, interval_count, interval_unit, status, amount,
-       currency_code, movement_type, household_id, default_split)
-    values ('${REGLA}', '${U_A}', '${VENCE}', 1, 'month', 'active',
+       currency_code, movement_type, household_id, default_split, max_occurrences,
+       schedule_effective_from)
+    values ('${REGLA}', '${U_A}', '${versions[0].anchor_date}', ${versions[0].interval_count},
+            '${versions[0].interval_unit}', 'active',
             ${opts.amount ?? 1000}, 'ARS', 'expense',
-            ${opts.shared ? `'${HOGAR}'` : 'null'}, ${split});
+            ${opts.shared ? `'${HOGAR}'` : 'null'}, ${split},
+            ${opts.maxOccurrences == null ? 'null' : opts.maxOccurrences},
+            '${versions[0].effective_from}');
     alter table public.recurrences enable trigger trg_recurrence_sync_schedule_and_pauses;
   `)
+  for (const v of versions) {
+    await db.exec(`
+      insert into public.recurrence_schedule_versions
+        (recurrence_id, user_id, effective_from, effective_until, interval_count, interval_unit,
+         anchor_date, is_assumed)
+      values ('${REGLA}', '${U_A}', '${v.effective_from}',
+              ${v.effective_until == null ? 'null' : `'${v.effective_until}'`},
+              ${v.interval_count}, '${v.interval_unit}', '${v.anchor_date}', false);
+    `)
+  }
+  for (const ps of opts.pauses ?? []) {
+    await db.exec(`
+      insert into public.recurrence_pauses (recurrence_id, user_id, paused_from, resumed_at)
+      values ('${REGLA}', '${U_A}', '${ps.paused_from}',
+              ${ps.resumed_at == null ? 'null' : `'${ps.resumed_at}'`});
+    `)
+  }
+}
+
+const linkAt = async (dueDate: string, txId: string) => {
+  await actAs(db, U_A)
+  const { rows } = await db.query<{ id: string }>(
+    `select public.recurrence_link_movement('${REGLA}'::uuid, '${dueDate}'::date,
+       '${txId}'::uuid, false) as id`,
+  )
+  return rows[0].id
+}
+
+const candidatesAt = async (dueDate: string, widen = false) => {
+  await actAs(db, U_A)
+  const { rows } = await db.query<{ id: string }>(
+    `select id from public.recurrence_link_candidates('${REGLA}'::uuid, '${dueDate}'::date, ${widen})`,
+  )
+  return rows.map((r) => r.id)
 }
 
 const makeMovement = async (opts: {
@@ -477,6 +538,106 @@ describe('liquidar, revertir o cancelar, y desvincular', () => {
     await unlink(instance)
     expect((await instanceRow(instance)).status).toBe('pending')
     expect((await movementRow(personal)).is_shared).toBe(false)
+  })
+})
+
+// ── El vencimiento se valida antes de crearle una identidad ──────────────────
+
+describe('validar el vencimiento antes de resolverlo', () => {
+  it('rechaza una fecha que el calendario no produce', async () => {
+    // Sin esto, vincular a cualquier fecha dejaría una ocurrencia fantasma — y
+    // con el conteo nuevo, una resuelta a futuro gastaría una posición.
+    await makeRule()
+    const tx = await makeMovement({ date: '2026-09-03' })
+    expect(await sqlstateOf(() => linkAt('2026-09-15', tx))).toBe('GRN16')
+    const { rows } = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.recurrence_instances where recurrence_id = '${REGLA}'`,
+    )
+    expect(rows[0].n).toBe(0)
+  })
+
+  it('rechaza una posición que cae dentro de una pausa', async () => {
+    // La pausa cubre los días DESPUÉS de paused_from (0071): el 23/10 está adentro.
+    await makeRule({ pauses: [{ paused_from: '2026-10-01', resumed_at: '2026-11-01' }] })
+    const tx = await makeMovement({ date: '2026-10-20' })
+    expect(await sqlstateOf(() => linkAt('2026-10-23', tx))).toBe('GRN16')
+  })
+
+  it('rechaza la posición que excede el tope del plan', async () => {
+    // Plan de 3: 23/09, 23/10, 23/11. El 23/12 sería la cuarta.
+    await makeRule({ maxOccurrences: 3 })
+    const tx = await makeMovement({ date: '2026-12-20' })
+    expect(await sqlstateOf(() => linkAt('2026-12-23', tx))).toBe('GRN17')
+  })
+
+  it('admite la última posición del plan', async () => {
+    await makeRule({ maxOccurrences: 3 })
+    const tx = await makeMovement({ date: '2026-11-20' })
+    expect(await sqlstateOf(() => linkAt('2026-11-23', tx))).toBeNull()
+  })
+
+  it('rechaza un vencimiento que ya está resuelto', async () => {
+    await makeRule()
+    const primero = await makeMovement({ date: '2026-09-03' })
+    const otro = await makeMovement({ date: '2026-09-04' })
+    await link(primero)
+    expect(await sqlstateOf(() => link(otro))).toBe('GRN18')
+  })
+
+  it('la regla SQL es una sola y la app la consulta igual', async () => {
+    // `recurrence_admits_occurrence` es lo que llama registrar-por-anticipado
+    // desde TS: tiene que decir lo mismo que el RPC de vincular.
+    await makeRule({ maxOccurrences: 3 })
+    await actAs(db, U_A)
+    const ask = async (d: string) => {
+      const { rows } = await db.query<{ r: string | null }>(
+        `select public.recurrence_admits_occurrence('${REGLA}'::uuid, '${d}'::date) as r`,
+      )
+      return rows[0].r
+    }
+    expect(await ask('2026-09-23')).toBeNull()
+    expect(await ask('2026-09-15')).toBe('not_an_occurrence')
+    expect(await ask('2026-12-23')).toBe('beyond_limit')
+  })
+})
+
+// ── La ventana sale del calendario real ──────────────────────────────────────
+
+describe('la ventana de candidatos es del vencimiento anterior al siguiente', () => {
+  it('con un cambio de frecuencia, el vencimiento anterior es el de la versión vieja', async () => {
+    // Semanal hasta fin de septiembre, mensual desde octubre. El vencimiento
+    // anterior al 23/10 es el ÚLTIMO semanal (28/09), no «23/10 − 1 mes» = 23/09.
+    await makeRule({
+      versions: [
+        { effective_from: '2026-09-07', effective_until: '2026-09-30', anchor_date: '2026-09-07', interval_count: 1, interval_unit: 'week' },
+        { effective_from: '2026-10-01', effective_until: null, anchor_date: '2026-10-23', interval_count: 1, interval_unit: 'month' },
+      ],
+    })
+    // Un pago del 29/09: posterior al último semanal (28/09) → adentro de la
+    // ventana real. Con «± 1 mes» también entraría, así que se agrega uno del
+    // 20/09, que la aritmética admite y el calendario real NO (cae antes del 28/09).
+    const adentro = await makeMovement({ date: '2026-09-29' })
+    const afuera = await makeMovement({ date: '2026-09-20' })
+    const ids = await candidatesAt('2026-10-23')
+    expect(ids).toContain(adentro)
+    expect(ids).not.toContain(afuera)
+  })
+
+  it('una pausa corre el vencimiento anterior más atrás', async () => {
+    // Mensual del 23. Octubre está pausado, así que el vencimiento anterior al
+    // 23/11 es el 23/09 y la ventana llega hasta ahí.
+    await makeRule({ pauses: [{ paused_from: '2026-10-01', resumed_at: '2026-11-01' }] })
+    const octubre = await makeMovement({ date: '2026-10-05' })
+    expect(await candidatesAt('2026-11-23')).toContain(octubre)
+  })
+
+  it('ampliar toma tres vecinos por lado', async () => {
+    // Para el 23/10 el anterior real es el 23/09; sin ampliar, un pago del 1/08
+    // queda afuera. Ampliado, tres vecinos atrás llegan al 23/07 y lo toman.
+    await makeRule()
+    const lejos = await makeMovement({ date: '2026-08-01' })
+    expect(await candidatesAt('2026-10-23')).not.toContain(lejos)
+    expect(await candidatesAt('2026-10-23', true)).toContain(lejos)
   })
 })
 

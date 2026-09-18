@@ -129,6 +129,21 @@ despliegue.
 
 ### 5. La ventana se deriva del calendario y se acepta que se superponga
 
+**Corregido en revisión (18-09).** La primera implementación hacía `p_due_date ± intervalo` con
+el intervalo vigente, que no es «el vencimiento anterior»: ignora un cambio de frecuencia (el
+anterior cae bajo otra versión) y las pausas (el anterior está más atrás). Ahora
+`recurrence_calendar_around` enumera las posiciones reales de cada versión en su tramo, resta
+las pausas con la lectura de 0071, y toma los vecinos de ese conjunto. Sin anterior o sin
+siguiente, el borde faltante es un paso del calendario en esa dirección — no `start_date`, que en
+una regla nueva coincide con el primer vencimiento y dejaba afuera el pago del 3.
+
+**Y el vencimiento se valida antes de crearle identidad**, cosa que la primera implementación no
+hacía: `recurrence_admits_occurrence` decide si una fecha se puede resolver (posición real, no
+pausada, no la semilla, dentro del tope, no resuelta) y la consultan LOS DOS caminos —el RPC de
+vincular y `registerRecurrenceAhead` desde TS—. El tope se pregunta a `recurrence_positions_spent`
+al día anterior, y no a una copia del caminante: la función satura en el tope, y preguntada en la
+propia fecha de la posición de más devolvería el tope igual y la dejaría pasar.
+
 De vencimiento anterior a vencimiento siguiente. Un número fijo de días no sirve: quince deja
 afuera el caso que motiva el change y sería absurdo en una regla semanal.
 

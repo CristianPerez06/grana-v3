@@ -1895,7 +1895,10 @@
         "blocked_revert": "Cannot unlink: there is a household settlement dated after this expense. Revert it and try again.",
         "blocked_cancel_own": "Cannot unlink: you have a settlement pending assignment dated after this expense. Cancel it and try again.",
         "blocked_cancel_other": "Cannot unlink: there is a settlement pending assignment dated after this expense, and the other person registered it. They have to cancel it.",
-        "blocked_multiple": "More than one settlement is blocking, so resolving just one is not enough."
+        "blocked_multiple": "More than one settlement is blocking, so resolving just one is not enough.",
+        "not_an_occurrence": "That date is not a due date of this rule.",
+        "beyond_limit": "This rule has already used every due date in its plan.",
+        "already_resolved": "That due date was already resolved."
       }
     }
   },

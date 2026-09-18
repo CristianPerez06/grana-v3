@@ -5511,6 +5511,21 @@ importe lo esconde exactamente ahí.
 no sólo cuando queda vacía—. El sistema NO SHALL exigir que el usuario escriba una búsqueda para
 llegar a la lista inicial.
 
+**EL VENCIMIENTO SE VALIDA ANTES DE CREARLE UNA IDENTIDAD.** Vincular o registrar por anticipado
+SHALL rechazar una fecha que el calendario de la regla no produce —incluida una posición que cae
+dentro de una pausa, y la fecha de la semilla, ya cubierta por el movimiento que creó la regla—, una
+posición que excede el tope del plan, y un vencimiento ya resuelto. Sin ese chequeo quedaría una
+ocurrencia con una identidad que el calendario nunca produce, y como una posición resuelta antes de
+su fecha cuenta como gastada, esa fecha fantasma consumiría una posición del límite. La regla SHALL
+ser **una sola** para los dos caminos, de modo que vincular y registrar por anticipado no puedan
+contestar distinto sobre la misma fecha.
+
+La ventana de candidatos SHALL tomar sus bordes del **calendario real** —los vecinos que la regla
+efectivamente produce, honrando versiones de cronograma y pausas— y no de una aritmética sobre el
+intervalo vigente. Cuando el vencimiento no tiene anterior (es el primero de la regla) o no tiene
+siguiente (el último de un plan con tope), el borde faltante SHALL ser un paso del calendario en esa
+dirección, para que un pago hecho antes del primer vencimiento siga entrando.
+
 #### Scenario: Vincular no crea ningún movimiento
 
 - **WHEN** el usuario vincula un gasto que ya tenía cargado al vencimiento del `2026-09-23`
@@ -5549,6 +5564,31 @@ llegar a la lista inicial.
 
 - **WHEN** la lista inicial de candidatos ya muestra movimientos
 - **THEN** la pantalla ofrece igualmente ampliar la búsqueda
+
+#### Scenario: Una fecha que no es un vencimiento se rechaza sin crear nada
+
+- **WHEN** se intenta vincular un movimiento al `2026-09-15` de una regla mensual del 23
+- **THEN** la operación se rechaza
+- **AND** no queda ninguna ocurrencia con esa fecha
+
+#### Scenario: Una posición más allá del tope se rechaza
+
+- **WHEN** una regla con `max_occurrences = 3` —vencimientos el `2026-09-23`, `2026-10-23` y
+  `2026-11-23`— recibe un intento de vincular al `2026-12-23`
+- **THEN** la operación se rechaza explicando que el plan ya usó todos sus vencimientos
+
+#### Scenario: Con un cambio de frecuencia, el vencimiento anterior es el de la versión vieja
+
+- **WHEN** una regla fue semanal hasta el `2026-09-30` y mensual del 23 desde octubre, y se abren
+  los candidatos del `2026-10-23`
+- **THEN** la ventana empieza en el último vencimiento semanal (`2026-09-28`)
+- **AND** un movimiento del `2026-09-20` NO aparece, aunque «un mes antes del 23/10» lo admitiría
+
+#### Scenario: El primer vencimiento de una regla también admite un pago anterior
+
+- **WHEN** el vencimiento del `2026-09-23` es el primero de su regla mensual y el usuario cargó un
+  gasto el `2026-09-03`
+- **THEN** ese gasto aparece entre los candidatos
 
 ### Requirement: El usuario puede desvincular un movimiento de un vencimiento
 

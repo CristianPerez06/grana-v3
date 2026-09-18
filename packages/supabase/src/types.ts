@@ -1366,6 +1366,26 @@ export type Database = {
         }
         Returns: number
       }
+      recurrence_calendar_around: {
+        Args: {
+          p_id: string
+          p_date: string
+          p_before?: number
+          p_after?: number
+        }
+        Returns: {
+          is_occurrence: boolean
+          lo: string
+          hi: string
+        }[]
+      }
+      recurrence_admits_occurrence: {
+        Args: {
+          p_id: string
+          p_date: string
+        }
+        Returns: string | null
+      }
       recurrence_link_candidates: {
         Args: {
           p_recurrence_id: string
