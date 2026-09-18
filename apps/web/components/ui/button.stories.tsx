@@ -11,7 +11,7 @@ const meta: Meta<typeof Button> = {
       control: 'select',
       options: ['primary', 'secondary', 'ghost', 'destructive', 'link'],
     },
-    size: { control: 'select', options: ['sm', 'md', 'lg', 'icon'] },
+    size: { control: 'select', options: ['xs', 'sm', 'md', 'lg', 'icon'] },
   },
 }
 export default meta
@@ -45,7 +45,7 @@ export const AllVariants: Story = {
   parameters: { layout: 'padded' },
   render: () => (
     <div className="flex flex-col gap-8">
-      {(['sm', 'md', 'lg'] as const).map((size) => (
+      {(['xs', 'sm', 'md', 'lg'] as const).map((size) => (
         <div key={size} className="flex flex-col gap-3">
           <p className="text-xs font-mono text-text-soft uppercase tracking-wide">{size}</p>
           <div className="flex flex-wrap items-center gap-3">

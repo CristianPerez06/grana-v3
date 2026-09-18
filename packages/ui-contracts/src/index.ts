@@ -43,7 +43,14 @@ export type ButtonVariant =
   | 'destructive'
   | 'link'
 
-export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon' | 'fab'
+/**
+ * `xs` is the COMPACT size: an action that lives inside a dense row (the two
+ * ways out of an upcoming due date, under each line of the recurrences hub),
+ * where `sm`'s 44px block turns every row into a wall of buttons. It is short on
+ * purpose, so each platform restores the 44px touch target its own way — the
+ * divergence the repo already allows: `::after` on web, `hitSlop` on native.
+ */
+export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'icon' | 'fab'
 
 export type ButtonProps = {
   variant?: ButtonVariant

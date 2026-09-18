@@ -33,6 +33,7 @@ const textVariant: Record<ButtonVariant, string> = {
 }
 
 const containerSize: Record<ButtonSize, string> = {
+  xs: 'h-7 px-2.5',
   sm: 'h-11 px-3',
   md: 'py-2.5 px-4',
   lg: 'py-3 px-5',
@@ -41,6 +42,7 @@ const containerSize: Record<ButtonSize, string> = {
 }
 
 const textSize: Record<ButtonSize, string> = {
+  xs: 'text-[13px]',
   sm: 'text-sm',
   md: 'text-sm',
   lg: 'text-base',
@@ -63,6 +65,10 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
+      // El botón compacto mide 28px, menos que el mínimo que se puede tocar con
+      // el pulgar: `hitSlop` le devuelve los 44px sin agrandar lo que se ve. Web
+      // hace lo mismo con un `::after`, que es la divergencia que el repo admite.
+      hitSlop={size === 'xs' ? 8 : undefined}
       className={`w-full flex-row items-center justify-center rounded-xl ${containerVariant[variant]} ${containerSize[size]} ${isDisabled ? 'opacity-50' : ''}`}
     >
       {loading ? (

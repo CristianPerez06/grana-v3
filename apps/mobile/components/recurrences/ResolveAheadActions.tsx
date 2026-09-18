@@ -103,17 +103,19 @@ export function ResolveAheadActions({
 
   return (
     <View className="gap-2">
-      {/* Una sola fila, mitad y mitad — el gemelo de web. El `Button` nativo es
-          `w-full` igual que el de web, así que sin la mitad cada uno se comería
-          la fila entera y quedarían apilados. */}
+      {/* Una sola fila, mitad y mitad, y las dos con el mismo peso — el gemelo
+          de web. El `Button` nativo es `w-full` igual que el de web, así que sin
+          la mitad cada uno se comería la fila entera. Y las dos `secondary`
+          porque son caminos equivalentes: una llena y la otra fantasma hacía que
+          la primera pareciera ya elegida. */}
       <View className="flex-row gap-2">
         <View className="flex-1">
-          <Button variant="secondary" size="sm" onPress={payNow} disabled={pending}>
+          <Button variant="secondary" size="xs" onPress={payNow} disabled={pending}>
             {t('recurrences.link.already_paid')}
           </Button>
         </View>
         <View className="flex-1">
-          <Button variant="ghost" size="sm" onPress={openSheet} disabled={pending}>
+          <Button variant="secondary" size="xs" onPress={openSheet} disabled={pending}>
             {t('recurrences.link.already_loaded')}
           </Button>
         </View>

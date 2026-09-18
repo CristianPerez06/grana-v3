@@ -17,6 +17,10 @@ const buttonVariants = cva(
         link: 'text-primary underline-offset-4 hover:underline px-0 h-auto',
       },
       size: {
+        // Corto de verdad (28px), con el área de toque de 44px devuelta por un
+        // `::after` invisible — el mismo recurso que ya usan el header del
+        // dashboard y la tarjeta de ahorro.
+        xs: "relative h-7 px-2.5 text-[13px] after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-['']",
         sm: 'h-11 px-3 text-sm',
         md: 'py-2.5 px-4 text-sm',
         lg: 'py-3 px-5 text-base',
