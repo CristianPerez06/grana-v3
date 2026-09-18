@@ -14,7 +14,7 @@
 - [x] 2.5 Verificar que la corrección de 2.4 **no cambia el cálculo de la deuda**: el original revertido y su contra siguen contando y cancelándose. Un test sobre la deuda derivada antes y después
 - [x] 2.6 RPC de **desvincular**: rompe el vínculo y revierte la conversión en la misma transacción, **sin** atrapar `GRN01`. Verificar que con una liquidación vigente falla entero —el movimiento sigue compartido y el vínculo sigue puesto— y que tras revertir esa liquidación la operación se completa
 - [x] 2.7 `revoke`/`grant` explícitos en cada función nueva, y self-check antes del COMMIT. Verificar que el self-check falla si se le saca una función a propósito
-- [ ] 2.8 Regenerar `packages/supabase/src/types.ts` contra el proyecto remoto y verificar que `pnpm typecheck` pasa — **las firmas de los tres RPC nuevos están escritas a mano y `typecheck` pasa; falta la regeneración real, que necesita credenciales del proyecto y la hace el usuario tras aplicar la migración**
+- [x] 2.8 Firmas de los RPC nuevos en `packages/supabase/src/types.ts`, verificadas contra el SQL aplicado — **escritas a mano por decisión del proyecto: la CLI de Supabase no se usa (18-09). Tras aplicar 0072 se comparó una por una contra las declaraciones de la migración (nombres y orden de los parámetros, cuáles tienen default, y la forma del retorno) y coinciden. `recurrence_admits_occurrence` es el único helper que la app llama por RPC; `settlement_is_live`, `recurrence_step_interval` y `recurrence_split_matches` sólo se usan dentro de SQL, así que no necesitan entrada**
 
 ## 3. Lógica compartida (`@grana/recurrences`)
 
