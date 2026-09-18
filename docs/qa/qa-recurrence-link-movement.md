@@ -17,7 +17,7 @@
 | | Qué | Cómo se sabe que salió bien |
 |---|---|---|
 | 0.1 | Aplicar `supabase/migrations/0072_recurrence_link_movement.sql` en el SQL Editor | Corre entera sin error. Tiene un self-check antes del `COMMIT`: si algo falta, aborta y dice qué |
-| 0.2 | ~~Regenerar los tipos~~ — **no aplica**: la CLI de Supabase no se usa en este proyecto. Las firmas de `packages/supabase/src/types.ts` están escritas a mano y ya se verificaron contra el SQL aplicado | `pnpm typecheck` en verde, que es lo único que esa regeneración aportaba |
+| 0.2 | ~~Regenerar los tipos~~ — **no aplica**: la CLI de Supabase no se usa en este proyecto (ver `AGENTS.md`). Las firmas de `packages/supabase/src/types.ts` están escritas a mano y se compararon una por una contra el SQL de 0072: nombres y orden de los parámetros, cuáles tienen default, y la forma del retorno | Esa comparación, ya hecha, más `pnpm typecheck` y `pnpm typecheck:mobile` en verde. **Cubre las firmas de este change, no el esquema entero**: el typecheck no compara este archivo contra la base |
 | 0.3 | Tener a mano una regla **mensual activa** cuyo próximo vencimiento **todavía no llegó** | El hub la muestra con «Próximo: …» |
 
 **Si 0.1 no corrió, todo lo demás falla al primer toque** y no significa nada: los tres RPC no existen.

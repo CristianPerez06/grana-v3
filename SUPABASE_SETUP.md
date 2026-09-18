@@ -297,12 +297,17 @@ export const addTodo = async (formData: FormData) => {
 
 ---
 
-## 8. Generar tipos de TypeScript (recomendado)
+## 8. Los tipos de TypeScript, a mano
 
-```bash
-pnpm dlx supabase login
-pnpm dlx supabase gen types typescript --project-id <project-ref> --schema public > lib/supabase/database.types.ts
-```
+**Este proyecto no usa la CLI de Supabase.** No hay `supabase login`, ni `supabase link`, ni
+`supabase gen types`. Los tipos del esquema viven en `packages/supabase/src/types.ts` y se
+**editan a mano**: cuando una migración cambia el contrato público —una tabla, una columna, la
+firma de un RPC o la forma de lo que devuelve— se escribe la entrada copiando lo que dice el SQL
+que se aplicó, se compara contra él, y se corren `pnpm typecheck` y `pnpm typecheck:mobile`.
+
+Conviene saber qué cubre eso y qué no: el typecheck demuestra que el código coincide con el
+archivo, nunca que el archivo coincida con la base. Nada compara el esquema entero solo, así que
+la comparación se hace migración por migración, mientras el SQL todavía está a la vista.
 
 Y después tipá los clientes:
 
@@ -346,21 +351,16 @@ La migración vive en `supabase/migrations/0007_accounts.sql`. Para aplicarla:
 
 Si algún flag es `false` o el bloque `DO $$ ... $$` de self-check lanzó una excepción, revisá la consola de errores del SQL Editor.
 
-### 10.2 Regenerar tipos TypeScript
+### 10.2 Actualizar los tipos TypeScript
 
-Después de aplicar la migración, regenerá los tipos:
+Después de aplicar la migración, actualizá a mano `packages/supabase/src/types.ts` (ver § 8: la
+CLI no se usa). Para esta migración eso significa agregar las tablas `accounts` y
+`account_currencies` y el enum `account_type`, copiando nombres, tipos y nulabilidad del SQL que
+acabás de pegar.
 
-```bash
-pnpm --filter @grana/supabase types:gen
-```
-
-O bien, si no tenés el script configurado:
-
-```bash
-supabase gen types typescript --project-id <project-id> > packages/supabase/src/types.ts
-```
-
-Verificá que `packages/supabase/src/types.ts` incluye ahora las tablas `accounts` y `account_currencies` y el enum `account_type`.
+Después corré `pnpm typecheck` y `pnpm typecheck:mobile`. Verde ahí quiere decir que el código
+coincide con el archivo; que el archivo coincida con la base lo sostiene la comparación que
+acabás de hacer contra el SQL.
 
 ### 10.3 Verificar el trigger (test manual)
 
