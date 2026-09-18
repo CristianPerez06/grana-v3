@@ -23,13 +23,21 @@ import { unlinkMovementFromRecurrence } from '@/app/_actions/recurrences'
 export const UnlinkInstanceButton = ({ instanceId }: { instanceId: string }) => {
   const t = useTranslations('recurrences.link')
   const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const unlink = () => {
     setError(null)
+    setDone(false)
     startTransition(async () => {
       const result = await unlinkMovementFromRecurrence(instanceId)
-      if (!result.ok) setError(result.formError ?? null)
+      if (!result.ok) {
+        setError(result.formError ?? null)
+        return
+      }
+      // Acá la ocurrencia se queda en pantalla —vuelve a «por revisar»—, así que
+      // el acuse puede vivir al lado del botón que dejó de ofrecerse.
+      setDone(true)
     })
   }
 
@@ -39,6 +47,7 @@ export const UnlinkInstanceButton = ({ instanceId }: { instanceId: string }) => 
         {pending ? t('unlinking') : t('unlink')}
       </Button>
       {error ? <Alert variant="error">{error}</Alert> : null}
+      {done ? <Alert variant="success">{t('unlinked_success')}</Alert> : null}
     </div>
   )
 }

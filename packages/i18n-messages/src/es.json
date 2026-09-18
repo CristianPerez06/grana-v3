@@ -1876,6 +1876,7 @@
       "link": "Vincular",
       "linking": "Vinculando…",
       "linked_success": "Vencimiento resuelto con el movimiento que ya tenías.",
+      "recorded_success": "Pago registrado: el vencimiento quedó resuelto.",
       "unlink": "Desvincular",
       "unlinking": "Desvinculando…",
       "unlinked_success": "Listo: el movimiento quedó suelto y el vencimiento volvió a por revisar.",

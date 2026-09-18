@@ -38,10 +38,12 @@ export function RecurrenceInstancesList({
   const showCents = useShowCents()
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
   const queryClient = useQueryClient()
 
   const unlink = async (instanceId: string) => {
     setError(null)
+    setDone(false)
     setPendingId(instanceId)
     const result = await unlinkMovementFromRecurrence(instanceId, t)
     setPendingId(null)
@@ -49,6 +51,7 @@ export function RecurrenceInstancesList({
       setError(result.formError)
       return
     }
+    setDone(true)
     // Desvincular suelta un movimiento real y puede devolverlo a personal: el
     // saldo, el feed y la deuda del hogar cambian con él.
     invalidateAfterRecurrenceResolution(queryClient)
@@ -116,6 +119,12 @@ export function RecurrenceInstancesList({
         </View>
       )}
       {error ? <Text className="text-[13px] text-terracotta">{error}</Text> : null}
+      {/* El acuse: la ocurrencia se queda en pantalla, vuelta a «por revisar». */}
+      {done ? (
+        <Text className="text-[13px] text-emerald-deep">
+          {t('recurrences.link.unlinked_success')}
+        </Text>
+      ) : null}
     </View>
   )
 }

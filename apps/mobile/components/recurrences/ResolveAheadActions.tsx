@@ -49,6 +49,10 @@ export function ResolveAheadActions({
   const [loadError, setLoadError] = useState(false)
   const [widened, setWidened] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // EL ACUSE. Sin él la pantalla cambia en silencio y el usuario no sabe si pasó
+  // algo. Acá la regla sigue en la lista —sólo se corre su próxima fecha—, así
+  // que el mensaje puede quedarse donde estaban los botones.
+  const [done, setDone] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
   // La lectura la dispara el toque, no un efecto de montaje: es la misma razón
@@ -80,6 +84,7 @@ export function ResolveAheadActions({
 
   const payNow = async () => {
     setError(null)
+    setDone(null)
     setPending(true)
     const result = await registerRecurrenceAhead({ recurrenceId, dueDate }, t)
     setPending(false)
@@ -87,11 +92,13 @@ export function ResolveAheadActions({
       setError(result.formError)
       return
     }
+    setDone(t('recurrences.link.recorded_success'))
     invalidateAfterRecurrenceResolution(queryClient)
   }
 
   const pick = async (candidate: LinkCandidate, confirmConversion: boolean) => {
     setError(null)
+    setDone(null)
     setPending(true)
     const result = await linkMovementToRecurrence(
       { recurrenceId, dueDate, transactionId: candidate.id, confirmConversion },
@@ -103,6 +110,7 @@ export function ResolveAheadActions({
       return
     }
     setSheetOpen(false)
+    setDone(t('recurrences.link.linked_success'))
     invalidateAfterRecurrenceResolution(queryClient)
   }
 
@@ -128,6 +136,7 @@ export function ResolveAheadActions({
       {error && !sheetOpen ? (
         <Text className="text-[13px] text-terracotta">{error}</Text>
       ) : null}
+      {done ? <Text className="text-[13px] text-emerald-deep">{done}</Text> : null}
 
       <LinkCandidatesSheet
         key={sheetKey}

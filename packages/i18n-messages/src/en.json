@@ -1876,6 +1876,7 @@
       "link": "Link",
       "linking": "Linking…",
       "linked_success": "Due date resolved with the movement you already had.",
+      "recorded_success": "Payment recorded: the due date is resolved.",
       "unlink": "Unlink",
       "unlinking": "Unlinking…",
       "unlinked_success": "Done: the movement is loose again and the due date is back to review.",

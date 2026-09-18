@@ -26,6 +26,7 @@ import {
   registerRecurrenceAhead,
 } from '@/app/_actions/recurrences'
 import { LinkCandidatesDrawer } from './link-candidates-drawer'
+import { useResolveAheadNotice } from './resolve-ahead-notice'
 
 type RuleProps = {
   recurrenceId: string
@@ -71,6 +72,7 @@ const PayAheadForm = ({
   const t = useTranslations('recurrences.link')
   const tRec = useTranslations('recurrences')
   const tTx = useTranslations('transactions')
+  const notify = useResolveAheadNotice()
   const currency = ruleCurrency as 'ARS' | 'USD'
 
   const [amount, setAmount] = useState(String(ruleAmount))
@@ -159,6 +161,9 @@ const PayAheadForm = ({
         setFormError(result.formError ?? null)
         return
       }
+      // El acuse lo da la pantalla: esta fila está por desaparecer, así que el
+      // mensaje sube al bloque que se queda.
+      notify(tRec('link.recorded_success'))
       onDone()
     })
   }
@@ -312,6 +317,7 @@ const PayAheadForm = ({
  */
 export const ResolveAheadActions = ({ shared, ...rule }: Props) => {
   const t = useTranslations('recurrences.link')
+  const notify = useResolveAheadNotice()
   const [formOpen, setFormOpen] = useState(false)
 
   // ── «Ya lo tengo cargado» ──────────────────────────────────────────────────
@@ -391,6 +397,7 @@ export const ResolveAheadActions = ({ shared, ...rule }: Props) => {
         loadError={loadError}
         widened={widened}
         onWiden={widen}
+        onLinked={() => notify(t('linked_success'))}
       />
     </>
   )
