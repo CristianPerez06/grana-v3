@@ -32,12 +32,20 @@ export const U_PAYER = '00000000-0000-0000-0000-0000000000a1'
 export const U_OTHER = '00000000-0000-0000-0000-0000000000b2'
 
 const SCHEMA = `
+  -- El enum real, no \`text\`: \`transactions.type\` es \`transaction_type\` desde
+  -- 0008. Declararlo como texto esconde una familia entera de fallos —Postgres
+  -- no tiene operador \`enum = text\`— y ya escondió uno: 0072 comparaba contra
+  -- \`recurrences.movement_type\`, que sí es texto, y se cayó al aplicarse.
+  create type transaction_type as enum (
+    'income', 'expense', 'transfer', 'adjustment', 'exchange', 'reimbursement', 'settlement'
+  );
+
   create table public.transactions (
     id           uuid primary key default gen_random_uuid(),
     user_id      uuid not null,
     household_id uuid,
     is_shared    boolean not null default false,
-    type         text not null default 'expense',
+    type         transaction_type not null default 'expense',
     amount       numeric(18,2) not null default 1000,
     currency_code text not null default 'ARS',
     date         date not null,

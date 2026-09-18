@@ -622,7 +622,13 @@ as $$
    where t.user_id = auth.uid()
      -- Mismo tipo funcional y misma moneda: vincular un ingreso a una regla de
      -- gasto haría que el historial afirme algo falso.
-     and t.type = w.movement_type
+     --
+     -- El cast NO es cosmético: `transactions.type` es el enum `transaction_type`
+     -- y `recurrences.movement_type` es TEXT con un CHECK, y Postgres no tiene un
+     -- operador entre los dos. Se lleva el enum a texto y no al revés porque
+     -- `text::transaction_type` revienta con cualquier valor que no sea una
+     -- etiqueta, mientras que el enum siempre tiene representación textual.
+     and t.type::text = w.movement_type
      and t.currency_code = w.currency_code
      -- La madre de cuotas no es un movimiento que alguien haya pagado.
      and coalesce(t.is_parent, false) = false
@@ -709,7 +715,10 @@ begin
     raise exception 'movement_not_found' using errcode = 'GRN10';
   end if;
 
-  if v_tx.type <> v_rule.movement_type or v_tx.currency_code <> v_rule.currency_code then
+  -- Mismo cast que en los candidatos, y por la misma razón: acá el cuerpo es
+  -- PL/pgSQL, así que esta línea no se valida al crear la función — habría
+  -- fallado recién al vincular, con el movimiento ya elegido por el usuario.
+  if v_tx.type::text <> v_rule.movement_type or v_tx.currency_code <> v_rule.currency_code then
     raise exception 'movement_incompatible' using errcode = 'GRN11';
   end if;
 

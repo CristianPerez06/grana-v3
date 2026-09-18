@@ -52,5 +52,6 @@
 
 - [x] 7.1 Recorrer el circuito completo de punta a punta: vincular → convertir a compartido → liquidar → cancelar o revertir → desvincular, más pago anticipado y límite. Verificar que cada paso deja el estado que el spec describe
 - [x] 7.2 Correr `pnpm verify` completo y dejarlo verde — **corrió de punta a punta en verde el 18-09, después de la segunda ronda de revisión (en la ronda anterior el registro de npm devolvía 503 y sólo se pudo correr eslabón por eslabón).**
+- [x] 7.3 Corregido al aplicar (18-09): la migración se caía en el SQL Editor con `operator does not exist: transaction_type = text`. `transactions.type` es un tipo enumerado y `recurrences.movement_type` es texto; se compara llevando el enum a texto, en los candidatos y en el vínculo. El arnés de PGlite declaraba esa columna como texto, así que ningún test podía verlo: ahora declara los enums reales (`transaction_type`, `account_type`), reproduce el fallo sin el arreglo y lo cubre con él
 - [x] 7.3 Aplicar los deltas a `openspec/specs/transactions/spec.md`, `openspec/specs/shared-recurrences/spec.md` y `openspec/specs/shared/spec.md`, mover la carpeta a `openspec/changes/archive/YYYY-MM-DD-recurrence-link-movement/` y verificar con `pnpm openspec:check`
 - [ ] 7.4 Presentar `findings.md` al usuario y borrarlo según lo que decida

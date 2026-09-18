@@ -52,6 +52,18 @@ const SCHEMA = `
   grant usage on schema public to authenticated;
   grant usage on schema auth to authenticated;
 
+  -- LOS TIPOS ENUMERADOS REALES, no \`text\`. \`transactions.type\` es el enum
+  -- \`transaction_type\` desde 0008 (0009/0014/0017/0022 le fueron agregando
+  -- valores) y \`accounts.type\` es \`account_type\` desde 0007/0010. El arnés los
+  -- declaraba como texto, y eso no es un detalle: Postgres NO tiene un operador
+  -- \`enum = text\`, así que una comparación contra una columna de texto —como
+  -- \`recurrences.movement_type\`, que sí lo es— falla en la base real y pasaba
+  -- verde acá. 0072 se cayó al aplicarse por exactamente eso.
+  create type transaction_type as enum (
+    'income', 'expense', 'transfer', 'adjustment', 'exchange', 'reimbursement', 'settlement'
+  );
+  create type account_type as enum ('cash', 'bank', 'credit');
+
   create table public.recurrences (
     id                  uuid primary key default gen_random_uuid(),
     user_id             uuid not null references auth.users(id) on delete cascade,
@@ -128,7 +140,7 @@ const SCHEMA = `
     id uuid primary key default gen_random_uuid(),
     user_id uuid references auth.users(id) on delete cascade,
     name text not null default 'Cuenta',
-    type text not null default 'bank',
+    type account_type not null default 'bank',
     is_active boolean not null default true
   );
   create table public.categories (
@@ -157,7 +169,7 @@ const SCHEMA = `
     amount numeric(18,2) not null default 1,
     -- Columnas que leen los RPC de vinculación (0072). Nullable y con default:
     -- los tests del seed link no las nombran y siguen viendo la misma tabla.
-    type text not null default 'expense',
+    type transaction_type not null default 'expense',
     currency_code text not null default 'ARS',
     account_id uuid,
     category_id uuid,
