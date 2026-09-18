@@ -65,7 +65,7 @@ export const RecurrenceActions = ({ rule, onEdit }: Props) => {
     'inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-lg)] text-text-muted transition-colors hover:bg-muted/40 hover:text-text disabled:opacity-40'
 
   return (
-    <div className="flex items-center justify-end gap-1 px-3.5">
+    <div className="flex items-center justify-end gap-1">
       <button
         type="button"
         onClick={onEdit}

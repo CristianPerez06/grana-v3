@@ -19,12 +19,15 @@ import { recurrenceTitle } from '@grana/recurrences'
 import { useShowCents } from '@/lib/preferences-context'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { RecurrenceDetail as RecurrenceDetailType } from '@/lib/recurrences/types'
+import { DetailTopbar } from '../../../_components/detail-topbar'
 import { ResolveAheadActions } from '../../_components/resolve-ahead-actions'
 import { RecurrenceActions } from './recurrence-actions'
 import { RecurrenceEditDrawer } from './recurrence-edit-drawer'
 
 type Props = {
   rule: RecurrenceDetailType
+  /** Adónde vuelve el «‹»: al hub, o al movimiento desde el que se abrió. */
+  back: { href: string; label: string }
 }
 
 // Parse a 'YYYY-MM-DD' calendar date locally (avoids the UTC shift a bare
@@ -75,7 +78,7 @@ const iconFor = (key: string): ReactNode => {
  * in the header, and editing happens in a drawer. The generated-instances list
  * renders below this (owned by the page).
  */
-export const RecurrenceDetail = ({ rule }: Props) => {
+export const RecurrenceDetail = ({ rule, back }: Props) => {
   const showCents = useShowCents()
   const t = useTranslations('recurrences')
   const tTx = useTranslations('transactions')
@@ -240,11 +243,19 @@ export const RecurrenceDetail = ({ rule }: Props) => {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <RecurrenceActions rule={rule} onEdit={() => setEditOpen(true)} />
+    <div>
+      {/* Volver y acciones en UNA fila, como en la ficha de un movimiento. Fuera
+          del contenedor con `gap-4`: el topbar trae su propio margen inferior,
+          y sumarle el gap devolvía el hueco que esto saca. */}
+      <DetailTopbar
+        backHref={back.href}
+        backLabel={back.label}
+        actions={<RecurrenceActions rule={rule} onEdit={() => setEditOpen(true)} />}
+      />
 
+    <div className="flex flex-col gap-4">
       {/* Hero: amount leads, with the rule's narrative and type/frequency below */}
-      <div className="flex flex-col items-center gap-2 px-4 pt-2 text-center">
+      <div className="flex flex-col items-center gap-2 px-4 text-center">
         <div className="flex flex-wrap items-center justify-center gap-1.5">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/50 px-2.5 py-1 text-[11px] font-semibold text-text-muted">
             {type === 'transfer' ? (
@@ -320,6 +331,7 @@ export const RecurrenceDetail = ({ rule }: Props) => {
       )}
 
       <RecurrenceEditDrawer rule={rule} open={editOpen} onClose={() => setEditOpen(false)} />
+    </div>
     </div>
   )
 }

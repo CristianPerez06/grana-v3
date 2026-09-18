@@ -43,7 +43,7 @@ import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 import { useDiscardGuard } from '../../_components/use-discard-guard'
 import { DiscardChangesDialog } from '../../_components/discard-changes-dialog'
 
-import { DetailTopbar } from './detail/detail-topbar'
+import { DetailTopbar } from '../../_components/detail-topbar'
 import { DetailActions } from './detail/detail-actions'
 import { DetailHero } from './detail/detail-hero'
 import { Glance, Chip, StatusDot } from './detail/glance'

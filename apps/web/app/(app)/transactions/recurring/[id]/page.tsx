@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getRecurrenceDetail } from '@/lib/recurrences/queries'
@@ -33,14 +32,7 @@ const RecurrenceDetailPage = async ({ params, searchParams }: Props) => {
 
   return (
     <>
-      <Link
-        href={back.href}
-        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        {`← ${back.label}`}
-      </Link>
-
-      <RecurrenceDetail rule={rule} />
+      <RecurrenceDetail rule={rule} back={back} />
 
       <RecurrenceInstancesList
         instances={rule.instances}

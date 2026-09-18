@@ -71,7 +71,7 @@ afterEach(cleanup)
 
 describe('the frequency shown on a recurrence detail', () => {
   it('translates a custom frequency instead of printing the column', () => {
-    render(<RecurrenceDetail rule={customRule} />)
+    render(<RecurrenceDetail rule={customRule} back={{ href: '/transactions/recurring', label: 'Recurrencias' }} />)
 
     // The translated key, twice: the metadata row and the chip over the amount.
     expect(screen.getAllByText('recurrences.frequencies.custom').length).toBeGreaterThan(0)
@@ -84,6 +84,7 @@ describe('the frequency shown on a recurrence detail', () => {
     render(
       <RecurrenceDetail
         rule={{ ...customRule, frequency: 'monthly', interval_count: 1, interval_unit: 'month' }}
+        back={{ href: '/transactions/recurring', label: 'Recurrencias' }}
       />,
     )
 
