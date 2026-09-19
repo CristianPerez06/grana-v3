@@ -22,7 +22,7 @@ import { Alert } from '@/components/ui/alert'
  * (desvincular). Los errores NO pasan por acá: cuando algo falla el control
  * sigue en pantalla, y el mensaje va al lado de lo que no funcionó.
  */
-const NoticeContext = createContext<(message: string) => void>(() => {})
+const NoticeContext = createContext<(message: string | null) => void>(() => {})
 
 export const useRecurrenceNotice = () => useContext(NoticeContext)
 

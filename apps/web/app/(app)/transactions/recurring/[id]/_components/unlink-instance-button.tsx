@@ -29,6 +29,9 @@ export const UnlinkInstanceButton = ({ instanceId }: { instanceId: string }) => 
 
   const unlink = () => {
     setError(null)
+    // Y el acuse de un intento anterior: si este falla, «lo desvinculaste» no
+    // puede quedar arriba del motivo por el que esta vez no se pudo.
+    notify(null)
     startTransition(async () => {
       const result = await unlinkMovementFromRecurrence(instanceId)
       if (!result.ok) {
