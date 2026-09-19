@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
@@ -51,7 +51,7 @@ export default function RecurringHubScreen() {
   const buckets: Record<Tab, RecurrenceSummary[]> = { active, paused, finished }
   // Active rules that collide with another (same account, currency and type,
   // equal or nearly equal amount) get an informative badge, as on web's hub.
-  const duplicateIds = useMemo(() => duplicateRuleIds(active), [active])
+  const duplicateIds = duplicateRuleIds(active)
 
   const options = [
     { value: 'active', label: `${t('recurrences.statuses.active')} (${active.length})` },
