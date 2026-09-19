@@ -79,6 +79,8 @@ export const Wallet = ({ cards, networkNames }: Props) => {
   // A refetch can empty the active filter; fall back rather than strand the
   // user on a list with no rows and no obvious way back.
   useEffect(() => {
+    // Intentional: the fallback resets the stored filter, not just the one shown.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (counts[filter] === 0) setFilter('all')
   }, [counts, filter])
 

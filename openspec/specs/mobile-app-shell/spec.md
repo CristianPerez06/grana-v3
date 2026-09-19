@@ -254,7 +254,7 @@ Configuración por defecto del cliente:
 - `retry`: política definida en `design.md` (ej. 1 reintento en errores de red, 0 en errores de autenticación).
 - `refetchOnWindowFocus`: NO aplica en RN (no hay ventana). El equivalente para mobile se cubre con el siguiente requirement (`focusManager` + `useFocusEffect`).
 
-La versión exacta de `@tanstack/react-query` SHALL ser compatible con `react@19.1.0` (pin estricto del workspace) — la versión seleccionada se documenta en `design.md`.
+La versión exacta de `@tanstack/react-query` SHALL ser compatible con la versión de `react` que fija el workspace (pin estricto, hoy `19.2.3`) — la versión seleccionada se documenta en `design.md`.
 
 #### Scenario: Toda pantalla mobile puede usar useQuery
 
@@ -380,7 +380,7 @@ Toda superficie scrolleable con inputs SHALL declarar `keyboardShouldPersistTaps
 
 #### Scenario: La compensación funciona igual en Android edge-to-edge
 
-- **WHEN** un usuario en un dispositivo Android (con `edgeToEdgeEnabled`) enfoca cualquier campo de cualquiera de las superficies con formulario
+- **WHEN** un usuario en un dispositivo Android (edge-to-edge, obligatorio desde Expo SDK 55) enfoca cualquier campo de cualquiera de las superficies con formulario
 - **THEN** el campo enfocado queda visible por encima del teclado
 - **AND** el comportamiento es equivalente al de iOS, sin superficies que queden sin compensación en Android
 

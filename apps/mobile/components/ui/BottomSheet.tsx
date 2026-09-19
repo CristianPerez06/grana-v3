@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { Animated, Dimensions, Modal, Pressable, useWindowDimensions, View } from 'react-native'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -73,7 +73,7 @@ export function BottomSheet({
 }) {
   const insets = useSafeAreaInsets()
   const screenHeight = Dimensions.get('window').height
-  const translateY = useRef(new Animated.Value(screenHeight)).current
+  const [translateY] = useState(() => new Animated.Value(screenHeight))
 
   useEffect(() => {
     if (visible) {
