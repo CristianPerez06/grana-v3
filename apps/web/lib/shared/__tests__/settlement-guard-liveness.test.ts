@@ -145,7 +145,7 @@ describe('sin la corrección — el defecto que 0072 repara', () => {
   // boot is in the body and the case gets the time it needs, and nothing else
   // does (the same shape as `migration-0064-phase-guard.test.ts`).
   it('revertir NO destrababa, y encima agregaba un bloqueo más nuevo', async () => {
-    db = await createSettlementGuardDb({ applyFix: false })
+    db = await createSettlementGuardDb({ upTo: '0049' })
     const gasto = await seedSharedExpense(db, { date: GASTO })
     const liquidacion = await seedSettlement(db, { date: LIQUIDACION, status: 'completed' })
     await reverseSettlement(db, liquidacion, HOY)

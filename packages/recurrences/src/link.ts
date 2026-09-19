@@ -84,44 +84,55 @@ export type BlockingSettlements = {
   multiple: boolean
 }
 
-export async function describeBlockingSettlements(
-  supabase: GranaSupabaseClient,
-  args: { transactionId: string; userId: string },
-): Promise<BlockingSettlements | null> {
-  const { data: movement } = await supabase
-    .from('transactions')
-    .select('household_id, currency_code, date, due_date')
-    .eq('id', args.transactionId)
-    .maybeSingle()
-  if (!movement?.household_id) return null
+/** Lo que el RPC devuelve: lo justo para elegir el consejo. */
+export type BlockingSettlementRow = { id: string; status: string; payer_id: string }
 
-  const impact = (movement.due_date as string | null) ?? (movement.date as string)
-
-  const { data: rows } = await supabase
-    .from('settlement')
-    .select('id, status, payer_id, payer_movement_id, transactions!settlement_payer_movement_id_fkey(date)')
-    .eq('household_id', movement.household_id)
-    .eq('currency_code', movement.currency_code)
-    .in('status', ['completed', 'pending_receipt'])
-
-  const blocking = (rows ?? []).filter((row) => {
-    const leg = (row as unknown as { transactions: { date: string } | null }).transactions
-    return leg != null && leg.date >= impact
-  })
-
-  if (blocking.length === 0) return null
+/**
+ * Qué acción destraba, dadas las liquidaciones que bloquean. Regla pura: la
+ * COBERTURA —cuáles bloquean— la decide SQL, que es el único que la ve entera.
+ */
+export function blockingAction(
+  rows: BlockingSettlementRow[],
+  userId: string,
+): BlockingSettlements | null {
+  if (rows.length === 0) return null
 
   // Se nombra primero lo que el usuario PUEDE hacer. Decirle que otro tiene que
   // cancelar algo, cuando él mismo podría revertir lo que realmente bloquea, lo
   // deja esperando a alguien sin motivo.
-  const completed = blocking.find((r) => r.status === 'completed')
-  if (completed) return { action: 'revert', multiple: blocking.length > 1 }
+  //
+  // Una `reversed` sin su contraasiento sigue protegiendo (`settlement_is_live`)
+  // y no se cancela: es una reversión a medio escribir, y «revertí» es el
+  // consejo más cercano a terminarla.
+  const revertible = rows.find((r) => r.status !== 'pending_receipt')
+  if (revertible) return { action: 'revert', multiple: rows.length > 1 }
 
-  const own = blocking.find((r) => r.payer_id === args.userId)
+  const own = rows.find((r) => r.payer_id === userId)
   return {
     action: own ? 'cancel_own' : 'cancel_other',
-    multiple: blocking.length > 1,
+    multiple: rows.length > 1,
   }
+}
+
+/**
+ * Las liquidaciones que bloquean se leen por RPC, no armando la consulta acá.
+ *
+ * La fila `settlement` la ven los dos miembros del hogar, pero su FECHA vive en
+ * el movimiento del pagador, que es personal: preguntando desde el cliente, una
+ * liquidación registrada por el otro miembro no aparece. Eso hacía que el
+ * mensaje aconsejara «revertí la liquidación» cuando lo que trababa era una
+ * pendiente ajena —ni se revierte, ni puede hacerlo quien lee el mensaje—. El
+ * RPC de 0073 contesta con los permisos de la guarda, así que los dos ven lo
+ * mismo.
+ */
+export async function describeBlockingSettlements(
+  supabase: GranaSupabaseClient,
+  args: { transactionId: string; userId: string },
+): Promise<BlockingSettlements | null> {
+  const { data } = await supabase.rpc('settlements_blocking_movement', {
+    p_transaction_id: args.transactionId,
+  })
+  return blockingAction((data ?? []) as BlockingSettlementRow[], args.userId)
 }
 
 // ── Vincular ─────────────────────────────────────────────────────────────────

@@ -545,6 +545,10 @@ Ambas guardas SHALL vivir en la base: un trigger `BEFORE DELETE` y un trigger `B
 
 Las dos guardas SHALL compartir el mismo criterio de vigencia. Corregir una sola dejaría el sistema contestando distinto a dos preguntas que este requirement define juntas.
 
+**LA GUARDA SHALL EVALUARSE SOBRE LA VERDAD COMPLETA, NO SOBRE LO QUE VE QUIEN LA DISPARA.** La fila `settlement` la ven los dos miembros del hogar, pero su fecha vive en el movimiento del pagador, que es **personal** y por RLS sólo ve su dueño. Evaluada con los permisos del que ejecuta el borrado o la descompartición, la guarda no encontraba las liquidaciones registradas por el **otro** miembro y dejaba pasar la operación: protegía únicamente contra uno mismo, justo al revés de lo que el requirement busca. Las guardas SHALL correr con permisos elevados (`SECURITY DEFINER`), y la consulta de cobertura SHALL estar definida **una sola vez** y no ser invocable por la aplicación.
+
+El **mensaje** SHALL derivarse de esa misma respuesta, no de una consulta propia del cliente. Un cliente que lista las liquidaciones del hogar no ve la fecha de las ajenas, así que cuando la que bloquea es del otro miembro no ve ninguna y cae en el consejo genérico «revertí la liquidación» —que sobre una pendiente ajena ni corresponde al estado ni es ejecutable por quien lo lee—. La aplicación SHALL preguntar por un RPC que responda con los mismos permisos que la guarda, limitado a los movimientos que el usuario ya puede ver.
+
 #### Scenario: Borrado bloqueado por una liquidación posterior en la misma moneda
 
 - **WHEN** un usuario intenta borrar un gasto compartido y existe una liquidación en la misma moneda con fecha igual o posterior a la del gasto
@@ -564,6 +568,11 @@ Las dos guardas SHALL compartir el mismo criterio de vigencia. Corregir una sola
 
 - **WHEN** existe una liquidación en ARS y el usuario descomparte/borra un gasto en USD (o viceversa)
 - **THEN** la guarda no se dispara (la moneda no coincide)
+
+#### Scenario: La liquidación que bloquea la registró el otro miembro
+
+- **WHEN** existe una liquidación vigente registrada por el otro miembro del hogar, con fecha igual o posterior a la del gasto, y el dueño del gasto intenta descompartirlo o borrarlo
+- **THEN** la guarda se dispara igual (SQLSTATE `GRN01`) y el mensaje nombra el estado de esa liquidación y quién la registró, aunque el usuario no pueda verla por su cuenta
 
 #### Scenario: Revertir una liquidación no queda bloqueado por las guardas
 

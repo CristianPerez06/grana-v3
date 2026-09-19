@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GranaSupabaseClient } from '@grana/supabase'
 import { canUnlink, recurrenceLinkLabelKey } from '../src/review-surface'
-import { describeBlockingSettlements } from '../src/link'
+import { blockingAction, describeBlockingSettlements } from '../src/link'
 
 const YO = '00000000-0000-0000-0000-0000000000a1'
 const EL_OTRO = '00000000-0000-0000-0000-0000000000b2'
@@ -34,133 +34,88 @@ describe('recurrenceLinkLabelKey', () => {
 })
 
 // ── Qué liquidación bloquea, y qué se puede hacer con ella ───────────────────
+//
+// QUÉ liquidaciones bloquean ya no se decide acá: la cobertura —hogar, moneda,
+// fecha y vigencia— la resuelve `settlements_blocking_movement` (0073), que es
+// el único que las ve todas. Un miembro, por su cuenta, no ve la fecha de una
+// liquidación que registró el otro. Lo que queda acá es la decisión: con estas
+// filas, qué se le ofrece al usuario. Se prueba sobre la función pura.
 
-type Settlement = {
-  id: string
-  status: 'completed' | 'pending_receipt'
-  payer_id: string
-  legDate: string
-}
+const row = (
+  id: string,
+  status: 'completed' | 'pending_receipt' | 'reversed',
+  payerId: string,
+) => ({ id, status, payer_id: payerId })
 
-const clientWith = (settlements: Settlement[], movement: Record<string, unknown> | null) =>
-  ({
-    from: (table: string) => {
-      if (table === 'transactions') {
-        return {
-          select: () => ({
-            eq: () => ({ maybeSingle: async () => ({ data: movement }) }),
-          }),
-        }
-      }
-      return {
-        select: () => ({
-          eq: () => ({
-            eq: () => ({
-              in: async () => ({
-                data: settlements.map((s) => ({
-                  id: s.id,
-                  status: s.status,
-                  payer_id: s.payer_id,
-                  payer_movement_id: `leg-${s.id}`,
-                  transactions: { date: s.legDate },
-                })),
-              }),
-            }),
-          }),
-        }),
-      }
-    },
-  }) as unknown as GranaSupabaseClient
-
-const GASTO = { household_id: 'h1', currency_code: 'ARS', date: '2026-09-10', due_date: null }
-
-describe('describeBlockingSettlements', () => {
-  it('no reporta nada sobre un movimiento personal', async () => {
-    const client = clientWith([], { ...GASTO, household_id: null })
-    expect(await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })).toBeNull()
+describe('blockingAction', () => {
+  it('no reporta nada cuando ninguna liquidación bloquea', () => {
+    expect(blockingAction([], YO)).toBeNull()
   })
 
-  it('no reporta nada cuando ninguna liquidación cubre la fecha', async () => {
-    const client = clientWith(
-      [{ id: 's1', status: 'completed', payer_id: YO, legDate: '2026-09-01' }],
-      GASTO,
-    )
-    expect(await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })).toBeNull()
-  })
-
-  it('una completada se revierte', async () => {
-    const client = clientWith(
-      [{ id: 's1', status: 'completed', payer_id: YO, legDate: '2026-09-20' }],
-      GASTO,
-    )
-    expect(await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })).toEqual({
+  it('una completada se revierte', () => {
+    expect(blockingAction([row('s1', 'completed', YO)], YO)).toEqual({
       action: 'revert',
       multiple: false,
     })
   })
 
-  it('una pendiente propia se cancela, no se revierte', async () => {
+  it('una pendiente propia se cancela, no se revierte', () => {
     // `reverse_settlement` sólo acepta completadas: decir «revertí» acá manda al
     // usuario a una operación que el sistema no ofrece para ese estado.
-    const client = clientWith(
-      [{ id: 's1', status: 'pending_receipt', payer_id: YO, legDate: '2026-09-20' }],
-      GASTO,
-    )
-    expect(await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })).toEqual({
+    expect(blockingAction([row('s1', 'pending_receipt', YO)], YO)).toEqual({
       action: 'cancel_own',
       multiple: false,
     })
   })
 
-  it('una pendiente del otro miembro no se le pide al usuario', async () => {
-    const client = clientWith(
-      [{ id: 's1', status: 'pending_receipt', payer_id: EL_OTRO, legDate: '2026-09-20' }],
-      GASTO,
-    )
+  it('una pendiente del otro miembro no se le pide al usuario', () => {
+    expect(blockingAction([row('s1', 'pending_receipt', EL_OTRO)], YO)).toEqual({
+      action: 'cancel_other',
+      multiple: false,
+    })
+  })
+
+  it('nombra primero lo que el usuario puede hacer', () => {
+    // Con una pendiente ajena y una completada, decir «que la cancele el otro»
+    // lo dejaría esperando a alguien cuando él mismo puede destrabarlo.
+    expect(
+      blockingAction([row('s1', 'pending_receipt', EL_OTRO), row('s2', 'completed', YO)], YO),
+    ).toEqual({ action: 'revert', multiple: true })
+  })
+
+  it('avisa cuando bloquea más de una', () => {
+    // Resolver una y volver a chocar con la siguiente, sin aviso, se lee como que
+    // la primera no sirvió de nada.
+    const result = blockingAction([row('s1', 'completed', YO), row('s2', 'completed', YO)], YO)
+    expect(result?.multiple).toBe(true)
+  })
+
+  it('una reversión a medio escribir se trata como completada', () => {
+    // `settlement_is_live` protege una `reversed` sin su contraasiento. No se
+    // cancela: lo que falta es terminar la reversión.
+    expect(blockingAction([row('s1', 'reversed', EL_OTRO)], YO)).toEqual({
+      action: 'revert',
+      multiple: false,
+    })
+  })
+})
+
+describe('describeBlockingSettlements', () => {
+  const clientReturning = (rows: unknown[]) =>
+    ({ rpc: async () => ({ data: rows }) }) as unknown as GranaSupabaseClient
+
+  it('pregunta por RPC y traduce la respuesta a una acción', async () => {
+    const client = clientReturning([row('s1', 'pending_receipt', EL_OTRO)])
     expect(await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })).toEqual({
       action: 'cancel_other',
       multiple: false,
     })
   })
 
-  it('nombra primero lo que el usuario puede hacer', async () => {
-    // Con una pendiente ajena y una completada, decir «que la cancele el otro»
-    // lo dejaría esperando a alguien cuando él mismo puede destrabarlo.
-    const client = clientWith(
-      [
-        { id: 's1', status: 'pending_receipt', payer_id: EL_OTRO, legDate: '2026-09-20' },
-        { id: 's2', status: 'completed', payer_id: YO, legDate: '2026-09-21' },
-      ],
-      GASTO,
-    )
-    expect(await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })).toEqual({
-      action: 'revert',
-      multiple: true,
-    })
-  })
-
-  it('avisa cuando bloquea más de una', async () => {
-    // Resolver una y volver a chocar con la siguiente, sin aviso, se lee como que
-    // la primera no sirvió de nada.
-    const client = clientWith(
-      [
-        { id: 's1', status: 'completed', payer_id: YO, legDate: '2026-09-20' },
-        { id: 's2', status: 'completed', payer_id: YO, legDate: '2026-09-21' },
-      ],
-      GASTO,
-    )
-    const result = await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })
-    expect(result?.multiple).toBe(true)
-  })
-
-  it('una liquidación del mismo día que el gasto ya lo cubre', async () => {
-    const client = clientWith(
-      [{ id: 's1', status: 'completed', payer_id: YO, legDate: '2026-09-10' }],
-      GASTO,
-    )
-    expect(await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })).toEqual({
-      action: 'revert',
-      multiple: false,
-    })
+  it('no reporta nada cuando el RPC no devuelve nada', async () => {
+    // Movimiento personal, o ninguna liquidación que lo cubra: el RPC contesta
+    // vacío en los dos casos y no hay nada que aconsejar.
+    const client = clientReturning([])
+    expect(await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })).toBeNull()
   })
 })

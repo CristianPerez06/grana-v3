@@ -1525,6 +1525,15 @@ export type Database = {
         Args: { p_settlement_id: string }
         Returns: undefined
       }
+      /** 0073 — las liquidaciones vigentes que cubren a un movimiento, con permisos elevados. */
+      settlements_blocking_movement: {
+        Args: { p_transaction_id: string }
+        Returns: {
+          id: string
+          status: string
+          payer_id: string
+        }[]
+      }
       card_period_pending: {
         Args: { p_period_id: string }
         Returns: {
