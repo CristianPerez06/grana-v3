@@ -1,22 +1,26 @@
 # QA — `recurrence-link-movement`
 
-> **Este código nunca se ejecutó contra la base real.** El change está implementado y archivado, y
-> `pnpm verify` corrió **de punta a punta en verde** después de la segunda ronda de revisión (tests
-> del monorepo, lint y typecheck de web y nativo, build, checks de salud y el validador de OpenSpec).
-> Nada de eso dibuja una pantalla: los tests nuevos corren SQL en un Postgres embebido (PGlite) y
-> TypeScript compara tipos. Todo lo de acá abajo se mira corriendo la app.
+> **Este guion se está corriendo.** `0072` ya está aplicada en la base online y los bloques A, B, C y
+> parte de D se corrieron en web; el estado por bloque, los hallazgos y lo que falta están en
+> [Resultado](#resultado), al final. Antes de seguir hay que aplicar `0073` (ver 0.1).
+>
+> `pnpm verify` corre en verde (tests del monorepo, lint y typecheck de web y nativo, build, checks
+> de salud y el validador de OpenSpec). Nada de eso dibuja una pantalla: los tests nuevos corren SQL
+> en un Postgres embebido (PGlite) y TypeScript compara tipos. Todo lo de acá abajo se mira corriendo
+> la app.
 >
 > Lo que **ya está probado y no hace falta re-verificar a mano**: el conteo de posiciones
-> (SQL↔TS, 10 casos), las guardas de liquidación (11 casos, incluido el defecto que reparan), y los
-> tres RPC con el circuito completo vincular → convertir → liquidar → revertir/cancelar → desvincular
-> (28 casos). Lo que falta es que **las superficies dibujen y se comporten**, y que todo eso funcione
-> contra la base online y no contra un doble.
+> (SQL↔TS, 10 casos), las guardas de liquidación (19 casos, incluidos los dos defectos que reparan y
+> el caso cruzado bajo RLS), y los tres RPC con el circuito completo vincular → convertir → liquidar
+> → revertir/cancelar → desvincular (28 casos). Lo que falta es que **las superficies dibujen y se
+> comporten**, y que todo eso funcione contra la base online y no contra un doble.
 
 ## 0 · Prerrequisitos — sin esto no arranca nada
 
 | | Qué | Cómo se sabe que salió bien |
 |---|---|---|
-| 0.1 | Aplicar `supabase/migrations/0072_recurrence_link_movement.sql` en el SQL Editor | Corre entera sin error. Tiene un self-check antes del `COMMIT`: si algo falta, aborta y dice qué |
+| 0.1 | Aplicar `supabase/migrations/0072_recurrence_link_movement.sql` en el SQL Editor | Corre entera sin error. Tiene un self-check antes del `COMMIT`: si algo falta, aborta y dice qué. **Ya aplicada** |
+| 0.1b | Aplicar `supabase/migrations/0073_settlement_guards_see_the_whole_truth.sql` | Termina en `✓ 0073 settlement guards see the whole truth`. Sin ella, las guardas de liquidación no ven las liquidaciones registradas por el otro miembro y **D6 pasa de largo** (es el defecto que encontró este QA) |
 | 0.2 | ~~Regenerar los tipos~~ — **no aplica**: la CLI de Supabase no se usa en este proyecto (ver `AGENTS.md`). Las firmas de `packages/supabase/src/types.ts` están escritas a mano y se compararon una por una contra el SQL de 0072: nombres y orden de los parámetros, cuáles tienen default, y la forma del retorno | Esa comparación, ya hecha, más `pnpm typecheck` y `pnpm typecheck:mobile` en verde. **Cubre las firmas de este change, no el esquema entero**: el typecheck no compara este archivo contra la base |
 | 0.3 | Tener a mano una regla **mensual activa** cuyo próximo vencimiento **todavía no llegó** | El hub la muestra con «Próximo: …» |
 
@@ -30,7 +34,7 @@ Es el síntoma original: el alquiler vence el 23 y lo pagás el 3.
 
 | | Qué hacer | Qué tiene que pasar |
 |---|---|---|
-| A1 | Abrir el hub de recurrencias | La fila del vencimiento futuro ahora ofrece **«Ya lo pagué»** y **«Ya lo tengo cargado»**. Antes no ofrecía nada, y la tarjeta decía «Solo informativo»; ahora la nota dice que se puede registrar o vincular |
+| A1 | Abrir el hub de recurrencias | La fila del vencimiento futuro ahora ofrece **«Ya lo pagué»** y **«Ya lo tengo cargado»**, los dos en una sola fila. Antes no ofrecía nada. Los botones se explican solos: no hay nota encima que los describa |
 | A2 | Tocar «Ya lo pagué» | **Se abre un formulario**, no se crea nada todavía: fecha de pago en **hoy** y editable, importe y cuenta de la regla, editables. El botón de confirmar queda **deshabilitado hasta que carguen las cuentas** |
 | A2b | Cambiar el importe y confirmar | El movimiento se crea con el importe que pusiste y **el importe de la regla no cambia** |
 | A2c | Elegir una cuenta cuyo saldo no alcanza | Aparece la advertencia de saldo negativo **antes** de confirmar. No bloquea |
@@ -81,7 +85,7 @@ Necesita un hogar de dos miembros y una regla de gasto compartida.
 | D3 | Repetir y confirmar | El gasto queda compartido con el reparto de la regla, y **la deuda del hogar se mueve** |
 | D4 | Desvincular | Vuelve a **personal**, sin reparto, y **la deuda vuelve a donde estaba** |
 | D5 | Tener un movimiento compartido con **otro reparto** dentro de la ventana | **No aparece** entre los candidatos |
-| D6 | Volver a hacer D3. Después registrar una **liquidación completada** posterior al gasto. Intentar desvincular | **Falla y NO cambia nada**: el gasto sigue compartido **y el vínculo sigue puesto**. El mensaje dice que hay que **revertir** esa liquidación |
+| D6 | Volver a hacer D3. Después registrar una **liquidación completada** posterior al gasto. Intentar desvincular | **Falla y NO cambia nada**: el gasto sigue compartido **y el vínculo sigue puesto**. El mensaje dice que hay que **revertir** esa liquidación. Vale **también si la liquidación la registró la otra persona** — es donde falló la primera vuelta (ver Resultado) |
 | D7 | Revertir esa liquidación e intentar de nuevo | **Ahora sí desvincula.** Este es el arreglo de fondo: antes revertir no destrababa nada |
 | D8 | Repetir D6 con una liquidación **pendiente de asignación registrada por vos** | El mensaje dice **cancelar**, no revertir |
 | D9 | Lo mismo, pero registrada por **la otra persona** | El mensaje dice que **la tiene que cancelar quien la registró**, y no te pide a vos que hagas nada |
@@ -129,4 +133,29 @@ algún movimiento resuelve más de un vencimiento.
 
 ## Resultado
 
-_(a completar al correrlo: qué casos pasaron, qué hallazgos salieron, qué se aceptó sin correr y por qué)_
+Al 19-09. Lo que no figura acá **no se corrió todavía**.
+
+| Bloque | Estado |
+|---|---|
+| 0 | `0072` aplicada. Falló en el primer intento por una comparación de enum contra texto; se corrigió en la migración y volvió a correr entera. **`0073` está pendiente de aplicar** |
+| A | A1–A4 corridos en web |
+| B | B0–B7 corridos en web, con el script de lectura de la misma carpeta |
+| C | C1–C3 corridos en web |
+| D | D1–D5 corridos. **D6 encontró un defecto** (abajo). D6 y D7 se repiten después de aplicar `0073`; D8 y D9 quedan pendientes |
+| E, F | Pendientes |
+| Check SQL | Pendiente |
+
+**El defecto de D6.** Con una liquidación completada posterior al gasto, desvincular **funcionó** en
+vez de ser rechazado. Las guardas se evaluaban con los permisos de quien dispara la operación, y la
+**fecha** de una liquidación vive en el movimiento del pagador, que es personal: cuando la registró
+el otro miembro, la guarda no la encontraba y dejaba pasar todo. Sólo protegía contra uno mismo. Lo
+repara `0073`, que además hace que el **mensaje** consulte con los mismos permisos —si no, aconseja
+«revertir» sobre una pendiente ajena, que ni corresponde al estado ni puede hacerlo quien lo lee—.
+Los tests de guardas ahora modelan RLS y el caso cruzado falla sin la migración.
+
+**Lo que se corrigió mientras se corría** (todo ya en la rama): los dos botones en una sola fila y
+con aspecto de botón; el importe recortado y la fecha repetida en la hoja de candidatos nativa; el
+fallback «Movimiento sin descripción»; la confirmación de conversión apilada y sin estado residual al
+cerrar y reabrir la hoja; el acuse de haber registrado, vinculado y desvinculado —el cambio de
+pantalla era mudo—; el vínculo a la regla dentro de su tarjeta y el camino de vuelta al movimiento;
+el historial a dos pisos en ancho angosto.

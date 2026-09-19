@@ -4,6 +4,7 @@ import { getRecurrenceDetail } from '@/lib/recurrences/queries'
 import { createClient } from '@/lib/supabase/server'
 import { RecurrenceDetail } from './_components/recurrence-detail'
 import { RecurrenceInstancesList } from './_components/recurrence-instances-list'
+import { RecurrenceNotice } from '../_components/recurrence-notice'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -34,10 +35,14 @@ const RecurrenceDetailPage = async ({ params, searchParams }: Props) => {
     <>
       <RecurrenceDetail rule={rule} back={back} />
 
-      <RecurrenceInstancesList
-        instances={rule.instances}
-        currencyCode={rule.currency_code}
-      />
+      {/* El acuse de desvincular vive acá y no en el botón: ese botón deja de
+          ofrecerse en cuanto la ocurrencia vuelve a «por revisar». */}
+      <RecurrenceNotice>
+        <RecurrenceInstancesList
+          instances={rule.instances}
+          currencyCode={rule.currency_code}
+        />
+      </RecurrenceNotice>
     </>
   )
 }

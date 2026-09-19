@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
 import { unlinkMovementFromRecurrence } from '@/app/_actions/recurrences'
+import { useRecurrenceNotice } from '../../_components/recurrence-notice'
 
 /**
  * SOLTAR UNA ASOCIACIÓN EQUIVOCADA. El movimiento no se borra —la recurrencia no
@@ -22,22 +23,24 @@ import { unlinkMovementFromRecurrence } from '@/app/_actions/recurrences'
  */
 export const UnlinkInstanceButton = ({ instanceId }: { instanceId: string }) => {
   const t = useTranslations('recurrences.link')
+  const notify = useRecurrenceNotice()
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const unlink = () => {
     setError(null)
-    setDone(false)
     startTransition(async () => {
       const result = await unlinkMovementFromRecurrence(instanceId)
       if (!result.ok) {
+        // El rechazo SÍ vive acá: el botón sigue en pantalla, y el motivo tiene
+        // que leerse al lado de lo que no funcionó.
         setError(result.formError ?? null)
         return
       }
-      // Acá la ocurrencia se queda en pantalla —vuelve a «por revisar»—, así que
-      // el acuse puede vivir al lado del botón que dejó de ofrecerse.
-      setDone(true)
+      // El acuse, en cambio, no puede vivir acá: al volver la ocurrencia a «por
+      // revisar» este botón deja de ofrecerse y se desmonta con el mensaje
+      // adentro. Va sobre la lista, que sigue montada.
+      notify(t('unlinked_success'))
     })
   }
 
@@ -47,7 +50,6 @@ export const UnlinkInstanceButton = ({ instanceId }: { instanceId: string }) => 
         {pending ? t('unlinking') : t('unlink')}
       </Button>
       {error ? <Alert variant="error">{error}</Alert> : null}
-      {done ? <Alert variant="success">{t('unlinked_success')}</Alert> : null}
     </div>
   )
 }

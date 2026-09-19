@@ -26,7 +26,7 @@ import {
   registerRecurrenceAhead,
 } from '@/app/_actions/recurrences'
 import { LinkCandidatesDrawer } from './link-candidates-drawer'
-import { useResolveAheadNotice } from './resolve-ahead-notice'
+import { useRecurrenceNotice } from './recurrence-notice'
 
 type RuleProps = {
   recurrenceId: string
@@ -72,7 +72,7 @@ const PayAheadForm = ({
   const t = useTranslations('recurrences.link')
   const tRec = useTranslations('recurrences')
   const tTx = useTranslations('transactions')
-  const notify = useResolveAheadNotice()
+  const notify = useRecurrenceNotice()
   const currency = ruleCurrency as 'ARS' | 'USD'
 
   const [amount, setAmount] = useState(String(ruleAmount))
@@ -317,7 +317,7 @@ const PayAheadForm = ({
  */
 export const ResolveAheadActions = ({ shared, ...rule }: Props) => {
   const t = useTranslations('recurrences.link')
-  const notify = useResolveAheadNotice()
+  const notify = useRecurrenceNotice()
   const [formOpen, setFormOpen] = useState(false)
 
   // ── «Ya lo tengo cargado» ──────────────────────────────────────────────────

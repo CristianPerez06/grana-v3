@@ -10,7 +10,7 @@ import { formatDateISO, getTodayAR } from '@/lib/date'
 import { recurrenceTitle } from '@grana/recurrences'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
-import { ResolveAheadNotice } from './resolve-ahead-notice'
+import { RecurrenceNotice } from './recurrence-notice'
 import { UpcomingCard } from './upcoming-card'
 import { ResolveAheadActions } from './resolve-ahead-actions'
 
@@ -165,11 +165,11 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
   )
 
   return (
-    <ResolveAheadNotice>
+    <RecurrenceNotice>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {renderCard(tRec('upcoming.next_7_days'), next7)}
         {renderCard(tRec('upcoming.next_30_days'), later)}
       </div>
-    </ResolveAheadNotice>
+    </RecurrenceNotice>
   )
 }
