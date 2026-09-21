@@ -111,7 +111,16 @@ export const LinkCandidatesDrawer = ({
 
   return (
     <Drawer open={open} onClose={close} ariaLabel={t('candidates_title')}>
-      <div className="flex h-full flex-col">
+      {/* `min-h-0 flex-1`, NO `h-full`. A ancho de teléfono el Drawer es una hoja
+          cuya altura la fija su contenido con un tope (`max-h-[90dvh]`), y contra
+          un padre de altura automática un `h-full` no vale nada: el cuerpo crece
+          con la lista, el panel la recorta y NO HAY NADA QUE SCROLLEAR. Con
+          `min-h-0` el cuerpo puede achicarse hasta el tope del panel, y recién
+          ahí la región de scroll de abajo recibe una altura y scrollea.
+
+          En escritorio no se notaba porque el panel ocupa toda la altura de la
+          pantalla (`md:h-dvh`), así que el `h-full` sí resolvía. */}
+      <div className="flex min-h-0 flex-1 flex-col">
         <header className="border-b border-border px-5 py-4">
           <h2 className="text-[17px] font-bold tracking-[-0.01em] text-text">
             {t('candidates_title')}
@@ -140,7 +149,7 @@ export const LinkCandidatesDrawer = ({
             {error ? <Alert variant="error">{error}</Alert> : null}
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {error || loadError ? (
               <div className="px-5 pt-4">
                 <Alert variant="error">{error ?? t('candidates_empty')}</Alert>
