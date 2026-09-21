@@ -51,20 +51,32 @@ order by p.proname;
 -- 2 · ¿Las guardas usan el criterio de vigencia?
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Las dos gemelas —borrar y descompartir— tienen que contestar igual. Si una dice
--- `false`, el sistema responde distinto a dos preguntas que el spec define juntas.
+-- Las dos gemelas —borrar y descompartir— tienen que contestar igual. Si una se
+-- quedara sin el criterio, el sistema respondería distinto a dos preguntas que el
+-- spec define juntas.
+--
+-- SE SIGUE LA CADENA, no el texto de la guarda. Hasta 0072 cada guarda llevaba el
+-- criterio escrito adentro; 0073 lo movió a `settlements_covering`, que es la que
+-- ahora lo aplica —una sola vez, y con permisos elevados—. Buscar
+-- `settlement_is_live` dentro de la guarda da `false` desde entonces, y eso NO es
+-- un defecto: es la consulta preguntando por una forma que dejó de existir.
 
 select
-  p.proname as guarda,
-  (prosrc like '%settlement_is_live%') as usa_el_criterio
+  p.proname                                 as funcion,
+  (prosrc like '%settlements_covering%')    as delega_en_la_cobertura,
+  (prosrc like '%settlement_is_live%')      as aplica_el_criterio
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public'
   and p.proname in (
     'trg_fn_block_shared_delete_with_settlement',
-    'trg_fn_block_unshare_with_settlement'
-  );
--- Esperado: 2 filas, las dos en true.
+    'trg_fn_block_unshare_with_settlement',
+    'settlements_covering'
+  )
+order by p.proname;
+-- Esperado: las dos guardas delegando (true) sin aplicarlo ellas (false), y
+-- `settlements_covering` al revés. Una guarda con las dos en false está sin
+-- protección.
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 3 · NINGUNA ocurrencia sin resolver puede tener fecha futura
