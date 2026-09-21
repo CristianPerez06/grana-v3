@@ -145,6 +145,12 @@ function mapRecurrenceSummary(
       maxOccurrences: recurrence.max_occurrences,
       positionsSpent,
       unresolvedCount: pending.length,
+      // Una ocurrencia que YA EXISTE y todavía no venció. Antes de que se
+      // pudiera resolver por anticipado no había ninguna: materializar sólo
+      // llegaba hasta hoy, así que «existe» implicaba «ya pasó».
+      hasUnresolvedAhead: pending.some(
+        (instance) => (instance.due_date ?? instance.scheduled_date) > today,
+      ),
     }),
     last_expected_occurrence: lastExpectedOccurrence({
       rule: schedule,

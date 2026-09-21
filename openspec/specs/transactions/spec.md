@@ -1388,6 +1388,16 @@ Una ocurrencia **pendiente** con fecha futura NO se saltea: su posición se gast
 llegue, y el conteo normativo todavía no la suma. La distinción es entre resuelta —confirmada u
 omitida— y sin resolver, la misma que usa el conteo.
 
+**UNA REGLA CON UN VENCIMIENTO FUTURO SIN RESOLVER NO ESTÁ FINALIZADA.** «Finalizada» se deriva de
+si el calendario tiene algo de hoy en adelante, y hasta que se pudo resolver por anticipado eso
+equivalía a preguntar si va a PRODUCIR una ocurrencia nueva: materializar sólo llegaba hasta hoy, así
+que toda ocurrencia existente era pasada. Resolver antes de la fecha rompe la equivalencia —crea hoy
+la ocurrencia de noviembre—, y una regla puede quedar con todas sus posiciones materializadas y una
+de ellas todavía por venir. El sistema SHALL considerar que esa regla **sigue activa**: decirle
+«Finalizada» al usuario es afirmar que no va a pasar nada más cuando en noviembre le vuelve a vencer.
+Un vencimiento sin resolver cuya fecha YA PASÓ no devuelve futuro: ahí «finalizada con pendientes»
+es la respuesta correcta.
+
 La proyección SHALL contestar **dónde termina el plan**, no qué es lo último que queda por venir.
 Las dos respuestas coinciden mientras se resuelva en orden y se separan en cuanto alguien resuelve
 por anticipado una posición POSTERIOR a otra que sigue pendiente: un plan de tres con la primera y
@@ -1438,6 +1448,13 @@ admite cualquier intervalo válido. Esa coherencia SHALL estar enforced por un `
   el primero por anticipado
 - **THEN** el avance pasa a «1 de 3» y restan 2
 - **AND** el último vencimiento previsto SIGUE siendo el tercero, no el segundo
+
+#### Scenario: Una regla con un vencimiento futuro sin resolver no se muestra finalizada
+
+- **WHEN** una regla de tres vencimientos tiene sus tres posiciones materializadas, dos resueltas por
+  anticipado y la del medio sin resolver con fecha futura
+- **THEN** la regla se muestra **activa**, no «Finalizada»
+- **AND** cuando esa fecha pasa sin resolverse, la regla pasa a «finalizada con pendientes»
 
 #### Scenario: Resolver por anticipado fuera de orden
 

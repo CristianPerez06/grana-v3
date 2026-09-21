@@ -116,4 +116,23 @@ describe('el plan de una regla con límite', () => {
     expect(r?.lifecycle.progress).toMatchObject({ spent: 2, total: 3, remaining: 1 })
     expect(r?.last_expected_occurrence).toEqual({ kind: 'date', date: positions[2] })
   })
+
+  it('con la del medio sin resolver y por venir, la regla NO está finalizada', async () => {
+    // Las tres posiciones existen ya: la primera y la última resueltas por
+    // anticipado, y la del medio materializada sin resolver. El calendario no
+    // va a producir nada nuevo —por eso la regla se mostraba «Finalizada»— pero
+    // a esa regla le queda un vencimiento por delante, en noviembre.
+    await actAsAdmin(db)
+    await db.exec(`
+      insert into public.recurrence_instances
+        (recurrence_id, user_id, scheduled_date, due_date, status, amount, currency_code)
+      values ('${RULE}', '${U_A}', '${positions[1]}', '${positions[1]}', 'pending', 1000, 'ARS');
+    `)
+    await actAs(db, U_A)
+
+    const r = await rule()
+    expect(r?.next_occurrence).toBeNull()
+    expect(r?.lifecycle.unresolved).toBe(1)
+    expect(r?.lifecycle.state).toBe('active')
+  })
 })

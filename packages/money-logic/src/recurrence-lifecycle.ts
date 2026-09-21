@@ -75,6 +75,20 @@ export type RecurrenceLifecycleInput = {
   positionsSpent: number
   /** Instances neither confirmed nor skipped. Says what is left to do, not whether the rule ended. */
   unresolvedCount: number
+  /**
+   * ¿Hay un vencimiento SIN RESOLVER cuya fecha todavía no llegó?
+   *
+   * `hasFutureOccurrence` pregunta si el calendario va a PRODUCIR algo nuevo, y
+   * eso alcanzaba mientras materializar sólo ocurría hasta hoy: toda ocurrencia
+   * existente era pasada. Resolver por anticipado rompe esa equivalencia —crea
+   * la ocurrencia del 20 de noviembre hoy—, y entonces una regla puede tener
+   * todas sus posiciones ya materializadas y una de ellas todavía por venir.
+   *
+   * Sin esto, esa regla se muestra «Finalizada» con un vencimiento futuro sin
+   * resolver a la vista, que es decirle al usuario que no va a pasar nada más
+   * cuando en noviembre le vuelve a vencer.
+   */
+  hasUnresolvedAhead: boolean
 }
 
 /**
@@ -97,7 +111,10 @@ export function deriveRecurrenceLifecycle(
     return { state: 'deleted', progress: null, unresolved: input.unresolvedCount }
   }
 
-  if (input.hasFutureOccurrence) {
+  // Lo que el calendario todavía va a producir, O lo que ya produjo y sigue por
+  // venir sin resolver: las dos formas de tener futuro. La segunda sólo existe
+  // desde que se puede resolver un vencimiento antes de su fecha.
+  if (input.hasFutureOccurrence || input.hasUnresolvedAhead) {
     // A pause is an interruption, not an end.
     return {
       state: input.status === 'paused' ? 'paused' : 'active',

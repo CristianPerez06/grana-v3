@@ -24,6 +24,7 @@ const base: RecurrenceLifecycleInput = {
   maxOccurrences: null,
   positionsSpent: 0,
   unresolvedCount: 0,
+  hasUnresolvedAhead: false,
 }
 
 describe('the state a recurrence is shown in', () => {
@@ -98,6 +99,39 @@ describe('the state a recurrence is shown in', () => {
       expect(result.progress).toEqual(progress)
     })
   }
+
+  it('una regla con un vencimiento futuro sin resolver NO está finalizada', () => {
+    // El caso del QA: plan de tres, las tres posiciones ya materializadas —dos
+    // resueltas por anticipado y la del medio sin resolver, en noviembre—. El
+    // calendario no va a producir nada nuevo, pero a esa regla le queda un
+    // vencimiento por delante: llamarla «Finalizada» es decir que no va a pasar
+    // nada más cuando en noviembre vuelve a vencer.
+    const result = deriveRecurrenceLifecycle({
+      ...base,
+      maxOccurrences: 3,
+      positionsSpent: 2,
+      hasFutureOccurrence: false,
+      unresolvedCount: 1,
+      hasUnresolvedAhead: true,
+    })
+
+    expect(result.state).toBe('active')
+  })
+
+  it('sigue finalizada cuando lo que queda sin resolver ya venció', () => {
+    // La distinción: un pendiente ATRASADO no le devuelve futuro a la regla.
+    // Sigue terminada, con trabajo pendiente — que es lo que dice ese estado.
+    const result = deriveRecurrenceLifecycle({
+      ...base,
+      maxOccurrences: 3,
+      positionsSpent: 3,
+      hasFutureOccurrence: false,
+      unresolvedCount: 1,
+      hasUnresolvedAhead: false,
+    })
+
+    expect(result.state).toBe('finished-with-pending')
+  })
 
   it('saturates a limit edited below what was already spent', () => {
     // Nothing should ever read "12 de 11", and nothing should owe -1.
