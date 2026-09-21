@@ -50,7 +50,13 @@ export type ButtonVariant =
  * purpose, so each platform restores the 44px touch target its own way — the
  * divergence the repo already allows: `::after` on web, `hitSlop` on native.
  */
-export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'icon' | 'fab'
+/**
+ * `2xs` es la acción que convive con un chip de estado: la misma altura que una
+ * píldora de estado, para que en una fila de historial las dos cosas se lean
+ * como una sola línea y no como dos tamaños peleando. `xs` sigue siendo la
+ * acción chica normal.
+ */
+export type ButtonSize = '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'icon' | 'fab'
 
 export type ButtonProps = {
   variant?: ButtonVariant

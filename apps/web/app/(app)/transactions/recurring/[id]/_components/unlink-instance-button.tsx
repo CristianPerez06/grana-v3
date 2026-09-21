@@ -57,7 +57,7 @@ export const UnlinkInstanceButton = ({ instanceId }: { instanceId: string }) => 
   return (
     <>
       <div className="ml-auto shrink-0">
-        <Button variant="secondary" size="xs" onPress={unlink} disabled={pending}>
+        <Button variant="secondary" size="2xs" onPress={unlink} disabled={pending}>
           {pending ? t('unlinking') : t('unlink')}
         </Button>
       </div>
