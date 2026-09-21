@@ -156,7 +156,7 @@ Al 19-09. Lo que no figura acá **no se corrió todavía**.
 | C | C1–C3 corridos en web |
 | D | **Completo: D1–D9 en verde.** **D6 encontró un defecto** (abajo), reparado por `0073` y re-corrido contra la base con la migración aplicada: la guarda bloqueó, el mensaje pidió revertir, y revertida la liquidación la desvinculación procedió. **D9** mostró el mensaje de «tiene que cancelarla ella» sobre una liquidación pendiente del otro miembro —el caso que más depende de `0073`, porque esa liquidación el usuario no la ve—. **D8** se corrió desde la otra cuenta —la app sólo deja registrar un pago a quien debe— con una regla compartida propia: dijo «cancelala», no «revertila», y al cancelar la liquidación la desvinculación procedió. Los tres mensajes quedaron verificados contra la base: revertir, cancelala vos, tiene que cancelarla ella |
 | E | E1, E2a, E2b y E3 corridos y en verde. **E2a encontró un defecto** (abajo). E4 no se corre en una sesión: pide desvincular un vencimiento cuya fecha ya pasó, y resolver por anticipado exige que sea futuro |
-| F | Pendiente |
+| F | **Web a ancho de teléfono (360px): F1, F1b y F3 en verde.** Los dos botones entran en una fila; «Desvincular» baja a su propio renglón alineado a la derecha; las filas del historial se leen sin desbordes. F2 y F4 pendientes, y el nativo entero |
 | Check SQL | Pendiente |
 
 **El defecto de D6.** Con una liquidación completada posterior al gasto, desvincular **funcionó** en
@@ -166,6 +166,23 @@ el otro miembro, la guarda no la encontraba y dejaba pasar todo. Sólo protegía
 repara `0073`, que además hace que el **mensaje** consulte con los mismos permisos —si no, aconseja
 «revertir» sobre una pendiente ajena, que ni corresponde al estado ni puede hacerlo quien lo lee—.
 Los tests de guardas ahora modelan RLS y el caso cruzado falla sin la migración.
+
+**TRES DEFECTOS DE LA MISMA RAÍZ, encontrados los tres a mano.** Este change hizo que existan
+ocurrencias **futuras** —resolver por anticipado las materializa hoy— y varios cálculos daban por
+sentado que «existe ⇒ ya pasó». Ninguno se habría escrito como test de antemano, porque el supuesto
+era invisible hasta romperlo:
+
+1. **El plan se acortaba** al resolver por anticipado: la posición gastada se contaba dos veces, una
+   en el conteo y otra en el caminante que proyecta el final.
+2. **El final se adelantaba** al resolver fuera de orden: la proyección contestaba «lo último que
+   queda por venir» en vez de «dónde termina el plan».
+3. **La regla se declaraba «Finalizada»** teniendo un vencimiento por venir sin resolver: el estado
+   pregunta si el calendario va a PRODUCIR algo nuevo, y con todas las posiciones ya materializadas
+   la respuesta era no.
+
+Los tres reparados, cada uno con un test sobre la regla y otro sobre la lectura que se despacha
+contra un Postgres real, y los tres escritos en el spec con su escenario. **Lección para el próximo
+change que mueva CUÁNDO existe un dato: hay que barrer quién lo estaba leyendo.**
 
 **El defecto de E2a.** Una regla de tres vencimientos decía «Último vencimiento previsto: 20 de
 diciembre» y, al resolver el primero por anticipado, pasó a decir **20 de noviembre** —contradiciendo
