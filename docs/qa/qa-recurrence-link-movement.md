@@ -155,7 +155,8 @@ Al 19-09. Lo que no figura acá **no se corrió todavía**.
 | B | B0–B7 corridos en web, con el script de lectura de la misma carpeta |
 | C | C1–C3 corridos en web |
 | D | **Completo: D1–D9 en verde.** **D6 encontró un defecto** (abajo), reparado por `0073` y re-corrido contra la base con la migración aplicada: la guarda bloqueó, el mensaje pidió revertir, y revertida la liquidación la desvinculación procedió. **D9** mostró el mensaje de «tiene que cancelarla ella» sobre una liquidación pendiente del otro miembro —el caso que más depende de `0073`, porque esa liquidación el usuario no la ve—. **D8** se corrió desde la otra cuenta —la app sólo deja registrar un pago a quien debe— con una regla compartida propia: dijo «cancelala», no «revertila», y al cancelar la liquidación la desvinculación procedió. Los tres mensajes quedaron verificados contra la base: revertir, cancelala vos, tiene que cancelarla ella |
-| E, F | Pendientes |
+| E | E1, E2a, E2b y E3 corridos y en verde. **E2a encontró un defecto** (abajo). E4 no se corre en una sesión: pide desvincular un vencimiento cuya fecha ya pasó, y resolver por anticipado exige que sea futuro |
+| F | Pendiente |
 | Check SQL | Pendiente |
 
 **El defecto de D6.** Con una liquidación completada posterior al gasto, desvincular **funcionó** en
@@ -165,6 +166,14 @@ el otro miembro, la guarda no la encontraba y dejaba pasar todo. Sólo protegía
 repara `0073`, que además hace que el **mensaje** consulte con los mismos permisos —si no, aconseja
 «revertir» sobre una pendiente ajena, que ni corresponde al estado ni puede hacerlo quien lo lee—.
 Los tests de guardas ahora modelan RLS y el caso cruzado falla sin la migración.
+
+**El defecto de E2a.** Una regla de tres vencimientos decía «Último vencimiento previsto: 20 de
+diciembre» y, al resolver el primero por anticipado, pasó a decir **20 de noviembre** —contradiciendo
+a la fila de al lado, que seguía diciendo «restan 2»—. Resolver antes de la fecha es el único caso
+donde una posición está gastada Y todavía por delante en el calendario, y la proyección la contaba
+dos veces. Reparado: la proyección saltea las resueltas futuras, distinguiéndolas de las pendientes
+futuras, que sí siguen contando. Dos tests, uno sobre la regla y otro sobre la lectura que se
+despacha contra un Postgres real —el dato no llegaba hasta la regla—, y la regla quedó en el spec.
 
 **Lo que salió al correr D6–D9, además del defecto de fondo:** el detalle de la regla no daba
 acuse al vincular —el proveedor del aviso envolvía sólo el historial y las acciones viven arriba—,
