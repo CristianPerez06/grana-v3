@@ -5,14 +5,22 @@
 -- más de un vencimiento.
 --
 -- Se pega en el SQL Editor. Todo es de LECTURA: no escribe nada.
--- Reemplazar <TU_USER_ID> por el uuid del usuario con el que se hace el QA.
+-- Reemplazar <TU_EMAIL> por el mail de la cuenta con la que se hace el QA.
+--
+-- SON SIETE CONSULTAS Y VAN DE A UNA: el SQL Editor muestra el resultado de la
+-- última sentencia nada más. Seleccionar el bloque y darle Run alcanza.
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 1 · ¿Existen las funciones que el change agrega?
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Si alguna falta, la migración 0072 no se aplicó y el resto del QA no significa
--- nada: las pantallas van a fallar al primer toque.
+-- Si falta alguna de las de 0072, esa migración no se aplicó y el resto del QA no
+-- significa nada: las pantallas van a fallar al primer toque.
+--
+-- Las cuatro de 0073 van con su propia expectativa: tienen que ser DEFINER. Son
+-- las guardas de liquidación y la consulta que las alimenta, y corren con
+-- permisos elevados a propósito —si quedaran INVOKER volverían a no ver las
+-- liquidaciones que registró el otro miembro, que es el defecto que 0073 repara—.
 
 select
   p.proname                                as funcion,
@@ -29,10 +37,15 @@ where n.nspname = 'public'
     'recurrence_admits_occurrence',
     'recurrence_step_interval',
     'recurrence_split_matches',
-    'settlement_is_live'
+    'settlement_is_live',
+    -- 0073
+    'settlements_covering',
+    'settlements_blocking_movement',
+    'trg_fn_block_shared_delete_with_settlement',
+    'trg_fn_block_unshare_with_settlement'
   )
 order by p.proname;
--- Esperado: 8 filas, todas INVOKER.
+-- Esperado: 12 filas. Las 8 de 0072, INVOKER. Las 4 de 0073, DEFINER.
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2 · ¿Las guardas usan el criterio de vigencia?
@@ -59,19 +72,30 @@ where n.nspname = 'public'
 --
 -- Es el caso trampa de «Ya lo pagué»: si el registro anticipado dejara una fila
 -- pendiente fechada adelante, el bloque de «por revisar» le pediría al usuario
--- algo que acaba de pagar. Esta consulta tiene que volver VACÍA.
+-- algo que acaba de pagar. Por eso la ocurrencia se escribe YA RESUELTA.
+--
+-- PERO UNA PENDIENTE FUTURA NO ES SIEMPRE UN DEFECTO, y decir lo contrario era un
+-- error de este guion: **desvincular** devuelve el vencimiento a «por revisar»
+-- conservando su fecha, y si esa fecha todavía no llegó la fila queda pendiente y
+-- futura, que es exactamente lo que el usuario pidió. El bloque la muestra con su
+-- etiqueta «vence en N días», no como algo atrasado.
+--
+-- Entonces esta consulta NO tiene que volver vacía: tiene que devolver SÓLO las
+-- que desvinculaste a mano. Cualquier otra —una que nunca vinculaste, o una de
+-- una regla que no tocaste— sí es un defecto del registro anticipado.
 
 select
   i.id,
   i.recurrence_id,
   i.due_date,
   i.status,
-  'PENDIENTE CON FECHA FUTURA — no debería existir' as problema
+  'pendiente con fecha futura — ¿la desvinculaste vos?' as revisar
 from public.recurrence_instances i
-where i.user_id = '<TU_USER_ID>'
+where i.user_id = (select id from auth.users where email = '<TU_EMAIL>')
   and i.status = 'pending'
-  and i.due_date > (now() at time zone 'America/Argentina/Buenos_Aires')::date;
--- Esperado: 0 filas.
+  and i.due_date > (now() at time zone 'America/Argentina/Buenos_Aires')::date
+order by i.due_date;
+-- Esperado: sólo las que desvinculaste durante el QA. Ninguna otra.
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 4 · Un movimiento resuelve UN vencimiento
@@ -85,7 +109,7 @@ select
   count(*) as vencimientos_que_resuelve,
   array_agg(i.due_date order by i.due_date) as fechas
 from public.recurrence_instances i
-where i.user_id = '<TU_USER_ID>'
+where i.user_id = (select id from auth.users where email = '<TU_EMAIL>')
   and i.confirmed_transaction_id is not null
 group by i.confirmed_transaction_id
 having count(*) > 1;
@@ -115,7 +139,7 @@ select
 from public.recurrence_instances i
 join public.recurrences r on r.id = i.recurrence_id
 left join public.transactions t on t.id = i.confirmed_transaction_id
-where i.user_id = '<TU_USER_ID>'
+where i.user_id = (select id from auth.users where email = '<TU_EMAIL>')
 order by r.description, i.due_date desc;
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -139,7 +163,7 @@ select
     (now() at time zone 'America/Argentina/Buenos_Aires')::date
   )                                            as restantes
 from public.recurrences r
-where r.user_id = '<TU_USER_ID>'
+where r.user_id = (select id from auth.users where email = '<TU_EMAIL>')
   and r.max_occurrences is not null
   and r.status <> 'deleted'
 order by r.description;
