@@ -29,21 +29,22 @@ export const useRecurrenceNotice = () => useContext(NoticeContext)
 export const RecurrenceNotice = ({
   children,
   /**
-   * El proveedor envuelve a sus hijos en una columna, así que se queda con la
-   * separación que tenían. Quien los tenía más separados la pasa acá — si no, al
-   * envolverlos se juntan.
+   * La separación que los hijos tenían entre sí antes de que el proveedor los
+   * envolviera. Va acá y no en el contenedor de afuera para que el aviso quede
+   * pegado a lo que anuncia: una pantalla con los bloques bien separados no
+   * tiene por qué dejar ese mismo hueco entre el «listo» y el contenido.
    */
-  className = 'flex flex-col gap-4',
+  contentClassName,
 }: {
   children: ReactNode
-  className?: string
+  contentClassName?: string
 }) => {
   const [message, setMessage] = useState<string | null>(null)
   return (
     <NoticeContext.Provider value={setMessage}>
-      <div className={className}>
+      <div className="flex flex-col gap-4">
         {message ? <Alert variant="success">{message}</Alert> : null}
-        {children}
+        <div className={contentClassName}>{children}</div>
       </div>
     </NoticeContext.Provider>
   )

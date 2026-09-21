@@ -37,7 +37,7 @@ const RecurrenceDetailPage = async ({ params, searchParams }: Props) => {
           acciones de resolver por anticipado viven en la ficha de arriba y
           también avisan. Envolviendo sólo el historial, el aviso de haber
           vinculado no tenía dónde salir y la pantalla se quedaba muda. */}
-      <RecurrenceNotice className="flex flex-col gap-8">
+      <RecurrenceNotice contentClassName="flex flex-col gap-8">
         <RecurrenceDetail rule={rule} back={back} />
         <RecurrenceInstancesList
           instances={rule.instances}
