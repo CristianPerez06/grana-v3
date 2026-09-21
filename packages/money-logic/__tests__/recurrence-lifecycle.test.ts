@@ -188,6 +188,41 @@ describe('the last expected occurrence', () => {
     expect(result).toEqual({ kind: 'date', date: '2027-07-08' })
   })
 
+  it('no vuelve a caminar una posición que se resolvió antes de su fecha', () => {
+    // El caso del QA: plan de tres, hoy 21/09, y el usuario paga por anticipado
+    // el vencimiento del 10/10 —que sigue siendo futuro—. `positionsSpent` ya lo
+    // cuenta, y el calendario también lo tiene por delante: contarlo de las dos
+    // formas hace terminar el plan un mes antes de lo que termina.
+    const result = lastExpectedOccurrence({
+      rule: { ...monthlyOnThe10th, max_occurrences: 3 },
+      today: '2026-09-21',
+      maxOccurrences: 3,
+      positionsSpent: 1,
+      hasOpenPause: false,
+      resolvedAhead: ['2026-10-10'],
+    })
+
+    // Oct (resuelto por anticipado), Nov y Dic. El último sigue siendo el de
+    // diciembre: gastar una posición antes no acorta el plan.
+    expect(result).toEqual({ kind: 'date', date: '2026-12-10' })
+  })
+
+  it('una pendiente futura NO se saltea: su posición todavía no se gastó', () => {
+    // La diferencia fina con el caso de arriba. Una ocurrencia que existe pero
+    // sigue sin resolver gastará su posición cuando llegue su fecha, así que el
+    // conteo normativo todavía no la suma y el caminante tiene que producirla.
+    const result = lastExpectedOccurrence({
+      rule: { ...monthlyOnThe10th, max_occurrences: 3 },
+      today: '2026-09-21',
+      maxOccurrences: 3,
+      positionsSpent: 0,
+      hasOpenPause: false,
+      resolvedAhead: [],
+    })
+
+    expect(result).toEqual({ kind: 'date', date: '2026-12-10' })
+  })
+
   it('refuses to name a date while a pause is open', () => {
     const result = lastExpectedOccurrence({
       rule: monthlyOnThe10th,

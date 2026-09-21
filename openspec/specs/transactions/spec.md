@@ -1376,6 +1376,18 @@ La generación SHALL cortar por la primera condición de fin que se cumpla (`end
 El generador, la proyección de próximas ocurrencias y la pantalla SHALL derivar ese conteo del mismo
 cronograma, de modo que no puedan dar números distintos para la misma regla.
 
+**UNA POSICIÓN GASTADA ANTES DE SU FECHA NO ACORTA EL PLAN.** Resolver un vencimiento por
+anticipado gasta su posición sin que su fecha haya llegado, de modo que esa posición es la única que
+está **gastada y todavía por delante en el calendario** a la vez. La proyección del último
+vencimiento SHALL saltearla: camina las posiciones que restan **desde hoy**, y si vuelve a producir
+la que ya se gastó la cuenta dos veces y anuncia un final una posición antes del real. Una regla de
+tres que resuelve la primera por anticipado SHALL seguir terminando en la tercera, y la pantalla NO
+SHALL decir «restan 2» al lado de un último vencimiento que sólo deja lugar para una.
+
+Una ocurrencia **pendiente** con fecha futura NO se saltea: su posición se gastará cuando su fecha
+llegue, y el conteo normativo todavía no la suma. La distinción es entre resuelta —confirmada u
+omitida— y sin resolver, la misma que usa el conteo.
+
 `interval_count` + `interval_unit` son la **fuente de verdad** del cronograma; `frequency` es solo la
 etiqueta de presentación. Para los cuatro presets, la etiqueta y el intervalo SHALL ser coherentes
 (`weekly` ⇒ 1 `week`, `biweekly` ⇒ 2 `week`, `monthly` ⇒ 1 `month`, `annual` ⇒ 1 `year`); `custom`
@@ -1412,6 +1424,13 @@ admite cualquier intervalo válido. Esa coherencia SHALL estar enforced por un `
 
 - **WHEN** una regla tiene `end_date = 2026-03-01` y la siguiente ocurrencia caería el `2026-03-15`
 - **THEN** esa ocurrencia no se materializa
+
+#### Scenario: Resolver por anticipado no mueve el final del plan
+
+- **WHEN** una regla mensual con `max_occurrences = 3` y sus tres vencimientos en el futuro resuelve
+  el primero por anticipado
+- **THEN** el avance pasa a «1 de 3» y restan 2
+- **AND** el último vencimiento previsto SIGUE siendo el tercero, no el segundo
 
 #### Scenario: max_occurrences da el mismo número en todas las superficies
 

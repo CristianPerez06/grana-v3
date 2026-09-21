@@ -170,6 +170,16 @@ export type LastExpectedOccurrenceInput = {
   positionsSpent: number
   /** True while a pause has no `resumed_at`. */
   hasOpenPause: boolean
+  /**
+   * Dates AFTER today that `positionsSpent` already counted: occurrences the
+   * user resolved before their date arrived. The walk below must skip them, or
+   * it counts them a second time and projects an end one position too early.
+   *
+   * It is the one case where "spent" and "still ahead in the calendar" overlap.
+   * Everything else the count includes is dated up to today, which the walk
+   * never revisits.
+   */
+  resolvedAhead?: Iterable<string>
 }
 
 /**
@@ -210,6 +220,11 @@ export function lastExpectedOccurrence(
   if (floor != null && floor >= SCHEDULE_NEVER_RULES) return { kind: 'none' }
   const from = floor != null && floor > input.today ? floor : input.today
 
+  // Las que ya se gastaron sin que su fecha llegara. El caminante las produce
+  // igual —son fechas futuras de este calendario— así que hay que pedirle esas
+  // de más y descartarlas, o el plan termina una posición antes de lo que debe.
+  const spentAhead = new Set(input.resolvedAhead ?? [])
+
   // Strictly after today, because a position falling ON today is already counted
   // among the spent ones — `cursor` is the walker's word for that.
   const ahead = walkOccurrences(
@@ -223,15 +238,15 @@ export function lastExpectedOccurrence(
     {
       from,
       cursor: input.today,
-      limit: remaining,
+      limit: remaining + spentAhead.size,
       // A rule may legitimately have more positions left than the default step
       // budget; the walk positions itself at the edge, so this is the number it
       // actually needs. Running out throws rather than returning a short list.
-      maxSteps: remaining + 4,
+      maxSteps: remaining + spentAhead.size + 4,
     },
   )
 
-  const last = ahead.at(-1)
+  const last = ahead.filter((date) => !spentAhead.has(date)).slice(0, remaining).at(-1)
   // Fewer than `remaining` came back: the rule's `end_date` cut the calendar
   // before its limit did. The last one the walk produced is still the last one
   // the rule has.
