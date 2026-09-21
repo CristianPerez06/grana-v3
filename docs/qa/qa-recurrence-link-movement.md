@@ -105,11 +105,22 @@ Con una regla de `max_occurrences = 3` cuyo primer vencimiento no llegó.
 | | Qué hacer | Qué muestra el detalle |
 |---|---|---|
 | E1 | Abrir el detalle | **0 de 3** |
-| E2 | Registrar el primero por anticipado | **1 de 3**, quedan los otros dos |
-| E3 | Desvincular **antes** de que llegue esa fecha | Vuelve a **0 de 3** |
-| E4 | Desvincular **después** de que pasó | Sigue en **1 de 3** — la fecha ya transcurrió |
+| E2a | Resolver el primero con **«Ya lo pagué»** | **1 de 3**, quedan los otros dos |
+| E2b | Resolver uno con **«Ya lo tengo cargado»** | **2 de 3** |
+| E3 | Desvincular el de E2b, **antes** de que llegue esa fecha | Vuelve a **1 de 3** |
+| E4 | Desvincular **después** de que la fecha pasó | Sigue contando — la fecha ya transcurrió |
 
-En los cuatro casos el plan conserva **tres** posiciones. **Falla si** aparece una cuarta.
+En todos los casos el plan conserva **tres** posiciones. **Falla si** aparece una cuarta.
+
+**E2 se parte en dos a propósito.** El guion decía «registrar por anticipado» y después «desvincular»,
+y esas dos cosas no se encadenan: desvincular se ofrece SÓLO sobre lo que el usuario vinculó
+(C3), porque deshacer un pago que la recurrencia creó sería borrar un movimiento real. Así que la
+posición se gasta por los dos caminos (E2a y E2b) y se devuelve sólo por el que se puede deshacer.
+
+**E4 no se puede correr en una sesión** sin esperar a que la fecha llegue: resolver por anticipado
+exige que el vencimiento sea futuro, y el caso pide desvincularlo cuando ya es pasado. Lo cubren
+los diez casos SQL del conteo de posiciones, que fijan exactamente esa regla: una posición se gasta
+al llegar su fecha O al resolverse antes, **una sola vez**.
 
 ---
 
@@ -143,7 +154,7 @@ Al 19-09. Lo que no figura acá **no se corrió todavía**.
 | A | A1–A4 corridos en web |
 | B | B0–B7 corridos en web, con el script de lectura de la misma carpeta |
 | C | C1–C3 corridos en web |
-| D | D1–D7 y D9 corridos y en verde. **D6 encontró un defecto** (abajo), reparado por `0073` y re-corrido contra la base con la migración aplicada: la guarda bloqueó, el mensaje pidió revertir, y revertida la liquidación la desvinculación procedió. **D9** mostró el mensaje de «tiene que cancelarla ella» sobre una liquidación pendiente del otro miembro —el caso que más depende de `0073`, porque esa liquidación el usuario no la ve—. Queda **D8** (pendiente propia), que se corre desde la otra cuenta: la app sólo deja registrar un pago a quien debe, y hoy debe la otra |
+| D | **Completo: D1–D9 en verde.** **D6 encontró un defecto** (abajo), reparado por `0073` y re-corrido contra la base con la migración aplicada: la guarda bloqueó, el mensaje pidió revertir, y revertida la liquidación la desvinculación procedió. **D9** mostró el mensaje de «tiene que cancelarla ella» sobre una liquidación pendiente del otro miembro —el caso que más depende de `0073`, porque esa liquidación el usuario no la ve—. **D8** se corrió desde la otra cuenta —la app sólo deja registrar un pago a quien debe— con una regla compartida propia: dijo «cancelala», no «revertila», y al cancelar la liquidación la desvinculación procedió. Los tres mensajes quedaron verificados contra la base: revertir, cancelala vos, tiene que cancelarla ella |
 | E, F | Pendientes |
 | Check SQL | Pendiente |
 
