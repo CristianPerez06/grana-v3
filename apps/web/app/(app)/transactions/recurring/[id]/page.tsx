@@ -33,11 +33,12 @@ const RecurrenceDetailPage = async ({ params, searchParams }: Props) => {
 
   return (
     <>
-      <RecurrenceDetail rule={rule} back={back} />
-
-      {/* El acuse de desvincular vive acá y no en el botón: ese botón deja de
-          ofrecerse en cuanto la ocurrencia vuelve a «por revisar». */}
-      <RecurrenceNotice>
+      {/* El proveedor envuelve TODA la pantalla, no sólo el historial: las dos
+          acciones de resolver por anticipado viven en la ficha de arriba y
+          también avisan. Envolviendo sólo el historial, el aviso de haber
+          vinculado no tenía dónde salir y la pantalla se quedaba muda. */}
+      <RecurrenceNotice className="flex flex-col gap-8">
+        <RecurrenceDetail rule={rule} back={back} />
         <RecurrenceInstancesList
           instances={rule.instances}
           currencyCode={rule.currency_code}

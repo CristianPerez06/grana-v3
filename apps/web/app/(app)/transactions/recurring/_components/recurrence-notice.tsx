@@ -26,11 +26,22 @@ const NoticeContext = createContext<(message: string | null) => void>(() => {})
 
 export const useRecurrenceNotice = () => useContext(NoticeContext)
 
-export const RecurrenceNotice = ({ children }: { children: ReactNode }) => {
+export const RecurrenceNotice = ({
+  children,
+  /**
+   * El proveedor envuelve a sus hijos en una columna, así que se queda con la
+   * separación que tenían. Quien los tenía más separados la pasa acá — si no, al
+   * envolverlos se juntan.
+   */
+  className = 'flex flex-col gap-4',
+}: {
+  children: ReactNode
+  className?: string
+}) => {
   const [message, setMessage] = useState<string | null>(null)
   return (
     <NoticeContext.Provider value={setMessage}>
-      <div className="flex flex-col gap-4">
+      <div className={className}>
         {message ? <Alert variant="success">{message}</Alert> : null}
         {children}
       </div>

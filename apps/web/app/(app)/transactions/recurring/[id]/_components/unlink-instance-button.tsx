@@ -47,12 +47,25 @@ export const UnlinkInstanceButton = ({ instanceId }: { instanceId: string }) => 
     })
   }
 
+  // Devuelve DOS hermanos sueltos, no un contenedor: la fila del historial los
+  // acomoda. El botón entra al lado del importe cuando hay lugar y se va solo a
+  // un renglón cuando no; el motivo del rechazo, que es una frase larga, ocupa
+  // siempre el ancho completo (`basis-full`) en vez de espichar el botón.
+  //
+  // El `div` intermedio existe porque `Button` es `w-full`: sin él ocupa todo el
+  // ancho disponible, que es lo que lo hacía verse como una barra.
   return (
-    <div className="flex flex-col items-end gap-1.5">
-      <Button variant="secondary" size="xs" onPress={unlink} disabled={pending}>
-        {pending ? t('unlinking') : t('unlink')}
-      </Button>
-      {error ? <Alert variant="error">{error}</Alert> : null}
-    </div>
+    <>
+      <div className="ml-auto shrink-0">
+        <Button variant="secondary" size="xs" onPress={unlink} disabled={pending}>
+          {pending ? t('unlinking') : t('unlink')}
+        </Button>
+      </div>
+      {error ? (
+        <Alert variant="error" className="basis-full">
+          {error}
+        </Alert>
+      ) : null}
+    </>
   )
 }

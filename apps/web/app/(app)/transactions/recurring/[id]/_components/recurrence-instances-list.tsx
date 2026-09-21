@@ -44,14 +44,20 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
       ) : (
         <ul className="flex flex-col gap-2">
           {instances.map((instance) => (
-            // DOS PISOS, no una sola línea. Con el botón compitiendo por el
-            // ancho, a ancho de teléfono la fecha se partía en cuatro renglones
-            // y la fila entera se amontonaba. Arriba el dato, abajo la acción.
+            // UNA fila que se parte sola. El botón entra al lado del importe
+            // cuando hay ancho —en web, la mayoría de las veces— y baja a su
+            // propio renglón, alineado a la derecha, cuando no entra.
+            //
+            // Lo decide `basis-56` sobre el bloque de datos, no un breakpoint:
+            // el piso de ancho que ese bloque reclama es lo que empuja al botón
+            // abajo, así que la fila reacciona al espacio que tiene y no a la
+            // medida de la pantalla. Un botón peleando el ancho sin ese piso es
+            // lo que antes partía la fecha en cuatro renglones.
             <li
               key={instance.id}
-              className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3"
+              className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-card px-4 py-3"
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-1 basis-56 items-center justify-between gap-3">
               <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="whitespace-nowrap text-sm font-semibold text-text">
                   {formatShortDate(instance.scheduled_date)}
