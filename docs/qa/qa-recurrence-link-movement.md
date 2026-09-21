@@ -156,7 +156,7 @@ Al 19-09. Lo que no figura acá **no se corrió todavía**.
 | C | C1–C3 corridos en web |
 | D | **Completo: D1–D9 en verde.** **D6 encontró un defecto** (abajo), reparado por `0073` y re-corrido contra la base con la migración aplicada: la guarda bloqueó, el mensaje pidió revertir, y revertida la liquidación la desvinculación procedió. **D9** mostró el mensaje de «tiene que cancelarla ella» sobre una liquidación pendiente del otro miembro —el caso que más depende de `0073`, porque esa liquidación el usuario no la ve—. **D8** se corrió desde la otra cuenta —la app sólo deja registrar un pago a quien debe— con una regla compartida propia: dijo «cancelala», no «revertila», y al cancelar la liquidación la desvinculación procedió. Los tres mensajes quedaron verificados contra la base: revertir, cancelala vos, tiene que cancelarla ella |
 | E | E1, E2a, E2b y E3 corridos y en verde. **E2a encontró un defecto** (abajo). E4 no se corre en una sesión: pide desvincular un vencimiento cuya fecha ya pasó, y resolver por anticipado exige que sea futuro |
-| F | **Web a ancho de teléfono (360px): F1, F1b y F3 en verde.** Los dos botones entran en una fila; «Desvincular» baja a su propio renglón alineado a la derecha; las filas del historial se leen sin desbordes. F2 y F4 pendientes, y el nativo entero |
+| F | **Web a ancho de teléfono (360px): completo.** F1, F1b y F3 en verde a la primera. **F2 encontró un defecto** —la hoja de candidatos no scrolleaba— reparado. **F4 aceptado por inspección**, ver abajo. **Falta el nativo entero** |
 | Check SQL | Pendiente |
 
 **El defecto de D6.** Con una liquidación completada posterior al gasto, desvincular **funcionó** en
@@ -183,6 +183,21 @@ era invisible hasta romperlo:
 Los tres reparados, cada uno con un test sobre la regla y otro sobre la lectura que se despacha
 contra un Postgres real, y los tres escritos en el spec con su escenario. **Lección para el próximo
 change que mueva CUÁNDO existe un dato: hay que barrer quién lo estaba leyendo.**
+
+**El defecto de F2: la hoja de candidatos no scrolleaba a ancho de teléfono.** El mismo `Drawer` es
+panel lateral en escritorio —alto fijo— y hoja inferior abajo de `md`, donde el alto lo fija el
+contenido con un tope. El cuerpo de la hoja pedía `h-full`, que contra un padre de altura automática
+no vale nada: crecía con la lista, el panel la recortaba y la región de scroll nunca recibía altura.
+En escritorio funcionaba, y por eso nadie lo había visto. El primitivo advierte en su comentario que
+espera un cuerpo `min-h-0 flex-1`; de los veinte consumidores, éste era el único que no lo cumplía.
+Reparado, con un test de código que falla si vuelve el patrón —red gruesa a propósito: el defecto
+sólo aparece con un alto de pantalla real y contenido que lo desborda, que es lo que un render sin
+navegador no tiene—.
+
+**F4 aceptado por inspección, sin correrlo.** Verlo pedía volver a armar una liquidación que
+bloqueara la desvinculación, y el mensaje de rechazo ya se vio funcionando en pantalla ancha: es un
+cartel de ancho completo en su propia línea (`basis-full`), y lo único que cambia a 360px es cuántos
+renglones usa el texto. Queda dicho acá para que nadie lo lea como corrido.
 
 **El defecto de E2a.** Una regla de tres vencimientos decía «Último vencimiento previsto: 20 de
 diciembre» y, al resolver el primero por anticipado, pasó a decir **20 de noviembre** —contradiciendo
