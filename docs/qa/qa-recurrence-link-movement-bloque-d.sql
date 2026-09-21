@@ -1,7 +1,11 @@
 -- QA · bloque D — QUIÉN ES QUIÉN
 --
--- SÓLO LECTURA. No inserta, no actualiza, no borra. Se pega entero en el SQL
--- Editor y devuelve cuatro tablas.
+-- SÓLO LECTURA. No inserta, no actualiza, no borra.
+--
+-- SON CUATRO CONSULTAS Y SE CORREN DE A UNA. El SQL Editor de Supabase muestra
+-- el resultado de la ÚLTIMA sentencia nada más: pegar el archivo entero devuelve
+-- las liquidaciones y esconde las otras tres. Seleccionar el bloque que se quiere
+-- y darle Run alcanza —el editor corre lo seleccionado—, o se pega una por vez.
 --
 -- Contesta lo que la pantalla no dice y la memoria no conserva: de qué cuenta es
 -- el gasto compartido, quién registró cada liquidación, y en qué estado está la
