@@ -18,6 +18,7 @@ import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { recurrenceTitle } from '@grana/recurrences'
 import { useShowCents } from '@/lib/preferences-context'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
+import { formatShortDate } from '@/lib/date'
 import type { RecurrenceDetail as RecurrenceDetailType } from '@/lib/recurrences/types'
 import { DetailTopbar } from '../../../_components/detail-topbar'
 import { ResolveAheadActions } from '../../_components/resolve-ahead-actions'
@@ -30,23 +31,16 @@ type Props = {
   back: { href: string; label: string }
 }
 
-// Parse a 'YYYY-MM-DD' calendar date locally (avoids the UTC shift a bare
-// `new Date(iso)` would introduce).
-const formatCalendarDate = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
 // `created_at` is an instant (ISO timestamp), not a bare calendar date: render
 // the AR calendar day it fell on so the date doesn't drift across midnight UTC.
+//
+// MES DE TRES LETRAS, como el resto de la pantalla y como la ficha nativa. El
+// mes entero partía «20 de diciembre de 2026» en tres renglones a ancho de
+// teléfono y dejaba esas filas el doble de altas que las demás.
 const formatTimestamp = (iso: string) =>
   new Date(iso).toLocaleDateString('es-AR', {
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     year: 'numeric',
     timeZone: 'America/Argentina/Buenos_Aires',
   })
@@ -157,14 +151,14 @@ export const RecurrenceDetail = ({ rule, back }: Props) => {
     rows.push({
       key: 'next_date',
       label: t('labels.next_date'),
-      value: formatCalendarDate(rule.next_occurrence),
+      value: formatShortDate(rule.next_occurrence),
     })
   }
   if (rule.end_date) {
     rows.push({
       key: 'end_date',
       label: t('labels.end_date'),
-      value: formatCalendarDate(rule.end_date),
+      value: formatShortDate(rule.end_date),
     })
   }
 
@@ -214,7 +208,7 @@ export const RecurrenceDetail = ({ rule, back }: Props) => {
       rows.push({
         key: 'last_expected',
         label: t('limit.last_expected'),
-        value: formatCalendarDate(last.date),
+        value: formatShortDate(last.date),
       })
     } else if (last.kind === 'unknown-while-paused') {
       rows.push({
