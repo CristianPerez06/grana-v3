@@ -139,11 +139,11 @@ Al 19-09. Lo que no figura acá **no se corrió todavía**.
 
 | Bloque | Estado |
 |---|---|
-| 0 | `0072` aplicada. Falló en el primer intento por una comparación de enum contra texto; se corrigió en la migración y volvió a correr entera. **`0073` está pendiente de aplicar** |
+| 0 | `0072` aplicada. Falló en el primer intento por una comparación de enum contra texto; se corrigió en la migración y volvió a correr entera. **`0073` aplicada** (21-09), sin errores |
 | A | A1–A4 corridos en web |
 | B | B0–B7 corridos en web, con el script de lectura de la misma carpeta |
 | C | C1–C3 corridos en web |
-| D | D1–D5 corridos. **D6 encontró un defecto** (abajo). D6 y D7 se repiten después de aplicar `0073`; D8 y D9 quedan pendientes |
+| D | D1–D7 y D9 corridos y en verde. **D6 encontró un defecto** (abajo), reparado por `0073` y re-corrido contra la base con la migración aplicada: la guarda bloqueó, el mensaje pidió revertir, y revertida la liquidación la desvinculación procedió. **D9** mostró el mensaje de «tiene que cancelarla ella» sobre una liquidación pendiente del otro miembro —el caso que más depende de `0073`, porque esa liquidación el usuario no la ve—. Queda **D8** (pendiente propia), que se corre desde la otra cuenta: la app sólo deja registrar un pago a quien debe, y hoy debe la otra |
 | E, F | Pendientes |
 | Check SQL | Pendiente |
 
@@ -154,6 +154,11 @@ el otro miembro, la guarda no la encontraba y dejaba pasar todo. Sólo protegía
 repara `0073`, que además hace que el **mensaje** consulte con los mismos permisos —si no, aconseja
 «revertir» sobre una pendiente ajena, que ni corresponde al estado ni puede hacerlo quien lo lee—.
 Los tests de guardas ahora modelan RLS y el caso cruzado falla sin la migración.
+
+**Lo que salió al correr D6–D9, además del defecto de fondo:** el detalle de la regla no daba
+acuse al vincular —el proveedor del aviso envolvía sólo el historial y las acciones viven arriba—,
+y el botón de desvincular ocupaba una fila entera. Los dos corregidos, el primero con un test que
+lee el código y falla si algo que avisa queda fuera del proveedor.
 
 **Lo que se corrigió mientras se corría** (todo ya en la rama): los dos botones en una sola fila y
 con aspecto de botón; el importe recortado y la fecha repetida en la hoja de candidatos nativa; el
