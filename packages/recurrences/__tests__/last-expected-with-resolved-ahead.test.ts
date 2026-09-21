@@ -104,4 +104,16 @@ describe('el plan de una regla con límite', () => {
     const r = await rule()
     expect(r?.next_occurrence).toBe(positions[1])
   })
+
+  it('resolver la ÚLTIMA por anticipado no adelanta el final', async () => {
+    // Fuera de orden: queda la del medio sin resolver y la última ya resuelta.
+    // Lo único que queda por venir es la segunda, pero el plan sigue terminando
+    // en la tercera.
+    await resolveAhead(positions[2])
+
+    const r = await rule()
+    expect(r?.positions_spent).toBe(2)
+    expect(r?.lifecycle.progress).toMatchObject({ spent: 2, total: 3, remaining: 1 })
+    expect(r?.last_expected_occurrence).toEqual({ kind: 'date', date: positions[2] })
+  })
 })

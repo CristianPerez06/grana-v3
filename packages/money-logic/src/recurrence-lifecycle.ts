@@ -246,7 +246,20 @@ export function lastExpectedOccurrence(
     },
   )
 
-  const last = ahead.filter((date) => !spentAhead.has(date)).slice(0, remaining).at(-1)
+  const lastAhead = ahead.filter((date) => !spentAhead.has(date)).slice(0, remaining).at(-1)
+
+  // DÓNDE TERMINA EL PLAN, no qué es lo último que queda por venir. Las dos
+  // respuestas coinciden mientras se resuelva en orden, y se separan en cuanto
+  // alguien resuelve por anticipado una posición POSTERIOR a otra que sigue
+  // pendiente: un plan de tres con octubre y diciembre resueltos y noviembre sin
+  // resolver termina en diciembre, aunque lo único que quede por venir sea
+  // noviembre. Decir «noviembre» ahí adelantaría el final del plan un mes por
+  // haber pagado algo antes.
+  //
+  // Las fechas son ISO, así que ordenan como texto.
+  const candidates = [...spentAhead, ...(lastAhead == null ? [] : [lastAhead])].sort()
+  const last = candidates.at(-1)
+
   // Fewer than `remaining` came back: the rule's `end_date` cut the calendar
   // before its limit did. The last one the walk produced is still the last one
   // the rule has.

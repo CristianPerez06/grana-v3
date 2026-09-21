@@ -207,6 +207,22 @@ describe('the last expected occurrence', () => {
     expect(result).toEqual({ kind: 'date', date: '2026-12-10' })
   })
 
+  it('resolver fuera de orden no adelanta el final del plan', () => {
+    // El segundo hallazgo del QA: plan de tres —Oct, Nov, Dic—, con octubre y
+    // DICIEMBRE resueltos por anticipado y noviembre todavía pendiente. Lo único
+    // que queda por venir es noviembre, pero el plan termina en diciembre.
+    const result = lastExpectedOccurrence({
+      rule: { ...monthlyOnThe10th, max_occurrences: 3 },
+      today: '2026-09-21',
+      maxOccurrences: 3,
+      positionsSpent: 2,
+      hasOpenPause: false,
+      resolvedAhead: ['2026-10-10', '2026-12-10'],
+    })
+
+    expect(result).toEqual({ kind: 'date', date: '2026-12-10' })
+  })
+
   it('una pendiente futura NO se saltea: su posición todavía no se gastó', () => {
     // La diferencia fina con el caso de arriba. Una ocurrencia que existe pero
     // sigue sin resolver gastará su posición cuando llegue su fecha, así que el

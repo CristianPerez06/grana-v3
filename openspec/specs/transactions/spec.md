@@ -1388,6 +1388,13 @@ Una ocurrencia **pendiente** con fecha futura NO se saltea: su posición se gast
 llegue, y el conteo normativo todavía no la suma. La distinción es entre resuelta —confirmada u
 omitida— y sin resolver, la misma que usa el conteo.
 
+La proyección SHALL contestar **dónde termina el plan**, no qué es lo último que queda por venir.
+Las dos respuestas coinciden mientras se resuelva en orden y se separan en cuanto alguien resuelve
+por anticipado una posición POSTERIOR a otra que sigue pendiente: un plan de tres con la primera y
+la tercera resueltas y la segunda sin resolver SHALL seguir terminando en la tercera. El último
+vencimiento previsto SHALL ser, entonces, el mayor entre las posiciones ya gastadas por anticipado y
+las que restan por caminar.
+
 `interval_count` + `interval_unit` son la **fuente de verdad** del cronograma; `frequency` es solo la
 etiqueta de presentación. Para los cuatro presets, la etiqueta y el intervalo SHALL ser coherentes
 (`weekly` ⇒ 1 `week`, `biweekly` ⇒ 2 `week`, `monthly` ⇒ 1 `month`, `annual` ⇒ 1 `year`); `custom`
@@ -1431,6 +1438,14 @@ admite cualquier intervalo válido. Esa coherencia SHALL estar enforced por un `
   el primero por anticipado
 - **THEN** el avance pasa a «1 de 3» y restan 2
 - **AND** el último vencimiento previsto SIGUE siendo el tercero, no el segundo
+
+#### Scenario: Resolver por anticipado fuera de orden
+
+- **WHEN** esa misma regla resuelve también el TERCER vencimiento por anticipado, dejando el segundo
+  sin resolver
+- **THEN** el avance pasa a «2 de 3» y resta 1
+- **AND** el último vencimiento previsto sigue siendo el tercero, aunque lo único que quede por venir
+  sea el segundo
 
 #### Scenario: max_occurrences da el mismo número en todas las superficies
 
