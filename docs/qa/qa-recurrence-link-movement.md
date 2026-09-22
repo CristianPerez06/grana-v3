@@ -1,8 +1,9 @@
 # QA — `recurrence-link-movement`
 
-> **Este guion se está corriendo.** `0072` ya está aplicada en la base online y los bloques A, B, C y
-> parte de D se corrieron en web; el estado por bloque, los hallazgos y lo que falta están en
-> [Resultado](#resultado), al final. Antes de seguir hay que aplicar `0073` (ver 0.1b).
+> **Este guion se corrió entero.** `0072` y `0073` están aplicadas en la base online y los bloques A
+> a G se corrieron en web, en web a ancho de teléfono y en la app nativa; el estado por bloque y los
+> hallazgos están en [Resultado](#resultado), al final. **Falta aplicar `0074`** (ver 0.1c), que
+> repara un defecto que encontró una revisión posterior al QA.
 >
 > `pnpm verify` corre en verde (tests del monorepo, lint y typecheck de web y nativo, build, checks
 > de salud y el validador de OpenSpec). Nada de eso dibuja una pantalla: los tests nuevos corren SQL
@@ -21,12 +22,15 @@
 |---|---|---|
 | 0.1 | Aplicar `supabase/migrations/0072_recurrence_link_movement.sql` en el SQL Editor | Corre entera sin error. Tiene un self-check antes del `COMMIT`: si algo falta, aborta y dice qué. **Ya aplicada** |
 | 0.1b | Aplicar `supabase/migrations/0073_settlement_guards_see_the_whole_truth.sql` | Termina en `✓ 0073 settlement guards see the whole truth`. Sin ella, las guardas de liquidación no ven las liquidaciones registradas por el otro miembro y **D6 pasa de largo** (es el defecto que encontró este QA) |
+| 0.1c | Aplicar `supabase/migrations/0074_link_snapshot_follows_the_movement.sql` | Termina mostrando `0074 OK`. Sin ella, vincular un movimiento a un vencimiento **que el generador ya había creado** deja el historial con el importe de la regla en vez del importe que se pagó — y el número es plausible, así que no se nota |
 | 0.2 | ~~Regenerar los tipos~~ — **no aplica**: la CLI de Supabase no se usa en este proyecto (ver `AGENTS.md`). Las firmas de `packages/supabase/src/types.ts` están escritas a mano y se compararon una por una contra el SQL de 0072 y 0073 —los tres RPC del change más `settlements_blocking_movement`—: nombres y orden de los parámetros, cuáles tienen default, y la forma del retorno | Esa comparación, ya hecha, más `pnpm typecheck` y `pnpm typecheck:mobile` en verde. **Cubre las firmas de este change, no el esquema entero**: el typecheck no compara este archivo contra la base |
 | 0.3 | Tener a mano una regla **mensual activa** cuyo próximo vencimiento **todavía no llegó** | El hub la muestra con «Próximo: …» |
 
 **Si 0.1 no corrió, todo lo demás falla al primer toque** y no significa nada: los tres RPC no
 existen. **Si no corrió 0.1b**, el resto anda pero el bloque D miente: las guardas siguen ciegas a
-lo que registró el otro miembro y D6 pasa cuando debería fallar.
+lo que registró el otro miembro y D6 pasa cuando debería fallar. **Si no corrió 0.1c**, todo anda y
+nada avisa: el importe equivocado del historial es el de la regla, coincide con el resto de la lista
+y no hay pantalla que lo contradiga.
 
 ---
 

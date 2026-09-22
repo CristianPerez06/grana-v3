@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BLOCKING_ACTIONS,
   LINK_ERROR_MESSAGE_KEYS,
   linkErrorMessageKeys,
   type LinkErrorCode,
@@ -73,9 +74,18 @@ describe('linkErrorMessageKeys — qué mensaje corresponde a cada rechazo', () 
     ).toEqual(['errors.blocked_revert', 'errors.blocked_multiple'])
   })
 
-  it('sin saber qué liquidación bloquea, cae en revertir', () => {
-    // El caso completado es el único que el circuito produce sin `blockedBy`.
-    expect(linkErrorMessageKeys({ errorCode: 'GRN01' })).toEqual(['errors.blocked_revert'])
+  it('sin saber qué liquidación bloquea, dice que no sabe — no manda a revertir', () => {
+    // Este test decía lo contrario, y era la suposición la que estaba mal: «el
+    // caso completado es el único que el circuito produce sin `blockedBy`».
+    // También lo produce un RPC que falla, y una lectura de la instancia que no
+    // vuelve. En los dos casos el usuario leía «revertila» sobre algo que puede
+    // ser una pendiente —que no se revierte— o ajena —que él no puede tocar—.
+    //
+    // El consejo más específico de los cuatro es el peor default: sólo una
+    // acción `revert` explícita lo gana.
+    const keys = linkErrorMessageKeys({ errorCode: 'GRN01' })
+    expect(keys).toEqual(['errors.blocked_unknown'])
+    expect(keys).not.toContain('errors.blocked_revert')
   })
 
   it('el código gana sobre el sqlstate: es la respuesta más precisa', () => {
@@ -94,9 +104,13 @@ describe('linkErrorMessageKeys — qué mensaje corresponde a cada rechazo', () 
   it('la lista publicada cubre todo lo que la función puede devolver', () => {
     // Es la lista que el test de catálogos recorre: si queda corta, una clave
     // nueva entra sin que nadie verifique que existe en los dos idiomas.
+    // Las acciones salen de `BLOCKING_ACTIONS`, NO de una lista escrita acá: la
+    // lista a mano se quedó en tres cuando llegó `unknown`, y como al catálogo
+    // también le faltaba, el test que existe para que no falte una clave pasó
+    // en verde con una faltando. Derivándola, una acción nueva entra sola.
     const produced = new Set<string>()
     for (const code of CODES) produced.add(`errors.${code}`)
-    for (const action of ['revert', 'cancel_own', 'cancel_other'] as const) {
+    for (const action of BLOCKING_ACTIONS) {
       for (const key of linkErrorMessageKeys({
         errorCode: 'GRN01',
         blockedBy: { action, multiple: true },

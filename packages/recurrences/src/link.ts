@@ -78,15 +78,27 @@ export async function getRecurrenceLinkCandidates(
  * Y cancelar una pendiente es potestad de quien la registró: si la puso el otro
  * miembro, pedirle al usuario que la cancele es pedirle algo que no puede hacer.
  */
+/**
+ * Las acciones posibles, como LISTA y no como unión escrita a mano.
+ *
+ * El tipo sale de acá, no al revés, porque una unión de TypeScript no existe en
+ * tiempo de ejecución: el test que exige que el catálogo de i18n tenga todas las
+ * claves tenía que enumerarlas a mano, y cuando llegó `unknown` la enumeración
+ * quedó corta. El test pasaba —recorría tres acciones y las comparaba contra un
+ * catálogo al que también le faltaba la cuarta—, o sea que el test escrito para
+ * que no falte una clave fue el que dejó faltar una. Derivándolo, una acción
+ * nueva entra sola.
+ *
+ * `unknown` NO es un estado de la liquidación: es no haber podido averiguarlo.
+ * Tiene su propio mensaje porque no puede nombrar una acción que no sabe si
+ * aplica.
+ */
+export const BLOCKING_ACTIONS = ['revert', 'cancel_own', 'cancel_other', 'unknown'] as const
+
+export type BlockingAction = (typeof BLOCKING_ACTIONS)[number]
+
 export type BlockingSettlements = {
-  /**
-   * `unknown` NO es un estado de la liquidación: es no haber podido averiguarlo.
-   * Se separa de los otros tres porque el mensaje que le corresponde es distinto
-   * —no puede nombrar una acción que no sabe si aplica— y porque sin él la falta
-   * de respuesta se confundía con «no hay ninguna», que devuelve el consejo por
-   * defecto: «revertí la liquidación», sobre una pendiente que no se revierte.
-   */
-  action: 'revert' | 'cancel_own' | 'cancel_other' | 'unknown'
+  action: BlockingAction
   /** Más de una liquidación vigente bloquea: resolver una sola no alcanza. */
   multiple: boolean
 }

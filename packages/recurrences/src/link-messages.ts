@@ -28,17 +28,22 @@ export function linkErrorMessageKeys(result: {
     // que bloquea: una completada se revierte, una pendiente se cancela, y una
     // pendiente ajena la cancela quien la registró. Decir siempre «revertí»
     // manda al usuario a una operación que el sistema no ofrece para ese estado.
-    // `unknown` es no haber podido averiguar cuál liquidación traba: el mensaje
-    // dice que hay una y manda a mirarla, en vez de aconsejar una operación que
-    // puede no corresponder al estado.
+    //
+    // NO SABER ES EL DEFECTO, «revertí» NO. Sólo una acción `revert` EXPLÍCITA
+    // aconseja revertir; todo lo demás —incluido no tener clasificación, que
+    // pasa si el RPC falla o si ni siquiera se pudo leer la instancia— cae en
+    // `blocked_unknown`, que dice que hay una liquidación trabando y manda a
+    // mirarla. El default anterior era el consejo más específico de los cuatro,
+    // que es el peor lugar donde poner el que se usa cuando no se sabe nada.
+    const action = result.blockedBy?.action
     const key =
-      result.blockedBy?.action === 'cancel_own'
-        ? 'errors.blocked_cancel_own'
-        : result.blockedBy?.action === 'cancel_other'
-          ? 'errors.blocked_cancel_other'
-          : result.blockedBy?.action === 'unknown'
-            ? 'errors.blocked_unknown'
-            : 'errors.blocked_revert'
+      action === 'revert'
+        ? 'errors.blocked_revert'
+        : action === 'cancel_own'
+          ? 'errors.blocked_cancel_own'
+          : action === 'cancel_other'
+            ? 'errors.blocked_cancel_other'
+            : 'errors.blocked_unknown'
     // Resolver una sola no alcanza cuando hay varias: se dice, o el usuario
     // vuelve a chocar contra lo mismo creyendo que ya lo destrabó.
     return result.blockedBy?.multiple ? [key, 'errors.blocked_multiple'] : [key]
@@ -64,5 +69,6 @@ export const LINK_ERROR_MESSAGE_KEYS: readonly string[] = [
   'errors.blocked_revert',
   'errors.blocked_cancel_own',
   'errors.blocked_cancel_other',
+  'errors.blocked_unknown',
   'errors.blocked_multiple',
 ]

@@ -102,6 +102,7 @@ export {
   linkMovementToRecurrence,
   unlinkMovementFromRecurrence,
   registerRecurrenceAhead,
+  BLOCKING_ACTIONS,
   describeBlockingSettlements,
   admitsOccurrence,
   type LinkCandidate,
