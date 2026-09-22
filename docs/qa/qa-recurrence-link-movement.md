@@ -176,7 +176,7 @@ Al 22-09. Lo que no figura acá **no se corrió todavía**.
 | D | **Completo: D1–D9 en verde.** **D6 encontró un defecto** (abajo), reparado por `0073` y re-corrido contra la base con la migración aplicada: la guarda bloqueó, el mensaje pidió revertir, y revertida la liquidación la desvinculación procedió. **D9** mostró el mensaje de «tiene que cancelarla ella» sobre una liquidación pendiente del otro miembro —el caso que más depende de `0073`, porque esa liquidación el usuario no la ve—. **D8** se corrió desde la otra cuenta —la app sólo deja registrar un pago a quien debe— con una regla compartida propia: dijo «cancelala», no «revertila», y al cancelar la liquidación la desvinculación procedió. Los tres mensajes quedaron verificados contra la base: revertir, cancelala vos, tiene que cancelarla ella |
 | E | E1, E2a, E2b y E3 corridos y en verde. **E2a encontró un defecto** (abajo). E4 no se corre en una sesión: pide desvincular un vencimiento cuya fecha ya pasó, y resolver por anticipado exige que sea futuro |
 | F | **Web a ancho de teléfono (360px): completo.** F1, F1b y F3 en verde a la primera. **F2 encontró un defecto** —la hoja de candidatos no scrolleaba— reparado. **F4 aceptado por inspección**, ver abajo. **Nativo corrido (22-09): N1–N6 en verde**, con tres defectos encontrados y reparados —«Ya lo pagué» registraba sin preguntar nada (F1b, divergencia eliminada), los chips de frecuencia no entraban, y las hojas de reglas sin historial no scrolleaban—. **Lo reparado ahí no volvió al teléfono: ver bloque G** |
-| G | **Pendiente.** Es el repaso del código nativo que salió DESPUÉS de la corrida de F |
+| G | **Completo: G1–G9 en verde**, en el iPhone 16 Pro. «Ya lo pagué» abre la hoja con los valores de la regla, lo que el usuario edita queda en el movimiento y la regla no se mueve, el aviso de saldo negativo aparece y deja confirmar igual, cancelar no deja resto, el chip «Desvincular» no ocupa fila propia, «Restantes: 1» no repite la palabra, el detalle de una regla compartida lo dice, y el aviso de categoría se va al elegirla. **Encontró un defecto** (abajo) |
 | Check SQL | **Corrido (22-09), sin hallazgos nuevos.** Cada ocurrencia quedó con la identidad que le corresponde (`created` las que crearon el movimiento, `linked` las señaladas), ningún movimiento resuelve más de un vencimiento, y las guardas contestan que no hay liquidación viva bloqueando. Las tres pendientes con fecha futura que aparecieron son las que este change hace posibles —una regla resuelta por anticipado deja el resto del calendario materializado— salvo una fila de «Prueba fecha futura», residuo de una revisión temprana del change: se borra borrando esa regla |
 
 **El defecto de D6.** Con una liquidación completada posterior al gasto, desvincular **funcionó** en
@@ -231,6 +231,17 @@ despacha contra un Postgres real —el dato no llegaba hasta la regla—, y la r
 acuse al vincular —el proveedor del aviso envolvía sólo el historial y las acciones viven arriba—,
 y el botón de desvincular ocupaba una fila entera. Los dos corregidos, el primero con un test que
 lee el código y falla si algo que avisa queda fuera del proveedor.
+
+**El defecto de G: dos hojas hermanas con la misma `key`.** Al abrir «Ya lo pagué» el teléfono
+mostró un cartel rojo de React —«Encountered two children with the same key»—. Cada hoja se remonta
+con su propio contador para no arrastrar estado entre aperturas, y los dos arrancan en 0: mientras
+la de candidatos fue la única con `key`, no había con quién chocar; la hoja de pago nueva la
+duplicó. Además del cartel, React se reserva el derecho de reusar el estado de una en la otra, que
+es justo lo que esos contadores existen para impedir. Reparado poniéndole a cada `key` un prefijo
+que dice de qué hoja habla, con un test que falla si vuelve a ser un número pelado. **El primer
+test escrito no servía** —comparaba cómo se escribe la expresión, y `payKey` y `sheetKey` se
+escriben distinto aunque valgan lo mismo—; se rehizo exigiendo el prefijo fijo y se verificó
+rompiéndolo a mano.
 
 **Lo que se corrigió mientras se corría** (todo ya en la rama): los dos botones en una sola fila y
 con aspecto de botón; el importe recortado y la fecha repetida en la hoja de candidatos nativa; el
