@@ -2,8 +2,8 @@
 
 > **Este guion se corrió entero.** `0072` y `0073` están aplicadas en la base online y los bloques A
 > a G se corrieron en web, en web a ancho de teléfono y en la app nativa; el estado por bloque y los
-> hallazgos están en [Resultado](#resultado), al final. **Falta aplicar `0074`** (ver 0.1c), que
-> repara un defecto que encontró una revisión posterior al QA.
+> hallazgos están en [Resultado](#resultado), al final. **`0074` también está aplicada** (22-09): la
+> agregó una revisión posterior al QA, y con ella no queda nada pendiente de aplicar.
 >
 > `pnpm verify` corre en verde (tests del monorepo, lint y typecheck de web y nativo, build, checks
 > de salud y el validador de OpenSpec). Nada de eso dibuja una pantalla: los tests nuevos corren SQL
@@ -22,7 +22,7 @@
 |---|---|---|
 | 0.1 | Aplicar `supabase/migrations/0072_recurrence_link_movement.sql` en el SQL Editor | Corre entera sin error. Tiene un self-check antes del `COMMIT`: si algo falta, aborta y dice qué. **Ya aplicada** |
 | 0.1b | Aplicar `supabase/migrations/0073_settlement_guards_see_the_whole_truth.sql` | Termina en `✓ 0073 settlement guards see the whole truth`. Sin ella, las guardas de liquidación no ven las liquidaciones registradas por el otro miembro y **D6 pasa de largo** (es el defecto que encontró este QA) |
-| 0.1c | Aplicar `supabase/migrations/0074_link_snapshot_follows_the_movement.sql` | Termina mostrando `0074 OK`. Sin ella, vincular un movimiento a un vencimiento **que el generador ya había creado** deja el historial con el importe de la regla en vez del importe que se pagó — y el número es plausible, así que no se nota |
+| 0.1c | Aplicar `supabase/migrations/0074_link_snapshot_follows_the_movement.sql` | Termina mostrando `0074 OK`. Sin ella, vincular un movimiento a un vencimiento **que el generador ya había creado** deja el historial con el importe de la regla en vez del importe que se pagó — y el número es plausible, así que no se nota. **Ya aplicada** (22-09): el editor contestó «Success. No rows returned», porque el `0074 OK` sale por el canal de *notices* y no siempre se muestra, así que se verificó aparte preguntándole a `pg_proc` si la función que quedó en la base copia el importe del movimiento — `true` |
 | 0.2 | ~~Regenerar los tipos~~ — **no aplica**: la CLI de Supabase no se usa en este proyecto (ver `AGENTS.md`). Las firmas de `packages/supabase/src/types.ts` están escritas a mano y se compararon una por una contra el SQL de 0072 y 0073 —los tres RPC del change más `settlements_blocking_movement`—: nombres y orden de los parámetros, cuáles tienen default, y la forma del retorno | Esa comparación, ya hecha, más `pnpm typecheck` y `pnpm typecheck:mobile` en verde. **Cubre las firmas de este change, no el esquema entero**: el typecheck no compara este archivo contra la base |
 | 0.3 | Tener a mano una regla **mensual activa** cuyo próximo vencimiento **todavía no llegó** | El hub la muestra con «Próximo: …» |
 
@@ -173,7 +173,7 @@ Al 22-09. Lo que no figura acá **no se corrió todavía**.
 
 | Bloque | Estado |
 |---|---|
-| 0 | `0072` aplicada. Falló en el primer intento por una comparación de enum contra texto; se corrigió en la migración y volvió a correr entera. **`0073` aplicada** (21-09), sin errores. **`0074` PENDIENTE DE APLICAR** (22-09): repara la rama de vincular que dejaba la foto de la regla sobre una ocurrencia que el generador ya había creado — el historial mostraba el importe de la regla sobre un vencimiento resuelto con un movimiento de otro importe. La encontró una revisión externa; el test la reproduce sin la migración |
+| 0 | `0072` aplicada. Falló en el primer intento por una comparación de enum contra texto; se corrigió en la migración y volvió a correr entera. **`0073` aplicada** (21-09), sin errores. **`0074` aplicada** (22-09), verificada contra `pg_proc` y no sólo por el mensaje del editor: repara la rama de vincular que dejaba la foto de la regla sobre una ocurrencia que el generador ya había creado — el historial mostraba el importe de la regla sobre un vencimiento resuelto con un movimiento de otro importe. La encontró una revisión externa; el test la reproduce sin la migración |
 | A | A1–A4 corridos en web |
 | B | B0–B7 corridos en web, con el script de lectura de la misma carpeta |
 | C | C1–C3 corridos en web |
