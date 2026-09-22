@@ -107,4 +107,19 @@ describe('registrar por anticipado, en nativo', () => {
     expect(actions).toContain('onPress={openPayAhead}')
     expect(actions).not.toContain('registerRecurrenceAhead(')
   })
+
+  it('cada hoja hermana lleva en su `key` de qué hoja habla', () => {
+    // Cada hoja se remonta con su propio contador, y los dos arrancan en 0: con
+    // el número pelado los dos hermanos valen `0` a la vez, React avisa en
+    // pantalla y puede reusar el estado de una en la otra —justo lo que los
+    // contadores existen para impedir—. Apareció en el teléfono, no en un test.
+    // Comparar las EXPRESIONES no alcanza: `payKey` y `sheetKey` se escriben
+    // distinto y valen lo mismo. Lo que se exige es el prefijo fijo.
+    const actions = read('components/recurrences/ResolveAheadActions.tsx')
+    const keys = [...actions.matchAll(/\skey=\{(`[^`]*`|[^}]+)\}/g)].map((m) => m[1])
+    expect(keys.length, 'el test dejó de mirar las `key`').toBeGreaterThan(1)
+    for (const key of keys) {
+      expect(key, `\`key={${key}}\` no dice de qué hoja habla`).toMatch(/^`[^`${]+\$\{/)
+    }
+  })
 })

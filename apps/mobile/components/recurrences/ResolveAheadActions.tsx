@@ -152,8 +152,14 @@ export function ResolveAheadActions({
       ) : null}
       {done ? <Text className="text-[13px] text-emerald-deep">{done}</Text> : null}
 
+      {/* LOS DOS CONTADORES SON HERMANOS, así que la `key` lleva de qué hoja
+          habla. Cada uno arranca en 0, y con el número pelado React ve dos
+          hijos con la misma `key`: avisa por consola y se reserva el derecho a
+          reusar el estado del uno en el otro, que es justo lo que estos
+          contadores existen para impedir. Mientras la hoja de candidatos fue la
+          única con `key`, no había con quién chocar. */}
       <PayAheadSheet
-        key={payKey}
+        key={`pay-${payKey}`}
         visible={payOpen}
         onClose={() => setPayOpen(false)}
         recurrenceId={recurrenceId}
@@ -166,7 +172,7 @@ export function ResolveAheadActions({
         onDone={paid}
       />
       <LinkCandidatesSheet
-        key={sheetKey}
+        key={`link-${sheetKey}`}
         visible={sheetOpen}
         onClose={() => setSheetOpen(false)}
         dueDate={dueDate}
