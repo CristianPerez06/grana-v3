@@ -7,10 +7,10 @@ import { useT } from '../../lib/locale-context'
 import {
   getRecurrenceLinkCandidates,
   linkMovementToRecurrence,
-  registerRecurrenceAhead,
 } from '../../lib/recurrences/mutators'
 import { invalidateAfterRecurrenceResolution } from '../../lib/recurrences/invalidate'
 import { LinkCandidatesSheet } from './LinkCandidatesSheet'
+import { PayAheadSheet } from './PayAheadSheet'
 
 type Props = {
   recurrenceId: string
@@ -18,6 +18,10 @@ type Props = {
   dueDate: string
   ruleAmount: number
   ruleCurrency: string
+  /** Lo que la hoja necesita para ofrecer cuentas válidas, igual que web. */
+  movementType: string
+  ruleAccountId: string | null
+  transferDestinationAccountId: string | null
   shared: boolean
 }
 
@@ -32,6 +36,9 @@ export function ResolveAheadActions({
   dueDate,
   ruleAmount,
   ruleCurrency,
+  movementType,
+  ruleAccountId,
+  transferDestinationAccountId,
   shared,
 }: Props) {
   const t = useT()
@@ -54,6 +61,10 @@ export function ResolveAheadActions({
   // que el mensaje puede quedarse donde estaban los botones.
   const [done, setDone] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  // Cada apertura monta una hoja NUEVA, por la misma razón que la de candidatos:
+  // confirmar la cierra sin pasar por el cierre que limpia su estado.
+  const [payOpen, setPayOpen] = useState(false)
+  const [payKey, setPayKey] = useState(0)
 
   // La lectura la dispara el toque, no un efecto de montaje: es la misma razón
   // que en web, y además deja la carga atada a la intención del usuario.
@@ -82,16 +93,19 @@ export function ResolveAheadActions({
     load(true)
   }
 
-  const payNow = async () => {
+  // ANTES REGISTRABA DE UNA, con los valores de la regla. Ahora abre el mismo
+  // formulario que web —importe, cuenta y fecha de pago, con el aviso de saldo
+  // negativo—, que es lo que hacía falta para que pagar antes con otro importe
+  // no obligue a ir a corregirlo después.
+  const openPayAhead = () => {
     setError(null)
     setDone(null)
-    setPending(true)
-    const result = await registerRecurrenceAhead({ recurrenceId, dueDate }, t)
-    setPending(false)
-    if (!result.ok) {
-      setError(result.formError)
-      return
-    }
+    setPayKey((n) => n + 1)
+    setPayOpen(true)
+  }
+
+  const paid = () => {
+    setPayOpen(false)
     setDone(t('recurrences.link.recorded_success'))
     invalidateAfterRecurrenceResolution(queryClient)
   }
@@ -123,7 +137,7 @@ export function ResolveAheadActions({
           la primera pareciera ya elegida. */}
       <View className="flex-row gap-2">
         <View className="flex-1">
-          <Button variant="secondary" size="xs" onPress={payNow} disabled={pending}>
+          <Button variant="secondary" size="xs" onPress={openPayAhead} disabled={pending}>
             {t('recurrences.link.already_paid')}
           </Button>
         </View>
@@ -138,6 +152,19 @@ export function ResolveAheadActions({
       ) : null}
       {done ? <Text className="text-[13px] text-emerald-deep">{done}</Text> : null}
 
+      <PayAheadSheet
+        key={payKey}
+        visible={payOpen}
+        onClose={() => setPayOpen(false)}
+        recurrenceId={recurrenceId}
+        dueDate={dueDate}
+        ruleAmount={ruleAmount}
+        ruleCurrency={ruleCurrency as 'ARS' | 'USD'}
+        movementType={movementType}
+        ruleAccountId={ruleAccountId}
+        transferDestinationAccountId={transferDestinationAccountId}
+        onDone={paid}
+      />
       <LinkCandidatesSheet
         key={sheetKey}
         visible={sheetOpen}

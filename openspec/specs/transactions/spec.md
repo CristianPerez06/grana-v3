@@ -1535,9 +1535,18 @@ Registrar de forma anticipada NO SHALL mover el calendario de la regla: el venci
 SHALL ser el que el calendario ya preveía. El ritmo pertenece a la obligación, no a la fecha en que
 el usuario eligió pagarla.
 
-**En web**, el usuario SHALL poder ajustar **fecha de pago, importe y cuenta** al registrar, y SHALL
-recibir la advertencia correspondiente si la cuenta quedara en negativo. **En la app nativa**, el
-registro SHALL usar los valores propuestos por la regla, sin edición.
+**En AMBAS plataformas**, el usuario SHALL poder ajustar **fecha de pago, importe y cuenta** al
+registrar, y SHALL recibir la advertencia correspondiente si la cuenta quedara en negativo. La regla
+propone los tres valores; ninguno queda fijo.
+
+Esto corrige una divergencia que el spec fijaba antes —en nativo el registro usaba los valores de la
+regla sin edición— y que el QA encontró de entrada. No era una divergencia forzada por la
+plataforma, que es la única clase que las convenciones del repo admiten: el sistema operativo no
+obliga a nada acá. Y el costo caía sobre el caso más común, porque **pagar antes suele venir con
+otro importe**: el usuario registraba un número que sabía equivocado y después iba a corregirlo a
+Movimientos, además de perderse el aviso de saldo negativo. Lo único que SHALL diferir es el
+envase: web lo muestra en la fila del vencimiento y nativo en una hoja, porque en un teléfono el
+formulario no entra al lado de la fila.
 
 Cualquiera sea la plataforma y el valor con que se registre: la fecha SHALL ser la del movimiento y NO
 SHALL sobrescribir el vencimiento de la ocurrencia, que se conserva. La cuenta SHALL ser un override

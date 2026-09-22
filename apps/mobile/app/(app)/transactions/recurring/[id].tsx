@@ -250,6 +250,9 @@ export default function RecurrenceDetailScreen() {
                       dueDate={rule.next_occurrence}
                       ruleAmount={Number(rule.amount)}
                       ruleCurrency={rule.currency_code}
+                      movementType={rule.movement_type}
+                      ruleAccountId={rule.account_id}
+                      transferDestinationAccountId={rule.transfer_destination_account_id}
                       shared={rule.household_id != null}
                     />
                   </View>

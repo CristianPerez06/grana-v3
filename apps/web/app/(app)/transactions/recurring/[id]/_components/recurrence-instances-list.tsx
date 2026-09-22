@@ -75,6 +75,13 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-2.5">
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    statusClass[instance.status] ?? statusClass.skipped
+                  }`}
+                >
+                  {tRec(`instance_statuses.${instance.status}`)}
+                </span>
                 {(() => {
                   // Amount tone mirrors the rest of the app: income emerald (+),
                   // expense terracotta (−), transfer navy (no sign).
@@ -93,13 +100,6 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
                     </span>
                   )
                 })()}
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    statusClass[instance.status] ?? statusClass.skipped
-                  }`}
-                >
-                  {tRec(`instance_statuses.${instance.status}`)}
-                </span>
               </div>
               </div>
               {/* Sólo sobre lo que el usuario vinculó: sobre un pago que creó

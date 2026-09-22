@@ -250,7 +250,13 @@ export async function unlinkMovementFromRecurrence(
 }
 
 export async function registerRecurrenceAhead(
-  args: { recurrenceId: string; dueDate: string; date?: string; amount?: number },
+  args: {
+    recurrenceId: string
+    dueDate: string
+    date?: string
+    amount?: number
+    accountId?: string
+  },
   t: Translate,
 ): Promise<RecurrenceMutationOutcome> {
   const userId = await currentUserId()

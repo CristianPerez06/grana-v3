@@ -1852,7 +1852,7 @@
     "reference_date_exhausted": "This rule has no upcoming occurrences, so its reference date cannot be changed. Extend the cap or the end date to adjust it again.",
     "limit": {
       "progress": "{spent} of {total} occurrences",
-      "remaining": "{remaining} left",
+      "remaining": "{remaining}",
       "last_expected": "Last expected occurrence",
       "last_expected_paused": "It will be worked out when you resume the rule",
       "no_limit": "It repeats with no limit",

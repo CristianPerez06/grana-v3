@@ -94,12 +94,16 @@ export function RecurrenceInstancesList({
                   </Text>
                 ) : null}
               </View>
-              <View className="items-end">
-                <Text className="text-[14px] font-bold text-text">
-                  {fmtMoney(Number(instance.amount), instance.currency_code, showCents)}
-                </Text>
+              {/* Estado e importe en UNA línea, y el importe ÚLTIMO: apilados
+                  hacían la fila el doble de alta, y con el estado al final los
+                  números dejaban de alinearse entre sí —que es lo único que se
+                  compara de un vistazo en una lista de importes—. */}
+              <View className="flex-row items-center gap-2">
                 <Text className={`text-[11px] font-bold ${STATUS_TONE[instance.status]}`}>
                   {t(`recurrences.instance_statuses.${instance.status}`)}
+                </Text>
+                <Text className="text-[14px] font-bold text-text">
+                  {fmtMoney(Number(instance.amount), instance.currency_code, showCents)}
                 </Text>
               </View>
               </View>

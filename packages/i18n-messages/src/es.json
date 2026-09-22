@@ -1852,7 +1852,7 @@
     "reference_date_exhausted": "Esta regla no tiene próximos vencimientos, así que no se puede cambiar la referencia. Extendé el tope o la fecha de fin para volver a ajustarla.",
     "limit": {
       "progress": "{spent} de {total} vencimientos",
-      "remaining": "{remaining} restantes",
+      "remaining": "{remaining}",
       "last_expected": "Último vencimiento previsto",
       "last_expected_paused": "Se calcula cuando reanudes la regla",
       "no_limit": "Se repite sin límite",
