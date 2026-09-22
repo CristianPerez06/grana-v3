@@ -71,7 +71,11 @@ export function Button({
       // el pulgar: `hitSlop` le devuelve los 44px sin agrandar lo que se ve. Web
       // hace lo mismo con un `::after`, que es la divergencia que el repo admite.
       hitSlop={size === 'xs' || size === '2xs' ? 8 : undefined}
-      className={`w-full flex-row items-center justify-center rounded-xl ${containerVariant[variant]} ${containerSize[size]} ${isDisabled ? 'opacity-50' : ''}`}
+      // `2xs` se mide por su contenido; todo lo demás ocupa el ancho. Es la
+      // acción que convive con un chip de estado adentro de una fila, y a ancho
+      // completo se ve como una barra gris atravesando la tarjeta. El gemelo
+      // web hace lo mismo con `w-auto`.
+      className={`${size === '2xs' ? '' : 'w-full'} flex-row items-center justify-center rounded-xl ${containerVariant[variant]} ${containerSize[size]} ${isDisabled ? 'opacity-50' : ''}`}
     >
       {loading ? (
         <Spinner size="sm" color={variant === 'primary' ? colors.white : colors.positive} />

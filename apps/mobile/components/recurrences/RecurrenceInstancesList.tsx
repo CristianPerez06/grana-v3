@@ -107,18 +107,16 @@ export function RecurrenceInstancesList({
                   la recurrencia, deshacer sería BORRAR ese movimiento. */}
               {canUnlink(instance) ? (
                 <View className="flex-row justify-end">
-                  <View>
-                    <Button
-                      variant="secondary"
-                      size="xs"
-                      onPress={() => unlink(instance.id)}
-                      disabled={pendingId === instance.id}
-                    >
-                      {pendingId === instance.id
-                        ? t('recurrences.link.unlinking')
-                        : t('recurrences.link.unlink')}
-                    </Button>
-                  </View>
+                  <Button
+                    variant="secondary"
+                    size="2xs"
+                    onPress={() => unlink(instance.id)}
+                    disabled={pendingId === instance.id}
+                  >
+                    {pendingId === instance.id
+                      ? t('recurrences.link.unlinking')
+                      : t('recurrences.link.unlink')}
+                  </Button>
                 </View>
               ) : null}
             </View>
