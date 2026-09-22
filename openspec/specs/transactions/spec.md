@@ -5551,6 +5551,16 @@ no tiene autoridad para corregirlo— y NO SHALL propagarse a la regla. Una dife
 mostrarse como información, no como advertencia ni como impedimento: el importe de una obligación
 cambia, y avisar de eso cada vez convertiría el caso normal en un error.
 
+**LA FOTO DE LA OCURRENCIA ES DEL MOVIMIENTO, POR LOS DOS CAMINOS.** Vincular termina en la misma
+fila de dos maneras —creando la ocurrencia, cuando el calendario todavía no la materializó, o
+resolviendo la que el generador ya dejó pendiente— y las dos SHALL dejarla igual: el importe, la
+cuenta, la clasificación y la descripción que la ocurrencia guarda SHALL ser los del movimiento
+vinculado, no los que la regla preveía. El destino de una transferencia, el hogar y el reparto SHALL
+seguir siendo los de la REGLA por los dos caminos, porque describen la obligación y no el pago.
+Una ocurrencia que conserva la foto sembrada por el generador muestra en el historial un importe que
+nunca se pagó, y lo hace de la forma más difícil de ver: el número es plausible, es el de la regla, y
+coincide con el de todas las demás filas.
+
 **QUÉ SE OFRECE COMO CANDIDATO.** La lista inicial SHALL contener los movimientos del usuario que
 cumplan **todas** estas condiciones: ser del mismo tipo funcional que la regla, estar en la misma
 moneda, **no estar ya vinculados** a ninguna otra ocurrencia, y caer en la ventana que va **desde el
@@ -5615,6 +5625,14 @@ dirección, para que un pago hecho antes del primer vencimiento siga entrando.
 - **THEN** el movimiento conserva su fecha, su importe y su cuenta
 - **AND** el importe y la cuenta de la regla no cambian
 - **AND** la ocurrencia conserva el `2026-09-23` como vencimiento
+
+#### Scenario: Vincular sobre una ocurrencia que el generador ya había creado
+
+- **WHEN** una regla de $600 tiene el vencimiento de este mes ya materializado como pendiente, y el
+  usuario lo resuelve señalando un movimiento de $2.500
+- **THEN** el historial de la regla muestra ese vencimiento con **$2.500** y la descripción del
+  movimiento, no los $600 de la regla
+- **AND** la regla sigue siendo de $600
 
 #### Scenario: Un movimiento ya vinculado no se ofrece para otro vencimiento
 

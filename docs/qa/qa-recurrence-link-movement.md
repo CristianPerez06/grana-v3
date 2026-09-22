@@ -169,7 +169,7 @@ Al 22-09. Lo que no figura acá **no se corrió todavía**.
 
 | Bloque | Estado |
 |---|---|
-| 0 | `0072` aplicada. Falló en el primer intento por una comparación de enum contra texto; se corrigió en la migración y volvió a correr entera. **`0073` aplicada** (21-09), sin errores |
+| 0 | `0072` aplicada. Falló en el primer intento por una comparación de enum contra texto; se corrigió en la migración y volvió a correr entera. **`0073` aplicada** (21-09), sin errores. **`0074` PENDIENTE DE APLICAR** (22-09): repara la rama de vincular que dejaba la foto de la regla sobre una ocurrencia que el generador ya había creado — el historial mostraba el importe de la regla sobre un vencimiento resuelto con un movimiento de otro importe. La encontró una revisión externa; el test la reproduce sin la migración |
 | A | A1–A4 corridos en web |
 | B | B0–B7 corridos en web, con el script de lectura de la misma carpeta |
 | C | C1–C3 corridos en web |

@@ -21,12 +21,21 @@ export function invalidateAfterRecurrenceMutation(queryClient: QueryClient): voi
 // el hub nativo seguía mostrando el saldo y los movimientos de antes después de
 // registrar un pago. El gemelo en web es `revalidateAfterRecurrenceMutation` +
 // `revalidateAfterMovementMutation`, que las server actions llaman siempre juntos.
+//
+// `['movement-form']` ESTÁ EN LA LISTA aunque parezca un detalle de formulario:
+// es la caché de la que salen las cuentas CON SU SALDO, y de ahí sale el aviso
+// de «esto te deja en negativo». `['accounts']` no la alcanza —TanStack empareja
+// por prefijo y ésta empieza por otro—, así que el segundo pago anticipado de una
+// sesión calculaba el aviso contra el saldo de antes del primero. Callado, y
+// sobre la única cifra que el formulario aporta además de lo que el usuario
+// escribe.
 export function invalidateAfterRecurrenceResolution(queryClient: QueryClient): void {
   for (const key of [
     ['recurrences'],
     ['transactions'],
     ['dashboard'],
     ['accounts'],
+    ['movement-form'],
     ['cards'],
     ['shared'],
   ]) {

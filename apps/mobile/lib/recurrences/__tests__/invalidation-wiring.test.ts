@@ -108,6 +108,27 @@ describe('registrar por anticipado, en nativo', () => {
     expect(actions).not.toContain('registerRecurrenceAhead(')
   })
 
+  it('lo que la hoja lee queda dentro de lo que se invalida al resolver', () => {
+    // El aviso de saldo negativo se calcula sobre las cuentas que lee la hoja, y
+    // esa caché NO cuelga de `['accounts']`: TanStack empareja por prefijo y
+    // `['movement-form', 'accounts']` empieza por otro. Sin esto, el segundo pago
+    // anticipado de una sesión avisaba contra el saldo de antes del primero.
+    // Se mira la LISTA, no el archivo: el comentario que explica por qué la
+    // clave está ahí la nombra también, y contra el texto entero el test pasaba
+    // con la línea de código borrada.
+    const invalidate = read('lib/recurrences/invalidate.ts')
+    const list = invalidate.match(/for \(const key of \[([\s\S]*?)\]\)/)
+    expect(list, 'el test dejó de encontrar la lista de claves').not.toBeNull()
+    const invalidated = new Set(
+      [...(list?.[1] ?? '').matchAll(/\[\s*'([^']+)'/g)].map((m) => m[1]),
+    )
+    const roots = [...sheet.matchAll(/queryKey:\s*\[\s*'([^']+)'/g)].map((m) => m[1])
+    expect(roots.length, 'el test dejó de mirar las queries de la hoja').toBeGreaterThan(0)
+    for (const root of new Set(roots)) {
+      expect([...invalidated], `resolver no invalida ['${root}']`).toContain(root)
+    }
+  })
+
   it('cada hoja hermana lleva en su `key` de qué hoja habla', () => {
     // Cada hoja se remonta con su propio contador, y los dos arrancan en 0: con
     // el número pelado los dos hermanos valen `0` a la vez, React avisa en

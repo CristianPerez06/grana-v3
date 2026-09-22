@@ -665,3 +665,72 @@ describe('self-check de 0072', () => {
     await fresh.close()
   })
 })
+
+/**
+ * LA FOTO DE LA OCURRENCIA ES DEL MOVIMIENTO, por los dos caminos.
+ *
+ * Vincular termina en la misma fila de dos maneras: creándola —cuando el
+ * calendario todavía no la materializó— o actualizando la `pending` que el
+ * generador ya había dejado. La primera copiaba el movimiento; la segunda sólo
+ * marcaba el vínculo, y la fila conservaba lo que la REGLA preveía.
+ *
+ * Nadie lo veía porque el número equivocado es plausible: es el de la regla, y
+ * coincide con el de todas las demás filas del historial. Lo repara `0074`.
+ */
+describe('la foto que deja vincular', () => {
+  const fotoDe = async (instanceId: string) => {
+    await actAsAdmin(db)
+    const { rows } = await db.query<{
+      amount: string
+      description: string | null
+      category_id: string | null
+    }>(
+      `select amount::text, description, category_id::text
+         from public.recurrence_instances where id = '${instanceId}'`,
+    )
+    return rows[0]
+  }
+
+  const conPendienteYMovimientoDistinto = async () => {
+    await makeRule({ amount: 600 })
+    await actAsAdmin(db)
+    await db.exec(`
+      insert into public.recurrence_instances
+        (recurrence_id, user_id, due_date, scheduled_date, status, amount, currency_code,
+         description)
+      values ('${REGLA}', '${U_A}', '${VENCE}', '${VENCE}', 'pending', 600, 'ARS',
+              'Lo que la regla preveía');
+    `)
+    const tx = await makeMovement({ date: '2026-09-23', amount: 2500 })
+    await actAsAdmin(db)
+    await db.exec(
+      `update public.transactions set description = 'Lo que realmente pagué' where id = '${tx}';`,
+    )
+    return tx
+  }
+
+  it('sobre una ocurrencia que ya existía, toma el importe y la descripción del movimiento', async () => {
+    const tx = await conPendienteYMovimientoDistinto()
+    const instancia = await link(tx)
+    const foto = await fotoDe(instancia)
+    expect(foto.amount).toBe('2500.00')
+    expect(foto.description).toBe('Lo que realmente pagué')
+  })
+
+  it('sin 0074 la fila se queda con lo que preveía la regla', async () => {
+    await db.close()
+    db = await createRecurrenceIdentityDb({ snapshotFix: false })
+    const tx = await conPendienteYMovimientoDistinto()
+    const instancia = await link(tx)
+    const foto = await fotoDe(instancia)
+    expect(foto.amount).toBe('600.00')
+    expect(foto.description).toBe('Lo que la regla preveía')
+  })
+
+  it('creando la ocurrencia, sigue tomándola del movimiento como ya hacía', async () => {
+    await makeRule({ amount: 600 })
+    const tx = await makeMovement({ date: '2026-09-23', amount: 2500 })
+    const instancia = await link(tx)
+    expect((await fotoDe(instancia)).amount).toBe('2500.00')
+  })
+})

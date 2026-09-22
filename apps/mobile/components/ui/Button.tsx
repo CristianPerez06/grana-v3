@@ -67,10 +67,16 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      // El botón compacto mide 28px, menos que el mínimo que se puede tocar con
-      // el pulgar: `hitSlop` le devuelve los 44px sin agrandar lo que se ve. Web
+      // Los dos compactos miden menos que el mínimo que se puede tocar con el
+      // pulgar, y `hitSlop` les devuelve los 44px sin agrandar lo que se ve. Web
       // hace lo mismo con un `::after`, que es la divergencia que el repo admite.
-      hitSlop={size === 'xs' || size === '2xs' ? 8 : undefined}
+      //
+      // EL NÚMERO SALE DE LA ALTURA, no es uno solo: `xs` mide 28 (h-7) y le
+      // faltan 8 por lado; `2xs` mide 20 (h-5) y le faltan 12. `2xs` nació
+      // colgado de la misma rama que `xs` y heredó el 8, así que prometía 44 y
+      // daba 36 — y el contrato dice 44. Web no tuvo el problema porque su
+      // `::after` declara la altura final (`h-11`) en vez del sobrante.
+      hitSlop={size === 'xs' ? 8 : size === '2xs' ? 12 : undefined}
       // `2xs` se mide por su contenido; todo lo demás ocupa el ancho. Es la
       // acción que convive con un chip de estado adentro de una fila, y a ancho
       // completo se ve como una barra gris atravesando la tarjeta. El gemelo

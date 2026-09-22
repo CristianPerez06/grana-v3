@@ -232,4 +232,3 @@ la base actual el cambio del punto 4 es un no-op verificable.
 **Rollback.** Revertir los puntos 4 y 5 es volver a `create or replace` las versiones de `0049`
 y `0071`. Las funciones nuevas quedan sin llamadores si se revierte la app; no hace falta
 borrarlas.
-

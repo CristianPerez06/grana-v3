@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Text, View } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import type { LinkCandidate } from '@grana/recurrences'
@@ -68,12 +68,23 @@ export function ResolveAheadActions({
 
   // La lectura la dispara el toque, no un efecto de montaje: es la misma razón
   // que en web, y además deja la carga atada a la intención del usuario.
+  // SÓLO CONTESTA LA ÚLTIMA BÚSQUEDA PEDIDA, gemelo de web: «ampliar» se ofrece
+  // también mientras la primera está en vuelo, y una respuesta angosta tardía
+  // pisaba la lista ampliada dejando el cartel diciendo «ampliada» sobre
+  // resultados que no lo son.
+  const requestRef = useRef(0)
+
   const load = (widen: boolean) => {
+    const token = ++requestRef.current
     setCandidates(null)
     setLoadError(false)
     getRecurrenceLinkCandidates(recurrenceId, dueDate, widen)
-      .then(setCandidates)
+      .then((rows) => {
+        if (token !== requestRef.current) return
+        setCandidates(rows)
+      })
       .catch(() => {
+        if (token !== requestRef.current) return
         // «No hay» y «no sabemos» no son lo mismo.
         setCandidates([])
         setLoadError(true)

@@ -196,6 +196,12 @@ function Ledger({ data, t }: { data: CurrentAccountData; t: TFn }) {
           entries.map((e) => {
             const chip = stateLabel(e.state, t)
             const canRevert = e.kind === 'settlement' && (e.state === 'completed' || e.state === 'pending')
+            // EL NOMBRE DEPENDE DEL ESTADO, gemelo de web: una completada se
+            // REVIERTE (deja su contraasiento), una pendiente se CANCELA —nunca
+            // llegó a mover plata—. Llamarlas igual rompe el único consejo que
+            // el sistema da cuando una liquidación traba algo: los mensajes
+            // dicen «cancelala» y no había ningún botón con ese nombre.
+            const undoKey = e.state === 'pending' ? 'cancel' : 'revert'
             return (
               <View key={e.id} className="flex-col gap-1 border-b border-border-soft pb-3">
                 <View className="flex-row items-start justify-between gap-3">
@@ -219,11 +225,11 @@ function Ledger({ data, t }: { data: CurrentAccountData; t: TFn }) {
                   (confirmRevertId === e.id ? (
                     <View className="flex-row items-center gap-3 pt-1">
                       <Text className="text-xs text-text-muted">
-                        {t('shared.cuenta_corriente.revert_confirm')}
+                        {t(`shared.cuenta_corriente.${undoKey}_confirm`)}
                       </Text>
                       <Pressable onPress={() => revert(e.id)} disabled={reverting}>
                         <Text className="text-xs font-semibold text-negative">
-                          {t('shared.cuenta_corriente.revert_yes')}
+                          {t(`shared.cuenta_corriente.${undoKey}_yes`)}
                         </Text>
                       </Pressable>
                       <Pressable onPress={() => setConfirmRevertId(null)}>
@@ -235,7 +241,7 @@ function Ledger({ data, t }: { data: CurrentAccountData; t: TFn }) {
                   ) : (
                     <Pressable className="pt-1" onPress={() => setConfirmRevertId(e.id)}>
                       <Text className="text-xs text-text-soft">
-                        {t('shared.cuenta_corriente.revert')}
+                        {t(`shared.cuenta_corriente.${undoKey}`)}
                       </Text>
                     </Pressable>
                   ))}

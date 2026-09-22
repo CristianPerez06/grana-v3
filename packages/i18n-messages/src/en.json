@@ -1898,6 +1898,7 @@
         "blocked_revert": "Cannot unlink: there is a household settlement dated after this expense. Revert it and try again.",
         "blocked_cancel_own": "Cannot unlink: you have a settlement pending assignment dated after this expense. Cancel it and try again.",
         "blocked_cancel_other": "Cannot unlink: there is a settlement pending assignment dated after this expense, and the other person registered it. They have to cancel it.",
+        "blocked_unknown": "Cannot unlink: there is a household settlement dated after this expense. We could not tell what state it is in — check the current account to see whether it needs reverting or cancelling.",
         "blocked_multiple": "More than one settlement is blocking, so resolving just one is not enough.",
         "not_an_occurrence": "That date is not a due date of this rule.",
         "beyond_limit": "This rule has already used every due date in its plan.",
@@ -2111,7 +2112,10 @@
       "revert": "Revert",
       "revert_confirm": "Revert this payment?",
       "revert_yes": "Yes, revert",
-      "revert_no": "No"
+      "revert_no": "No",
+      "cancel": "Cancel",
+      "cancel_confirm": "Cancel this payment?",
+      "cancel_yes": "Yes, cancel"
     },
     "split": {
       "toggle_label": "Share",

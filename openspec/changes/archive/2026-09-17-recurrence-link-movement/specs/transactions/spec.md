@@ -116,6 +116,23 @@ Esto no es una sutileza de presentación: el mismo conteo corta la generación. 
 
 La fecha guardada en `paused_from` SHALL seguir siendo el día real en que el usuario pausó. Lo que cambia es cómo se **lee** el intervalo, no lo que se registra: guardar el día siguiente haría que el historial mienta sobre cuándo ocurrió.
 
+**UNA REGLA CON UN VENCIMIENTO FUTURO SIN RESOLVER NO ESTÁ FINALIZADA.** «Finalizada» se deriva de
+si el calendario tiene algo de hoy en adelante, y hasta que se pudo resolver por anticipado eso
+equivalía a preguntar si va a PRODUCIR una ocurrencia nueva: materializar sólo llegaba hasta hoy, así
+que toda ocurrencia existente era pasada. Resolver antes de la fecha rompe la equivalencia —crea hoy
+la ocurrencia de noviembre—, y una regla puede quedar con todas sus posiciones materializadas y una
+de ellas todavía por venir. El sistema SHALL considerar que esa regla **sigue activa**: decirle
+«Finalizada» al usuario es afirmar que no va a pasar nada más cuando en noviembre le vuelve a vencer.
+Un vencimiento sin resolver cuya fecha YA PASÓ no devuelve futuro: ahí «finalizada con pendientes»
+es la respuesta correcta.
+
+La proyección SHALL contestar **dónde termina el plan**, no qué es lo último que queda por venir.
+Las dos respuestas coinciden mientras se resuelva en orden y se separan en cuanto alguien resuelve
+por anticipado una posición POSTERIOR a otra que sigue pendiente: un plan de tres con la primera y
+la tercera resueltas y la segunda sin resolver SHALL seguir terminando en la tercera. El último
+vencimiento previsto SHALL ser, entonces, el mayor entre las posiciones ya gastadas por anticipado y
+las que restan por caminar.
+
 El **último vencimiento previsto** SHALL calcularse con el mismo caminante de calendario que produce las fechas reales, honrando versiones de cronograma, pausas y correcciones de ancla. NO SHALL persistirse: una regla que se pausa o a la que se le corrige el día de vencimiento cambia esa fecha, y un valor guardado quedaría mintiendo.
 
 **UNA REGLA PAUSADA NO TIENE FECHA FINAL, Y ESO NO ES LO MISMO QUE NO TENER FUTURO.** Son dos preguntas distintas y SHALL responderse por separado:
@@ -181,6 +198,28 @@ Una regla **sin** `max_occurrences` NO SHALL mostrar ninguno de estos datos —n
 - **THEN** la ocurrencia del día en que se pausó sigue contando
 - **AND** sólo el día estrictamente interior a la pausa queda sin producir
 
+#### Scenario: Resolver por anticipado no mueve el final del plan
+
+- **WHEN** una regla mensual con `max_occurrences = 3` y sus tres vencimientos en el futuro resuelve
+  el primero por anticipado
+- **THEN** el avance pasa a «1 de 3» y restan 2
+- **AND** el último vencimiento previsto SIGUE siendo el tercero, no el segundo
+
+#### Scenario: Una regla con un vencimiento futuro sin resolver no se muestra finalizada
+
+- **WHEN** una regla de tres vencimientos tiene sus tres posiciones materializadas, dos resueltas por
+  anticipado y la del medio sin resolver con fecha futura
+- **THEN** la regla se muestra **activa**, no «Finalizada»
+- **AND** cuando esa fecha pasa sin resolverse, la regla pasa a «finalizada con pendientes»
+
+#### Scenario: Resolver por anticipado fuera de orden
+
+- **WHEN** esa misma regla resuelve también el TERCER vencimiento por anticipado, dejando el segundo
+  sin resolver
+- **THEN** el avance pasa a «2 de 3» y resta 1
+- **AND** el último vencimiento previsto sigue siendo el tercero, aunque lo único que quede por venir
+  sea el segundo
+
 #### Scenario: El avance no cuenta filas
 
 - **WHEN** una regla creada a partir de un movimiento tiene `max_occurrences = 3` y su primera ocurrencia está cubierta por el movimiento semilla, que no tiene fila en `recurrence_instances`
@@ -231,6 +270,16 @@ no tiene autoridad para corregirlo— y NO SHALL propagarse a la regla. Una dife
 mostrarse como información, no como advertencia ni como impedimento: el importe de una obligación
 cambia, y avisar de eso cada vez convertiría el caso normal en un error.
 
+**LA FOTO DE LA OCURRENCIA ES DEL MOVIMIENTO, POR LOS DOS CAMINOS.** Vincular termina en la misma
+fila de dos maneras —creando la ocurrencia, cuando el calendario todavía no la materializó, o
+resolviendo la que el generador ya dejó pendiente— y las dos SHALL dejarla igual: el importe, la
+cuenta, la clasificación y la descripción que la ocurrencia guarda SHALL ser los del movimiento
+vinculado, no los que la regla preveía. El destino de una transferencia, el hogar y el reparto SHALL
+seguir siendo los de la REGLA por los dos caminos, porque describen la obligación y no el pago.
+Una ocurrencia que conserva la foto sembrada por el generador muestra en el historial un importe que
+nunca se pagó, y lo hace de la forma más difícil de ver: el número es plausible, es el de la regla, y
+coincide con el de todas las demás filas.
+
 **QUÉ SE OFRECE COMO CANDIDATO.** La lista inicial SHALL contener los movimientos del usuario que
 cumplan **todas** estas condiciones: ser del mismo tipo funcional que la regla, estar en la misma
 moneda, **no estar ya vinculados** a ninguna otra ocurrencia, y caer en la ventana que va **desde el
@@ -280,6 +329,14 @@ llegar a la lista inicial.
 - **THEN** el movimiento conserva su fecha, su importe y su cuenta
 - **AND** el importe y la cuenta de la regla no cambian
 - **AND** la ocurrencia conserva el `2026-09-23` como vencimiento
+
+#### Scenario: Vincular sobre una ocurrencia que el generador ya había creado
+
+- **WHEN** una regla de $600 tiene el vencimiento de este mes ya materializado como pendiente, y el
+  usuario lo resuelve señalando un movimiento de $2.500
+- **THEN** el historial de la regla muestra ese vencimiento con **$2.500** y la descripción del
+  movimiento, no los $600 de la regla
+- **AND** la regla sigue siendo de $600
 
 #### Scenario: Un movimiento ya vinculado no se ofrece para otro vencimiento
 

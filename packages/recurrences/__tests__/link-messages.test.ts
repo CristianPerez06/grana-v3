@@ -49,6 +49,15 @@ describe('linkErrorMessageKeys — qué mensaje corresponde a cada rechazo', () 
     expect(keys).not.toContain('errors.blocked_revert')
   })
 
+  it('cuando no se pudo averiguar el estado, no aconseja revertir', () => {
+    const keys = linkErrorMessageKeys({
+      errorCode: 'GRN01',
+      blockedBy: { action: 'unknown', multiple: false },
+    })
+    expect(keys).toEqual(['errors.blocked_unknown'])
+    expect(keys).not.toContain('errors.blocked_revert')
+  })
+
   it('una pendiente ajena dice que la cancela quien la registró', () => {
     expect(
       linkErrorMessageKeys({

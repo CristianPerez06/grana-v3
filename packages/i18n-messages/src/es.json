@@ -1898,6 +1898,7 @@
         "blocked_revert": "No se puede desvincular: hay una liquidación del hogar posterior a este gasto. Revertila y volvé a intentarlo.",
         "blocked_cancel_own": "No se puede desvincular: hay una liquidación tuya pendiente de asignar posterior a este gasto. Cancelala y volvé a intentarlo.",
         "blocked_cancel_other": "No se puede desvincular: hay una liquidación pendiente de asignar posterior a este gasto, y la registró la otra persona. Tiene que cancelarla ella.",
+        "blocked_unknown": "No se puede desvincular: hay una liquidación del hogar posterior a este gasto. No pudimos averiguar en qué estado está — miralá en la cuenta corriente para ver si hay que revertirla o cancelarla.",
         "blocked_multiple": "Hay más de una liquidación bloqueando, así que resolver una sola no alcanza.",
         "not_an_occurrence": "Esa fecha no es un vencimiento de esta regla.",
         "beyond_limit": "Esta regla ya usó todos los vencimientos de su plan.",
@@ -2111,7 +2112,10 @@
       "revert": "Revertir",
       "revert_confirm": "¿Revertir este pago?",
       "revert_yes": "Sí, revertir",
-      "revert_no": "No"
+      "revert_no": "No",
+      "cancel": "Cancelar",
+      "cancel_confirm": "¿Cancelar este pago?",
+      "cancel_yes": "Sí, cancelar"
     },
     "split": {
       "toggle_label": "Compartir",

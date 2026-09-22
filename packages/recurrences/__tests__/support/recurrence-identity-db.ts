@@ -34,6 +34,7 @@ export const MIGRATION_0069 = read('0069_repair_seed_occurrence_identity.sql')
 export const MIGRATION_0070 = read('0070_recurrence_positions_spent_batch.sql')
 export const MIGRATION_0071 = read('0071_pause_looks_forward.sql')
 export const MIGRATION_0072 = read('0072_recurrence_link_movement.sql')
+export const MIGRATION_0074 = read('0074_link_snapshot_follows_the_movement.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -273,7 +274,12 @@ const SEED = `
  * purpose — 0064's own behaviour, or what 0066 refuses to run against.
  */
 export async function createRecurrenceIdentityDb(
-  options: { applyMigration?: boolean; scheduleGap?: boolean; seedRepair?: boolean } = {},
+  options: {
+    applyMigration?: boolean
+    scheduleGap?: boolean
+    seedRepair?: boolean
+    snapshotFix?: boolean
+  } = {},
 ): Promise<PGlite> {
   const db = new PGlite()
   await db.exec('create schema if not exists public;')
@@ -295,6 +301,10 @@ export async function createRecurrenceIdentityDb(
       // And 0072, for the same reason: the count that decides whether a rule
       // still owes money is the one production runs.
       await applyLinkMovement(db)
+      // 0074 viaja con 0072: repara la rama de vincular que dejaba la foto de la
+      // regla sobre una ocurrencia que ya existía. Se puede saltear
+      // (`snapshotFix: false`) para reproducir el defecto.
+      if (options.snapshotFix !== false) await db.exec(MIGRATION_0074)
     }
   }
   return db

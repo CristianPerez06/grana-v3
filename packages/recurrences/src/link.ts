@@ -79,7 +79,14 @@ export async function getRecurrenceLinkCandidates(
  * miembro, pedirle al usuario que la cancele es pedirle algo que no puede hacer.
  */
 export type BlockingSettlements = {
-  action: 'revert' | 'cancel_own' | 'cancel_other'
+  /**
+   * `unknown` NO es un estado de la liquidación: es no haber podido averiguarlo.
+   * Se separa de los otros tres porque el mensaje que le corresponde es distinto
+   * —no puede nombrar una acción que no sabe si aplica— y porque sin él la falta
+   * de respuesta se confundía con «no hay ninguna», que devuelve el consejo por
+   * defecto: «revertí la liquidación», sobre una pendiente que no se revierte.
+   */
+  action: 'revert' | 'cancel_own' | 'cancel_other' | 'unknown'
   /** Más de una liquidación vigente bloquea: resolver una sola no alcanza. */
   multiple: boolean
 }
@@ -129,9 +136,14 @@ export async function describeBlockingSettlements(
   supabase: GranaSupabaseClient,
   args: { transactionId: string; userId: string },
 ): Promise<BlockingSettlements | null> {
-  const { data } = await supabase.rpc('settlements_blocking_movement', {
+  const { data, error } = await supabase.rpc('settlements_blocking_movement', {
     p_transaction_id: args.transactionId,
   })
+  // NO SABER NO ES NO HABER. La guarda ya rechazó la operación, así que hay una
+  // liquidación vigente con seguridad; lo que falta es CUÁL. Devolver null acá
+  // dejaba caer el mensaje en su rama por defecto —«revertí la liquidación»—,
+  // que es la que sobra justo cuando lo que traba es una pendiente.
+  if (error) return { action: 'unknown', multiple: false }
   return blockingAction((data ?? []) as BlockingSettlementRow[], args.userId)
 }
 

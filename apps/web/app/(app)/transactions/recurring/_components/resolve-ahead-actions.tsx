@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useRef, useState, useTransition } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Check, ChevronDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
@@ -330,12 +330,24 @@ export const ResolveAheadActions = ({ shared, ...rule }: Props) => {
   // un efecto que setea estado al abrirse es exactamente el patrón que el lint
   // del repo prohíbe, y además deja la carga atada al montaje en vez de a la
   // intención del usuario.
+  // SÓLO CONTESTA LA ÚLTIMA BÚSQUEDA PEDIDA. «Ampliar» se ofrece también
+  // mientras la primera está en vuelo, así que las dos pueden convivir: si la
+  // angosta llega después, pisa la lista ampliada y el cartel sigue diciendo
+  // «ampliada» sobre resultados que no lo son. El usuario no ve su movimiento y
+  // lo carga de nuevo — el duplicado que esta pantalla existe para evitar.
+  const requestRef = useRef(0)
+
   const load = (widen: boolean) => {
+    const token = ++requestRef.current
     setCandidates(null)
     setLoadError(false)
     getRecurrenceLinkCandidates(rule.recurrenceId, rule.dueDate, widen)
-      .then(setCandidates)
+      .then((rows) => {
+        if (token !== requestRef.current) return
+        setCandidates(rows)
+      })
       .catch(() => {
+        if (token !== requestRef.current) return
         // «No hay» y «no sabemos» no son lo mismo: confundirlos manda al usuario
         // a cargar el gasto de nuevo, que es el duplicado que queremos evitar.
         setCandidates([])

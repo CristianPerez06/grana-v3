@@ -118,4 +118,18 @@ describe('describeBlockingSettlements', () => {
     const client = clientReturning([])
     expect(await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })).toBeNull()
   })
+
+  it('si el RPC falla dice que no sabe, en vez de caer en «revertí»', async () => {
+    // NO SABER NO ES NO HABER: la guarda ya rechazó, así que hay una liquidación
+    // vigente seguro. Devolver null acá dejaba el mensaje en su rama por
+    // defecto, que aconseja revertir — justo lo que no corresponde si lo que
+    // traba es una pendiente.
+    const client = {
+      rpc: async () => ({ data: null, error: { message: 'boom' } }),
+    } as unknown as GranaSupabaseClient
+    expect(await describeBlockingSettlements(client, { transactionId: MOV, userId: YO })).toEqual({
+      action: 'unknown',
+      multiple: false,
+    })
+  })
 })

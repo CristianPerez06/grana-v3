@@ -28,12 +28,17 @@ export function linkErrorMessageKeys(result: {
     // que bloquea: una completada se revierte, una pendiente se cancela, y una
     // pendiente ajena la cancela quien la registró. Decir siempre «revertí»
     // manda al usuario a una operación que el sistema no ofrece para ese estado.
+    // `unknown` es no haber podido averiguar cuál liquidación traba: el mensaje
+    // dice que hay una y manda a mirarla, en vez de aconsejar una operación que
+    // puede no corresponder al estado.
     const key =
       result.blockedBy?.action === 'cancel_own'
         ? 'errors.blocked_cancel_own'
         : result.blockedBy?.action === 'cancel_other'
           ? 'errors.blocked_cancel_other'
-          : 'errors.blocked_revert'
+          : result.blockedBy?.action === 'unknown'
+            ? 'errors.blocked_unknown'
+            : 'errors.blocked_revert'
     // Resolver una sola no alcanza cuando hay varias: se dice, o el usuario
     // vuelve a chocar contra lo mismo creyendo que ya lo destrabó.
     return result.blockedBy?.multiple ? [key, 'errors.blocked_multiple'] : [key]

@@ -34,10 +34,17 @@ describe('invalidación después de una mutación de recurrencia', () => {
     // El movimiento que queda colgado de la ocurrencia corre el saldo de la
     // cuenta, el feed, los agregados del dashboard, el resumen de la tarjeta y
     // la deuda del hogar.
+    //
+    // `movement-form` está por separado aunque también sean cuentas: es la caché
+    // de la que sale el saldo CONTRA EL QUE SE AVISA que una operación deja en
+    // negativo, y no cuelga de `accounts` —TanStack empareja por prefijo—. Sin
+    // ella el segundo pago anticipado de una sesión avisaba contra el saldo de
+    // antes del primero.
     expect(keys.map(([prefix]) => prefix).sort()).toEqual([
       'accounts',
       'cards',
       'dashboard',
+      'movement-form',
       'recurrences',
       'shared',
       'transactions',
