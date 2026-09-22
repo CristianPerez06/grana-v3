@@ -131,10 +131,29 @@ al llegar su fecha O al resolverse antes, **una sola vez**.
 | | Qué mirar |
 |---|---|
 | F1 | Los dos botones entran en la fila sin romper el monto ni el nombre de la regla — en el hub web, en el **hub nativo** (debajo de cada regla activa) y en los dos detalles |
-| F1b | En nativo, «Ya lo pagué» registra directo con los valores de la regla y la fecha de hoy, **sin formulario**: es la divergencia que el spec fija para la app nativa |
+| F1b | En nativo, «Ya lo pagué» abre una **hoja con importe, cuenta y fecha** — los mismos campos que web. La divergencia que el spec fijaba (registrar directo, sin formulario) **se eliminó**: la encontró esta misma corrida, ver bloque G |
 | F2 | En nativo, la hoja de candidatos **scrollea** — si la lista es larga y no se mueve, el tope de altura no está haciendo efecto |
 | F3 | El rótulo «Vinculado» aparece en la ficha del movimiento **también en nativo** (antes no mostraba ningún vínculo) |
 | F4 | Los mensajes de error son los mismos textos en las dos plataformas |
+
+---
+
+## G · Nativo, segunda vuelta
+
+Lo de F se corrió en el teléfono **antes** de los tres últimos commits nativos, así que ese código
+tiene tests pero no pasó por el aparato. Esto es el repaso de **lo que cambió después**, nada más.
+
+| | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| G1 | En el hub nativo, sobre una regla con vencimiento futuro, tocar **«Ya lo pagué»** | Se abre una **hoja**, no registra de una. Viene con el **importe de la regla**, **su cuenta** y la fecha de **hoy** |
+| G2 | Cambiar los tres: otro importe, otra cuenta, otra fecha. Confirmar | El movimiento creado queda con **lo que escribiste**. La **regla no cambia** (sigue con su importe y su cuenta) y **la próxima fecha no se mueve** |
+| G3 | Volver a abrir la hoja y elegir una cuenta cuyo saldo no alcance | Aparece el **aviso de saldo negativo** debajo de la cuenta, y **deja confirmar igual** — avisa, no impide |
+| G4 | Abrir la hoja, escribir cualquier cosa y tocar **Cancelar**. Volver a abrirla | Cierra sin registrar nada, y **vuelve limpia** (con los valores de la regla otra vez) |
+| G5 | Después de confirmar G2 | Aparece el **acuse** debajo de la regla y el vencimiento **sale de «por revisar»** |
+| G6 | Entrar al detalle de una regla con un vencimiento **vinculado** | **«Desvincular» es un chip chico** pegado a la derecha, **sin ocupar una fila propia**. En cada fila del historial, **estado e importe van en un solo renglón** y el **importe al final**, alineado con los de arriba y abajo |
+| G7 | En el detalle de una regla con tope de vencimientos, mirar el recuadro del límite | Dice **«Restantes: 1»**, no «Restantes: 1 restantes» |
+| G8 | Detalle de una regla **compartida** | La línea de abajo del título dice **«Gasto · Mensual · Compartido»** |
+| G9 | Crear una regla nueva en nativo: confirmar **sin categoría** para que salte el error, y después **elegir la categoría** | El aviso **se va al elegirla**, sin tener que volver a confirmar. Lo mismo al corregir el importe o el destino de una transferencia |
 
 ---
 
@@ -146,7 +165,7 @@ algún movimiento resuelve más de un vencimiento.
 
 ## Resultado
 
-Al 19-09. Lo que no figura acá **no se corrió todavía**.
+Al 22-09. Lo que no figura acá **no se corrió todavía**.
 
 | Bloque | Estado |
 |---|---|
@@ -156,8 +175,9 @@ Al 19-09. Lo que no figura acá **no se corrió todavía**.
 | C | C1–C3 corridos en web |
 | D | **Completo: D1–D9 en verde.** **D6 encontró un defecto** (abajo), reparado por `0073` y re-corrido contra la base con la migración aplicada: la guarda bloqueó, el mensaje pidió revertir, y revertida la liquidación la desvinculación procedió. **D9** mostró el mensaje de «tiene que cancelarla ella» sobre una liquidación pendiente del otro miembro —el caso que más depende de `0073`, porque esa liquidación el usuario no la ve—. **D8** se corrió desde la otra cuenta —la app sólo deja registrar un pago a quien debe— con una regla compartida propia: dijo «cancelala», no «revertila», y al cancelar la liquidación la desvinculación procedió. Los tres mensajes quedaron verificados contra la base: revertir, cancelala vos, tiene que cancelarla ella |
 | E | E1, E2a, E2b y E3 corridos y en verde. **E2a encontró un defecto** (abajo). E4 no se corre en una sesión: pide desvincular un vencimiento cuya fecha ya pasó, y resolver por anticipado exige que sea futuro |
-| F | **Web a ancho de teléfono (360px): completo.** F1, F1b y F3 en verde a la primera. **F2 encontró un defecto** —la hoja de candidatos no scrolleaba— reparado. **F4 aceptado por inspección**, ver abajo. **Falta el nativo entero** |
-| Check SQL | Pendiente |
+| F | **Web a ancho de teléfono (360px): completo.** F1, F1b y F3 en verde a la primera. **F2 encontró un defecto** —la hoja de candidatos no scrolleaba— reparado. **F4 aceptado por inspección**, ver abajo. **Nativo corrido (22-09): N1–N6 en verde**, con tres defectos encontrados y reparados —«Ya lo pagué» registraba sin preguntar nada (F1b, divergencia eliminada), los chips de frecuencia no entraban, y las hojas de reglas sin historial no scrolleaban—. **Lo reparado ahí no volvió al teléfono: ver bloque G** |
+| G | **Pendiente.** Es el repaso del código nativo que salió DESPUÉS de la corrida de F |
+| Check SQL | **Corrido (22-09), sin hallazgos nuevos.** Cada ocurrencia quedó con la identidad que le corresponde (`created` las que crearon el movimiento, `linked` las señaladas), ningún movimiento resuelve más de un vencimiento, y las guardas contestan que no hay liquidación viva bloqueando. Las tres pendientes con fecha futura que aparecieron son las que este change hace posibles —una regla resuelta por anticipado deja el resto del calendario materializado— salvo una fila de «Prueba fecha futura», residuo de una revisión temprana del change: se borra borrando esa regla |
 
 **El defecto de D6.** Con una liquidación completada posterior al gasto, desvincular **funcionó** en
 vez de ser rechazado. Las guardas se evaluaban con los permisos de quien dispara la operación, y la
