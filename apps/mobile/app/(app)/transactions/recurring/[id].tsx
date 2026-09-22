@@ -200,6 +200,13 @@ export default function RecurrenceDetailScreen() {
               </Text>
               <Text className="mt-0.5 text-[13px] font-semibold text-text-muted">
                 {movementLabel(rule.movement_type, t)} · {frequencyLabel(rule.frequency, t)}
+                {/* QUE LA REGLA ES COMPARTIDA, dicho donde se lee. El dato ya
+                    estaba en la ficha —decide si vincular pide confirmación—
+                    pero no se mostraba, y una regla compartida le genera deuda a
+                    otra persona cada vez que se confirma un vencimiento. Va en
+                    esta misma línea, que es la que describe qué ES la regla.
+                    Gemelo de web, con la misma palabra que usa el feed. */}
+                {rule.household_id == null ? null : ` · ${t('transactions.list.shared_short')}`}
                 {/* THE DERIVED STATE, web's twin. `status` says what the user
                     did to the rule, and a rule that spent its limit still says
                     `active` — so this line said nothing while the list grouped

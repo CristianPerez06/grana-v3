@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Receipt,
   Repeat,
+  Users,
   Tag,
   Wallet,
 } from 'lucide-react'
@@ -259,6 +260,19 @@ export const RecurrenceDetail = ({ rule, back }: Props) => {
             )}
             {frequencyLabel}
           </span>
+          {/* QUE LA REGLA ES COMPARTIDA, dicho donde se lee. El dato ya estaba
+              en la ficha —lo usa para decidir si vincular pide confirmación—
+              pero no se mostraba: la única forma de enterarse era abrir la
+              edición o intentar vincular algo. Y una regla compartida le genera
+              deuda a otra persona cada vez que se confirma un vencimiento, así
+              que no es un detalle de configuración. Mismo chip que el feed de
+              vencimientos y que la fila de un movimiento compartido. */}
+          {rule.household_id != null && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-soft px-2.5 py-1 text-[11px] font-semibold text-slate">
+              <Users size={13} aria-hidden />
+              {tTx('list.shared_short')}
+            </span>
+          )}
           {/* THE DERIVED STATE, not the column. `status` says what the user did
               to the rule — and a rule that spent its limit still says `active`,
               so this chip showed nothing while the list grouped the same rule
