@@ -626,6 +626,21 @@ export function owedOccurrencesForRule({
  * Counting rows says a 6-cuota rule has cuotas left when it does not, and offers
  * a reference date for a rule that will never fire again.
  *
+ * A POSITION IS SPENT WHEN ITS DATE ARRIVES **OR** WHEN IT IS RESOLVED EARLY,
+ * whichever comes first — and once either way. The walk answers the first half;
+ * `resolvedAheadDueDates` carries the second: the vencimientos already resolved
+ * whose date has not arrived yet. Without them, someone who pays the 23rd on the
+ * 3rd sees «0 de 3» with one of the three already paid, and the avance lags by up
+ * to a whole interval.
+ *
+ * THE TWO HALVES ARE DISJOINT BY CONSTRUCTION, which is the only reason this can
+ * be a sum: the walk stops at `today`, so everything it counts is dated on or
+ * before it, and every date here is strictly after it. That property is what
+ * keeps a union from needing the walk to know about resolutions at all — and
+ * extending the walk past `today` instead would be a real hazard, because
+ * `owedOccurrencesForRule` shares it and has no upper-bound filter of its own: it
+ * would start materialising future occurrences.
+ *
  * Saturates at the cap, because a walk that reaches it stops there.
  */
 export function occurrencePositionsSpent(input: {
@@ -636,8 +651,14 @@ export function occurrencePositionsSpent(input: {
   today: string
   /** See `OwedOccurrencesForRuleInput.seedOccurrenceDate`. */
   seedOccurrenceDate: string | null
+  /**
+   * Vencimientos de la regla ya resueltos —confirmados u omitidos— cuya fecha
+   * todavía no llegó. Las que ya llegaron NO van acá: las cuenta la caminata, y
+   * pasarlas igual las contaría dos veces.
+   */
+  resolvedAheadDueDates?: Iterable<string>
 }): number {
-  return forEachComposedOccurrence(
+  const walked = forEachComposedOccurrence(
     {
       ...input,
       // Never clip the start: the horizon is the generator's "do not bother
@@ -647,6 +668,19 @@ export function occurrencePositionsSpent(input: {
     },
     () => {},
   )
+
+  const ahead = new Set<string>()
+  for (const date of input.resolvedAheadDueDates ?? []) {
+    // Strictly after today, or the walk already has it.
+    if (date <= input.today) continue
+    // The seed is counted by the walk on its own account — it is a real movement
+    // occupying that date. Adding it here would count one commitment twice.
+    if (date === input.seedOccurrenceDate) continue
+    ahead.add(date)
+  }
+
+  const total = walked + ahead.size
+  return input.maxOccurrences == null ? total : Math.min(total, input.maxOccurrences)
 }
 
 // ── Upcoming projection (pure) ───────────────────────────────────────────────

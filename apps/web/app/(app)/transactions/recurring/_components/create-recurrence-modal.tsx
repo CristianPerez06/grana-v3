@@ -240,11 +240,33 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
     setCurrencyCode(activeCurrencies[(idx + 1) % activeCurrencies.length])
   }
 
+  /**
+   * EL AVISO SE VA CUANDO SE CORRIGE LO QUE LO CAUSÓ, no recién al reenviar.
+   *
+   * Los errores de este formulario se setean en el envío, y hasta ahora se
+   * limpiaban sólo ahí: elegir la categoría que faltaba dejaba «Elegí una
+   * categoría» a la vista, con la categoría ya puesta. Un aviso que pide algo
+   * que ya se hizo es peor que ninguno — enseña a ignorarlos.
+   *
+   * Se limpia desde los tres campos que pueden causarlo: importe, categoría y
+   * cuenta de destino.
+   */
   const pickCategory = (catId: string, subId: string) => {
     setCategoryId(catId)
     setSubcategoryId(subId)
     setCatDrill(null)
     setActivePopover(null)
+    setFormError(null)
+  }
+
+  const editAmount = (next: string) => {
+    setAmount(next)
+    setFormError(null)
+  }
+
+  const pickDestination = (id: string) => {
+    setDestinationAccountId(id)
+    setFormError(null)
   }
 
   const reset = () => {
@@ -566,11 +588,11 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
                   id="rec-amount"
                   required
                   value={amount}
-                  onChange={setAmount}
+                  onChange={editAmount}
                   placeholder="0"
                   className={`w-full min-w-0 bg-transparent text-[30px] font-extrabold leading-none tracking-[-0.02em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
                 />
-                <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
+                <MoneyCalculatorPopover seed={amount} onResult={editAmount} className="shrink-0 self-center" />
               </div>
             </div>
 
@@ -614,7 +636,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
                     }
                   >
                     {renderAccountPicker(transferDestinations, destinationAccountId, (id) => {
-                      setDestinationAccountId(id)
+                      pickDestination(id)
                       setActivePopover(null)
                     })}
                   </Popover>

@@ -482,19 +482,28 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
                     <p className="mt-0.5 truncate text-[11.5px] font-medium text-text-muted">{subtitle(e)}</p>
                     {/* mobile: qué cambia inline */}
                     <p className="mt-0.5 text-[11px] font-semibold text-text-soft sm:hidden">{changeCopy(e)}</p>
-                    {/* revertir — solo settlements vivos (completada/pendiente) */}
+                    {/* Deshacer — sólo settlements vivos (completada/pendiente).
+                        EL NOMBRE DEPENDE DEL ESTADO: una completada se REVIERTE
+                        (deja su contraasiento), una pendiente se CANCELA (nunca
+                        llegó a mover plata). La operación es la misma de este
+                        lado, pero llamarlas igual rompe el único consejo que el
+                        sistema da cuando una liquidación traba algo: los
+                        mensajes dicen «cancelala» y acá no había ningún botón
+                        con ese nombre. */}
                     {e.kind === 'settlement' &&
                       (e.state === 'completed' || e.state === 'pending') &&
                       (confirmRevertId === e.id ? (
                         <span className="mt-1 inline-flex items-center gap-2 text-[11px] font-bold">
-                          <span className="text-text-muted">{t('revert_confirm')}</span>
+                          <span className="text-text-muted">
+                            {e.state === 'pending' ? t('cancel_confirm') : t('revert_confirm')}
+                          </span>
                           <button
                             type="button"
                             onClick={() => handleRevert(e.id)}
                             disabled={isReverting}
                             className="text-expense hover:underline disabled:opacity-50"
                           >
-                            {t('revert_yes')}
+                            {e.state === 'pending' ? t('cancel_yes') : t('revert_yes')}
                           </button>
                           <button
                             type="button"
@@ -510,7 +519,7 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
                           onClick={() => setConfirmRevertId(e.id)}
                           className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-slate hover:underline"
                         >
-                          <Undo2 size={12} /> {t('revert')}
+                          <Undo2 size={12} /> {e.state === 'pending' ? t('cancel') : t('revert')}
                         </button>
                       ))}
                   </div>

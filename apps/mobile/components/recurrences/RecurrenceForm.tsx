@@ -137,6 +137,27 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
     }
   }
 
+  /**
+   * EL AVISO SE VA CUANDO SE CORRIGE LO QUE LO CAUSÓ, no recién al reenviar.
+   * Gemelo de web: los errores se setean en el envío, y elegir la categoría que
+   * faltaba dejaba «Elegí una categoría» a la vista con la categoría ya puesta.
+   */
+  const pickCategory = (cat: string, sub: string) => {
+    setCategoryId(cat)
+    setSubcategoryId(sub)
+    setFormError(null)
+  }
+
+  const editAmount = (next: string) => {
+    setAmount(next)
+    setFormError(null)
+  }
+
+  const pickDestination = (id: string) => {
+    setDestinationAccountId(id)
+    setFormError(null)
+  }
+
   const handleAccountChange = (id: string) => {
     setAccountId(id)
     const account = accounts.find((a) => a.id === id)
@@ -253,7 +274,7 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
       {/* Amount (+ currency when the account has both) */}
       <View className="flex-col gap-1.5">
         <Label>{t('transactions.form.amount_label')}</Label>
-        <MoneyAmountInput value={amount} onChangeText={setAmount} placeholder="0" />
+        <MoneyAmountInput value={amount} onChangeText={editAmount} placeholder="0" />
         {activeCurrencies.length > 1 && (
           <View className="pt-1">
             <Segmented
@@ -280,7 +301,7 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
           label={t('transactions.form.destination_label')}
           accounts={transferDestinations}
           selectedId={destinationAccountId}
-          onSelect={setDestinationAccountId}
+          onSelect={pickDestination}
         />
       )}
 
@@ -290,10 +311,7 @@ export function RecurrenceForm({ accounts, categories, household, onDone }: Prop
           categories={categoryList}
           categoryId={categoryId}
           subcategoryId={subcategoryId}
-          onPick={(cat, sub) => {
-            setCategoryId(cat)
-            setSubcategoryId(sub)
-          }}
+          onPick={pickCategory}
         />
       )}
 

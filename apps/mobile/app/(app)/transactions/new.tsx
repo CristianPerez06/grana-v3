@@ -4,8 +4,8 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { getAccounts } from '@grana/accounts'
 import { getTodayAR } from '@grana/money-logic'
-import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { MovementFormAccount } from '@grana/movement-form'
+import { toMovementFormAccounts } from '../../../lib/accounts/form-accounts'
 import { FormScreen } from '../../../components/layout/FormScreen'
 import { MovementForm } from '../../../components/transactions/MovementForm'
 import { MovementFormSkeleton } from '../../../components/transactions/MovementFormSkeleton'
@@ -14,13 +14,6 @@ import { getFrequentClassifications } from '../../../lib/transactions/frequent-c
 import { getHousehold } from '../../../lib/shared/queries'
 import { supabase } from '../../../lib/supabase'
 import { useT } from '../../../lib/locale-context'
-
-type AccountCurrency = { currency_code: string; is_active: boolean }
-
-const activeCodes = (currencies: AccountCurrency[]): ('ARS' | 'USD')[] =>
-  currencies
-    .filter((c) => c.is_active && (c.currency_code === 'ARS' || c.currency_code === 'USD'))
-    .map((c) => c.currency_code as 'ARS' | 'USD')
 
 // `/transactions/new` — the alta screen. Loads the form's data inputs (all
 // accounts incl. credit, category tree, household) and hands them to the shared
@@ -65,37 +58,10 @@ export default function NewMovementScreen() {
   // Project the grouped accounts onto the form's account shape — mirror of the
   // web movement-drawer-loader. Credit cards are off-ledger, so their balances
   // are {0,0} and the negative-balance warning never applies to them.
-  const accounts = useMemo<MovementFormAccount[]>(() => {
-    const grouped = accountsQ.data
-    if (!grouped) return []
-    return [
-      ...[...grouped.cash, ...grouped.bank].map((a) => ({
-        id: a.id,
-        name: a.name,
-        type: a.type as 'cash' | 'bank',
-        activeCurrencies: activeCodes(a.currencies),
-        balances: a.balances,
-        institutionId: a.institution_id ?? null,
-        institutionName: a.institution?.name ?? null,
-        avatar: a.avatar,
-      })),
-      ...grouped.credit.map((c) => ({
-        id: c.id,
-        name: c.name,
-        type: 'credit' as const,
-        activeCurrencies: activeCodes(c.currencies),
-        balances: { ARS: 0, USD: 0 },
-        institutionId: c.institution_id ?? null,
-        institutionName: c.institution?.name ?? null,
-        // Resolve the avatar like cash/bank do, so each card inherits its
-        // institution's brand color instead of the default fallback.
-        avatar: resolveAccountAvatar(
-          { id: c.id, name: c.name, type: 'credit', color_key: c.color_key, icon_key: c.icon_key },
-          c.institution,
-        ),
-      })),
-    ]
-  }, [accountsQ.data])
+  const accounts = useMemo<MovementFormAccount[]>(
+    () => toMovementFormAccounts(accountsQ.data),
+    [accountsQ.data],
+  )
 
   const ready = accountsQ.isSuccess && categoriesQ.isSuccess && householdQ.isSuccess
   const failed = accountsQ.isError || categoriesQ.isError || householdQ.isError

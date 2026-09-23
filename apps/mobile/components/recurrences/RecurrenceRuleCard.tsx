@@ -5,6 +5,7 @@ import { colors } from '../../lib/colors'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
+import { ResolveAheadActions } from './ResolveAheadActions'
 import {
   amountSign,
   amountToneClass,
@@ -20,7 +21,9 @@ type Tab = 'active' | 'paused' | 'finished'
 // with native primitives: category-tinted tile (or a Repeat glyph for
 // transfers), title (description → category → type), a frequency badge, a meta
 // line (next occurrence + account), the tonal amount, and — on the active tab —
-// the "próximo {date}" caption. Read-only; tapping opens the rule detail.
+// the "próximo {date}" caption. Tapping the row opens the rule detail; below
+// it, an active rule with a next date offers the two ways to resolve that date
+// before it arrives (web's hub does the same under each upcoming row).
 export function RecurrenceRuleCard({
   rule,
   tab,
@@ -78,7 +81,12 @@ export function RecurrenceRuleCard({
       ? formatShortDate(rule.next_occurrence, locale)
       : null
 
+  // The actions sit OUTSIDE the row's Pressable: a Button inside a Pressable
+  // makes both claim the touch, and the row's navigation would swallow the tap.
+  const showActions = tab === 'active' && rule.status === 'active' && rule.next_occurrence != null
+
   return (
+    <View>
     <Pressable
       onPress={onPress}
       className="flex-row items-center gap-3 rounded-2xl px-3.5 py-3.5 active:bg-page"
@@ -136,5 +144,20 @@ export function RecurrenceRuleCard({
         <ChevronRight size={18} color="#B8C0CA" />
       </View>
     </Pressable>
+    {showActions && rule.next_occurrence ? (
+      <View className="px-3.5 pb-3.5">
+        <ResolveAheadActions
+          recurrenceId={rule.id}
+          dueDate={rule.next_occurrence}
+          ruleAmount={Number(rule.amount)}
+          ruleCurrency={rule.currency_code}
+          movementType={rule.movement_type}
+          ruleAccountId={rule.account_id}
+          transferDestinationAccountId={rule.transfer_destination_account_id}
+          shared={rule.household_id != null}
+        />
+      </View>
+    ) : null}
+    </View>
   )
 }

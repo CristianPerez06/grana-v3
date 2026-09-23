@@ -17,7 +17,7 @@ import {
   confirmRecurrenceInstance,
   skipRecurrenceInstance,
 } from '../../lib/recurrences/mutators'
-import { invalidateAfterRecurrenceConfirm } from '../../lib/recurrences/invalidate'
+import { invalidateAfterRecurrenceResolution } from '../../lib/recurrences/invalidate'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { colors } from '../../lib/colors'
@@ -265,7 +265,7 @@ export function PendingRecurrencesBlock() {
           : 'recurrences.pending.skipped_success',
       ),
     )
-    invalidateAfterRecurrenceConfirm(queryClient)
+    invalidateAfterRecurrenceResolution(queryClient)
   }
 
   // RN has no `spread` on shadows, so web's 4px gold halo becomes a real ring:

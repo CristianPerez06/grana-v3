@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Receipt,
   Repeat,
+  Users,
   Tag,
   Wallet,
 } from 'lucide-react'
@@ -18,31 +19,29 @@ import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { recurrenceTitle } from '@grana/recurrences'
 import { useShowCents } from '@/lib/preferences-context'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
+import { formatShortDate } from '@/lib/date'
 import type { RecurrenceDetail as RecurrenceDetailType } from '@/lib/recurrences/types'
+import { DetailTopbar } from '../../../_components/detail-topbar'
+import { ResolveAheadActions } from '../../_components/resolve-ahead-actions'
 import { RecurrenceActions } from './recurrence-actions'
 import { RecurrenceEditDrawer } from './recurrence-edit-drawer'
 
 type Props = {
   rule: RecurrenceDetailType
-}
-
-// Parse a 'YYYY-MM-DD' calendar date locally (avoids the UTC shift a bare
-// `new Date(iso)` would introduce).
-const formatCalendarDate = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
+  /** Adónde vuelve el «‹»: al hub, o al movimiento desde el que se abrió. */
+  back: { href: string; label: string }
 }
 
 // `created_at` is an instant (ISO timestamp), not a bare calendar date: render
 // the AR calendar day it fell on so the date doesn't drift across midnight UTC.
+//
+// MES DE TRES LETRAS, como el resto de la pantalla y como la ficha nativa. El
+// mes entero partía «20 de diciembre de 2026» en tres renglones a ancho de
+// teléfono y dejaba esas filas el doble de altas que las demás.
 const formatTimestamp = (iso: string) =>
   new Date(iso).toLocaleDateString('es-AR', {
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     year: 'numeric',
     timeZone: 'America/Argentina/Buenos_Aires',
   })
@@ -74,7 +73,7 @@ const iconFor = (key: string): ReactNode => {
  * in the header, and editing happens in a drawer. The generated-instances list
  * renders below this (owned by the page).
  */
-export const RecurrenceDetail = ({ rule }: Props) => {
+export const RecurrenceDetail = ({ rule, back }: Props) => {
   const showCents = useShowCents()
   const t = useTranslations('recurrences')
   const tTx = useTranslations('transactions')
@@ -153,14 +152,14 @@ export const RecurrenceDetail = ({ rule }: Props) => {
     rows.push({
       key: 'next_date',
       label: t('labels.next_date'),
-      value: formatCalendarDate(rule.next_occurrence),
+      value: formatShortDate(rule.next_occurrence),
     })
   }
   if (rule.end_date) {
     rows.push({
       key: 'end_date',
       label: t('labels.end_date'),
-      value: formatCalendarDate(rule.end_date),
+      value: formatShortDate(rule.end_date),
     })
   }
 
@@ -210,7 +209,7 @@ export const RecurrenceDetail = ({ rule }: Props) => {
       rows.push({
         key: 'last_expected',
         label: t('limit.last_expected'),
-        value: formatCalendarDate(last.date),
+        value: formatShortDate(last.date),
       })
     } else if (last.kind === 'unknown-while-paused') {
       rows.push({
@@ -239,11 +238,19 @@ export const RecurrenceDetail = ({ rule }: Props) => {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <RecurrenceActions rule={rule} onEdit={() => setEditOpen(true)} />
+    <div>
+      {/* Volver y acciones en UNA fila, como en la ficha de un movimiento. Fuera
+          del contenedor con `gap-4`: el topbar trae su propio margen inferior,
+          y sumarle el gap devolvía el hueco que esto saca. */}
+      <DetailTopbar
+        backHref={back.href}
+        backLabel={back.label}
+        actions={<RecurrenceActions rule={rule} onEdit={() => setEditOpen(true)} />}
+      />
 
+    <div className="flex flex-col gap-4">
       {/* Hero: amount leads, with the rule's narrative and type/frequency below */}
-      <div className="flex flex-col items-center gap-2 px-4 pt-2 text-center">
+      <div className="flex flex-col items-center gap-2 px-4 text-center">
         <div className="flex flex-wrap items-center justify-center gap-1.5">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/50 px-2.5 py-1 text-[11px] font-semibold text-text-muted">
             {type === 'transfer' ? (
@@ -253,6 +260,19 @@ export const RecurrenceDetail = ({ rule }: Props) => {
             )}
             {frequencyLabel}
           </span>
+          {/* QUE LA REGLA ES COMPARTIDA, dicho donde se lee. El dato ya estaba
+              en la ficha —lo usa para decidir si vincular pide confirmación—
+              pero no se mostraba: la única forma de enterarse era abrir la
+              edición o intentar vincular algo. Y una regla compartida le genera
+              deuda a otra persona cada vez que se confirma un vencimiento, así
+              que no es un detalle de configuración. Mismo chip que el feed de
+              vencimientos y que la fila de un movimiento compartido. */}
+          {rule.household_id != null && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-soft px-2.5 py-1 text-[11px] font-semibold text-slate">
+              <Users size={13} aria-hidden />
+              {tTx('list.shared_short')}
+            </span>
+          )}
           {/* THE DERIVED STATE, not the column. `status` says what the user did
               to the rule — and a rule that spent its limit still says `active`,
               so this chip showed nothing while the list grouped the same rule
@@ -301,7 +321,25 @@ export const RecurrenceDetail = ({ rule }: Props) => {
         })}
       </div>
 
+      {/* THE TWO WAYS OUT FOR A DUE DATE THAT HAS NOT ARRIVED — the hub's twin,
+          on the rule's own page. Without it, someone who pays the rent on the
+          3rd has to go back to the hub or wait for the 23rd, and this is the
+          screen that names that date. Same commit as the native detail. */}
+      {rule.next_occurrence && rule.status === 'active' && (
+        <ResolveAheadActions
+          recurrenceId={rule.id}
+          dueDate={rule.next_occurrence}
+          ruleAmount={Number(rule.amount)}
+          ruleCurrency={rule.currency_code}
+          movementType={rule.movement_type as 'expense' | 'income' | 'transfer'}
+          ruleAccountId={rule.account?.id ?? null}
+          transferDestinationAccountId={rule.transfer_destination_account_id ?? null}
+          shared={rule.household_id != null}
+        />
+      )}
+
       <RecurrenceEditDrawer rule={rule} open={editOpen} onClose={() => setEditOpen(false)} />
+    </div>
     </div>
   )
 }

@@ -24,6 +24,7 @@ const base: RecurrenceLifecycleInput = {
   maxOccurrences: null,
   positionsSpent: 0,
   unresolvedCount: 0,
+  hasUnresolvedAhead: false,
 }
 
 describe('the state a recurrence is shown in', () => {
@@ -98,6 +99,39 @@ describe('the state a recurrence is shown in', () => {
       expect(result.progress).toEqual(progress)
     })
   }
+
+  it('una regla con un vencimiento futuro sin resolver NO está finalizada', () => {
+    // El caso del QA: plan de tres, las tres posiciones ya materializadas —dos
+    // resueltas por anticipado y la del medio sin resolver, en noviembre—. El
+    // calendario no va a producir nada nuevo, pero a esa regla le queda un
+    // vencimiento por delante: llamarla «Finalizada» es decir que no va a pasar
+    // nada más cuando en noviembre vuelve a vencer.
+    const result = deriveRecurrenceLifecycle({
+      ...base,
+      maxOccurrences: 3,
+      positionsSpent: 2,
+      hasFutureOccurrence: false,
+      unresolvedCount: 1,
+      hasUnresolvedAhead: true,
+    })
+
+    expect(result.state).toBe('active')
+  })
+
+  it('sigue finalizada cuando lo que queda sin resolver ya venció', () => {
+    // La distinción: un pendiente ATRASADO no le devuelve futuro a la regla.
+    // Sigue terminada, con trabajo pendiente — que es lo que dice ese estado.
+    const result = deriveRecurrenceLifecycle({
+      ...base,
+      maxOccurrences: 3,
+      positionsSpent: 3,
+      hasFutureOccurrence: false,
+      unresolvedCount: 1,
+      hasUnresolvedAhead: false,
+    })
+
+    expect(result.state).toBe('finished-with-pending')
+  })
 
   it('saturates a limit edited below what was already spent', () => {
     // Nothing should ever read "12 de 11", and nothing should owe -1.
@@ -186,6 +220,57 @@ describe('the last expected occurrence', () => {
     // Same eleven positions — the one spent in September plus the ten that
     // remain — with the last one on the corrected day.
     expect(result).toEqual({ kind: 'date', date: '2027-07-08' })
+  })
+
+  it('no vuelve a caminar una posición que se resolvió antes de su fecha', () => {
+    // El caso del QA: plan de tres, hoy 21/09, y el usuario paga por anticipado
+    // el vencimiento del 10/10 —que sigue siendo futuro—. `positionsSpent` ya lo
+    // cuenta, y el calendario también lo tiene por delante: contarlo de las dos
+    // formas hace terminar el plan un mes antes de lo que termina.
+    const result = lastExpectedOccurrence({
+      rule: { ...monthlyOnThe10th, max_occurrences: 3 },
+      today: '2026-09-21',
+      maxOccurrences: 3,
+      positionsSpent: 1,
+      hasOpenPause: false,
+      resolvedAhead: ['2026-10-10'],
+    })
+
+    // Oct (resuelto por anticipado), Nov y Dic. El último sigue siendo el de
+    // diciembre: gastar una posición antes no acorta el plan.
+    expect(result).toEqual({ kind: 'date', date: '2026-12-10' })
+  })
+
+  it('resolver fuera de orden no adelanta el final del plan', () => {
+    // El segundo hallazgo del QA: plan de tres —Oct, Nov, Dic—, con octubre y
+    // DICIEMBRE resueltos por anticipado y noviembre todavía pendiente. Lo único
+    // que queda por venir es noviembre, pero el plan termina en diciembre.
+    const result = lastExpectedOccurrence({
+      rule: { ...monthlyOnThe10th, max_occurrences: 3 },
+      today: '2026-09-21',
+      maxOccurrences: 3,
+      positionsSpent: 2,
+      hasOpenPause: false,
+      resolvedAhead: ['2026-10-10', '2026-12-10'],
+    })
+
+    expect(result).toEqual({ kind: 'date', date: '2026-12-10' })
+  })
+
+  it('una pendiente futura NO se saltea: su posición todavía no se gastó', () => {
+    // La diferencia fina con el caso de arriba. Una ocurrencia que existe pero
+    // sigue sin resolver gastará su posición cuando llegue su fecha, así que el
+    // conteo normativo todavía no la suma y el caminante tiene que producirla.
+    const result = lastExpectedOccurrence({
+      rule: { ...monthlyOnThe10th, max_occurrences: 3 },
+      today: '2026-09-21',
+      maxOccurrences: 3,
+      positionsSpent: 0,
+      hasOpenPause: false,
+      resolvedAhead: [],
+    })
+
+    expect(result).toEqual({ kind: 'date', date: '2026-12-10' })
   })
 
   it('refuses to name a date while a pause is open', () => {

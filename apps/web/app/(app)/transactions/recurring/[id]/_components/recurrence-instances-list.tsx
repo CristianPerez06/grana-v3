@@ -1,7 +1,9 @@
 import { getTranslations } from 'next-intl/server'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatShortDate } from '@/lib/date'
+import { canUnlink } from '@grana/recurrences'
 import type { EnrichedRecurrenceInstance } from '@/lib/recurrences/types'
+import { UnlinkInstanceButton } from './unlink-instance-button'
 
 type Props = {
   /**
@@ -26,6 +28,7 @@ const statusClass: Record<string, string> = {
  */
 export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props) => {
   const tRec = await getTranslations('recurrences')
+  const tLink = await getTranslations('recurrences.link')
 
   const fmtAmount = (amount: number) =>
     currencyCode === 'ARS' ? formatARS(amount, false) : formatUSD(amount, false)
@@ -41,12 +44,22 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
       ) : (
         <ul className="flex flex-col gap-2">
           {instances.map((instance) => (
+            // UNA fila que se parte sola. El botón entra al lado del importe
+            // cuando hay ancho —en web, la mayoría de las veces— y baja a su
+            // propio renglón, alineado a la derecha, cuando no entra.
+            //
+            // Lo decide `basis-56` sobre el bloque de datos, no un breakpoint:
+            // el piso de ancho que ese bloque reclama es lo que empuja al botón
+            // abajo, así que la fila reacciona al espacio que tiene y no a la
+            // medida de la pantalla. Un botón peleando el ancho sin ese piso es
+            // lo que antes partía la fecha en cuatro renglones.
             <li
               key={instance.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3"
+              className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-card px-4 py-3"
             >
+              <div className="flex min-w-0 flex-1 basis-56 items-center justify-between gap-3">
               <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-sm font-semibold text-text">
+                <span className="whitespace-nowrap text-sm font-semibold text-text">
                   {formatShortDate(instance.scheduled_date)}
                 </span>
                 {instance.description && (
@@ -54,8 +67,21 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
                     {instance.description}
                   </span>
                 )}
+                {/* Vinculado, no originado: el movimiento existía antes. */}
+                {instance.resolution_kind === 'linked' && (
+                  <span className="text-[11px] font-medium text-text-soft">
+                    {tLink('label_linked')}
+                  </span>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-2.5">
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    statusClass[instance.status] ?? statusClass.skipped
+                  }`}
+                >
+                  {tRec(`instance_statuses.${instance.status}`)}
+                </span>
                 {(() => {
                   // Amount tone mirrors the rest of the app: income emerald (+),
                   // expense terracotta (−), transfer navy (no sign).
@@ -74,14 +100,11 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
                     </span>
                   )
                 })()}
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    statusClass[instance.status] ?? statusClass.skipped
-                  }`}
-                >
-                  {tRec(`instance_statuses.${instance.status}`)}
-                </span>
               </div>
+              </div>
+              {/* Sólo sobre lo que el usuario vinculó: sobre un pago que creó
+                  la recurrencia, deshacer sería BORRAR ese movimiento. */}
+              {canUnlink(instance) && <UnlinkInstanceButton instanceId={instance.id} />}
             </li>
           ))}
         </ul>

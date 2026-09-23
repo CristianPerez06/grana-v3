@@ -59,18 +59,38 @@ type RecurrenceRow = Omit<
   | 'last_expected_occurrence'
 >
 
+/**
+ * Una ocurrencia que la regla YA TIENE de hoy en adelante, con lo único que hay
+ * que saber de ella acá: si está resuelta.
+ *
+ * Lleva el estado y no sólo la fecha porque dos lecturas distintas la necesitan
+ * distinta: «qué fechas ya existen» —para no anunciar como próxima una que ya
+ * está— usa todas, y «dónde termina el plan» tiene que saltear las que se
+ * resolvieron antes de tiempo, que el conteo normativo ya dio por gastadas.
+ */
+type UpcomingOccurrence = { date: string; resolved: boolean }
+
 function mapRecurrenceSummary(
   recurrence: RecurrenceRow,
   pendingByRecurrenceId: Map<string, PendingInstance[]>,
-  upcomingByRecurrenceId: Map<string, string[]>,
+  upcomingByRecurrenceId: Map<string, UpcomingOccurrence[]>,
   today: string,
   positionsSpentByRecurrenceId: Map<string, number>,
 ): RecurrenceSummary {
+  const upcoming = upcomingByRecurrenceId.get(recurrence.id) ?? []
   const covered = coveredOccurrences({
     seedOccurrenceDate: recurrence.seed_occurrence_date,
     seededFromMovement: recurrence.created_from_transaction_id != null,
-    existing: upcomingByRecurrenceId.get(recurrence.id) ?? [],
+    existing: upcoming.map((occurrence) => occurrence.date),
   })
+  // Resueltas y todavía futuras: las únicas posiciones que están gastadas Y
+  // siguen por delante en el calendario. `recurrence_positions_spent` las suma
+  // aparte, con este mismo criterio (resuelta y con fecha estrictamente mayor
+  // que hoy), así que la proyección tiene que descontarlas o las cuenta dos
+  // veces y el plan termina un mes antes.
+  const resolvedAhead = upcoming
+    .filter((occurrence) => occurrence.resolved && occurrence.date > today)
+    .map((occurrence) => occurrence.date)
 
   // ONE schedule object for every question asked below. The "próximo", whether
   // anything is left and where the rule ends are three readings of the same
@@ -125,6 +145,12 @@ function mapRecurrenceSummary(
       maxOccurrences: recurrence.max_occurrences,
       positionsSpent,
       unresolvedCount: pending.length,
+      // Una ocurrencia que YA EXISTE y todavía no venció. Antes de que se
+      // pudiera resolver por anticipado no había ninguna: materializar sólo
+      // llegaba hasta hoy, así que «existe» implicaba «ya pasó».
+      hasUnresolvedAhead: pending.some(
+        (instance) => (instance.due_date ?? instance.scheduled_date) > today,
+      ),
     }),
     last_expected_occurrence: lastExpectedOccurrence({
       rule: schedule,
@@ -135,6 +161,7 @@ function mapRecurrenceSummary(
       // rule is paused and closed when it resumes, so the column says it without
       // a second read.
       hasOpenPause: recurrence.status === 'paused',
+      resolvedAhead,
     }),
   }
 }
@@ -150,14 +177,18 @@ async function getUpcomingOccurrenceDates(
   supabase: GranaSupabaseClient,
   recurrenceIds: string[],
   since: string,
-): Promise<Map<string, string[]>> {
-  const byRule = new Map<string, string[]>()
+): Promise<Map<string, UpcomingOccurrence[]>> {
+  const byRule = new Map<string, UpcomingOccurrence[]>()
   if (recurrenceIds.length === 0) return byRule
 
-  const { data, error } = await selectAllPages<{ recurrence_id: string; due_date: string }>(() =>
+  const { data, error } = await selectAllPages<{
+    recurrence_id: string
+    due_date: string
+    status: string
+  }>(() =>
     supabase
       .from('recurrence_instances')
-      .select('recurrence_id, due_date')
+      .select('recurrence_id, due_date, status')
       .in('recurrence_id', recurrenceIds)
       .not('due_date', 'is', null)
       .gte('due_date', since)
@@ -167,12 +198,21 @@ async function getUpcomingOccurrenceDates(
   if (error) throw error
 
   for (const row of data) {
+    const occurrence = { date: row.due_date, resolved: isResolvedStatus(row.status) }
     const list = byRule.get(row.recurrence_id)
-    if (list == null) byRule.set(row.recurrence_id, [row.due_date])
-    else list.push(row.due_date)
+    if (list == null) byRule.set(row.recurrence_id, [occurrence])
+    else list.push(occurrence)
   }
   return byRule
 }
+
+/**
+ * Las dos formas de estar resuelta, con la misma definición que usa
+ * `recurrence_positions_spent`: confirmada o omitida. `pending` no gasta nada
+ * —devolver una ocurrencia a revisión antes de su fecha libera la posición—.
+ */
+const isResolvedStatus = (status: string): boolean =>
+  status === 'confirmed' || status === 'skipped'
 
 /**
  * How many positions of its calendar each rule has spent — ALL of them in ONE
@@ -523,7 +563,10 @@ export async function getRecurrenceDetail(
         id,
         instances
           .filter((instance) => instance.due_date != null && instance.due_date >= today)
-          .map((instance) => instance.due_date as string),
+          .map((instance) => ({
+            date: instance.due_date as string,
+            resolved: isResolvedStatus(instance.status),
+          })),
       ],
     ]),
     today,
@@ -590,11 +633,20 @@ export async function getRecurrenceLinkForTransaction(
   recurrence_id: string
   movement_type: string
   frequency: string
+  /**
+   * CÓMO se resolvió la ocurrencia. Un movimiento que existía ANTES no fue
+   * originado por la recurrencia —el usuario lo cargó por su cuenta— y llamarlo
+   * «originado» hace que dos filas idénticas en pantalla se comporten distinto
+   * sin explicación. Es además la misma distinción que decide qué acción de
+   * deshacer se ofrece.
+   */
+  resolution_kind: string | null
 } | null> {
   const { data: instance, error } = await supabase
     .from('recurrence_instances')
     .select(`
       recurrence_id,
+      resolution_kind,
       recurrence:recurrences!inner(movement_type, frequency)
     `)
     .eq('confirmed_transaction_id', transactionId)
@@ -610,6 +662,7 @@ export async function getRecurrenceLinkForTransaction(
     recurrence_id: instance.recurrence_id as string,
     movement_type: recurrence.movement_type,
     frequency: recurrence.frequency,
+    resolution_kind: (instance.resolution_kind as string | null) ?? null,
   }
 }
 
@@ -1328,7 +1381,7 @@ export async function getDuplicateRulesFor(
         coveredOccurrences({
           seedOccurrenceDate: rule.seed_occurrence_date,
           seededFromMovement: rule.created_from_transaction_id != null,
-          existing: upcoming.get(rule.id) ?? [],
+          existing: (upcoming.get(rule.id) ?? []).map((occurrence) => occurrence.date),
         }),
       ),
     })),

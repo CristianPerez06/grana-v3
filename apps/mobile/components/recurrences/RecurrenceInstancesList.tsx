@@ -1,8 +1,14 @@
+import { useState } from 'react'
 import { Text, View } from 'react-native'
-import type {
-  EnrichedRecurrenceInstance,
-  RecurrenceInstanceStatus,
+import {
+  canUnlink,
+  type EnrichedRecurrenceInstance,
+  type RecurrenceInstanceStatus,
 } from '@grana/recurrences'
+import { useQueryClient } from '@tanstack/react-query'
+import { Button } from '../ui/Button'
+import { invalidateAfterRecurrenceResolution } from '../../lib/recurrences/invalidate'
+import { unlinkMovementFromRecurrence } from '../../lib/recurrences/mutators'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
@@ -30,6 +36,26 @@ export function RecurrenceInstancesList({
   const t = useT()
   const locale = useLocale()
   const showCents = useShowCents()
+  const [pendingId, setPendingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+  const queryClient = useQueryClient()
+
+  const unlink = async (instanceId: string) => {
+    setError(null)
+    setDone(false)
+    setPendingId(instanceId)
+    const result = await unlinkMovementFromRecurrence(instanceId, t)
+    setPendingId(null)
+    if (!result.ok) {
+      setError(result.formError)
+      return
+    }
+    setDone(true)
+    // Desvincular suelta un movimiento real y puede devolverlo a personal: el
+    // saldo, el feed y la deuda del hogar cambian con él.
+    invalidateAfterRecurrenceResolution(queryClient)
+  }
 
   return (
     <View className="gap-3">
@@ -45,12 +71,13 @@ export function RecurrenceInstancesList({
       ) : (
         <View className="overflow-hidden rounded-2xl border border-border bg-card">
           {instances.map((instance, i) => (
+            // DOS PISOS, como en web: el botón abajo, no disputando el ancho
+            // con la fecha y el importe.
             <View
               key={instance.id}
-              className={`flex-row items-center justify-between px-4 py-3 ${
-                i > 0 ? 'border-t border-border-soft' : ''
-              }`}
+              className={`gap-2 px-4 py-3 ${i > 0 ? 'border-t border-border-soft' : ''}`}
             >
+              <View className="flex-row items-center justify-between">
               <View className="min-w-0 flex-1 pr-3">
                 <Text className="text-[14px] font-semibold text-text">
                   {formatShortDate(instance.scheduled_date, locale)}
@@ -60,19 +87,53 @@ export function RecurrenceInstancesList({
                     {instance.description}
                   </Text>
                 ) : null}
+                {/* Vinculado, no originado: el movimiento existía antes. */}
+                {instance.resolution_kind === 'linked' ? (
+                  <Text className="text-[11px] text-text-soft">
+                    {t('recurrences.link.label_linked')}
+                  </Text>
+                ) : null}
               </View>
-              <View className="items-end">
-                <Text className="text-[14px] font-bold text-text">
-                  {fmtMoney(Number(instance.amount), instance.currency_code, showCents)}
-                </Text>
+              {/* Estado e importe en UNA línea, y el importe ÚLTIMO: apilados
+                  hacían la fila el doble de alta, y con el estado al final los
+                  números dejaban de alinearse entre sí —que es lo único que se
+                  compara de un vistazo en una lista de importes—. */}
+              <View className="flex-row items-center gap-2">
                 <Text className={`text-[11px] font-bold ${STATUS_TONE[instance.status]}`}>
                   {t(`recurrences.instance_statuses.${instance.status}`)}
                 </Text>
+                <Text className="text-[14px] font-bold text-text">
+                  {fmtMoney(Number(instance.amount), instance.currency_code, showCents)}
+                </Text>
               </View>
+              </View>
+              {/* Sólo sobre lo que el usuario vinculó: sobre un pago que creó
+                  la recurrencia, deshacer sería BORRAR ese movimiento. */}
+              {canUnlink(instance) ? (
+                <View className="flex-row justify-end">
+                  <Button
+                    variant="secondary"
+                    size="2xs"
+                    onPress={() => unlink(instance.id)}
+                    disabled={pendingId === instance.id}
+                  >
+                    {pendingId === instance.id
+                      ? t('recurrences.link.unlinking')
+                      : t('recurrences.link.unlink')}
+                  </Button>
+                </View>
+              ) : null}
             </View>
           ))}
         </View>
       )}
+      {error ? <Text className="text-[13px] text-terracotta">{error}</Text> : null}
+      {/* El acuse: la ocurrencia se queda en pantalla, vuelta a «por revisar». */}
+      {done ? (
+        <Text className="text-[13px] text-emerald-deep">
+          {t('recurrences.link.unlinked_success')}
+        </Text>
+      ) : null}
     </View>
   )
 }

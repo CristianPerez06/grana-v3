@@ -15,11 +15,11 @@ Las queries de Supabase **no** viven acá — viven en el `lib/` de cada app, po
 |---|---|
 | `createClient(url, anonKey, options?)` | Envuelve `@supabase/supabase-js` ya tipado con `Database`. Las apps le pasan su config y wrapping de auth. |
 | `GranaSupabaseClient` | `SupabaseClient<Database>` — el tipo del cliente, para anotar funciones que reciben un client. |
-| `Database` | Tipos generados del esquema remoto. |
+| `Database` | Los tipos del esquema remoto, escritos a mano (ver Reglas). |
 
 ## Reglas
 
-- **`src/types.ts` es generado, no editado a mano.** Se regenera con `supabase gen types typescript --project-id <id>` contra el proyecto remoto. Ver "Migrations are the schema truth" y "Supabase is online-only" en `AGENTS.md`.
+- **`src/types.ts` se mantiene A MANO.** El proyecto no usa la CLI de Supabase: no hay `supabase gen types`. Cuando una migración cambia el contrato público —una tabla, una columna, la firma de un RPC o la forma de lo que devuelve— la entrada se escribe copiando lo que dice el SQL aplicado, se compara contra él y se corren `pnpm typecheck` y `pnpm typecheck:mobile`. El typecheck sólo demuestra que el código coincide con este archivo; que este archivo coincida con el esquema remoto lo sostiene esa comparación, y nada más. Ver "Migrations are the schema truth" y "Supabase is online-only, and the CLI is not part of the loop" en `AGENTS.md`.
 - **Sin queries ni server actions.** Eso es código de cada app.
 
 ## Cómo se consume

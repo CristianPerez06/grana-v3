@@ -20,7 +20,11 @@ import { PGlite } from '@electric-sql/pglite'
  */
 
 const MIGRATIONS = resolve(__dirname, '../../../../supabase/migrations')
-const read = (file: string) => readFileSync(resolve(MIGRATIONS, file), 'utf-8')
+// Normalizado a LF: en Windows con autocrlf el archivo llega con \r\n, y todo
+// regex de acá abajo que busque un salto de línea literal deja de encontrarlo.
+// Once tests rojos en Windows y verdes en Linux sobre el mismo commit.
+const read = (file: string) =>
+  readFileSync(resolve(MIGRATIONS, file), 'utf-8').replace(/\r\n/g, '\n')
 
 export const MIGRATION_0064 = read('0064_recurrence_identity_expand.sql')
 export const MIGRATION_0065 = read('0065_delete_seeded_movement_atomically.sql')
@@ -29,6 +33,8 @@ export const MIGRATION_0068 = read('0068_schedule_version_effective_until.sql')
 export const MIGRATION_0069 = read('0069_repair_seed_occurrence_identity.sql')
 export const MIGRATION_0070 = read('0070_recurrence_positions_spent_batch.sql')
 export const MIGRATION_0071 = read('0071_pause_looks_forward.sql')
+export const MIGRATION_0072 = read('0072_recurrence_link_movement.sql')
+export const MIGRATION_0074 = read('0074_link_snapshot_follows_the_movement.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -46,6 +52,18 @@ const SCHEMA = `
   create role anon;
   grant usage on schema public to authenticated;
   grant usage on schema auth to authenticated;
+
+  -- LOS TIPOS ENUMERADOS REALES, no \`text\`. \`transactions.type\` es el enum
+  -- \`transaction_type\` desde 0008 (0009/0014/0017/0022 le fueron agregando
+  -- valores) y \`accounts.type\` es \`account_type\` desde 0007/0010. El arnés los
+  -- declaraba como texto, y eso no es un detalle: Postgres NO tiene un operador
+  -- \`enum = text\`, así que una comparación contra una columna de texto —como
+  -- \`recurrences.movement_type\`, que sí lo es— falla en la base real y pasaba
+  -- verde acá. 0072 se cayó al aplicarse por exactamente eso.
+  create type transaction_type as enum (
+    'income', 'expense', 'transfer', 'adjustment', 'exchange', 'reimbursement', 'settlement'
+  );
+  create type account_type as enum ('cash', 'bank', 'credit');
 
   create table public.recurrences (
     id                  uuid primary key default gen_random_uuid(),
@@ -123,7 +141,7 @@ const SCHEMA = `
     id uuid primary key default gen_random_uuid(),
     user_id uuid references auth.users(id) on delete cascade,
     name text not null default 'Cuenta',
-    type text not null default 'bank',
+    type account_type not null default 'bank',
     is_active boolean not null default true
   );
   create table public.categories (
@@ -149,8 +167,54 @@ const SCHEMA = `
     id uuid primary key default gen_random_uuid(),
     user_id uuid not null references auth.users(id) on delete cascade,
     date date not null default current_date,
-    amount numeric(18,2) not null default 1
+    amount numeric(18,2) not null default 1,
+    -- Columnas que leen los RPC de vinculación (0072). Nullable y con default:
+    -- los tests del seed link no las nombran y siguen viendo la misma tabla.
+    type transaction_type not null default 'expense',
+    currency_code text not null default 'ARS',
+    account_id uuid,
+    category_id uuid,
+    subcategory_id uuid,
+    description text,
+    is_shared boolean not null default false,
+    household_id uuid,
+    is_parent boolean not null default false,
+    due_date date
   );
+
+  -- El reparto por miembro, y la liquidación: lo que la rama compartida de
+  -- vincular escribe y lo que la guarda de 0049/0072 protege.
+  create table public.shared_expense_split (
+    transaction_id uuid not null references public.transactions(id) on delete cascade,
+    household_id   uuid not null,
+    user_id        uuid not null,
+    percentage     numeric(5,2) not null,
+    amount_assigned numeric(18,2) not null,
+    primary key (transaction_id, user_id)
+  );
+
+  create table public.settlement (
+    id                     uuid primary key default gen_random_uuid(),
+    household_id           uuid not null,
+    payer_id               uuid not null,
+    receiver_id            uuid not null,
+    payer_movement_id      uuid references public.transactions(id) on delete set null,
+    receiver_movement_id   uuid references public.transactions(id) on delete set null,
+    amount                 numeric(18,2) not null default 1000,
+    currency_code          text not null default 'ARS',
+    status                 text not null default 'pending_receipt',
+    reversed_at            timestamptz,
+    reverses_settlement_id uuid references public.settlement(id) on delete set null,
+    constraint chk_settlement_status
+      check (status in ('pending_receipt', 'completed', 'reversed', 'contra'))
+  );
+
+  alter table public.shared_expense_split enable row level security;
+  create policy "own splits" on public.shared_expense_split for all to authenticated
+    using (true) with check (true);
+  alter table public.settlement enable row level security;
+  create policy "own settlements" on public.settlement for all to authenticated
+    using (true) with check (true);
   alter table public.recurrences
     add constraint recurrences_created_from_transaction_fk
     foreign key (created_from_transaction_id)
@@ -172,6 +236,18 @@ const SCHEMA = `
     with check (user_id = auth.uid());
   create policy "users delete own recurrences" on public.recurrences for delete to authenticated
     using (user_id = auth.uid());
+
+  -- unshare_movement reducido a lo que el RPC de desvincular le pide: bajar la
+  -- bandera y borrar los repartos. Lo que NO se estira es la guarda: los triggers
+  -- reales de 0049/0072 se cuelgan abajo, así que el camino GRN01 —el que decide
+  -- si desvincular se completa o no cambia nada— se ejercita de verdad.
+  create or replace function public.unshare_movement(p_root_id uuid)
+  returns void language plpgsql security invoker as $unshare$
+  begin
+    update public.transactions set is_shared = false, household_id = null
+     where id = p_root_id;
+    delete from public.shared_expense_split where transaction_id = p_root_id;
+  end $unshare$;
 
   alter table public.recurrence_instances enable row level security;
   create policy "own instances" on public.recurrence_instances for all to authenticated
@@ -198,7 +274,12 @@ const SEED = `
  * purpose — 0064's own behaviour, or what 0066 refuses to run against.
  */
 export async function createRecurrenceIdentityDb(
-  options: { applyMigration?: boolean; scheduleGap?: boolean; seedRepair?: boolean } = {},
+  options: {
+    applyMigration?: boolean
+    scheduleGap?: boolean
+    seedRepair?: boolean
+    snapshotFix?: boolean
+  } = {},
 ): Promise<PGlite> {
   const db = new PGlite()
   await db.exec('create schema if not exists public;')
@@ -217,6 +298,13 @@ export async function createRecurrenceIdentityDb(
       // 0071 too: a pause that swallows its own opening day is not the schema
       // production is going to have.
       await applyPauseLooksForward(db)
+      // And 0072, for the same reason: the count that decides whether a rule
+      // still owes money is the one production runs.
+      await applyLinkMovement(db)
+      // 0074 viaja con 0072: repara la rama de vincular que dejaba la foto de la
+      // regla sobre una ocurrencia que ya existía. Se puede saltear
+      // (`snapshotFix: false`) para reproducir el defecto.
+      if (options.snapshotFix !== false) await db.exec(MIGRATION_0074)
     }
   }
   return db
@@ -305,6 +393,35 @@ export async function applyPauseLooksForward(db: PGlite): Promise<void> {
     await db.exec('rollback;').catch(() => undefined)
     throw error
   }
+}
+
+/**
+ * 0072: registrar un pago antes del vencimiento, vincular y desvincular. Se
+ * exporta además de aplicarse por defecto, para que un test pueda construir la
+ * base SIN ella y ver el conteo viejo perder una posición resuelta por
+ * anticipado.
+ */
+export async function applyLinkMovement(db: PGlite): Promise<void> {
+  try {
+    await db.exec(MIGRATION_0072)
+  } catch (error) {
+    await db.exec('rollback;').catch(() => undefined)
+    throw error
+  }
+  // 0072 crea funciones nuevas, así que necesitan el grant que el harness inicial
+  // no pudo darles.
+  await grantAll(db)
+  // Las guardas de liquidación viven en 0043/0048, que arrastran medio módulo
+  // Compartido. Se cuelgan acá los triggers sobre las funciones que 0072 acaba de
+  // definir: lo que se está probando es el predicado, no el alta del trigger.
+  await db.exec(`
+    drop trigger if exists trg_block_unshare_with_settlement on public.transactions;
+    create trigger trg_block_unshare_with_settlement
+      before update on public.transactions
+      for each row
+      when (OLD.is_shared is true and NEW.is_shared is false)
+      execute function public.trg_fn_block_unshare_with_settlement();
+  `)
 }
 
 export async function applyActivation(db: PGlite): Promise<void> {

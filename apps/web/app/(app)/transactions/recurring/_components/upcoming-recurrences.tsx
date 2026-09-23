@@ -10,7 +10,9 @@ import { formatDateISO, getTodayAR } from '@/lib/date'
 import { recurrenceTitle } from '@grana/recurrences'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
+import { RecurrenceNotice } from './recurrence-notice'
 import { UpcomingCard } from './upcoming-card'
+import { ResolveAheadActions } from './resolve-ahead-actions'
 
 type Props = {
   rules: RecurrenceSummary[]
@@ -108,8 +110,9 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
     return (
       <div
         key={`${occ.rule_id}-${occ.scheduled_date}-${i}`}
-        className="flex items-center gap-3.5 px-5 py-3 [&+&]:border-t [&+&]:border-[var(--border-soft)]"
+        className="[&+&]:border-t [&+&]:border-[var(--border-soft)]"
       >
+      <div className="flex items-center gap-3.5 px-5 pb-1.5 pt-3">
         <span
           className="flex size-[38px] shrink-0 items-center justify-center rounded-[11px] text-[18px]"
           style={{ backgroundColor: `${tileColor}1A` }}
@@ -129,6 +132,22 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
           <span className="text-[12px] font-semibold text-text-soft">{formatWhen(occ.scheduled_date)}</span>
         </div>
       </div>
+      {/* Las dos salidas para un vencimiento que todavía no llegó. Van debajo de
+          la fila y no al lado del importe: a ancho de teléfono, dos botones
+          compitiendo con el monto por la misma línea dejan los tres ilegibles. */}
+      <div className="px-5 pb-3 pl-[66px]">
+        <ResolveAheadActions
+          recurrenceId={rule.id}
+          dueDate={occ.scheduled_date}
+          ruleAmount={amount}
+          ruleCurrency={rule.currency_code}
+          movementType={rule.movement_type as 'expense' | 'income' | 'transfer'}
+          ruleAccountId={rule.account?.id ?? null}
+          transferDestinationAccountId={rule.transfer_destination_account_id ?? null}
+          shared={rule.household_id != null}
+        />
+      </div>
+    </div>
     )
   }
 
@@ -137,16 +156,20 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
   const renderCard = (title: string, rows: { rule_id: string; scheduled_date: string }[]) => (
     <UpcomingCard
       title={title}
-      note={tRec('upcoming.info_only')}
+      // Ya no es «solo informativo»: cada fila ofrece registrar o vincular. La
+      // proyección sigue siendo una lectura pura; las acciones escriben por su
+      // cuenta, a través de las server actions.
       rows={rows.map(renderRow)}
       emptyLabel={tRec('upcoming.empty')}
     />
   )
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {renderCard(tRec('upcoming.next_7_days'), next7)}
-      {renderCard(tRec('upcoming.next_30_days'), later)}
-    </div>
+    <RecurrenceNotice>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {renderCard(tRec('upcoming.next_7_days'), next7)}
+        {renderCard(tRec('upcoming.next_30_days'), later)}
+      </div>
+    </RecurrenceNotice>
   )
 }

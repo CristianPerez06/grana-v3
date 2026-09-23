@@ -4,7 +4,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2 } from 'lucide-react-native'
 import type { MovementKind } from '@grana/money-logic'
 import type { SeededRecurrenceInfo } from '@grana/transactions-mutations'
-import type { SeededRecurrenceResolution } from '@grana/recurrences'
+import {
+  getRecurrenceLinkForTransaction,
+  recurrenceLinkLabelKey,
+  type SeededRecurrenceResolution,
+} from '@grana/recurrences'
+import { supabase } from '../../../../lib/supabase'
 import { PageHeader } from '../../../../components/ui/PageHeader'
 import { MovementDetailView } from '../../../../components/transactions/detail/MovementDetailView'
 import { MovementDetailSkeleton } from '../../../../components/transactions/detail/MovementDetailSkeleton'
@@ -50,6 +55,14 @@ export default function MovementDetailScreen() {
   const query = useQuery({
     queryKey: ['transactions', 'detail', txId] as const,
     queryFn: () => getMovementDetail(txId),
+  })
+
+  // DE QUÉ REGLA VIENE ESTE MOVIMIENTO, y si lo originó o el usuario lo vinculó.
+  // Web lo muestra desde siempre; nativo no mostraba nada, así que el mismo
+  // movimiento decía «generado por una regla» en una pantalla y nada en la otra.
+  const linkQuery = useQuery({
+    queryKey: ['transactions', 'recurrence-link', txId] as const,
+    queryFn: () => getRecurrenceLinkForTransaction(supabase, txId),
   })
 
   const data = query.data ?? null
@@ -203,7 +216,36 @@ export default function MovementDetailScreen() {
             </Text>
           </View>
         ) : (
-          <MovementDetailView data={data} />
+          <>
+            {/* DE QUÉ REGLA VIENE ESTE MOVIMIENTO. En web esta frase se mudó
+                adentro de la tarjeta «Recurrencia», que allá existe; acá el
+                detalle nativo no tiene esa tarjeta, así que la frase sigue
+                siendo su propia fila —primera del contenido, debajo del
+                encabezado— y ya no más angosta que el resto: el `mx-4` se
+                sumaba al `px-6` del scroll y la dejaba metida hacia adentro. */}
+            {linkQuery.data ? (
+              <Pressable
+                onPress={() =>
+                  // `from` para que la regla rotule su «volver» con este
+                  // movimiento, igual que en web. Ir hacia atrás ya funcionaba
+                  // —la pila lo resuelve—, pero el rótulo decía «Recurrencias».
+                  router.push(
+                    `/transactions/recurring/${linkQuery.data!.recurrence_id}?from=transaction:${txId}`,
+                  )
+                }
+                className="mb-1 flex-row items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5"
+              >
+                <Text className="flex-1 text-[13px] text-text-muted">
+                  {t(
+                    `recurrences.link.label_${recurrenceLinkLabelKey(
+                      linkQuery.data.resolution_kind,
+                    )}`,
+                  )}
+                </Text>
+              </Pressable>
+            ) : null}
+            <MovementDetailView data={data} />
+          </>
         )}
       </ScrollView>
     </View>

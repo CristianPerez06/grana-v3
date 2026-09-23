@@ -7,6 +7,7 @@ import { PageHeader } from '../../../../components/ui/PageHeader'
 import { Drawer } from '../../../../components/ui/Drawer'
 import { SkeletonBlock } from '../../../../components/ui/SkeletonBlock'
 import { RecurrenceInstancesList } from '../../../../components/recurrences/RecurrenceInstancesList'
+import { ResolveAheadActions } from '../../../../components/recurrences/ResolveAheadActions'
 import { RecurrenceEditForm } from '../../../../components/recurrences/RecurrenceEditForm'
 import {
   amountSign,
@@ -55,7 +56,7 @@ export default function RecurrenceDetailScreen() {
   const showCents = useShowCents()
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>()
   const [editOpen, setEditOpen] = useState(false)
 
   const query = useQuery({
@@ -163,7 +164,14 @@ export default function RecurrenceDetailScreen() {
     <View className="flex-1 bg-page">
       <PageHeader
         title={t('recurrences.title')}
-        backLink={{ href: '/transactions/recurring', label: t('recurrences.back_label') }}
+        backLink={
+          from?.startsWith('transaction:')
+            ? {
+                href: `/transactions/${from.slice('transaction:'.length)}`,
+                label: t('recurrences.back_to_movement'),
+              }
+            : { href: '/transactions/recurring', label: t('recurrences.back_label') }
+        }
         onBackPress={onBack}
         actions={actions}
       />
@@ -192,6 +200,13 @@ export default function RecurrenceDetailScreen() {
               </Text>
               <Text className="mt-0.5 text-[13px] font-semibold text-text-muted">
                 {movementLabel(rule.movement_type, t)} · {frequencyLabel(rule.frequency, t)}
+                {/* QUE LA REGLA ES COMPARTIDA, dicho donde se lee. El dato ya
+                    estaba en la ficha —decide si vincular pide confirmación—
+                    pero no se mostraba, y una regla compartida le genera deuda a
+                    otra persona cada vez que se confirma un vencimiento. Va en
+                    esta misma línea, que es la que describe qué ES la regla.
+                    Gemelo de web, con la misma palabra que usa el feed. */}
+                {rule.household_id == null ? null : ` · ${t('transactions.list.shared_short')}`}
                 {/* THE DERIVED STATE, web's twin. `status` says what the user
                     did to the rule, and a rule that spent its limit still says
                     `active` — so this line said nothing while the list grouped
@@ -230,6 +245,24 @@ export default function RecurrenceDetailScreen() {
                     label={t('recurrences.labels.next_date')}
                     value={formatShortDate(rule.next_occurrence, locale)}
                   />
+                ) : null}
+                {/* LAS DOS SALIDAS PARA UN VENCIMIENTO QUE NO LLEGÓ. Sin esto el
+                    usuario que paga el alquiler el 3 tiene que esperar al 23 o
+                    cargarlo a mano — y cargarlo a mano es peor, porque el 23 la
+                    app se lo vuelve a proponer. Mismo commit que web. */}
+                {rule.next_occurrence && rule.status === 'active' ? (
+                  <View className="pt-2">
+                    <ResolveAheadActions
+                      recurrenceId={rule.id}
+                      dueDate={rule.next_occurrence}
+                      ruleAmount={Number(rule.amount)}
+                      ruleCurrency={rule.currency_code}
+                      movementType={rule.movement_type}
+                      ruleAccountId={rule.account_id}
+                      transferDestinationAccountId={rule.transfer_destination_account_id}
+                      shared={rule.household_id != null}
+                    />
+                  </View>
                 ) : null}
                 {rule.end_date ? (
                   <Row

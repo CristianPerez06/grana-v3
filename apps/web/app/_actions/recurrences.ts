@@ -32,8 +32,16 @@ import {
   skipRecurrenceInstance as skipRecurrenceInstanceImpl,
   updateRecurrence as updateRecurrenceImpl,
   getDuplicateRulesFor,
+  getRecurrenceLinkCandidates as getRecurrenceLinkCandidatesImpl,
+  linkMovementToRecurrence as linkMovementToRecurrenceImpl,
+  unlinkMovementFromRecurrence as unlinkMovementFromRecurrenceImpl,
+  registerRecurrenceAhead as registerRecurrenceAheadImpl,
+  linkErrorMessageKeys,
   type DuplicateCandidate,
   type DuplicateMatch,
+  type LinkCandidate,
+  type LinkErrorCode,
+  type BlockingSettlements,
 } from '@grana/recurrences'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
@@ -227,4 +235,98 @@ export async function dismissRecurrenceSuggestion(
 
 export async function generateDueRecurrenceInstancesAction(): Promise<GenerationResult> {
   return generateDueRecurrenceInstances(await createClient())
+}
+
+// ── Vincular, desvincular y registrar antes del vencimiento ───────────────────
+//
+// Shells finos: auth + cliente + la implementación compartida + revalidación. La
+// traducción del rechazo vive acá porque el package no conoce el catálogo.
+
+async function translateLinkError(
+  code: LinkErrorCode | undefined,
+  blockedBy: BlockingSettlements | undefined,
+  errorCode: string | undefined,
+): Promise<string | undefined> {
+  // QUÉ mensaje corresponde lo decide el package (`linkErrorMessageKeys`), que
+  // es donde nativo lee la misma tabla; acá sólo se traduce. Estaba escrita dos
+  // veces, y la copia de nativo se quedó atrás sin que nada avisara.
+  const keys = linkErrorMessageKeys({ linkErrorCode: code, blockedBy, errorCode })
+  if (!keys) return undefined
+  const t = await getTranslations('recurrences.link')
+  return keys.map((key) => t(key)).join(' ')
+}
+
+export async function getRecurrenceLinkCandidates(
+  recurrenceId: string,
+  dueDate: string,
+  widen = false,
+): Promise<LinkCandidate[]> {
+  await getAuthenticatedUserId()
+  const supabase = await createClient()
+  return getRecurrenceLinkCandidatesImpl(supabase, { recurrenceId, dueDate, widen })
+}
+
+export async function linkMovementToRecurrence(args: {
+  recurrenceId: string
+  dueDate: string
+  transactionId: string
+  confirmConversion?: boolean
+}): Promise<ActionResult<never>> {
+  await getAuthenticatedUserId()
+  const supabase = await createClient()
+  const result = await linkMovementToRecurrenceImpl(supabase, args)
+  if (result.ok) {
+    // Vincular no crea movimientos, pero cambia de qué está hecho el historial de
+    // la regla y —cuando convierte— la deuda del hogar.
+    revalidateAfterRecurrenceMutation()
+    revalidateAfterMovementMutation()
+    return { ok: true }
+  }
+  const formError = await translateLinkError(result.linkErrorCode, undefined, result.errorCode)
+  return { ok: false, formError: formError ?? result.formError }
+}
+
+export async function unlinkMovementFromRecurrence(
+  instanceId: string,
+): Promise<ActionResult<never>> {
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+  const result = await unlinkMovementFromRecurrenceImpl(supabase, { instanceId, userId })
+  if (result.ok) {
+    revalidateAfterRecurrenceMutation()
+    revalidateAfterMovementMutation()
+    return { ok: true }
+  }
+  const formError = await translateLinkError(
+    result.linkErrorCode,
+    result.blockedBy,
+    result.errorCode,
+  )
+  return { ok: false, formError: formError ?? result.formError }
+}
+
+export async function registerRecurrenceAhead(args: {
+  recurrenceId: string
+  dueDate: string
+  date?: string
+  amount?: number
+  accountId?: string
+}): Promise<ActionResult<never> & { transactionId?: string }> {
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+  const result = await registerRecurrenceAheadImpl(supabase, userId, args)
+  if (!result.ok && result.mapErrorCode) {
+    const tm = await getTranslations('recurrences.mapper_errors')
+    return { ok: false, formError: tm(result.mapErrorCode) }
+  }
+  if (result.ok) {
+    revalidateAfterRecurrenceMutation()
+    revalidateAfterMovementMutation()
+    return { ok: true, transactionId: result.transactionId }
+  }
+  // El rechazo de la validación del vencimiento —no es una posición del
+  // calendario, excede el tope, ya está resuelto— llega como código y se
+  // traduce acá, igual que en vincular. Sin esto el formulario mostraba nada.
+  const formError = await translateLinkError(result.linkErrorCode, undefined, result.errorCode)
+  return { ok: false, formError: formError ?? result.formError }
 }

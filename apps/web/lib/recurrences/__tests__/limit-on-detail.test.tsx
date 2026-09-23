@@ -67,7 +67,8 @@ const plan = {
   last_expected_occurrence: { kind: 'date', date: '2027-07-10' },
 } as unknown as Parameters<typeof RecurrenceDetail>[0]['rule']
 
-const show = (rule: typeof plan) => render(<RecurrenceDetail rule={rule} />)
+const show = (rule: typeof plan) =>
+  render(<RecurrenceDetail rule={rule} back={{ href: '/transactions/recurring', label: 'Recurrencias' }} />)
 
 afterEach(cleanup)
 

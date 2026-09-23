@@ -1621,6 +1621,7 @@
     "title": "Recurrencias",
     "description": "Reglas que generan movimientos pendientes para que confirmes u omitas.",
     "back_label": "Movimientos",
+    "back_to_movement": "Movimiento",
     "empty": "Todavía no tenés reglas recurrentes. Creá una con el botón \"Crear recurrencia\" o activá el toggle \"Hacer recurrente\" cuando registres un movimiento.",
     "empty_active": "No tenés reglas activas. Creá una con el botón \"Crear recurrencia\".",
     "empty_paused": "No tenés reglas pausadas.",
@@ -1819,7 +1820,6 @@
     "upcoming": {
       "next_7_days": "Próximos 7 días",
       "next_30_days": "Próximos 30 días",
-      "info_only": "Solo informativo",
       "empty": "Nada por aquí.",
       "show_rest": "Ver las otras {count}",
       "show_less": "Ver menos"
@@ -1852,7 +1852,7 @@
     "reference_date_exhausted": "Esta regla no tiene próximos vencimientos, así que no se puede cambiar la referencia. Extendé el tope o la fecha de fin para volver a ajustarla.",
     "limit": {
       "progress": "{spent} de {total} vencimientos",
-      "remaining": "{remaining} restantes",
+      "remaining": "{remaining}",
       "last_expected": "Último vencimiento previsto",
       "last_expected_paused": "Se calcula cuando reanudes la regla",
       "no_limit": "Se repite sin límite",
@@ -1861,6 +1861,51 @@
       "progress_label": "Avance",
       "remaining_label": "Restantes",
       "end_label": "Termina"
+    },
+    "link": {
+      "already_paid": "Ya lo pagué",
+      "already_paid_hint": "Registrá el pago ahora, aunque falte para el vencimiento. El próximo sigue igual.",
+      "already_loaded": "Ya lo tengo cargado",
+      "already_loaded_hint": "Elegí el movimiento que ya cargaste. No se crea ninguno nuevo.",
+      "candidates_title": "¿Cuál de estos es?",
+      "candidates_subtitle": "Movimientos tuyos cerca del vencimiento del {date}",
+      "candidates_empty": "No encontramos movimientos cerca de esa fecha.",
+      "no_description": "Movimiento sin descripción",
+      "widen": "Ampliar la búsqueda",
+      "widened": "Mostrando un período más amplio",
+      "amount_differs": "La regla venía de {ruleAmount}; este movimiento es de {amount}.",
+      "link": "Vincular",
+      "linking": "Vinculando…",
+      "linked_success": "Vencimiento resuelto con el movimiento que ya tenías.",
+      "recorded_success": "Pago registrado: el vencimiento quedó resuelto.",
+      "unlink": "Desvincular",
+      "unlinking": "Desvinculando…",
+      "unlinked_success": "Listo: el movimiento quedó suelto y el vencimiento volvió a por revisar.",
+      "label_linked": "Vinculado a esta recurrencia",
+      "label_originated": "Generado por una regla recurrente",
+      "relation_row_label": "Este movimiento",
+      "convert_title": "Este gasto va a pasar a ser compartido",
+      "convert_body": "Vincularlo lo reparte con tu hogar según la regla, así que va a mover la deuda entre ustedes.",
+      "convert_warning_settlement": "Ojo: ya hay una liquidación que cubre esta fecha, así que para deshacer esta conversión vas a tener que resolverla primero.",
+      "convert_confirm": "Sí, compartirlo y vincular",
+      "convert_cancel": "Cancelar",
+      "errors": {
+        "movement_incompatible": "Ese movimiento no es del mismo tipo o moneda que la regla.",
+        "movement_already_linked": "Ese movimiento ya está vinculado a otro vencimiento.",
+        "movement_shared_elsewhere": "Ese movimiento está compartido con otro reparto. Arreglá su reparto y volvé a intentarlo.",
+        "conversion_not_confirmed": "Hace falta confirmar que el gasto pase a ser compartido.",
+        "not_linked": "Este vencimiento se resolvió con un movimiento que creó la app, así que no se puede desvincular.",
+        "blocked_revert": "No se puede desvincular: hay una liquidación del hogar posterior a este gasto. Revertila y volvé a intentarlo.",
+        "blocked_cancel_own": "No se puede desvincular: hay una liquidación tuya pendiente de asignar posterior a este gasto. Cancelala y volvé a intentarlo.",
+        "blocked_cancel_other": "No se puede desvincular: hay una liquidación pendiente de asignar posterior a este gasto, y la registró la otra persona. Tiene que cancelarla ella.",
+        "blocked_unknown": "No se puede desvincular: hay una liquidación del hogar posterior a este gasto. No pudimos averiguar en qué estado está — miralá en la cuenta corriente para ver si hay que revertirla o cancelarla.",
+        "blocked_multiple": "Hay más de una liquidación bloqueando, así que resolver una sola no alcanza.",
+        "not_an_occurrence": "Esa fecha no es un vencimiento de esta regla.",
+        "beyond_limit": "Esta regla ya usó todos los vencimientos de su plan.",
+        "already_resolved": "Ese vencimiento ya fue resuelto."
+      },
+      "accounts_loading": "Leyendo tus cuentas…",
+      "accounts_unavailable": "No pudimos leer tus cuentas. Cerrá y volvé a intentar."
     }
   },
   "subcategories": {
@@ -2067,7 +2112,10 @@
       "revert": "Revertir",
       "revert_confirm": "¿Revertir este pago?",
       "revert_yes": "Sí, revertir",
-      "revert_no": "No"
+      "revert_no": "No",
+      "cancel": "Cancelar",
+      "cancel_confirm": "¿Cancelar este pago?",
+      "cancel_yes": "Sí, cancelar"
     },
     "split": {
       "toggle_label": "Compartir",

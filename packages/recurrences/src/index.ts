@@ -89,12 +89,31 @@ export {
   materializationOutcome,
   reviewFeedState,
   stuckRules,
+  canUnlink,
+  recurrenceLinkLabelKey,
   type ReviewUrgency,
   type ResolutionPreview,
   type MaterializationOutcome,
   type ReviewFeedState,
   type StuckRule,
 } from './review-surface'
+export {
+  getRecurrenceLinkCandidates,
+  linkMovementToRecurrence,
+  unlinkMovementFromRecurrence,
+  registerRecurrenceAhead,
+  BLOCKING_ACTIONS,
+  describeBlockingSettlements,
+  admitsOccurrence,
+  type LinkCandidate,
+  type LinkErrorCode,
+  type LinkResult,
+  type UnlinkResult,
+  type RegisterAheadResult,
+  type BlockingSettlements,
+} from './link'
+export { linkErrorMessageKeys, LINK_ERROR_MESSAGE_KEYS } from './link-messages'
+
 export { recurrenceTitle, type RecurrenceTitleParts } from './display-title'
 export { referenceDateChoice } from './schedule-edit'
 export type { ReferenceDateChoice } from './schedule-edit'

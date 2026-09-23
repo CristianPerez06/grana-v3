@@ -75,6 +75,20 @@ export type RecurrenceLifecycleInput = {
   positionsSpent: number
   /** Instances neither confirmed nor skipped. Says what is left to do, not whether the rule ended. */
   unresolvedCount: number
+  /**
+   * ¿Hay un vencimiento SIN RESOLVER cuya fecha todavía no llegó?
+   *
+   * `hasFutureOccurrence` pregunta si el calendario va a PRODUCIR algo nuevo, y
+   * eso alcanzaba mientras materializar sólo ocurría hasta hoy: toda ocurrencia
+   * existente era pasada. Resolver por anticipado rompe esa equivalencia —crea
+   * la ocurrencia del 20 de noviembre hoy—, y entonces una regla puede tener
+   * todas sus posiciones ya materializadas y una de ellas todavía por venir.
+   *
+   * Sin esto, esa regla se muestra «Finalizada» con un vencimiento futuro sin
+   * resolver a la vista, que es decirle al usuario que no va a pasar nada más
+   * cuando en noviembre le vuelve a vencer.
+   */
+  hasUnresolvedAhead: boolean
 }
 
 /**
@@ -97,7 +111,10 @@ export function deriveRecurrenceLifecycle(
     return { state: 'deleted', progress: null, unresolved: input.unresolvedCount }
   }
 
-  if (input.hasFutureOccurrence) {
+  // Lo que el calendario todavía va a producir, O lo que ya produjo y sigue por
+  // venir sin resolver: las dos formas de tener futuro. La segunda sólo existe
+  // desde que se puede resolver un vencimiento antes de su fecha.
+  if (input.hasFutureOccurrence || input.hasUnresolvedAhead) {
     // A pause is an interruption, not an end.
     return {
       state: input.status === 'paused' ? 'paused' : 'active',
@@ -170,6 +187,16 @@ export type LastExpectedOccurrenceInput = {
   positionsSpent: number
   /** True while a pause has no `resumed_at`. */
   hasOpenPause: boolean
+  /**
+   * Dates AFTER today that `positionsSpent` already counted: occurrences the
+   * user resolved before their date arrived. The walk below must skip them, or
+   * it counts them a second time and projects an end one position too early.
+   *
+   * It is the one case where "spent" and "still ahead in the calendar" overlap.
+   * Everything else the count includes is dated up to today, which the walk
+   * never revisits.
+   */
+  resolvedAhead?: Iterable<string>
 }
 
 /**
@@ -210,6 +237,11 @@ export function lastExpectedOccurrence(
   if (floor != null && floor >= SCHEDULE_NEVER_RULES) return { kind: 'none' }
   const from = floor != null && floor > input.today ? floor : input.today
 
+  // Las que ya se gastaron sin que su fecha llegara. El caminante las produce
+  // igual —son fechas futuras de este calendario— así que hay que pedirle esas
+  // de más y descartarlas, o el plan termina una posición antes de lo que debe.
+  const spentAhead = new Set(input.resolvedAhead ?? [])
+
   // Strictly after today, because a position falling ON today is already counted
   // among the spent ones — `cursor` is the walker's word for that.
   const ahead = walkOccurrences(
@@ -223,15 +255,28 @@ export function lastExpectedOccurrence(
     {
       from,
       cursor: input.today,
-      limit: remaining,
+      limit: remaining + spentAhead.size,
       // A rule may legitimately have more positions left than the default step
       // budget; the walk positions itself at the edge, so this is the number it
       // actually needs. Running out throws rather than returning a short list.
-      maxSteps: remaining + 4,
+      maxSteps: remaining + spentAhead.size + 4,
     },
   )
 
-  const last = ahead.at(-1)
+  const lastAhead = ahead.filter((date) => !spentAhead.has(date)).slice(0, remaining).at(-1)
+
+  // DÓNDE TERMINA EL PLAN, no qué es lo último que queda por venir. Las dos
+  // respuestas coinciden mientras se resuelva en orden, y se separan en cuanto
+  // alguien resuelve por anticipado una posición POSTERIOR a otra que sigue
+  // pendiente: un plan de tres con octubre y diciembre resueltos y noviembre sin
+  // resolver termina en diciembre, aunque lo único que quede por venir sea
+  // noviembre. Decir «noviembre» ahí adelantaría el final del plan un mes por
+  // haber pagado algo antes.
+  //
+  // Las fechas son ISO, así que ordenan como texto.
+  const candidates = [...spentAhead, ...(lastAhead == null ? [] : [lastAhead])].sort()
+  const last = candidates.at(-1)
+
   // Fewer than `remaining` came back: the rule's `end_date` cut the calendar
   // before its limit did. The last one the walk produced is still the last one
   // the rule has.

@@ -1376,6 +1376,35 @@ La generación SHALL cortar por la primera condición de fin que se cumpla (`end
 El generador, la proyección de próximas ocurrencias y la pantalla SHALL derivar ese conteo del mismo
 cronograma, de modo que no puedan dar números distintos para la misma regla.
 
+**UNA POSICIÓN GASTADA ANTES DE SU FECHA NO ACORTA EL PLAN.** Resolver un vencimiento por
+anticipado gasta su posición sin que su fecha haya llegado, de modo que esa posición es la única que
+está **gastada y todavía por delante en el calendario** a la vez. La proyección del último
+vencimiento SHALL saltearla: camina las posiciones que restan **desde hoy**, y si vuelve a producir
+la que ya se gastó la cuenta dos veces y anuncia un final una posición antes del real. Una regla de
+tres que resuelve la primera por anticipado SHALL seguir terminando en la tercera, y la pantalla NO
+SHALL decir «restan 2» al lado de un último vencimiento que sólo deja lugar para una.
+
+Una ocurrencia **pendiente** con fecha futura NO se saltea: su posición se gastará cuando su fecha
+llegue, y el conteo normativo todavía no la suma. La distinción es entre resuelta —confirmada u
+omitida— y sin resolver, la misma que usa el conteo.
+
+**UNA REGLA CON UN VENCIMIENTO FUTURO SIN RESOLVER NO ESTÁ FINALIZADA.** «Finalizada» se deriva de
+si el calendario tiene algo de hoy en adelante, y hasta que se pudo resolver por anticipado eso
+equivalía a preguntar si va a PRODUCIR una ocurrencia nueva: materializar sólo llegaba hasta hoy, así
+que toda ocurrencia existente era pasada. Resolver antes de la fecha rompe la equivalencia —crea hoy
+la ocurrencia de noviembre—, y una regla puede quedar con todas sus posiciones materializadas y una
+de ellas todavía por venir. El sistema SHALL considerar que esa regla **sigue activa**: decirle
+«Finalizada» al usuario es afirmar que no va a pasar nada más cuando en noviembre le vuelve a vencer.
+Un vencimiento sin resolver cuya fecha YA PASÓ no devuelve futuro: ahí «finalizada con pendientes»
+es la respuesta correcta.
+
+La proyección SHALL contestar **dónde termina el plan**, no qué es lo último que queda por venir.
+Las dos respuestas coinciden mientras se resuelva en orden y se separan en cuanto alguien resuelve
+por anticipado una posición POSTERIOR a otra que sigue pendiente: un plan de tres con la primera y
+la tercera resueltas y la segunda sin resolver SHALL seguir terminando en la tercera. El último
+vencimiento previsto SHALL ser, entonces, el mayor entre las posiciones ya gastadas por anticipado y
+las que restan por caminar.
+
 `interval_count` + `interval_unit` son la **fuente de verdad** del cronograma; `frequency` es solo la
 etiqueta de presentación. Para los cuatro presets, la etiqueta y el intervalo SHALL ser coherentes
 (`weekly` ⇒ 1 `week`, `biweekly` ⇒ 2 `week`, `monthly` ⇒ 1 `month`, `annual` ⇒ 1 `year`); `custom`
@@ -1412,6 +1441,28 @@ admite cualquier intervalo válido. Esa coherencia SHALL estar enforced por un `
 
 - **WHEN** una regla tiene `end_date = 2026-03-01` y la siguiente ocurrencia caería el `2026-03-15`
 - **THEN** esa ocurrencia no se materializa
+
+#### Scenario: Resolver por anticipado no mueve el final del plan
+
+- **WHEN** una regla mensual con `max_occurrences = 3` y sus tres vencimientos en el futuro resuelve
+  el primero por anticipado
+- **THEN** el avance pasa a «1 de 3» y restan 2
+- **AND** el último vencimiento previsto SIGUE siendo el tercero, no el segundo
+
+#### Scenario: Una regla con un vencimiento futuro sin resolver no se muestra finalizada
+
+- **WHEN** una regla de tres vencimientos tiene sus tres posiciones materializadas, dos resueltas por
+  anticipado y la del medio sin resolver con fecha futura
+- **THEN** la regla se muestra **activa**, no «Finalizada»
+- **AND** cuando esa fecha pasa sin resolverse, la regla pasa a «finalizada con pendientes»
+
+#### Scenario: Resolver por anticipado fuera de orden
+
+- **WHEN** esa misma regla resuelve también el TERCER vencimiento por anticipado, dejando el segundo
+  sin resolver
+- **THEN** el avance pasa a «2 de 3» y resta 1
+- **AND** el último vencimiento previsto sigue siendo el tercero, aunque lo único que quede por venir
+  sea el segundo
 
 #### Scenario: max_occurrences da el mismo número en todas las superficies
 
@@ -1468,9 +1519,34 @@ El sistema SHALL permitir registrar el pago de una ocurrencia recurrente. Al reg
 SHALL crear una transacción real usando el mismo contrato de creación que usa un movimiento manual
 del mismo tipo, y la ocurrencia SHALL quedar vinculada a la transacción creada.
 
-**En web**, el usuario SHALL poder ajustar **fecha de pago, importe y cuenta** al registrar, y SHALL
-recibir la advertencia correspondiente si la cuenta quedara en negativo. **En la app nativa**, el
-registro SHALL usar los valores propuestos por la regla, sin edición.
+**REGISTRAR NO ESPERA AL VENCIMIENTO.** El sistema SHALL permitir registrar el pago de un vencimiento
+**cuya fecha todavía no llegó**, sin exigir que la ocurrencia ya esté materializada. Quien paga el
+alquiler el 3 no tiene por qué esperar al 23 para decirlo, y la alternativa que hoy le queda —cargar
+el gasto a mano— produce exactamente el duplicado que el vencimiento del 23 va a proponerle después.
+
+Al registrarse de forma anticipada, el vencimiento SHALL quedar resuelto **bajo su propia identidad**
+—la fecha en que vencía, no la del pago—, de modo que el generador reconozca esa fecha como cubierta
+cuando llegue y NO la vuelva a producir. La resolución anticipada SHALL dejar el mismo estado que
+habría dejado resolverla el día del vencimiento: el sistema NO SHALL crear una ocurrencia pendiente
+fechada en el futuro como paso intermedio, porque una ocurrencia pendiente con fecha futura aparecería
+en el bloque de vencimientos por revisar anunciando como pendiente algo que el usuario acaba de pagar.
+
+Registrar de forma anticipada NO SHALL mover el calendario de la regla: el vencimiento siguiente
+SHALL ser el que el calendario ya preveía. El ritmo pertenece a la obligación, no a la fecha en que
+el usuario eligió pagarla.
+
+**En AMBAS plataformas**, el usuario SHALL poder ajustar **fecha de pago, importe y cuenta** al
+registrar, y SHALL recibir la advertencia correspondiente si la cuenta quedara en negativo. La regla
+propone los tres valores; ninguno queda fijo.
+
+Esto corrige una divergencia que el spec fijaba antes —en nativo el registro usaba los valores de la
+regla sin edición— y que el QA encontró de entrada. No era una divergencia forzada por la
+plataforma, que es la única clase que las convenciones del repo admiten: el sistema operativo no
+obliga a nada acá. Y el costo caía sobre el caso más común, porque **pagar antes suele venir con
+otro importe**: el usuario registraba un número que sabía equivocado y después iba a corregirlo a
+Movimientos, además de perderse el aviso de saldo negativo. Lo único que SHALL diferir es el
+envase: web lo muestra en la fila del vencimiento y nativo en una hoja, porque en un teléfono el
+formulario no entra al lado de la fila.
 
 Cualquiera sea la plataforma y el valor con que se registre: la fecha SHALL ser la del movimiento y NO
 SHALL sobrescribir el vencimiento de la ocurrencia, que se conserva. La cuenta SHALL ser un override
@@ -1483,6 +1559,28 @@ por su propia identidad, de modo que registrar pagos en cualquier orden es segur
 Lo que SHALL estar disponible por igual en web y en la app nativa es la **materialización** del
 atraso y el **bloque de vencimientos por revisar**: que una ocurrencia exista, se vea y se pueda
 resolver NO SHALL depender de la plataforma.
+
+#### Scenario: Registrar un pago antes de que el vencimiento llegue
+
+- **WHEN** hoy es el `2026-09-03`, una regla mensual vence el `2026-09-23` y esa ocurrencia todavía no
+  está materializada, y el usuario registra su pago con fecha de hoy
+- **THEN** se crea un movimiento fechado el `2026-09-03`
+- **AND** la ocurrencia del `2026-09-23` queda resuelta conservando el `2026-09-23` como vencimiento
+- **AND** en ningún momento queda una ocurrencia pendiente en el bloque de vencimientos por revisar
+
+#### Scenario: Un vencimiento pagado antes no se vuelve a proponer al llegar su fecha
+
+- **WHEN** el usuario registró el `2026-09-03` el pago del vencimiento del `2026-09-23`, y llega el
+  `2026-09-23`
+- **THEN** el generador NO produce una ocurrencia para el `2026-09-23`
+- **AND** el bloque de vencimientos por revisar no muestra nada de esa regla por esa fecha
+
+#### Scenario: Pagar antes no adelanta el vencimiento siguiente
+
+- **WHEN** el usuario registra el `2026-09-03` el pago del vencimiento del `2026-09-23` de una regla
+  mensual
+- **THEN** el próximo vencimiento de la regla sigue siendo el `2026-10-23`
+- **AND** NO es el `2026-10-03`
 
 #### Scenario: Registrar un pago con otra fecha conserva el vencimiento (web)
 
@@ -1758,6 +1856,8 @@ La **próxima fecha** mostrada SHALL derivarse del mismo caminante de calendario
 ### Requirement: El hub de recurrencias proyecta lo que viene en dos ventanas, sin repetir lo ya materializado
 
 El hub de recurrencias **web** (`/transactions/recurring`) SHALL mostrar una proyección informativa de las próximas ocurrencias de las reglas **activas**, en dos ventanas disjuntas: **"Próximos 7 días"** (`[hoy, hoy+7]`) y **"Próximos 30 días"** (`[hoy+8, hoy+30]`), ambas computadas con la fecha financiera AR (`getTodayAR()`). La proyección SHALL ser pura: NO SHALL leer ni escribir instancias, NO SHALL generar nada y NO SHALL sumar montos entre monedas (invariante bimoneda — cada ocurrencia muestra el suyo).
+
+Cada fila de la proyección SHALL ofrecer, además, las dos salidas para un vencimiento que todavía no llegó —registrar el pago y vincular un movimiento ya cargado—. Eso NO contradice la pureza: la proyección sigue siendo una lectura que no escribe; las acciones escriben por su cuenta, a través de las operaciones de registro y vinculación. Por lo mismo, la tarjeta NO SHALL rotularse como «solo informativa» mientras ofrezca acciones: un rótulo que dice una cosa junto a botones que hacen otra hace que el usuario no sepa a cuál creerle.
 
 La segunda ventana SHALL medirse en **días corridos desde hoy**, y NO SHALL recortarse al fin del mes calendario. Una ventana que termina el último día del mes se vacía sola a medida que avanza el mes —desde el día en que `hoy+8` cae en el mes siguiente, su rango empieza después de terminar— y deja al usuario sin ningún horizonte más allá de siete días justo cuando más cerca está lo que viene.
 
@@ -5211,6 +5311,10 @@ Cuando una regla tiene `max_occurrences`, su detalle SHALL mostrar **cuántos ve
 
 El conteo SHALL expresarse en **posiciones del calendario de la regla**, la misma unidad que usa el corte de la generación (ver "La generación de instancias recurrentes usa intervalo+unidad y corta por la primera condición de fin"). NO SHALL contarse por filas de `recurrence_instances`: una regla sembrada por un movimiento no tiene fila para su primera ocurrencia, y una posición producida mientras nada estaba generando tampoco — contar filas le atribuye a una regla agotada vencimientos que no le quedan.
 
+**UNA POSICIÓN SE CONSUME AL LLEGAR SU FECHA O AL RESOLVERSE ANTES, LO QUE PASE PRIMERO — Y UNA SOLA VEZ.** Las dos condiciones SHALL combinarse como una unión, nunca como una suma: una posición cuya fecha llegó **y** que además está resuelta cuenta **una**. Sin la segunda condición, quien paga el vencimiento del 23 el día 3 ve la regla en «0 de 3» con un vencimiento ya resuelto, y el avance queda atrasado hasta un intervalo entero. Sin la unión, esa misma posición se contaría dos veces al llegar su fecha y el plan perdería un vencimiento que nunca se usó.
+
+**ESTAR POR REVISAR Y HABER CONSUMIDO UNA POSICIÓN SON COSAS DISTINTAS.** Devolver una ocurrencia a *sin resolver* SHALL cambiar sólo lo primero. Si su fecha **todavía no llegó**, la posición vuelve a estar disponible y el avance retrocede; si su fecha **ya pasó**, la posición sigue consumida aunque la ocurrencia esté otra vez por revisar, porque el calendario ya la produjo y ningún estado de resolución puede devolverle a la regla un día que transcurrió. En los dos casos el plan SHALL conservar exactamente las posiciones que tenía: resolver, deshacer y volver a resolver NO SHALL agregar ninguna.
+
 **UNA PAUSA MIRA HACIA ADELANTE.** El día en que se pausa una regla SHALL seguir perteneciendo a su calendario: una pausa afecta los días **posteriores** al que se abre. La regla estuvo activa parte de ese día, así que la ocurrencia que cae ahí es suya —**haya corrido o no el generador todavía**— y una pausa NO SHALL quitarle a la regla esa posición. Si el generador ya pasó, la instancia existe y la posición está gastada; si todavía no pasó, la posición sigue debida y se va a producir. El estado del generador no cambia de quién es el día.
 
 Esto no es una sutileza de presentación: el mismo conteo corta la generación. Con la lectura anterior, una regla de 3 vencimientos que produjo el primero y se pausó ese mismo día quedaba en «0 de 3» y seguía generando **tres más** — cuatro cuotas en un plan de tres. Una fecha no lleva hora, así que el calendario no puede saber si la pausa fue antes o después de la ocurrencia de ese día; la regla se resuelve en la única dirección que no puede destruir un compromiso ya asumido.
@@ -5234,6 +5338,35 @@ Una regla **sin** `max_occurrences` NO SHALL mostrar ninguno de estos datos —n
 - **THEN** el detalle muestra que lleva 1 de 11 vencimientos
 - **AND** que le quedan 10
 - **AND** que el último vencimiento previsto es el 10 de julio de 2027
+
+#### Scenario: Resolver un vencimiento antes de su fecha consume su posición
+
+- **WHEN** hoy es el `2026-09-03` y una regla con `max_occurrences = 3` —vencimientos el `2026-09-23`,
+  el `2026-10-23` y el `2026-11-23`— tiene resuelto el del `2026-09-23`
+- **THEN** el detalle muestra que lleva 1 de 3
+- **AND** le quedan el `2026-10-23` y el `2026-11-23`
+
+#### Scenario: La posición resuelta antes no se cuenta otra vez al llegar su fecha
+
+- **WHEN** la regla del escenario anterior llega al `2026-09-23` con ese vencimiento ya resuelto
+- **THEN** el detalle sigue mostrando que lleva 1 de 3
+- **AND** NO muestra 2 de 3
+
+#### Scenario: Devolver a revisión antes del vencimiento libera la posición
+
+- **WHEN** hoy es el `2026-09-05`, el vencimiento del `2026-09-23` estaba resuelto y el usuario lo
+  devuelve a *sin resolver*
+- **THEN** el vencimiento del `2026-09-23` queda por revisar
+- **AND** el detalle vuelve a mostrar 0 de 3, porque su fecha todavía no llegó
+- **AND** el plan sigue teniendo tres posiciones: `2026-09-23`, `2026-10-23` y `2026-11-23`
+
+#### Scenario: Devolver a revisión después del vencimiento conserva la posición
+
+- **WHEN** hoy es el `2026-09-25`, el vencimiento del `2026-09-23` estaba resuelto y el usuario lo
+  devuelve a *sin resolver*
+- **THEN** el vencimiento del `2026-09-23` queda por revisar
+- **AND** el detalle sigue mostrando 1 de 3, porque su fecha ya pasó
+- **AND** el plan sigue teniendo tres posiciones, sin agregar una cuarta
 
 #### Scenario: Pausar el día de un vencimiento no borra ese vencimiento
 
@@ -5399,3 +5532,198 @@ Quitar el límite SHALL dejar la regla sin `max_occurrences`, y su final vuelve 
 - **WHEN** el usuario le quita el límite a una regla que lo tenía
 - **THEN** la regla queda con `max_occurrences = NULL`
 - **AND** su detalle deja de mostrar avance y último vencimiento previsto
+
+### Requirement: El usuario puede vincular un movimiento que ya cargó a un vencimiento
+
+El sistema SHALL permitir resolver un vencimiento señalando un movimiento **que ya existe** en el
+historial del usuario, sin crear ninguna transacción nueva. Es la contracara de registrar un pago: el
+usuario que ya cargó el gasto a mano necesita decir «esto que cargué el martes es el alquiler de
+septiembre», y sin esa salida la app le vuelve a proponer el mismo gasto y lo empuja a cargarlo dos
+veces o a perder el rastro de que lo pagó.
+
+Al vincular, la ocurrencia SHALL quedar resuelta apuntando al movimiento existente, el sistema NO
+SHALL insertar ninguna fila en `transactions`, y NO SHALL modificarse ningún saldo: ese movimiento ya
+estaba contado. La ocurrencia SHALL conservar su vencimiento.
+
+**LOS DATOS DEL MOVIMIENTO MANDAN Y LA REGLA NO SE REESCRIBE.** La fecha, el importe y la cuenta del
+movimiento vinculado SHALL conservarse tal como están —el movimiento es un hecho ya ocurrido y la app
+no tiene autoridad para corregirlo— y NO SHALL propagarse a la regla. Una diferencia de importe SHALL
+mostrarse como información, no como advertencia ni como impedimento: el importe de una obligación
+cambia, y avisar de eso cada vez convertiría el caso normal en un error.
+
+**LA FOTO DE LA OCURRENCIA ES DEL MOVIMIENTO, POR LOS DOS CAMINOS.** Vincular termina en la misma
+fila de dos maneras —creando la ocurrencia, cuando el calendario todavía no la materializó, o
+resolviendo la que el generador ya dejó pendiente— y las dos SHALL dejarla igual: el importe, la
+cuenta, la clasificación y la descripción que la ocurrencia guarda SHALL ser los del movimiento
+vinculado, no los que la regla preveía. El destino de una transferencia, el hogar y el reparto SHALL
+seguir siendo los de la REGLA por los dos caminos, porque describen la obligación y no el pago.
+Una ocurrencia que conserva la foto sembrada por el generador muestra en el historial un importe que
+nunca se pagó, y lo hace de la forma más difícil de ver: el número es plausible, es el de la regla, y
+coincide con el de todas las demás filas.
+
+**QUÉ SE OFRECE COMO CANDIDATO.** La lista inicial SHALL contener los movimientos del usuario que
+cumplan **todas** estas condiciones: ser del mismo tipo funcional que la regla, estar en la misma
+moneda, **no estar ya vinculados** a ninguna otra ocurrencia, y caer en la ventana que va **desde el
+vencimiento anterior hasta el vencimiento siguiente** de la regla.
+
+La ventana SHALL derivarse del calendario de la regla y NO SHALL ser un número fijo de días: media
+docena de días alrededor del vencimiento deja afuera el caso que motiva esta capacidad —pagar el 3 lo
+que vence el 23—, y un número fijo que lo cubriera sería absurdo en una regla semanal. Que la ventana
+de dos vencimientos consecutivos se superponga es **aceptado a propósito**: la app genuinamente no
+sabe a qué período correspondió un pago, y quien sabe es el usuario. Un movimiento ya vinculado
+desaparece de toda otra lista, así que no puede resolver dos vencimientos.
+
+**EL IMPORTE Y LA CUENTA ORDENAN, NO EXCLUYEN.** El sistema SHALL ordenar los candidatos por
+proximidad —misma cuenta primero, luego importe más parecido, luego fecha más cercana al
+vencimiento— y NO SHALL usar ninguno de esos criterios para dejar un movimiento fuera de la lista. Un
+alquiler que aumentó es justo el caso en que el usuario más necesita encontrarlo, y filtrar por
+importe lo esconde exactamente ahí.
+
+**AMPLIAR LA BÚSQUEDA SHALL estar siempre disponible**, incluso cuando la lista ya trae candidatos —
+no sólo cuando queda vacía—. El sistema NO SHALL exigir que el usuario escriba una búsqueda para
+llegar a la lista inicial.
+
+**EL VENCIMIENTO SE VALIDA ANTES DE CREARLE UNA IDENTIDAD.** Vincular o registrar por anticipado
+SHALL rechazar una fecha que el calendario de la regla no produce —incluida una posición que cae
+dentro de una pausa, y la fecha de la semilla, ya cubierta por el movimiento que creó la regla—, una
+posición que excede el tope del plan, y un vencimiento ya resuelto. Sin ese chequeo quedaría una
+ocurrencia con una identidad que el calendario nunca produce, y como una posición resuelta antes de
+su fecha cuenta como gastada, esa fecha fantasma consumiría una posición del límite. La regla SHALL
+ser **una sola** para los dos caminos, de modo que vincular y registrar por anticipado no puedan
+contestar distinto sobre la misma fecha.
+
+La ventana de candidatos SHALL tomar sus bordes del **calendario real** —los vecinos que la regla
+efectivamente produce, honrando versiones de cronograma y pausas— y no de una aritmética sobre el
+intervalo vigente. Cuando el vencimiento no tiene anterior (es el primero de la regla) o no tiene
+siguiente (el último de un plan con tope), el borde faltante SHALL ser un paso del calendario en esa
+dirección, para que un pago hecho antes del primer vencimiento siga entrando.
+
+#### Scenario: Vincular no crea ningún movimiento
+
+- **WHEN** el usuario vincula un gasto que ya tenía cargado al vencimiento del `2026-09-23`
+- **THEN** la ocurrencia del `2026-09-23` queda resuelta apuntando a ese movimiento
+- **AND** no se inserta ninguna fila nueva en `transactions`
+- **AND** ningún saldo cambia
+
+#### Scenario: Un pago hecho veinte días antes aparece entre los candidatos
+
+- **WHEN** el vencimiento es el `2026-09-23`, la regla es mensual y el usuario cargó un gasto el
+  `2026-09-03`
+- **THEN** ese gasto aparece en la lista inicial de candidatos
+
+#### Scenario: Un importe distinto no esconde el movimiento
+
+- **WHEN** la regla tiene un importe de `450000` y el movimiento cargado es de `610000`, dentro de la
+  ventana
+- **THEN** el movimiento aparece igual entre los candidatos
+- **AND** la pantalla muestra la diferencia de importe como información
+
+#### Scenario: El movimiento vinculado conserva sus datos y la regla no cambia
+
+- **WHEN** el usuario vincula al vencimiento del `2026-09-23` un movimiento fechado el `2026-09-03`,
+  de `610000`, cargado en una cuenta distinta de la de la regla
+- **THEN** el movimiento conserva su fecha, su importe y su cuenta
+- **AND** el importe y la cuenta de la regla no cambian
+- **AND** la ocurrencia conserva el `2026-09-23` como vencimiento
+
+#### Scenario: Vincular sobre una ocurrencia que el generador ya había creado
+
+- **WHEN** una regla de $600 tiene el vencimiento de este mes ya materializado como pendiente, y el
+  usuario lo resuelve señalando un movimiento de $2.500
+- **THEN** el historial de la regla muestra ese vencimiento con **$2.500** y la descripción del
+  movimiento, no los $600 de la regla
+- **AND** la regla sigue siendo de $600
+
+#### Scenario: Un movimiento ya vinculado no se ofrece para otro vencimiento
+
+- **WHEN** un movimiento ya está vinculado al vencimiento del `2026-09-23` y el usuario abre los
+  candidatos del vencimiento del `2026-10-23`
+- **THEN** ese movimiento no aparece en la lista
+
+#### Scenario: Ampliar la búsqueda está disponible con la lista llena
+
+- **WHEN** la lista inicial de candidatos ya muestra movimientos
+- **THEN** la pantalla ofrece igualmente ampliar la búsqueda
+
+#### Scenario: Una fecha que no es un vencimiento se rechaza sin crear nada
+
+- **WHEN** se intenta vincular un movimiento al `2026-09-15` de una regla mensual del 23
+- **THEN** la operación se rechaza
+- **AND** no queda ninguna ocurrencia con esa fecha
+
+#### Scenario: Una posición más allá del tope se rechaza
+
+- **WHEN** una regla con `max_occurrences = 3` —vencimientos el `2026-09-23`, `2026-10-23` y
+  `2026-11-23`— recibe un intento de vincular al `2026-12-23`
+- **THEN** la operación se rechaza explicando que el plan ya usó todos sus vencimientos
+
+#### Scenario: Con un cambio de frecuencia, el vencimiento anterior es el de la versión vieja
+
+- **WHEN** una regla fue semanal hasta el `2026-09-30` y mensual del 23 desde octubre, y se abren
+  los candidatos del `2026-10-23`
+- **THEN** la ventana empieza en el último vencimiento semanal (`2026-09-28`)
+- **AND** un movimiento del `2026-09-20` NO aparece, aunque «un mes antes del 23/10» lo admitiría
+
+#### Scenario: El primer vencimiento de una regla también admite un pago anterior
+
+- **WHEN** el vencimiento del `2026-09-23` es el primero de su regla mensual y el usuario cargó un
+  gasto el `2026-09-03`
+- **THEN** ese gasto aparece entre los candidatos
+
+### Requirement: El usuario puede desvincular un movimiento de un vencimiento
+
+El sistema SHALL permitir deshacer una vinculación. Desvincular SHALL **conservar el movimiento** —
+vuelve a estar suelto, tal como estaba antes— y devolver la ocurrencia a *sin resolver*. El sistema NO
+SHALL borrar el movimiento: la recurrencia no lo creó, lo cargó el usuario, y borrarlo destruiría un
+hecho real de su historial.
+
+Desvincular NO SHALL dejar la ocurrencia **omitida**: omitir afirma que ese período no correspondía, y
+lo que el usuario está diciendo al desvincular es que se equivocó de movimiento. Es la distinción que
+ya rige entre deshacer y omitir.
+
+El sistema SHALL ofrecer desvincular **únicamente sobre ocurrencias resueltas por vinculación**. Una
+ocurrencia resuelta por un movimiento que la recurrencia **creó** NO SHALL ofrecer esta acción, porque
+deshacerla significaría borrar ese movimiento, que es una operación distinta y con su propio alcance.
+Que el sistema pueda distinguir las dos es el motivo por el que cada ocurrencia registra **cómo** se
+resolvió.
+
+#### Scenario: Desvincular conserva el movimiento y devuelve el vencimiento a revisión
+
+- **WHEN** el usuario desvincula el movimiento que había asociado al vencimiento del `2026-09-23`
+- **THEN** el movimiento sigue existiendo, sin vínculo con ninguna regla
+- **AND** la ocurrencia del `2026-09-23` queda *sin resolver*, conservando su vencimiento
+- **AND** la ocurrencia NO queda omitida
+
+#### Scenario: Un vencimiento desvinculado se puede volver a resolver
+
+- **WHEN** el usuario desvincula el vencimiento del `2026-09-23` y después vincula otro movimiento
+- **THEN** la ocurrencia queda resuelta por el movimiento nuevo
+- **AND** la regla no gana ningún vencimiento adicional
+
+#### Scenario: Desvincular no se ofrece sobre un pago que creó la recurrencia
+
+- **WHEN** el usuario abre una ocurrencia que se resolvió registrando un pago, con un movimiento
+  creado por la recurrencia
+- **THEN** la pantalla NO ofrece desvincular
+
+### Requirement: Un movimiento vinculado se rotula como vinculado, no como originado
+
+Un movimiento que existía **antes** de resolverse la ocurrencia NO SHALL presentarse como originado en
+la regla recurrente: no lo originó, el usuario lo cargó por su cuenta. El sistema SHALL rotularlo como
+**vinculado** a esa recurrencia, y SHALL reservar el rótulo de origen para los movimientos que la
+recurrencia efectivamente creó.
+
+La distinción SHALL ser visible para el usuario, no sólo interna: es la misma que decide qué acción se
+le ofrece para deshacer, y un rótulo que las confunda hace que dos filas idénticas en pantalla se
+comporten distinto sin explicación.
+
+#### Scenario: El historial distingue vinculado de originado
+
+- **WHEN** el usuario abre un movimiento que vinculó a una recurrencia
+- **THEN** la ficha dice que está **vinculado** a esa recurrencia
+- **AND** NO dice que la recurrencia lo originó
+
+#### Scenario: Un movimiento creado por la recurrencia conserva su rótulo de origen
+
+- **WHEN** el usuario abre un movimiento que la recurrencia creó al registrarse un pago
+- **THEN** la ficha dice que lo originó esa recurrencia

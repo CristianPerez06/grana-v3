@@ -26,11 +26,8 @@ Desde la raíz del proyecto:
 pnpm add @supabase/supabase-js @supabase/ssr
 ```
 
-Opcional, para acceso tipado a la base (recomendado):
-
-```bash
-pnpm add -D supabase
-```
+No instales la CLI de Supabase: este proyecto no la usa (ver § 8). El acceso tipado a la base
+sale de `packages/supabase/src/types.ts`, que se mantiene a mano.
 
 ---
 
@@ -297,12 +294,17 @@ export const addTodo = async (formData: FormData) => {
 
 ---
 
-## 8. Generar tipos de TypeScript (recomendado)
+## 8. Los tipos de TypeScript, a mano
 
-```bash
-pnpm dlx supabase login
-pnpm dlx supabase gen types typescript --project-id <project-ref> --schema public > lib/supabase/database.types.ts
-```
+**Este proyecto no usa la CLI de Supabase.** No hay `supabase login`, ni `supabase link`, ni
+`supabase gen types`. Los tipos del esquema viven en `packages/supabase/src/types.ts` y se
+**editan a mano**: cuando una migración cambia el contrato público —una tabla, una columna, la
+firma de un RPC o la forma de lo que devuelve— se escribe la entrada copiando lo que dice el SQL
+que se aplicó, se compara contra él, y se corren `pnpm typecheck` y `pnpm typecheck:mobile`.
+
+Conviene saber qué cubre eso y qué no: el typecheck demuestra que el código coincide con el
+archivo, nunca que el archivo coincida con la base. Nada compara el esquema entero solo, así que
+la comparación se hace migración por migración, mientras el SQL todavía está a la vista.
 
 Y después tipá los clientes:
 
@@ -346,21 +348,16 @@ La migración vive en `supabase/migrations/0007_accounts.sql`. Para aplicarla:
 
 Si algún flag es `false` o el bloque `DO $$ ... $$` de self-check lanzó una excepción, revisá la consola de errores del SQL Editor.
 
-### 10.2 Regenerar tipos TypeScript
+### 10.2 Actualizar los tipos TypeScript
 
-Después de aplicar la migración, regenerá los tipos:
+Después de aplicar la migración, actualizá a mano `packages/supabase/src/types.ts` (ver § 8: la
+CLI no se usa). Para esta migración eso significa agregar las tablas `accounts` y
+`account_currencies` y el enum `account_type`, copiando nombres, tipos y nulabilidad del SQL que
+acabás de pegar.
 
-```bash
-pnpm --filter @grana/supabase types:gen
-```
-
-O bien, si no tenés el script configurado:
-
-```bash
-supabase gen types typescript --project-id <project-id> > packages/supabase/src/types.ts
-```
-
-Verificá que `packages/supabase/src/types.ts` incluye ahora las tablas `accounts` y `account_currencies` y el enum `account_type`.
+Después corré `pnpm typecheck` y `pnpm typecheck:mobile`. Verde ahí quiere decir que el código
+coincide con el archivo; que el archivo coincida con la base lo sostiene la comparación que
+acabás de hacer contra el SQL.
 
 ### 10.3 Verificar el trigger (test manual)
 
@@ -394,13 +391,11 @@ La migración vive en `supabase/migrations/0008_transactions.sql`. Para aplicarl
 
 Si algún flag es `false` o el bloque `DO $$ ... $$` de self-check lanzó una excepción, revisá la consola de errores del SQL Editor.
 
-### 11.2 Regenerar tipos TypeScript
+### 11.2 Actualizar los tipos TypeScript
 
-Después de aplicar la migración, regenerá los tipos:
-
-```bash
-./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts
-```
+Después de aplicar la migración, editá a mano `packages/supabase/src/types.ts` con lo que la
+migración agregó o cambió, copiándolo del SQL que acabás de pegar (ver § 8). Después corré
+`pnpm typecheck` y `pnpm typecheck:mobile`.
 
 Verificá que `packages/supabase/src/types.ts` incluye ahora la tabla `transactions` y el enum `transaction_type`.
 
@@ -427,13 +422,11 @@ La migración vive en `supabase/migrations/0009_transactions_transfer_adjustment
 
 Si algún flag es `false` o el bloque `DO $$ ... $$` de self-check lanzó una excepción, revisá la consola de errores del SQL Editor.
 
-### 12.2 Regenerar tipos TypeScript
+### 12.2 Actualizar los tipos TypeScript
 
-Después de aplicar la migración, regenerá los tipos:
-
-```bash
-./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts
-```
+Después de aplicar la migración, editá a mano `packages/supabase/src/types.ts` con lo que la
+migración agregó o cambió, copiándolo del SQL que acabás de pegar (ver § 8). Después corré
+`pnpm typecheck` y `pnpm typecheck:mobile`.
 
 Verificá que `packages/supabase/src/types.ts` incluye ahora:
 - La columna `transfer_destination_account_id` en `transactions`.
@@ -465,11 +458,10 @@ Para aplicarla:
 
 Si el self-check falla con `% account(s) named Efectivo still exist`, alguien creó manualmente una cuenta `Efectivo` que no es del trigger — revisarlo antes de continuar.
 
-### 12.5.2 Regenerar tipos TypeScript
+### 12.5.2 Actualizar los tipos TypeScript
 
-```bash
-./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts
-```
+A mano, con lo que esta migración cambió, copiándolo del SQL aplicado (ver § 8). Después,
+`pnpm typecheck` y `pnpm typecheck:mobile`.
 
 `packages/supabase/src/types.ts` debe incluir ahora `mode`, `financial_timezone` y `onboarding_completed_at` en `profiles` (Row / Insert / Update).
 
@@ -503,18 +495,17 @@ no vale es suponer que existe algo que no está.
 
 1. **Aplicar `0061`** en ese proyecto, pegando el archivo completo en el **SQL Editor**.
    Al final se ve `✓ 0061 card payment legs applied`.
-2. **Regenerar los tipos y comparar drift.** Las columnas de pata, `isOneToOne: false` en
-   `period_payments.period_id` y las cuatro funciones se escribieron **a mano** mientras
-   la migración no estaba aplicada:
+2. **Comparar los tipos contra el SQL aplicado.** Las columnas de pata, `isOneToOne: false` en
+   `period_payments.period_id` y las cuatro funciones se escribieron a mano mientras la
+   migración no estaba aplicada — como todo en ese archivo, porque el proyecto no usa la CLI
+   de Supabase (§ 8). Así que la comparación es a ojo, entrada por entrada, contra las
+   declaraciones de la migración: nombres, tipos, nulabilidad, y la firma y el retorno de
+   cada función.
 
-   ```bash
-   pnpm --filter @grana/supabase types:gen
-   git diff packages/supabase/src/types.ts
-   ```
-
-   Un diff acá **no es cosmético**: significa que la base no quedó como el código la
-   asume. Este paso va ACÁ y no en la ventana de producción: si aparece drift, se
-   arregla con calma, no con el pago de resúmenes caído.
+   Una diferencia acá **no es cosmética**: significa que la base no quedó como el código la
+   asume, y ningún typecheck lo va a decir, porque compara el código con el archivo y no el
+   archivo con la base. Este paso va ACÁ y no en la ventana de producción: si aparece una
+   diferencia, se arregla con calma, no con el pago de resúmenes caído.
 3. **QA de los cuatro recorridos**: resumen solo ARS, mixto pagando USD en USD, mixto
    pesificado en ARS, y sin cuenta USD activa. Más la **reversión** de los dos mixtos, en
    web (mobile no tiene ese flujo — ver la brecha anotada en la change).
