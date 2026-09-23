@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
+    "@expo/metro-runtime": "~57.0.16",
     "@grana/accounts": "workspace:*",
     "@grana/cards": "workspace:*",
     "@grana/dashboard": "workspace:*",
@@ -34,40 +35,48 @@
     "@grana/transactions-mutations": "workspace:*",
     "@grana/ui-contracts": "workspace:*",
     "@grana/validation": "workspace:*",
-    "@react-native-community/datetimepicker": "8.4.4",
+    "@react-native-community/datetimepicker": "9.1.0",
     "@tanstack/react-query": "5.100.13",
-    "expo": "~54.0.33",
-    "expo-constants": "~18.0.13",
-    "expo-font": "~14.0.11",
-    "expo-linking": "~8.0.12",
-    "expo-router": "~6.0.23",
-    "expo-secure-store": "^55.0.14",
-    "expo-splash-screen": "~31.0.13",
-    "expo-status-bar": "~3.0.9",
+    "expo": "~57.0.24",
+    "expo-constants": "~57.0.19",
+    "expo-font": "~57.0.4",
+    "expo-linking": "~57.0.10",
+    "expo-router": "~57.0.22",
+    "expo-secure-store": "~57.0.4",
+    "expo-splash-screen": "~57.0.9",
+    "expo-status-bar": "~57.0.1",
     "lucide-react-native": "^1.16.0",
     "nativewind": "^4.2.4",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
     "react-native-css-interop": "^0.2.4",
     "react-native-keyboard-controller": "^1.22.2",
-    "react-native-reanimated": "~4.1.7",
-    "react-native-safe-area-context": "~5.6.2",
-    "react-native-screens": "~4.16.0",
-    "react-native-svg": "15.12.1",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
     "react-native-url-polyfill": "^3.0.0",
-    "react-native-worklets": "0.8.3"
+    "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
     "@grana/ui-tokens": "workspace:*",
-    "@types/react": "~19.1.0",
-    "babel-preset-expo": "~54.0.10",
+    "@types/react": "~19.2.10",
+    "babel-preset-expo": "~57.0.12",
     "eas-cli": "^18.13.0",
     "eslint": "^9.39.4",
-    "eslint-config-expo": "^55.0.1",
+    "eslint-config-expo": "~57.0.2",
     "sharp": "^0.33.5",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.2",
     "vitest": "^3.0.0"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "react-native-keyboard-controller",
+        "typescript"
+      ]
+    }
+  }
 }

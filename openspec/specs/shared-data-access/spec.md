@@ -68,7 +68,7 @@ El tipo `Household` (y `HouseholdMember`) SHALL definirse una sola vez, en `@gra
 
 `apps/web` SHALL consumir las lecturas de `@grana/shared` directamente desde sus server components, sin dejar un shim intermedio: `apps/web/lib/shared/queries.ts` SHALL ser eliminado (consistente con el rollout de direct reads que borró `app/_actions/queries.ts`). En `apps/mobile`, la **implementación duplicada** del stub (`apps/mobile/lib/shared/queries.ts`, con los cuerpos propios de `getHousehold` + `getMovementSharedInfo`) SHALL ser reemplazada por un wrapper delgado que inyecta el cliente nativo en las lecturas de `@grana/shared` y conserva las firmas de la app (mismo patrón que `lib/cards/queries.ts` y `lib/transactions/queries.ts`); NO SHALL quedar ninguna reimplementación de esas lecturas en `apps/mobile`.
 
-`@grana/shared` SHALL permanecer libre de UI (solo tipos + lógica) para no introducir una segunda versión de React en el monorepo (RN 0.81 fija React a 19.1.0).
+`@grana/shared` SHALL permanecer libre de UI (solo tipos + lógica) para no introducir una segunda versión de React en el monorepo (React Native fija una versión exacta de React; hoy RN 0.86 fija `19.2.3`).
 
 #### Scenario: La web ya no tiene la capa de lectura local
 

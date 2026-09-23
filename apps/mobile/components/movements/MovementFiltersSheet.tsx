@@ -115,6 +115,7 @@ export function MovementFiltersSheet({
   // would still be sitting there on the next open.
   useEffect(() => {
     if (!visible) return
+    /* eslint-disable react-hooks/set-state-in-effect -- re-seeding the draft on open is the point */
     setType(filters.type)
     setAccountId(filters.accountId)
     setCategoryId(filters.categoryId)
@@ -122,6 +123,7 @@ export function MovementFiltersSheet({
     setCurrency(filters.currency)
     setAmountMin(filters.amountMin != null ? String(filters.amountMin) : '')
     setAmountMax(filters.amountMax != null ? String(filters.amountMax) : '')
+    /* eslint-enable react-hooks/set-state-in-effect */
     onDraftCategoryChange(filters.categoryId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible])

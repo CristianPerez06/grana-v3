@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { Animated, Dimensions, Modal, Pressable } from 'react-native'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
 import type { DrawerProps } from '@grana/ui-contracts'
@@ -25,7 +25,7 @@ export function Drawer({
   const screenWidth = Dimensions.get('window').width
   const panelWidth = Math.min(widthPx, screenWidth)
   const hiddenOffset = side === 'right' ? panelWidth : -panelWidth
-  const translateX = useRef(new Animated.Value(hiddenOffset)).current
+  const [translateX] = useState(() => new Animated.Value(hiddenOffset))
 
   useEffect(() => {
     if (open) {
