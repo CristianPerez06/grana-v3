@@ -235,8 +235,8 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
     // the `SafeAreaProvider` in `app/_layout.tsx` does not reach into it, so the
     // `SafeAreaView` below reads insets of zero and plants the header at y=0 —
     // under the Dynamic Island, with the title behind the pill and the close
-    // button pushed against it. Same reason `Drawer` mounts its own
-    // `KeyboardProvider` rather than relying on the root one.
+    // button pushed against it. The keyboard is the opposite case: the root
+    // `KeyboardProvider` does reach in here, so no nested one (issue #166).
     <SafeAreaProvider>
       <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-page">
         {/* Panel header — title + close */}

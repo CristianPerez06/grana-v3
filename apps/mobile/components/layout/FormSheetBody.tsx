@@ -23,13 +23,10 @@ type Props = {
  * Scrollable body for overlay surfaces that contain text inputs (`Drawer`,
  * `BottomSheet`, or any RN `Modal`).
  *
- * It does NOT mount a `KeyboardProvider`. An RN `Modal` renders into a separate
- * native window and the keyboard context is anchored to a window, so the
- * provider in `app/_layout.tsx` does not reach inside a modal — but the provider
- * renders a `flex: 1` view, which measures 0 inside a content-sized sheet and
- * hides the content. So the provider is mounted by whoever owns the `Modal`
- * (`BottomSheet`, `Drawer`, `MovementFiltersSheet`), where it fills the window;
- * this component only scrolls and shifts.
+ * It does NOT mount a `KeyboardProvider`, and neither does the surface that
+ * owns the `Modal`: the one in `app/_layout.tsx` tracks the keyboard inside the
+ * modal window too, and a nested one left it paused after the modal closed
+ * (issue #166). This component only scrolls and shifts.
  *
  * An overlay without a text field — `SelectSheet`, `EditDatesSheet` — keeps a
  * plain `ScrollView`/`FlatList`.

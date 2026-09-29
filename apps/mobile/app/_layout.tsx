@@ -73,9 +73,10 @@ export default function RootLayout() {
   // KeyboardProvider goes right inside it: every form surface reads keyboard
   // state from here (FormScreen, FormSheetBody, TabBar), and it must sit under
   // SafeAreaProvider because the keyboard-aware scrollers combine keyboard
-  // height with the safe-area insets. Surfaces rendered inside an RN Modal live
-  // in their own window and mount their own nested provider — that's what
-  // FormSheetBody encapsulates; this one does not reach them.
+  // height with the safe-area insets. It is the ONLY keyboard provider in the
+  // app: it also tracks the keyboard inside RN Modals (sheets, drawers), and a
+  // nested one there left this one paused after the modal closed, with the
+  // toolbar below stuck on screen (issue #166).
   // LocaleProvider is next so translations reach auth screens.
   // QueryClientProvider has no dependency on the others and sits innermost.
   // El `View className="flex-1 bg-page"` pinta el fondo de la ventana: sin él

@@ -16,11 +16,10 @@ type Props = {
  * breaks, and the list renders every row). This one only shifts its children
  * and lets the list keep scrolling itself.
  *
- * It does NOT mount a `KeyboardProvider`. The provider for a modal window is
- * mounted by the surface that owns the `Modal` — `BottomSheet`, `Drawer`,
- * `MovementFiltersSheet` — because the provider's view is `flex: 1` and only
- * measures correctly at the root of the window. Mounted here instead, inside a
- * content-sized sheet, it collapsed to zero height and hid the picker.
+ * It does NOT mount a `KeyboardProvider`, and neither does the surface that
+ * owns the `Modal`: the one in `app/_layout.tsx` tracks the keyboard inside the
+ * modal window too, and a nested one left it paused after the modal closed
+ * (issue #166).
  *
  * This is the library's `KeyboardAvoidingView`, NOT React Native's: it handles
  * Android edge-to-edge and animates in sync with the keyboard, which is exactly

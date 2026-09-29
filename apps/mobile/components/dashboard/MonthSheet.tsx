@@ -44,9 +44,7 @@ export const MonthSheet = ({ open, years, selected, onSelect, onDismiss }: Month
       onRequestClose={onDismiss}
       transparent
       animationType="slide"
-      // Must match what a keyboard provider would force under edge-to-edge, and
-      // what every other sheet in the app declares. This sheet has no text
-      // input, so it mounts no `KeyboardProvider`.
+      // Edge-to-edge like the main window and every other sheet in the app.
       statusBarTranslucent
       navigationBarTranslucent
     >

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
-import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { parseMoneyInput } from '@grana/validation'
 import {
@@ -180,204 +179,201 @@ export function MovementFiltersSheet({
       onRequestClose={onClose}
       transparent
       animationType="slide"
-      // Must match what the provider inside forces under edge-to-edge; the
-      // keyboard-controller library requires the modal window to agree, and a
-      // window that disagrees measures wrong. The footer is kept clear of the
-      // navigation bar by the safe-area spacer at the end of the scroll content,
-      // not by opting out of edge-to-edge.
+      // Edge-to-edge like the main window, so the keyboard height the root
+      // provider reports lines up with this window's geometry. The footer is
+      // kept clear of the navigation bar by the safe-area spacer at the end of
+      // the scroll content, not by opting out of edge-to-edge.
       statusBarTranslucent
       navigationBarTranslucent
     >
-      {/* The provider goes at the root of the window, not inside the panel: its
-          view is `flex: 1` and would measure 0 in this content-sized sheet. */}
-      <KeyboardProvider>
-        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-          {/* The scrim is a SIBLING behind the panel, not an ancestor of it.
-              With the usual `Pressable` scrim wrapping a `Pressable` panel, the
-              scrolling body hangs off two views that claim the touch responder
-              on press — and every chip inside is a `Pressable` too. Starting a
-              drag on one of them then races the scroller for the gesture, which
-              is why parts of this sheet scrolled and parts did not. Behind and
-              beside the panel, the scrim still closes on tap and competes with
-              nothing. No tap-swallowing wrapper is needed either: the panel
-              paints after the scrim, so its touches never reach it. */}
-          <Pressable
-            onPress={onClose}
-            accessibilityLabel={t('transactions.filters.close')}
-            style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(11,26,43,0.30)' }]}
-          />
-          {/* The panel hugs its content: the height bound lives on the scrolling
-              body below, so a short sheet stays short and a long one scrolls. */}
-          <View className="overflow-hidden rounded-t-2xl bg-page">
-            <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-              <Text className="text-lg font-semibold text-text">
-                {t('transactions.filters.filters_button')}
+      {/* No `KeyboardProvider` here: the root one tracks the keyboard inside
+          this window, and a second one left it paused after closing (#166). */}
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        {/* The scrim is a SIBLING behind the panel, not an ancestor of it.
+            With the usual `Pressable` scrim wrapping a `Pressable` panel, the
+            scrolling body hangs off two views that claim the touch responder
+            on press — and every chip inside is a `Pressable` too. Starting a
+            drag on one of them then races the scroller for the gesture, which
+            is why parts of this sheet scrolled and parts did not. Behind and
+            beside the panel, the scrim still closes on tap and competes with
+            nothing. No tap-swallowing wrapper is needed either: the panel
+            paints after the scrim, so its touches never reach it. */}
+        <Pressable
+          onPress={onClose}
+          accessibilityLabel={t('transactions.filters.close')}
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(11,26,43,0.30)' }]}
+        />
+        {/* The panel hugs its content: the height bound lives on the scrolling
+            body below, so a short sheet stays short and a long one scrolls. */}
+        <View className="overflow-hidden rounded-t-2xl bg-page">
+          <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+            <Text className="text-lg font-semibold text-text">
+              {t('transactions.filters.filters_button')}
+            </Text>
+            <Pressable onPress={onClose} accessibilityRole="button">
+              <Text className="text-sm font-medium text-emerald">
+                {t('transactions.filters.close')}
               </Text>
-              <Pressable onPress={onClose} accessibilityRole="button">
-                <Text className="text-sm font-medium text-emerald">
-                  {t('transactions.filters.close')}
+            </Pressable>
+          </View>
+
+          <FormSheetBody maxHeight={BODY_MAX_HEIGHT} contentClassName="gap-5 px-5 pt-5">
+            {/* Type — the DERIVED kind axis, not the transaction_type column:
+                it is what the shared `MovementFilters` contract declares, and
+                it carries the distinctions the row badges already show
+                (installments, statement payment, refund). */}
+            <View className="gap-2">
+              <Label>{t('transactions.filters.type')}</Label>
+              <View className="flex-row flex-wrap gap-2">
+                <Chip
+                  label={t('transactions.filters.all_masc')}
+                  active={type === null}
+                  onPress={() => setType(null)}
+                />
+                {MOVEMENT_TYPE_KEYS.map((option) => (
+                  <Chip
+                    key={option}
+                    label={t(`transactions.movement_kinds.${option}`)}
+                    active={type === option}
+                    onPress={() => setType(option)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {/* Account — only where it disambiguates something. */}
+            {showAccountFilter && accounts.length >= 2 && (
+              <View className="gap-2">
+                <Label>{t('transactions.filters.account')}</Label>
+                <View className="flex-row flex-wrap gap-2">
+                  <Chip
+                    label={t('transactions.filters.all_fem')}
+                    active={accountId === null}
+                    onPress={() => setAccountId(null)}
+                  />
+                  {accounts.map((account) => (
+                    <Chip
+                      key={account.id}
+                      label={account.name}
+                      active={accountId === account.id}
+                      onPress={() => setAccountId(account.id)}
+                      leading={<AccountAvatar {...account.avatar} size="sm" />}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Category */}
+            {categories.length > 0 && (
+              <View className="gap-2">
+                <Label>{t('transactions.filters.category')}</Label>
+                <View className="flex-row flex-wrap gap-2">
+                  <Chip
+                    label={t('transactions.filters.all_fem')}
+                    active={categoryId === null}
+                    onPress={() => pickCategory(null)}
+                  />
+                  {categories.map((option) => (
+                    <Chip
+                      key={option.id}
+                      label={categoryLabel(option)}
+                      active={categoryId === option.id}
+                      onPress={() => pickCategory(option.id)}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Subcategory — the catalog serves the drafted category's, so the
+                block appears as soon as a category is picked */}
+            {categoryId && subcategories.length > 0 && (
+              <View className="gap-2">
+                <Label>{t('transactions.filters.subcategory')}</Label>
+                <View className="flex-row flex-wrap gap-2">
+                  <Chip
+                    label={t('transactions.filters.all_fem')}
+                    active={subcategoryId === null}
+                    onPress={() => setSubcategoryId(null)}
+                  />
+                  {subcategories.map((sub) => (
+                    <Chip
+                      key={sub.id}
+                      label={subcategoryLabel(sub)}
+                      active={subcategoryId === sub.id}
+                      onPress={() => setSubcategoryId(sub.id)}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Currency */}
+            <View className="gap-2">
+              <Label>{t('transactions.filters.currency')}</Label>
+              <View className="flex-row flex-wrap gap-2">
+                <Chip
+                  label={t('transactions.filters.all_fem')}
+                  active={currency === null}
+                  onPress={() => setCurrency(null)}
+                />
+                {CURRENCY_OPTIONS.map((code) => (
+                  <Chip
+                    key={code}
+                    label={code}
+                    active={currency === code}
+                    onPress={() => setCurrency(code)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {/* Amount range */}
+            <View className="gap-2">
+              <View className="flex-row gap-3">
+                <View className="flex-1 gap-1.5">
+                  <Label>{t('transactions.filters.amount_min')}</Label>
+                  <MoneyAmountInput value={amountMin} onChangeText={setAmountMin} placeholder="0" />
+                </View>
+                <View className="flex-1 gap-1.5">
+                  <Label>{t('transactions.filters.amount_max')}</Label>
+                  <MoneyAmountInput value={amountMax} onChangeText={setAmountMax} placeholder="0" />
+                </View>
+              </View>
+            </View>
+
+            {/* Footer */}
+            <View className="flex-row items-center gap-3 pt-1">
+              <Pressable
+                onPress={clear}
+                accessibilityRole="button"
+                className="rounded-xl bg-border-soft px-4 py-3"
+              >
+                <Text className="text-sm font-semibold text-text">
+                  {t('transactions.filters.clear')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={apply}
+                accessibilityRole="button"
+                className="flex-1 items-center rounded-xl bg-emerald px-4 py-3"
+              >
+                <Text className="text-sm font-semibold text-white">
+                  {t('transactions.filters.apply')}
                 </Text>
               </Pressable>
             </View>
 
-            <FormSheetBody maxHeight={BODY_MAX_HEIGHT} contentClassName="gap-5 px-5 pt-5">
-              {/* Type — the DERIVED kind axis, not the transaction_type column:
-                  it is what the shared `MovementFilters` contract declares, and
-                  it carries the distinctions the row badges already show
-                  (installments, statement payment, refund). */}
-              <View className="gap-2">
-                <Label>{t('transactions.filters.type')}</Label>
-                <View className="flex-row flex-wrap gap-2">
-                  <Chip
-                    label={t('transactions.filters.all_masc')}
-                    active={type === null}
-                    onPress={() => setType(null)}
-                  />
-                  {MOVEMENT_TYPE_KEYS.map((option) => (
-                    <Chip
-                      key={option}
-                      label={t(`transactions.movement_kinds.${option}`)}
-                      active={type === option}
-                      onPress={() => setType(option)}
-                    />
-                  ))}
-                </View>
-              </View>
-
-              {/* Account — only where it disambiguates something. */}
-              {showAccountFilter && accounts.length >= 2 && (
-                <View className="gap-2">
-                  <Label>{t('transactions.filters.account')}</Label>
-                  <View className="flex-row flex-wrap gap-2">
-                    <Chip
-                      label={t('transactions.filters.all_fem')}
-                      active={accountId === null}
-                      onPress={() => setAccountId(null)}
-                    />
-                    {accounts.map((account) => (
-                      <Chip
-                        key={account.id}
-                        label={account.name}
-                        active={accountId === account.id}
-                        onPress={() => setAccountId(account.id)}
-                        leading={<AccountAvatar {...account.avatar} size="sm" />}
-                      />
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Category */}
-              {categories.length > 0 && (
-                <View className="gap-2">
-                  <Label>{t('transactions.filters.category')}</Label>
-                  <View className="flex-row flex-wrap gap-2">
-                    <Chip
-                      label={t('transactions.filters.all_fem')}
-                      active={categoryId === null}
-                      onPress={() => pickCategory(null)}
-                    />
-                    {categories.map((option) => (
-                      <Chip
-                        key={option.id}
-                        label={categoryLabel(option)}
-                        active={categoryId === option.id}
-                        onPress={() => pickCategory(option.id)}
-                      />
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Subcategory — the catalog serves the drafted category's, so the
-                  block appears as soon as a category is picked */}
-              {categoryId && subcategories.length > 0 && (
-                <View className="gap-2">
-                  <Label>{t('transactions.filters.subcategory')}</Label>
-                  <View className="flex-row flex-wrap gap-2">
-                    <Chip
-                      label={t('transactions.filters.all_fem')}
-                      active={subcategoryId === null}
-                      onPress={() => setSubcategoryId(null)}
-                    />
-                    {subcategories.map((sub) => (
-                      <Chip
-                        key={sub.id}
-                        label={subcategoryLabel(sub)}
-                        active={subcategoryId === sub.id}
-                        onPress={() => setSubcategoryId(sub.id)}
-                      />
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Currency */}
-              <View className="gap-2">
-                <Label>{t('transactions.filters.currency')}</Label>
-                <View className="flex-row flex-wrap gap-2">
-                  <Chip
-                    label={t('transactions.filters.all_fem')}
-                    active={currency === null}
-                    onPress={() => setCurrency(null)}
-                  />
-                  {CURRENCY_OPTIONS.map((code) => (
-                    <Chip
-                      key={code}
-                      label={code}
-                      active={currency === code}
-                      onPress={() => setCurrency(code)}
-                    />
-                  ))}
-                </View>
-              </View>
-
-              {/* Amount range */}
-              <View className="gap-2">
-                <View className="flex-row gap-3">
-                  <View className="flex-1 gap-1.5">
-                    <Label>{t('transactions.filters.amount_min')}</Label>
-                    <MoneyAmountInput value={amountMin} onChangeText={setAmountMin} placeholder="0" />
-                  </View>
-                  <View className="flex-1 gap-1.5">
-                    <Label>{t('transactions.filters.amount_max')}</Label>
-                    <MoneyAmountInput value={amountMax} onChangeText={setAmountMax} placeholder="0" />
-                  </View>
-                </View>
-              </View>
-
-              {/* Footer */}
-              <View className="flex-row items-center gap-3 pt-1">
-                <Pressable
-                  onPress={clear}
-                  accessibilityRole="button"
-                  className="rounded-xl bg-border-soft px-4 py-3"
-                >
-                  <Text className="text-sm font-semibold text-text">
-                    {t('transactions.filters.clear')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={apply}
-                  accessibilityRole="button"
-                  className="flex-1 items-center rounded-xl bg-emerald px-4 py-3"
-                >
-                  <Text className="text-sm font-semibold text-white">
-                    {t('transactions.filters.apply')}
-                  </Text>
-                </Pressable>
-              </View>
-
-              {/* Bottom inset as a SPACER, not as content padding: NativeWind
-                  maps `contentContainerClassName` onto `contentContainerStyle`,
-                  so passing that style directly would collide with the class
-                  names above. It rides inside the scroll content on purpose —
-                  padding on the panel would push the footer up and clip it. */}
-              <View style={{ height: insets.bottom + BOTTOM_SPACING }} />
-            </FormSheetBody>
-          </View>
+            {/* Bottom inset as a SPACER, not as content padding: NativeWind
+                maps `contentContainerClassName` onto `contentContainerStyle`,
+                so passing that style directly would collide with the class
+                names above. It rides inside the scroll content on purpose —
+                padding on the panel would push the footer up and clip it. */}
+            <View style={{ height: insets.bottom + BOTTOM_SPACING }} />
+          </FormSheetBody>
         </View>
-      </KeyboardProvider>
+      </View>
     </Modal>
   )
 }
