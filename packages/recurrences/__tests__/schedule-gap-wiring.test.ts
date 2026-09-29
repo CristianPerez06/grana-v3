@@ -141,8 +141,8 @@ describe('what the hub says, through its own mapper', () => {
 
 describe('a spent cap survives the anchor moving, through the real read', () => {
   it('stops announcing once the cuotas the new anchor inherited are gone', async () => {
-    // Nine cuotas on the 25th since January; eight are behind us. The user
-    // corrects the reference date to the 27th OF THIS CYCLE, which is what the
+    // Nine cuotas on the 1st; eight are behind us. The user corrects the
+    // reference date to a day OF THIS CYCLE still to come, which is what the
     // form offers — so the rule's calendar gets a new origin near today, and the
     // position it sits at under that origin is ZERO. The generator composes both
     // anchors and knows one cuota is left; a reader that counts the cap from the
@@ -151,23 +151,42 @@ describe('a spent cap survives the anchor moving, through the real read', () => 
     // The old fixture shifted the anchor by two days within the same month,
     // where the new origin's index happens to equal what was already spent — it
     // agreed with the bug and proved nothing.
+    //
+    // Every date is derived from today. The fixture before this one pinned the
+    // anchor to 2026-01-25: the positions spent grow with the real calendar, so
+    // it held for one month and then the cap was gone before the test began.
+    // The 1st never clamps, and the 1st of the month seven back puts the eighth
+    // cuota on the 1st of this month — on or before today, whatever today is —
+    // and the ninth on the 1st of the next, always ahead.
+    const { rows: dates } = await db.query<{ anchor: string; corrected: string }>(
+      `select (date_trunc('month', d) - interval '7 months')::date::text as anchor,
+              (d + 1)::text as corrected
+         from (select (now() at time zone 'America/Argentina/Buenos_Aires')::date as d) t`,
+    )
+    const { anchor, corrected } = dates[0]
     const id = `00000000-0000-4000-8000-00000000f2${(seq++).toString(16).padStart(2, '0')}`
     await actAsAdmin(db)
     await db.exec(`
       insert into public.recurrences
         (id, user_id, start_date, interval_count, interval_unit, status, amount, currency_code,
          movement_type, max_occurrences, last_generated_date)
-      values ('${id}', '${U_A}', '2026-01-25', 1, 'month', 'active', 1000, 'ARS', 'expense', 9,
+      values ('${id}', '${U_A}', '${anchor}', 1, 'month', 'active', 1000, 'ARS', 'expense', 9,
               ((now() at time zone 'America/Argentina/Buenos_Aires')::date));
     `)
     await actAs(db, U_A)
 
-    const corrected = `${(await today()).slice(0, 7)}-27`
+    // The candidates are asked for the way `update_recurrence_schedule` validates
+    // them: with what is left of the cap. Asked without it they include a date
+    // the guard refuses, and a fixture that drifted would fail far from the cause.
     const { rows: candidates } = await db.query<{ effective_from: string }>(
       `select effective_from::text from public.recurrence_candidate_effective_dates(
          '${corrected}'::date, 1, 'month',
-         ((now() at time zone 'America/Argentina/Buenos_Aires')::date))`,
+         ((now() at time zone 'America/Argentina/Buenos_Aires')::date), null,
+         9 - public.recurrence_positions_spent('${id}'::uuid,
+               ((now() at time zone 'America/Argentina/Buenos_Aires')::date)))`,
     )
+    // One cuota left, so one date to offer: the corrected anchor itself.
+    expect(candidates.map((c) => c.effective_from)).toEqual([corrected])
     await db.exec(`
       select public.update_recurrence_schedule('${id}'::uuid,
         jsonb_build_object('start_date', '${corrected}'), '${candidates[0].effective_from}'::date);
@@ -177,8 +196,8 @@ describe('a spent cap survives the anchor moving, through the real read', () => 
     const { rows } = await db.query<{ n: number }>(
       `select schedule_positions_before as n from public.recurrences where id = '${id}'`,
     )
-    // January through August on the 25th, spent under the anchor the rule no
-    // longer has — and invisible to anything that walks only the new one.
+    // Eight 1sts, up to this month's, spent under the anchor the rule no longer
+    // has — and invisible to anything that walks only the new one.
     expect(Number(rows[0].n)).toBe(8)
 
     // The ninth and last, materialized.
