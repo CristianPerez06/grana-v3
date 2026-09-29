@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Animated, Dimensions, Modal, Pressable, useWindowDimensions, View } from 'react-native'
-import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 // Breathing room below the last element, on top of the OS inset — so content
@@ -51,14 +50,13 @@ export const useSheetBodyMaxHeight = () => {
  * `children` (FlatList/ScrollView) should carry its own `maxHeight` so it scrolls
  * instead of overflowing the cap.
  *
- * The `KeyboardProvider` for the sheet is mounted HERE, at the root of the modal
- * window, and never inside the panel. Two facts force that placement: an RN
- * `Modal` is a separate native window that the root provider does not reach, and
- * the provider renders its own view with a hardcoded `flex: 1`. In the
- * content-sized panel that view measures 0 (flex-basis 0 inside an auto-height
- * column) and takes the whole sheet down with it; at the modal root it fills the
- * window, which is what it wants. Sheets with a text field wrap their content in
- * `FormSheetKeyboardView` / `FormSheetBody`, which now only shift or scroll.
+ * It mounts NO `KeyboardProvider`: the one in `app/_layout.tsx` already tracks
+ * the keyboard inside the modal window (on Android the library hands its
+ * callback over to the dialog while it is shown). A second provider here
+ * overwrote the root's dismiss listener, so closing the sheet left the root
+ * paused for good and the keyboard toolbar stuck on screen (issue #166). Sheets
+ * with a text field wrap their content in `FormSheetKeyboardView` /
+ * `FormSheetBody`, which only shift or scroll.
  */
 export function BottomSheet({
   visible,
@@ -91,34 +89,32 @@ export function BottomSheet({
       visible={visible}
       transparent
       animationType="fade"
-      // Must match what the provider inside uses: under edge-to-edge it forces
-      // both to true, and the library requires the modal window to agree.
+      // Edge-to-edge like the main window, so the keyboard height the root
+      // provider reports lines up with this window's geometry.
       statusBarTranslucent
       navigationBarTranslucent
       onRequestClose={onClose}
     >
-      <KeyboardProvider>
-        <Pressable
-          accessibilityLabel={ariaLabel}
-          onPress={onClose}
-          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(11,26,43,0.30)' }}
+      <Pressable
+        accessibilityLabel={ariaLabel}
+        onPress={onClose}
+        style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(11,26,43,0.30)' }}
+      >
+        <Animated.View
+          className="overflow-hidden rounded-t-2xl bg-page"
+          style={{ maxHeight: PANEL_MAX_PERCENT, transform: [{ translateY }] }}
         >
-          <Animated.View
-            className="overflow-hidden rounded-t-2xl bg-page"
-            style={{ maxHeight: PANEL_MAX_PERCENT, transform: [{ translateY }] }}
-          >
-            {/* Swallow taps on the panel so they don't bubble to the scrim. The
-                bottom padding = OS inset + a fixed base so the last element keeps
-                its distance from the screen edge on every device. */}
-            <Pressable onPress={() => {}} style={{ paddingBottom: insets.bottom + BOTTOM_SPACING }}>
-              <View className="items-center pb-1 pt-2.5">
-                <View className="h-1 w-9 rounded-full bg-border" />
-              </View>
-              {children}
-            </Pressable>
-          </Animated.View>
-        </Pressable>
-      </KeyboardProvider>
+          {/* Swallow taps on the panel so they don't bubble to the scrim. The
+              bottom padding = OS inset + a fixed base so the last element keeps
+              its distance from the screen edge on every device. */}
+          <Pressable onPress={() => {}} style={{ paddingBottom: insets.bottom + BOTTOM_SPACING }}>
+            <View className="items-center pb-1 pt-2.5">
+              <View className="h-1 w-9 rounded-full bg-border" />
+            </View>
+            {children}
+          </Pressable>
+        </Animated.View>
+      </Pressable>
     </Modal>
   )
 }
