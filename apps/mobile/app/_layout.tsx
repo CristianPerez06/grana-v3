@@ -60,11 +60,16 @@ export default function RootLayout() {
         }
       } else if (event === 'SIGNED_OUT') {
         router.replace('/(auth)/login')
+        // Whatever ended the session — the menu button, another device, a
+        // refresh the service refused — the next person to sign in must not
+        // read this one's data from the cache: query keys carry no user id.
+        // After the redirect, so the (app) screens are gone and don't refetch.
+        queryClient.clear()
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, queryClient])
 
   if (!fontsLoaded) return null
 
