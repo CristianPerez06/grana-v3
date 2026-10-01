@@ -23,6 +23,7 @@ export default defineConfig({
       'expo-secure-store': path.resolve(__dirname, 'test/stubs/expo-secure-store.ts'),
       '@grana/i18n-messages': path.resolve(__dirname, '../../packages/i18n-messages/src/index.ts'),
       '@grana/money-logic': path.resolve(__dirname, '../../packages/money-logic/src/index.ts'),
+      '@grana/supabase': path.resolve(__dirname, '../../packages/supabase/src/index.ts'),
       '@grana/recurrences': path.resolve(__dirname, '../../packages/recurrences/src/index.ts'),
       '@grana/validation': path.resolve(__dirname, '../../packages/validation/src/index.ts'),
     },
