@@ -2,6 +2,9 @@ import 'react-native-url-polyfill/auto'
 
 import * as SecureStore from 'expo-secure-store'
 import { createClient } from '@grana/supabase'
+import { AppState } from 'react-native'
+
+import { registerSessionRefresh } from './session-refresh'
 
 const ExpoSecureStoreAdapter = {
   getItem: (key: string) => SecureStore.getItemAsync(key),
@@ -20,3 +23,5 @@ export const supabase = createClient(
     },
   },
 )
+
+registerSessionRefresh(AppState, supabase.auth)
