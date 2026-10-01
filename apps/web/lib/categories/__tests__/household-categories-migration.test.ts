@@ -230,6 +230,20 @@ describe('sharing promotes the classification', () => {
   })
 })
 
+/**
+ * This case boots its own Postgres INSIDE the test body: it needs a database the
+ * migration has not touched yet, so the shared one from `beforeAll` will not do.
+ * That puts the boot under `testTimeout` (5s default) instead of the 60s
+ * `hookTimeout`, and booting WASM Postgres is ~3s idle and over 10s when the
+ * suite's files compete for CPU — so it timed out intermittently with nothing
+ * wrong in it (issue #119).
+ *
+ * The time is given to this case and to nothing else. `testTimeout` stays at its
+ * default in `vitest.config.ts`: raising it globally would buy this case a margin
+ * at the cost of hiding a genuine hang in every other one.
+ */
+const BOOTS_POSTGRES = 60_000
+
 describe('backfill on apply', () => {
   it('promotes the private categories of already-shared rows when the migration runs', async () => {
     const fresh = await createHouseholdCategoriesDb({ applyMigration: false })
@@ -258,5 +272,5 @@ describe('backfill on apply', () => {
     } finally {
       await fresh.close()
     }
-  })
+  }, BOOTS_POSTGRES)
 })
