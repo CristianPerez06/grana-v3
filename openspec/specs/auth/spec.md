@@ -3,7 +3,9 @@
 ## Purpose
 
 Define los flujos de autenticación de Grana: alta de usuario con confirmación vía código OTP de 8 dígitos, inicio de sesión, recuperación de contraseña, cambio de contraseña desde el área autenticada (con verificación de la actual y revocación de las demás sesiones), reenvío de códigos con cooldown, y los templates de email versionados que los soportan. Cubre tanto el cliente web (Next.js + `@supabase/ssr`) como el cliente mobile (Expo + `@supabase/supabase-js` sobre AsyncStorage), y los callbacks que cierran cada flujo en cada plataforma.
+
 ## Requirements
+
 ### Requirement: Los templates de email viven versionados en el repo
 
 Los templates de email que dispara Supabase para los flujos de auth de esta app SHALL estar versionados bajo `supabase/templates/<nombre>.html`. Esa carpeta es la **fuente de verdad**; el dashboard de Supabase es un mirror manual, que una persona sincroniza a mano cada vez. Cualquier cambio a un template SHALL hacerse primero en el repo y luego copiarse al dashboard. Si el dashboard y el repo divergen, el contenido del repo gana — la resolución es sobrescribir el dashboard, nunca al revés.
@@ -240,6 +242,8 @@ El sistema SHALL permitir que un usuario confirmado inicie sesión ingresando em
 
 La persistencia de sesión varía por plataforma: web usa cookies HTTP-only manejadas por Supabase server-side; mobile usa `expo-secure-store` como `storage` del cliente de Supabase.
 
+En mobile la sesión SHALL renovarse sola antes de expirar, y SHALL renovarse solo mientras la app está al frente. Cuando la app vuelve al frente, la sesión SHALL renovarse en el acto si expiró o está por expirar, antes de que lo que ve la persona dependa de ella. Si una renovación no llega al servicio de autenticación, la sesión SHALL mantenerse abierta y la renovación SHALL volver a intentarse mientras la app siga al frente.
+
 Si Supabase devuelve el código `email_not_confirmed`, el formulario SHALL mostrar un mensaje específico + una acción inline para reenviar el código de confirmación, según el requirement "Reenvío del código de confirmación desde el login".
 
 #### Scenario: Login exitoso (web)
@@ -297,6 +301,20 @@ Si Supabase devuelve el código `email_not_confirmed`, el formulario SHALL mostr
 - **WHEN** un usuario autenticado en mobile cierra completamente la app y la vuelve a abrir
 - **THEN** `app/index.tsx` resuelve `supabase.auth.getSession()` con la sesión persistida en `expo-secure-store`
 - **AND** emite `<Redirect href="/(app)/dashboard" />` sin pasar por la pantalla de login
+
+#### Scenario: Volver a la app después de más de una hora (mobile)
+
+- **WHEN** un usuario autenticado manda la app de mobile a segundo plano
+- **AND** la vuelve a traer al frente más de una hora después
+- **THEN** sigue con la sesión iniciada, sin pasar por la pantalla de login
+- **AND** la pantalla en la que estaba carga sus datos sin error
+
+#### Scenario: Volver a la app sin conexión (mobile)
+
+- **WHEN** un usuario autenticado trae la app de mobile al frente después de que su sesión expiró
+- **AND** no hay conexión
+- **THEN** sigue con la sesión iniciada
+- **AND** la sesión se renueva sola cuando vuelve la conexión, sin que toque nada
 
 ### Requirement: Logout desde el área autenticada
 
@@ -717,4 +735,3 @@ Todo el texto visible de las dos pantallas SHALL provenir de los catálogos i18n
 - **WHEN** un usuario con una sesión normal (claim `amr=password`) abre la pantalla de cambio de contraseña
 - **THEN** el formulario de tres campos se renderiza directamente
 - **AND** NO se muestra la card de "sesión inválida o expirada" que sí gatea la pantalla de recovery
-
