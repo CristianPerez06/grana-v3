@@ -30,6 +30,7 @@ const stalled = [
 const upToDate = [
   { account_id: 'visa', start_date: '2026-08-25', end_date: '2026-09-24', due_date: '2026-10-06' },
   { account_id: 'visa', start_date: '2026-09-25', end_date: '2026-10-23', due_date: '2026-11-05' },
+  { account_id: 'visa', start_date: '2026-10-24', end_date: '2026-11-23', due_date: '2026-12-05' },
 ]
 
 describe('rollActiveCardsToToday', () => {
@@ -39,7 +40,15 @@ describe('rollActiveCardsToToday', () => {
     expect(inserted).toHaveLength(0)
   })
 
-  it('rolls an unused active card up to the cycle containing today', async () => {
+  it('adds the "próximo resumen" when the cycle in course is the last one', async () => {
+    const { client, inserted } = makeClient()
+    const current = upToDate.slice(0, 2)
+    expect(await rollActiveCardsToToday(client, [{ id: 'visa', is_active: true }], current, today)).toBe(true)
+    expect(inserted).toHaveLength(1)
+    expect(inserted[0]).toMatchObject({ account_id: 'visa', start_date: '2026-10-24', is_estimated: true })
+  })
+
+  it('rolls an unused active card up to the cycle containing today, plus the next one', async () => {
     const { client, inserted } = makeClient()
     const cards = [
       { id: 'visa', is_active: true },
@@ -47,9 +56,11 @@ describe('rollActiveCardsToToday', () => {
     ]
     expect(await rollActiveCardsToToday(client, cards, [...upToDate, ...stalled], today)).toBe(true)
     expect(inserted.every((r) => r.account_id === 'mc')).toBe(true)
-    const last = inserted[inserted.length - 1]
-    expect((last.start_date as string) <= '2026-10-06').toBe(true)
-    expect((last.end_date as string) >= '2026-10-06').toBe(true)
+    const cover = inserted[inserted.length - 2]
+    expect((cover.start_date as string) <= '2026-10-06').toBe(true)
+    expect((cover.end_date as string) >= '2026-10-06').toBe(true)
+    const next = inserted[inserted.length - 1]
+    expect((next.start_date as string) > '2026-10-06').toBe(true)
   })
 
   it('leaves archived cards alone', async () => {

@@ -33,7 +33,7 @@ La misma regla aplica en web y en mobile.
 
 El sistema SHALL respetar el invariante `I-CRED-12`: para toda cuenta `accounts.type='credit'` con `is_active=true`, SHALL existir al menos un `card_periods` con estado derivado `open` (`today ≤ end_date`). El mantenimiento es **lazy**: cuando una operación necesita un período cubriendo una fecha posterior al último período conocido y no existe ningún período cuyo rango la cubra, el sistema SHALL generar al vuelo **todos los períodos que falten**, uno a continuación del otro y contiguos (`start_date = anterior.end_date + 1`), cada uno con fechas del algoritmo de sugerencia (ver requirement de algoritmo), hasta que el último generado cubra esa fecha. Generar un único período que no llega a cubrirla NO SHALL ocurrir. Todo período auto-generado SHALL marcarse con `is_estimated=true`.
 
-**Lectura de la tarjeta.** Abrir el listado de tarjetas (`/cards`) o el detalle de una tarjeta (incluida su edición) es una operación que necesita el período que cubre **hoy**: antes de leer, el sistema SHALL completar el calendario de cada tarjeta activa hasta hoy con la misma regla. Así, una tarjeta que no se usó en meses muestra el ciclo en curso (estimado) y no el último ciclo que alguna vez se generó. Los períodos intermedios que se crean de este modo quedan vacíos y se muestran como "Sin consumos" (ver requirement de resumen sin consumos). La generación SHALL ser idempotente: repetir la lectura no crea períodos de más, y una lectura concurrente que pierde la UNIQUE `(account_id, start_date)` SHALL continuar sin error visible.
+**Lectura de la tarjeta.** Abrir el listado de tarjetas (`/cards`) o el detalle de una tarjeta (incluida su edición) es una operación que necesita el período que cubre **hoy**: antes de leer, el sistema SHALL completar el calendario de cada tarjeta activa hasta hoy con la misma regla, y SHALL garantizar además que exista un período estimado **posterior** al que contiene hoy (el "próximo resumen"), la misma forma que dejan el alta y el pago. Así, una tarjeta que no se usó en meses muestra el ciclo en curso (estimado) y no el último ciclo que alguna vez se generó. Los períodos intermedios que se crean de este modo quedan vacíos y se muestran como "Sin consumos" (ver requirement de resumen sin consumos). La generación SHALL ser idempotente: repetir la lectura no crea períodos de más, y una lectura concurrente que pierde la UNIQUE `(account_id, start_date)` SHALL continuar sin error visible.
 
 #### Scenario: Inserción de consumo con fecha fuera de período existente genera el siguiente
 
@@ -57,8 +57,16 @@ El sistema SHALL respetar el invariante `I-CRED-12`: para toda cuenta `accounts.
 
 - **WHEN** una tarjeta activa tiene como último período uno con `end_date='2026-07-25'`, sin consumos, y el usuario abre `/cards` con `today='2026-10-06'`
 - **THEN** antes de mostrar la tarjeta el sistema crea los períodos estimados contiguos hasta el que cubre `2026-10-06`
+- **AND** crea también el período estimado siguiente, que empieza el día posterior a ese cierre
 - **AND** la fila de la tarjeta muestra el cierre y el vencimiento de ese período en curso
+- **AND** el formulario de edición muestra el resumen actual y el próximo
 - **AND** volver a abrir `/cards` no crea ningún período adicional
+
+#### Scenario: El ciclo en curso sin próximo recibe uno al leer
+
+- **WHEN** el período que contiene hoy es el último de la tarjeta
+- **THEN** al abrir la tarjeta el sistema crea un período estimado con `start_date` = cierre de ese período + 1
+- **AND** si ya existe un período posterior, no crea nada
 
 #### Scenario: Race condition al generar período concurrentemente
 

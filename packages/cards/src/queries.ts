@@ -2,6 +2,7 @@ import type { GranaSupabaseClient } from '@grana/supabase'
 import {
   derivePeriodStatus,
   derivePeriodVariant,
+  addDaysToISO,
   formatDateISO,
   sumMoneyValues,
   subtractMoneyValues,
@@ -31,9 +32,10 @@ export function derivePeriodAlert(
 // ─── Calendar roll-forward on read (I-CRED-12) ─────────────────────────────────
 
 /**
- * Roll the calendar of every ACTIVE card whose last period ends before today.
- * Archived cards are exempt (they accept no new consumos). Returns whether any
- * period was created, so the caller knows to re-read.
+ * Roll the calendar of every ACTIVE card so that a period covers today AND a
+ * "próximo resumen" follows it — the same shape the alta and the payment leave
+ * (current + next estimated). Archived cards are exempt (they accept no new
+ * consumos). Returns whether any period was created, so the caller re-reads.
  */
 export async function rollActiveCardsToToday(
   supabase: GranaSupabaseClient,
@@ -45,12 +47,31 @@ export async function rollActiveCardsToToday(
   let rolled = false
   for (const card of cards) {
     if (!card.is_active) continue
-    const own = periods.filter((p) => p.account_id === card.id)
-    if (own.length === 0) continue
-    const lastEnd = own.reduce((max, p) => (p.end_date > max ? p.end_date : max), own[0].end_date)
-    if (lastEnd >= todayStr) continue
-    const created = await rollCardPeriodsForward(supabase, card.id, todayStr, today, own)
-    if (created.length > 0) rolled = true
+    let known: Array<{ start_date: string; end_date: string; due_date: string }> = periods.filter(
+      (p) => p.account_id === card.id,
+    )
+    if (known.length === 0) continue
+
+    // 1. Up to the cycle that contains today.
+    const lastEnd = known.reduce((max, p) => (p.end_date > max ? p.end_date : max), known[0].end_date)
+    if (lastEnd < todayStr) {
+      const created = await rollCardPeriodsForward(supabase, card.id, todayStr, today, known)
+      if (created.length > 0) rolled = true
+      known = [...known, ...created]
+    }
+
+    // 2. One more: the cycle in course always has a "próximo resumen".
+    const cover = known.find((p) => p.start_date <= todayStr && todayStr <= p.end_date)
+    if (cover && !known.some((p) => p.start_date > cover.end_date)) {
+      const created = await rollCardPeriodsForward(
+        supabase,
+        card.id,
+        addDaysToISO(cover.end_date, 1),
+        today,
+        known,
+      )
+      if (created.length > 0) rolled = true
+    }
   }
   return rolled
 }

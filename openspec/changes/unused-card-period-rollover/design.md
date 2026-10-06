@@ -27,7 +27,7 @@ Las lecturas `getCreditCards` (solo tarjetas activas) y `getCreditCardDetail` (s
 
 Por qué filas reales y no un período "virtual" calculado en memoria: las pantallas del resumen se navegan por `periodId` (`/cards/[id]/periods/[periodId]`), los consumos necesitan una fila donde imputarse, y el formulario de edición escribe sobre un período existente. Un período virtual obligaría a cada una de esas rutas a manejar un caso sin id, y habría dos verdades sobre el calendario. El invariante `I-CRED-12` ya dice "lazy": abrir la tarjeta pasa a ser una de las operaciones que lo disparan.
 
-Cuándo escribe: solo cuando el último período termina antes de hoy. En una tarjeta en uso no hay escritura, así que el costo en la lectura es nulo salvo la primera vez.
+Hasta dónde: hasta el período que contiene hoy **y uno más**, para que siempre haya "próximo resumen" (la forma que dejan el alta y el pago, y la que el formulario de edición necesita para mostrar las dos fechas). Cuándo escribe: solo cuando el último período termina antes de hoy, o cuando el que contiene hoy es el último. En una tarjeta en uso no hay escritura, así que el costo en la lectura es nulo salvo la primera vez.
 
 ### 2. Un planificador puro y un único ejecutor
 
