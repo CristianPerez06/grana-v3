@@ -1,7 +1,7 @@
 import type { Database, GranaSupabaseClient } from '@grana/supabase'
 import { computePeriodAmounts, derivePeriodVariant, sumMoneyValues } from '@grana/money-logic'
 import { getCardPeriodsWithStatus } from '@grana/transactions-mutations'
-import { derivePeriodAlert, getCreditCardDebtCheck } from './queries'
+import { derivePeriodAlert, getCreditCardDebtCheck, rollActiveCardsToToday } from './queries'
 import type {
   CardPeriodWithPayment,
   PeriodVariant,
@@ -163,7 +163,12 @@ export async function getCreditCardDetail(
     throw error
   }
 
-  const periods = await getCardPeriodsWithStatus(supabase, accountId)
+  let periods = await getCardPeriodsWithStatus(supabase, accountId)
+  // I-CRED-12 on read: the detail (and the edit form, which reads it) must show
+  // the cycle that contains today, even on a card that sat unused.
+  if (await rollActiveCardsToToday(supabase, [account], periods, today)) {
+    periods = await getCardPeriodsWithStatus(supabase, accountId)
+  }
   const debtCheck = await getCreditCardDebtCheck(supabase, accountId, today)
 
   return {
@@ -181,19 +186,32 @@ export async function getCardPeriods(
   accountId: string,
   today: Date,
 ): Promise<CardPeriodDetail[]> {
-  const periods = await getCardPeriodsWithStatus(supabase, accountId)
-  if (periods.length === 0) return []
-
-  const periodIds = periods.map((p) => p.id)
-
   // Alícuota de sellos de la tarjeta (la misma para todos sus períodos).
   const { data: accountRow, error: accountRowError } = await supabase
     .from('accounts')
-    .select('stamp_tax_rate')
+    .select('stamp_tax_rate, is_active')
     .eq('id', accountId)
     .maybeSingle()
   if (accountRowError) throw accountRowError
   const stampTaxRate = accountRow?.stamp_tax_rate ?? null
+
+  let periods = await getCardPeriodsWithStatus(supabase, accountId)
+  // I-CRED-12 on read: same roll-forward as the detail, which may run in
+  // parallel with this read (a concurrent insert is tolerated, not an error).
+  if (
+    accountRow &&
+    (await rollActiveCardsToToday(
+      supabase,
+      [{ id: accountId, is_active: accountRow.is_active }],
+      periods,
+      today,
+    ))
+  ) {
+    periods = await getCardPeriodsWithStatus(supabase, accountId)
+  }
+  if (periods.length === 0) return []
+
+  const periodIds = periods.map((p) => p.id)
 
   // Load transactions grouped by period
   const { data: txRows, error: txError } = await supabase

@@ -9,6 +9,7 @@ const TONE: Record<CardTone, { bg: string; text: string; dot: string }> = {
   due: { bg: 'bg-terracotta-soft', text: 'text-terracotta', dot: 'bg-terracotta' },
   soon: { bg: 'bg-warning-soft', text: 'text-warning-deep', dot: 'bg-warning' },
   ok: { bg: 'bg-emerald-soft', text: 'text-emerald-deep', dot: 'bg-emerald' },
+  empty: { bg: 'bg-border-soft', text: 'text-text-muted', dot: 'bg-text-soft' },
 }
 
 export const CardStatusPill = ({ tone }: { tone: CardTone }) => {

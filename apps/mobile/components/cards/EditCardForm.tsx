@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Lock } from 'lucide-react-native'
 import { parseMoneyInput } from '@grana/validation'
 import type { Institution } from '@grana/accounts'
-import { resolveEditCycle } from '@grana/cards'
+import { orderCycleDateWrites, resolveEditCycle } from '@grana/cards'
 import type { CreditCardDetail, CardNetwork } from '../../lib/cards/queries'
 import {
   archiveCard,
@@ -37,7 +37,7 @@ type PickerKey = 'currentEnd' | 'currentDue' | 'nextEnd' | 'nextDue' | null
 
 // Native twin of web's edit-card-form.tsx (page variant). Same fields/validation,
 // idiomatic RN. Name/bank/limit persist via `updateCreditCard`; the cycle dates
-// via `updatePeriodDates` (current-then-next, only the dates that changed). The
+// via `updatePeriodDates` (order from `orderCycleDateWrites`, only the dates that changed). The
 // network is immutable (read-only chip). Archive is debt-guarded; delete is only
 // offered when the card never had movements.
 export function EditCardForm({
@@ -141,29 +141,15 @@ export function EditCardForm({
         return
       }
 
-      // Cycle dates persist per period. Current period FIRST: it can cascade the
-      // boundary (shifting the next period's start), so the next period's own
-      // end/due must be written after that settles. Only the changed dates.
-      if (
-        cycle.currentPeriodId &&
-        (currentEnd !== (cycle.currentEndDate ?? '') || currentDue !== (cycle.currentDueDate ?? ''))
-      ) {
-        const r = await updatePeriodDates(queryClient, cycle.currentPeriodId, {
-          end_date: currentEnd,
-          due_date: currentDue,
-        })
-        if (!r.ok) {
-          setFormError(t(r.errorKey))
-          return
-        }
-      }
-      if (
-        cycle.nextPeriodId &&
-        (nextEnd !== (cycle.nextEndDate ?? '') || nextDue !== (cycle.nextDueDate ?? ''))
-      ) {
-        const r = await updatePeriodDates(queryClient, cycle.nextPeriodId, {
-          end_date: nextEnd,
-          due_date: nextDue,
+      // Cycle dates persist per period, in the order `orderCycleDateWrites`
+      // decides (shared with web): usually current first — it cascades the next
+      // one's start — but next first when the new current close passes the
+      // next's stored close. Only the changed dates.
+      const writes = orderCycleDateWrites(cycle, { currentEnd, currentDue, nextEnd, nextDue })
+      for (const write of writes) {
+        const r = await updatePeriodDates(queryClient, write.periodId, {
+          end_date: write.end_date,
+          due_date: write.due_date,
         })
         if (!r.ok) {
           setFormError(t(r.errorKey))

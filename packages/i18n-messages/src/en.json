@@ -736,6 +736,7 @@
       "future": "Future",
       "current": "Current",
       "no_movements": "No transactions",
+      "no_charges": "No charges",
       "pending_payment": "Pending payment",
       "overdue": "Overdue",
       "paid": "Paid",
@@ -840,7 +841,8 @@
     "pill": {
       "due": "To pay",
       "soon": "Closing soon",
-      "ok": "Up to date"
+      "ok": "Up to date",
+      "empty": "No charges"
     },
     "wallet": {
       "subtitle": "{count, plural, =0 {No cards} one {# credit card} other {# credit cards}} · {month} statements",
@@ -1001,6 +1003,7 @@
       "running_end_not_after_paid_close": "The running cycle’s close must be after {date} (the close of the statement you are paying).",
       "running_next_already_paid": "The running cycle already has a payment: its dates can’t be changed from here.",
       "boundary_next_paid": "The next statement is already paid. The boundary between the two can’t be changed.",
+      "period_empty": "There’s nothing to pay: this statement closed with no charges.",
       "would_swallow_next": "The new closing date would cover the whole next statement. Edit the next statement’s dates first.",
       "running_cycle_invalid_dates": "Couldn’t confirm the running cycle: the dates are invalid or overlap an existing statement. The close must be after {date} and the due date after the close.",
       "eager_estimated_failed": "Couldn’t create the next estimated statement.",

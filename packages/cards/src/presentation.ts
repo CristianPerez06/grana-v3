@@ -1,6 +1,6 @@
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { CardPeriodAlert } from './types'
-import type { CardTone } from './grouping'
+import { isEmptyVariant, type CardTone } from './grouping'
 
 /**
  * Per-card accent color (`--cc-accent` in the design handoff). Derived from the
@@ -43,12 +43,15 @@ export const cardMonogram = (name: string): string => {
  *  - `due`  (terracota): the statement closed/overdue and is unpaid with debt.
  *  - `soon` (amber): the due date is near (alert='amber') or it closes soon.
  *  - `ok`   (emerald): up to date.
+ *  - `empty` (neutral): the statement has no charges ("Sin consumos").
  */
 export const pillTone = (
   alert: CardPeriodAlert,
   variant: string | null,
 ): CardTone => {
-  if (variant === 'vencido' || variant === 'cerrado_esperando_pago' || alert === 'red') return 'due'
+  if (variant === 'vencido' || variant === 'cerrado_esperando_pago') return 'due'
+  if (isEmptyVariant(variant)) return 'empty'
+  if (alert === 'red') return 'due'
   if (alert === 'amber') return 'soon'
   return 'ok'
 }
@@ -98,3 +101,47 @@ export const resolveEditCycle = (periods: CyclePeriodInput[], todayISO: string) 
     nextPeriodIsEstimated: next?.is_estimated ?? false,
   }
 }
+
+export type CycleDateWrite = {
+  periodId: string
+  end_date: string
+  due_date: string
+}
+
+/**
+ * The period-date writes the edit form must issue, in order. Only pairs that
+ * changed are written. The current period goes first (its close cascades the
+ * next one's start) — EXCEPT when the new current close reaches or passes the
+ * next period's STORED close and the next pair also changed: then the next goes
+ * first, so the current close never lands on a period still ending before it.
+ * Shared so web and mobile cannot drift.
+ */
+export const orderCycleDateWrites = (
+  cycle: {
+    currentPeriodId: string | null
+    currentEndDate: string | null
+    currentDueDate: string | null
+    nextPeriodId: string | null
+    nextEndDate: string | null
+    nextDueDate: string | null
+  },
+  edited: { currentEnd: string; currentDue: string; nextEnd: string; nextDue: string },
+): CycleDateWrite[] => {
+  const current =
+    cycle.currentPeriodId &&
+    (edited.currentEnd !== (cycle.currentEndDate ?? '') ||
+      edited.currentDue !== (cycle.currentDueDate ?? ''))
+      ? { periodId: cycle.currentPeriodId, end_date: edited.currentEnd, due_date: edited.currentDue }
+      : null
+  const next =
+    cycle.nextPeriodId &&
+    (edited.nextEnd !== (cycle.nextEndDate ?? '') || edited.nextDue !== (cycle.nextDueDate ?? ''))
+      ? { periodId: cycle.nextPeriodId, end_date: edited.nextEnd, due_date: edited.nextDue }
+      : null
+
+  if (current && next && cycle.nextEndDate && current.end_date >= cycle.nextEndDate) {
+    return [next, current]
+  }
+  return [current, next].filter((w): w is CycleDateWrite => w !== null)
+}
+

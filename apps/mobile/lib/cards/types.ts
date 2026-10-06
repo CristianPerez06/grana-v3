@@ -23,3 +23,4 @@ export type PeriodVariant =
   | 'cerrado_esperando_pago'
   | 'vencido'
   | 'pagado'
+  | 'sin_consumos'

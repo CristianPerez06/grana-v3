@@ -6,6 +6,7 @@ import {
   sumMoneyValues,
   subtractMoneyValues,
 } from '@grana/money-logic'
+import { rollCardPeriodsForward } from '@grana/transactions-mutations'
 import type { CardPeriodWithPayment } from '@grana/transactions-mutations'
 import type { CardPeriodAlert, CreditCardSummary, CreditCardDebtCheck } from './types'
 
@@ -25,6 +26,33 @@ export function derivePeriodAlert(
   if (daysUntilDue <= 3) return 'red'
   if (daysUntilDue <= 7) return 'amber'
   return 'none'
+}
+
+// ─── Calendar roll-forward on read (I-CRED-12) ─────────────────────────────────
+
+/**
+ * Roll the calendar of every ACTIVE card whose last period ends before today.
+ * Archived cards are exempt (they accept no new consumos). Returns whether any
+ * period was created, so the caller knows to re-read.
+ */
+export async function rollActiveCardsToToday(
+  supabase: GranaSupabaseClient,
+  cards: Array<{ id: string; is_active: boolean }>,
+  periods: Array<{ account_id: string; start_date: string; end_date: string; due_date: string }>,
+  today: Date,
+): Promise<boolean> {
+  const todayStr = formatDateISO(today)
+  let rolled = false
+  for (const card of cards) {
+    if (!card.is_active) continue
+    const own = periods.filter((p) => p.account_id === card.id)
+    if (own.length === 0) continue
+    const lastEnd = own.reduce((max, p) => (p.end_date > max ? p.end_date : max), own[0].end_date)
+    if (lastEnd >= todayStr) continue
+    const created = await rollCardPeriodsForward(supabase, card.id, todayStr, today, own)
+    if (created.length > 0) rolled = true
+  }
+  return rolled
 }
 
 // ─── Debt check for archive/delete guards ─────────────────────────────────────
@@ -131,9 +159,25 @@ export async function getCreditCards(
       .not('parent_id', 'is', null),
   ])
 
-  const { data: allPeriods, error: periodsError } = periodsResult
+  const { data: loadedPeriods, error: periodsError } = periodsResult
   if (periodsError) throw periodsError
   if (installmentChildrenResult.error) throw installmentChildrenResult.error
+
+  // I-CRED-12 on read: an ACTIVE card that sat unused has no period covering
+  // today. Roll its calendar forward first, so the card shows the cycle in
+  // course instead of the last one ever generated. Writes nothing when every
+  // card is up to date.
+  const rolled = await rollActiveCardsToToday(supabase, cards, loadedPeriods ?? [], today)
+  let allPeriods = loadedPeriods
+  if (rolled) {
+    const { data: reloaded, error: reloadError } = await supabase
+      .from('card_periods')
+      .select('*')
+      .in('account_id', cardIds)
+      .order('start_date', { ascending: true })
+    if (reloadError) throw reloadError
+    allPeriods = reloaded
+  }
 
   // Distinct parents with pending children, grouped by card.
   const installmentParentsByCard = new Map<string, Set<string>>()

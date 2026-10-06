@@ -28,6 +28,7 @@ const variantLabelKey: Record<PeriodVariant, string> = {
   cerrado_esperando_pago: 'period.pending_payment',
   vencido: 'period.overdue',
   pagado: 'period.paid',
+  sin_consumos: 'period.no_charges',
 }
 
 const variantColors: Record<PeriodVariant, string> = {
@@ -37,6 +38,7 @@ const variantColors: Record<PeriodVariant, string> = {
   cerrado_esperando_pago: 'text-amber-700 bg-amber-50',
   vencido: 'text-red-700 bg-red-50',
   pagado: 'text-green-700 bg-green-50',
+  sin_consumos: 'text-muted-foreground bg-muted',
 }
 
 type Props = {

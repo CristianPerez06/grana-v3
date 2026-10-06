@@ -131,7 +131,8 @@ export function resolveCardDetailState({
   if (!cardHasHistory && cardDetail.is_active) {
     return {
       kind: 'new-card',
-      shared: { ...sharedBase, committedARS: 0, headerTone: 'ok' },
+      // Never used: its statement has no charges ("Sin consumos"), same as the wallet row.
+      shared: { ...sharedBase, committedARS: 0, headerTone: 'empty' },
     }
   }
 

@@ -22,6 +22,8 @@ type Fixture = {
   laterPeriods?: Array<Record<string, unknown>>
   laterPayments?: Array<{ period_id: string }>
   nextNextTx?: { id: string } | null
+  /** A charge of the period being paid; `null` models an empty ("Sin consumos") statement. */
+  periodTx?: { id: string } | null
   calendarError?: { message?: string; code?: string; details?: string } | null
   payError?: { message?: string; code?: string; details?: string } | null
   payResult?: Record<string, unknown> | null
@@ -47,7 +49,9 @@ export function fakeCardsSupabase(fixture: Fixture = {}) {
   const account = fixture.account === undefined ? ACCOUNT : fixture.account
 
   /** Qué devuelve cada tabla, según si la consulta pide una fila o varias. */
-  const resolve = (table: string, single: boolean) => {
+  const periodTx = fixture.periodTx === undefined ? { id: 'charge-1' } : fixture.periodTx
+
+  const resolve = (table: string, single: boolean, filters: Record<string, unknown>) => {
     if (table === 'card_periods') {
       // Una fila = el período que se paga; varias = los posteriores para el plan.
       return single ? { data: period, error: null } : { data: fixture.laterPeriods ?? [], error: null }
@@ -59,6 +63,7 @@ export function fakeCardsSupabase(fixture: Fixture = {}) {
         : { data: fixture.laterPayments ?? [], error: null }
     }
     if (table === 'transactions') {
+      if (single && period && filters.card_period_id === period.id) return { data: periodTx, error: null }
       return single ? { data: fixture.nextNextTx ?? null, error: null } : { data: [], error: null }
     }
     return { data: null, error: null }
@@ -66,9 +71,14 @@ export function fakeCardsSupabase(fixture: Fixture = {}) {
 
   const builder = (table: string) => {
     let single = false
+    const filters: Record<string, unknown> = {}
     const chain: Record<string, unknown> = {}
-    const passthrough = ['select', 'eq', 'in', 'gt', 'lte', 'order', 'limit', 'is', 'neq']
+    const passthrough = ['select', 'in', 'gt', 'lte', 'order', 'limit', 'is', 'neq']
     for (const m of passthrough) chain[m] = () => chain
+    chain.eq = (col: string, value: unknown) => {
+      filters[col] = value
+      return chain
+    }
     chain.single = () => {
       single = true
       return chain
@@ -82,7 +92,7 @@ export function fakeCardsSupabase(fixture: Fixture = {}) {
       return chain
     }
     // Thenable: la cadena se resuelve donde el código la espere.
-    chain.then = (onFulfilled: (v: unknown) => unknown) => Promise.resolve(resolve(table, single)).then(onFulfilled)
+    chain.then = (onFulfilled: (v: unknown) => unknown) => Promise.resolve(resolve(table, single, filters)).then(onFulfilled)
     return chain
   }
 

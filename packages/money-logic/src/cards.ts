@@ -21,6 +21,8 @@ export type PeriodVariant =
   | 'cerrado_esperando_pago'
   | 'vencido'
   | 'pagado'
+  /** Closed or overdue with nothing imputed: it closes by itself, nothing to pay. */
+  | 'sin_consumos'
 
 // ─── Period status / variant derivation ───────────────────────────────────────
 
@@ -46,6 +48,8 @@ export function derivePeriodVariant(
   const status = derivePeriodStatus(period, today, hasPayment)
 
   if (status === 'paid') return 'pagado'
+  // An empty statement that already closed has nothing to pay or to fall due.
+  if ((status === 'overdue' || status === 'closed') && txCount === 0) return 'sin_consumos'
   if (status === 'overdue') return 'vencido'
   if (status === 'closed') return 'cerrado_esperando_pago'
 
@@ -286,6 +290,115 @@ export function planRunningCycleConfirmation(
     nextNextOp: 'none',
     createEagerEstimated: !nextNext,
     reassignShrunkTailToEager: !nextNext && confirmedEndDate < nextPeriod.end_date,
+  }
+}
+
+// ─── Roll-forward planning (I-CRED-12) ────────────────────────────────────────
+
+/** Safety cap: ten years of monthly cycles. Only corrupt data gets near it. */
+export const MAX_ROLL_FORWARD_PERIODS = 120
+
+export type PlannedPeriod = { start_date: string; end_date: string; due_date: string }
+
+/**
+ * Periods to create so that one covers `throughDate`: contiguous from the last
+ * known period, each projected with `suggestNextPeriodDates` over the existing
+ * periods PLUS the ones already planned. Returns `[]` when the last period
+ * already reaches `throughDate`, or when there is no period to anchor on.
+ * Pure: the caller inserts them.
+ */
+export function planPeriodRollForward(
+  periods: Array<{ start_date: string; end_date: string; due_date: string }>,
+  throughDate: string,
+  today: Date,
+): PlannedPeriod[] {
+  if (periods.length === 0) return []
+  const known = [...periods].sort((a, b) => a.end_date.localeCompare(b.end_date))
+  const planned: PlannedPeriod[] = []
+
+  let last = known[known.length - 1]
+  while (last.end_date < throughDate && planned.length < MAX_ROLL_FORWARD_PERIODS) {
+    const start = addDaysToISO(last.end_date, 1)
+    const suggestion = suggestNextPeriodDates([...known, ...planned], today)
+    // Degenerate history (non-increasing closes) must never stall the walk.
+    const end =
+      suggestion.suggestedEndDate >= start ? suggestion.suggestedEndDate : addDaysToISO(last.end_date, 30)
+    const due = suggestion.suggestedDueDate > end ? suggestion.suggestedDueDate : addDaysToISO(end, 10)
+    const next = { start_date: start, end_date: end, due_date: due }
+    planned.push(next)
+    last = next
+  }
+
+  return planned
+}
+
+// ─── Period close edit planning (boundary cascade + estimated absorption) ─────
+
+export type PeriodEndEditLater = {
+  id: string
+  start_date: string
+  end_date: string
+  is_estimated: boolean
+  has_payment: boolean
+  has_transactions: boolean
+}
+
+export type PeriodEndEditPlan =
+  | { action: 'reject'; reason: 'boundary_next_paid' | 'would_swallow_next' }
+  | {
+      action: 'apply'
+      /** Empty estimated periods the new close covers entirely: deleted. */
+      deleteIds: string[]
+      /** The first period left after the new close, whose start follows it. */
+      shift: { id: string; newStartDate: string; direction: 'extend' | 'shrink' } | null
+      /** Absorption left no period after the edited one: project a new estimated. */
+      createEstimatedAfter: boolean
+    }
+
+/**
+ * Decide what editing a period's close does to the periods after it. The new
+ * close may only swallow periods that are a bare projection (estimated, no
+ * transactions, no payment): those are deleted. Anything with real data keeps
+ * the `would_swallow_next` guard. Pure; mirrors `planRunningCycleConfirmation`.
+ */
+export function planPeriodEndEdit(input: {
+  oldEndDate: string
+  newEndDate: string
+  /** Every period after the edited one, any order. */
+  later: PeriodEndEditLater[]
+}): PeriodEndEditPlan {
+  const { oldEndDate, newEndDate } = input
+  const later = [...input.later].sort((a, b) => a.start_date.localeCompare(b.start_date))
+  const noop = { action: 'apply' as const, deleteIds: [], shift: null, createEstimatedAfter: false }
+
+  const next = later[0]
+  if (!next) return noop
+
+  const newNextStart = addDaysToISO(newEndDate, 1)
+  if (newNextStart === next.start_date) return noop
+
+  if (next.has_payment) return { action: 'reject', reason: 'boundary_next_paid' }
+
+  const swallowed = later.filter((p) => p.end_date <= newEndDate)
+  if (swallowed.some((p) => !p.is_estimated || p.has_payment || p.has_transactions)) {
+    return { action: 'reject', reason: 'would_swallow_next' }
+  }
+
+  const remaining = later.filter((p) => p.end_date > newEndDate)
+  const following = remaining[0] ?? null
+  if (following && following.has_payment) return { action: 'reject', reason: 'boundary_next_paid' }
+
+  return {
+    action: 'apply',
+    deleteIds: swallowed.map((p) => p.id),
+    shift: following
+      ? {
+          id: following.id,
+          newStartDate: newNextStart,
+          direction: newEndDate > oldEndDate ? 'extend' : 'shrink',
+        }
+      : null,
+    createEstimatedAfter: following === null,
   }
 }
 

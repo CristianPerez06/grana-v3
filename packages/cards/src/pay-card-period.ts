@@ -154,6 +154,18 @@ export async function payCardPeriod(args: {
     return { ok: false, messageKey: 'cards.errors.period_not_closed' }
   }
 
+  // A statement that closed with nothing imputed closes by itself: there is
+  // nothing to pay ("Sin consumos"). The UI hides the action; this is the guard.
+  const { data: anyTx, error: anyTxError } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('card_period_id', period.id)
+    .limit(1)
+    .maybeSingle()
+
+  if (anyTxError) return { ok: false, errorCode: anyTxError.code }
+  if (!anyTx) return { ok: false, messageKey: 'cards.errors.period_empty' }
+
   // ── 1 · El calendario ──────────────────────────────────────────────────────
   const { data: laterPeriods, error: laterPeriodsError } = await supabase
     .from('card_periods')

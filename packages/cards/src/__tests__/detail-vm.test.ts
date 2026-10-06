@@ -120,7 +120,7 @@ describe('resolveCardDetailState › new-card', () => {
     if (state.kind !== 'new-card') return
     expect(state.shared.cardHasHistory).toBe(false)
     expect(state.shared.institutionName).toBe('Galicia')
-    expect(state.shared.headerTone).toBe('ok')
+    expect(state.shared.headerTone).toBe('empty')
     expect(state.shared.committedARS).toBe(0)
     expect(typeof state.shared.accent).toBe('string')
   })
