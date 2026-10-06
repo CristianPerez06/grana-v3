@@ -4,9 +4,10 @@
 Define el primitivo de selección de fecha de la web (`DatePicker`): un único control que, al hacer click, abre directamente el calendario de mes completo (sin el paso intermedio del `<input type="date">` nativo). Cubre el contrato de valor (ISO `YYYY-MM-DD` sin desfase de zona), el "hoy" en zona financiera, las restricciones `min`/`max`, y la regla de que TODOS los campos de fecha de la web lo usan. Scope solo web; la contraparte nativa vive en la capability `mobile-date-field`.
 
 ## Requirements
+
 ### Requirement: Selección de fecha que abre el mes completo
 
-La web SHALL proveer un único primitivo `DatePicker` que, al activarse con un solo click sobre el campo, despliegue **directamente** un calendario de mes completo. NO SHALL existir un paso intermedio (input nativo o vista compacta) que requiera un segundo click para ver el mes.
+La web SHALL proveer un único primitivo `DatePicker` que, al activarse con un solo click sobre el campo, despliegue **directamente** un calendario de mes completo. NO SHALL existir un paso intermedio (input nativo o vista compacta) que requiera un segundo click para ver el mes. El calendario SHALL mostrar siempre seis semanas, cualquiera sea el mes, completando los lugares sobrantes con días del mes anterior o siguiente, de modo que su tamaño no cambie al navegar entre meses.
 
 #### Scenario: Un click abre el calendario de mes
 
@@ -24,6 +25,18 @@ La web SHALL proveer un único primitivo `DatePicker` que, al activarse con un s
 
 - **WHEN** el calendario está abierto
 - **THEN** el usuario puede avanzar y retroceder de mes sin cerrar el calendario
+
+#### Scenario: El calendario no cambia de tamaño al cambiar de mes
+
+- **WHEN** el calendario está abierto y el usuario pasa de un mes que ocupa cinco semanas a uno que ocupa seis (o cuatro), en cualquier dirección
+- **THEN** la grilla muestra seis semanas en ambos meses, con los días ajenos al mes en el estilo atenuado de los días de otros meses
+- **AND** el calendario conserva su alto y su posición en pantalla, y los controles para cambiar de mes quedan en el mismo lugar
+
+#### Scenario: El calendario se muestra entero sin scroll cuando entra en pantalla
+
+- **WHEN** el usuario abre el calendario y el espacio libre de la pantalla alcanza para mostrarlo completo
+- **THEN** el calendario se muestra entero, con sus seis semanas y sus acciones, sin barra de desplazamiento
+- **AND** solo aparece desplazamiento interno cuando el espacio libre es menor que el calendario
 
 ### Requirement: Atajo "Hoy" en zona financiera
 
@@ -68,4 +81,3 @@ Todos los campos de fecha de la web SHALL usar el primitivo `DatePicker`. NO SHA
 
 - **WHEN** el `DatePicker` se usa dentro de un `Drawer` (por ejemplo, el alta de movimiento)
 - **THEN** el calendario abre anclado correctamente y se cierra por outside-click/Esc sin romper el overlay del drawer
-

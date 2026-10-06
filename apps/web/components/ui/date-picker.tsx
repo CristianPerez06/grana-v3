@@ -136,6 +136,9 @@ export function DatePicker({
         onSelect={(d) => d && select(formatDateISO(d))}
         disabled={disabledMatcher}
         showOutsideDays
+        // Always six weeks: a 4/5-week month would shrink the grid, and the
+        // popover (often flipped above the trigger) would jump under the arrows.
+        fixedWeeks
       />
       <button
         type="button"
@@ -168,7 +171,10 @@ export function DatePicker({
       minWidthPx={300}
       maxWidthPx={320}
       trigger={trigger ?? fieldTrigger}
-      className="grana-datepicker-popover"
+      // The month grid has a fixed size (six weeks), so drop the Popover's 60vh
+      // ceiling — meant for long lists — and only cap at the space actually free.
+      // Otherwise a mid-height viewport scrolls a calendar that would fit.
+      className="grana-datepicker-popover max-h-[var(--radix-popover-content-available-height)]"
     >
       {content}
     </Popover>
