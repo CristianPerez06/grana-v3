@@ -35,5 +35,5 @@
 
 ## 7. Cierre
 
-- [ ] 7.1 Correr `pnpm verify` en verde.
-- [ ] 7.2 Probar en la web a ancho de escritorio y de teléfono con una tarjeta parada: muestra "Sin consumos", el ciclo en curso, no suma en "A pagar", y editar las fechas guarda sin error.
+- [x] 7.1 Correr `pnpm verify` en verde.
+- [x] 7.2 Probar en la web a ancho de escritorio y de teléfono con una tarjeta parada: muestra "Sin consumos", el ciclo en curso, no suma en "A pagar", y editar las fechas guarda sin error.

@@ -60,7 +60,9 @@ El sistema SHALL NOT mantener una columna `status` ni un trigger que la actualic
 
 ### Requirement: El sistema mantiene siempre al menos un período abierto por delante de hoy
 
-El sistema SHALL respetar el invariante `I-CRED-12`: para toda cuenta `accounts.type='credit'` con `is_active=true`, SHALL existir al menos un `card_periods` con estado derivado `open` (`today ≤ end_date`). El mantenimiento es **lazy**: cuando una operación necesita un período cubriendo una fecha futura y no existe ningún período cuyo rango lo cubra, el sistema SHALL generar uno nuevo al vuelo siguiendo el algoritmo de sugerencia (ver requirement de algoritmo). El período auto-generado SHALL marcarse con `is_estimated=true`.
+El sistema SHALL respetar el invariante `I-CRED-12`: para toda cuenta `accounts.type='credit'` con `is_active=true`, SHALL existir al menos un `card_periods` con estado derivado `open` (`today ≤ end_date`). El mantenimiento es **lazy**: cuando una operación necesita un período cubriendo una fecha posterior al último período conocido y no existe ningún período cuyo rango la cubra, el sistema SHALL generar al vuelo **todos los períodos que falten**, uno a continuación del otro y contiguos (`start_date = anterior.end_date + 1`), cada uno con fechas del algoritmo de sugerencia (ver requirement de algoritmo), hasta que el último generado cubra esa fecha. Generar un único período que no llega a cubrirla NO SHALL ocurrir. Todo período auto-generado SHALL marcarse con `is_estimated=true`.
+
+**Lectura de la tarjeta.** Abrir el listado de tarjetas (`/cards`) o el detalle de una tarjeta (incluida su edición) es una operación que necesita el período que cubre **hoy**: antes de leer, el sistema SHALL completar el calendario de cada tarjeta activa hasta hoy con la misma regla, y SHALL garantizar además que exista un período estimado **posterior** al que contiene hoy (el "próximo resumen"), la misma forma que dejan el alta y el pago. Así, una tarjeta que no se usó en meses muestra el ciclo en curso (estimado) y no el último ciclo que alguna vez se generó. Los períodos intermedios que se crean de este modo quedan vacíos y se muestran como "Sin consumos" (ver requirement de resumen sin consumos). La generación SHALL ser idempotente: repetir la lectura no crea períodos de más, y una lectura concurrente que pierde la UNIQUE `(account_id, start_date)` SHALL continuar sin error visible.
 
 #### Scenario: Inserción de consumo con fecha fuera de período existente genera el siguiente
 
@@ -74,6 +76,27 @@ El sistema SHALL respetar el invariante `I-CRED-12`: para toda cuenta `accounts.
 - **THEN** el sistema NO crea períodos nuevos
 - **AND** la transacción se asigna al período existente
 
+#### Scenario: Consumo muy posterior al último período genera todos los intermedios
+
+- **WHEN** el último período de la tarjeta termina `2026-07-25` (ciclos de 30 días) y se registra un consumo con `date='2026-10-06'`
+- **THEN** el sistema crea los períodos estimados contiguos que faltan (`2026-07-26 → 2026-08-24`, `2026-08-25 → 2026-09-23`, `2026-09-24 → 2026-10-23`)
+- **AND** el consumo queda imputado al período `2026-09-24 → 2026-10-23`, que contiene su fecha
+
+#### Scenario: Abrir una tarjeta sin uso completa el calendario hasta hoy
+
+- **WHEN** una tarjeta activa tiene como último período uno con `end_date='2026-07-25'`, sin consumos, y el usuario abre `/cards` con `today='2026-10-06'`
+- **THEN** antes de mostrar la tarjeta el sistema crea los períodos estimados contiguos hasta el que cubre `2026-10-06`
+- **AND** crea también el período estimado siguiente, que empieza el día posterior a ese cierre
+- **AND** la fila de la tarjeta muestra el cierre y el vencimiento de ese período en curso
+- **AND** el formulario de edición muestra el resumen actual y el próximo
+- **AND** volver a abrir `/cards` no crea ningún período adicional
+
+#### Scenario: El ciclo en curso sin próximo recibe uno al leer
+
+- **WHEN** el período que contiene hoy es el último de la tarjeta
+- **THEN** al abrir la tarjeta el sistema crea un período estimado con `start_date` = cierre de ese período + 1
+- **AND** si ya existe un período posterior, no crea nada
+
 #### Scenario: Race condition al generar período concurrentemente
 
 - **WHEN** dos requests intentan generar el mismo período "siguiente" en paralelo y uno gana la UNIQUE `(account_id, start_date)`
@@ -83,6 +106,7 @@ El sistema SHALL respetar el invariante `I-CRED-12`: para toda cuenta `accounts.
 
 - **WHEN** una tarjeta tiene `is_active=false`
 - **THEN** el invariante no exige períodos open (la tarjeta no acepta consumos nuevos)
+- **AND** abrir su detalle no genera períodos
 
 ### Requirement: El algoritmo de sugerencia de fechas usa el promedio de períodos previos
 
@@ -113,7 +137,7 @@ El sistema SHALL persistir la asignación de cada transacción de tarjeta a su p
 
 Cuando ningún período existente cubre la fecha, el sistema SHALL distinguir dos casos:
 
-- **Fecha posterior al período más nuevo**: el sistema genera el siguiente período hacia adelante (rolling forward, `is_estimated=true`, `start_date = último.end_date + 1`) y asigna la transacción ahí.
+- **Fecha posterior al período más nuevo**: el sistema genera hacia adelante los períodos que falten (rolling forward, `is_estimated=true`, contiguos desde `último.end_date + 1`) hasta que uno cubra la fecha, y asigna la transacción a ese. La transacción NUNCA SHALL quedar imputada a un período cuyo rango no contiene su `date`.
 - **Fecha anterior al `start_date` del período más viejo**: el sistema SHALL rechazar la operación con un error claro que nombre la fecha de inicio del historial de la tarjeta. El sistema NO SHALL crear períodos hacia atrás ni asignar la transacción a un período que no contenga su fecha. Un consumo previo al historial pertenece a un ciclo que Grana no trackea (el registro empieza en el alta).
 
 #### Scenario: Consumo cae en período actual
@@ -140,6 +164,12 @@ Cuando ningún período existente cubre la fecha, el sistema SHALL distinguir do
 - **THEN** la operación se rechaza con el mismo error de fecha anterior al historial
 - **AND** no se inserta el parent ni ninguna cuota
 
+#### Scenario: Consumo de hoy en una tarjeta parada cae en el ciclo de hoy
+
+- **WHEN** el último período de la tarjeta termina `2026-07-25` y el usuario registra un consumo con `date='2026-10-06'`
+- **THEN** la transacción queda imputada a un período cuyo `start_date ≤ 2026-10-06 ≤ end_date`
+- **AND** no queda imputada al período `2026-07-26 → 2026-08-24`
+
 ---
 
 ### Requirement: Las fechas de un período `open` se pueden editar; las de un período `paid` no
@@ -154,7 +184,11 @@ El sistema SHALL permitir editar `end_date` y `due_date` de un `card_periods` cu
 **Bloqueos.** La cascada SHALL rechazarse en estos casos, sin modificar ninguna fila:
 
 - Si el próximo período tiene `period_payment` (estado `paid`), el sistema rechaza con mensaje "El próximo resumen ya está pagado. No se puede modificar el borde entre ambos resúmenes."
-- Si `new_end_date >= next.end_date` (el período editado tragaría todo el próximo), el sistema rechaza con mensaje "La nueva fecha de cierre cubriría todo el próximo resumen. Editá primero las fechas del próximo resumen."
+- Si `new_end_date >= next.end_date` (el período editado tragaría todo el próximo) y alguno de los períodos que quedarían enteramente cubiertos (`end_date ≤ new_end_date`) tiene transacciones, pago o fechas confirmadas (`is_estimated=false`), el sistema rechaza con mensaje "La nueva fecha de cierre cubriría todo el próximo resumen. Editá primero las fechas del próximo resumen."
+
+**Absorción de estimados vacíos.** Si todos los períodos que el nuevo cierre cubriría enteramente son estimados (`is_estimated=true`), sin transacciones y sin pago, el sistema NO SHALL rechazar: esos períodos son solo una proyección y SHALL eliminarse. Luego la cascada del borde se aplica sobre el primer período que siga después (`start_date = new_end_date + 1`). Si no queda ninguno, el sistema SHALL crear un período estimado a continuación, para conservar siempre un próximo resumen.
+
+**Orden de guardado en el formulario de edición de tarjeta.** Cuando el usuario cambia en el mismo guardado las fechas del resumen actual y las del próximo, y el nuevo cierre actual alcanza o supera el cierre **vigente** del próximo, el sistema SHALL guardar primero las fechas del próximo y después las del actual. En cualquier otro caso guarda primero el actual (orden existente). La regla es la misma en web y en mobile.
 
 **UI del sheet de edición.** La pantalla de edición de fechas SHALL mostrar, antes de guardar, un preview ámbar de la cascada cuando `new_end_date + 1 ≠ next.start_date` y la cascada es válida; y un cartel rojo bloqueante con el botón "Guardar" deshabilitado cuando el próximo período está pagado.
 
@@ -204,6 +238,53 @@ El sistema SHALL permitir editar `end_date` y `due_date` de un `card_periods` cu
 - **WHEN** un usuario o llamada API intenta editar las fechas de un período cuyo estado derivado es `paid`
 - **THEN** la action retorna error explícito y no modifica nada
 
+#### Scenario: Correr el cierre por encima de un próximo estimado vacío lo absorbe
+
+- **WHEN** existe P1 con `end_date='2026-10-23'` y P2 estimado, sin transacciones ni pago, con `start_date='2026-10-24'` y `end_date='2026-11-22'`, y el usuario edita `P1.end_date='2026-11-25'`
+- **THEN** la edición procede sin error
+- **AND** P2 se elimina y existe un período estimado con `start_date='2026-11-26'`
+- **AND** P1 queda con `end_date='2026-11-25'`
+
+#### Scenario: El próximo con consumos sigue bloqueando
+
+- **WHEN** P2 tiene una transacción imputada y el usuario edita `P1.end_date` a una fecha `>= P2.end_date`
+- **THEN** la action retorna error "La nueva fecha de cierre cubriría todo el próximo resumen. Editá primero las fechas del próximo resumen."
+- **AND** ninguna fila se modifica
+
+#### Scenario: Editar actual y próximo a la vez guarda primero el próximo cuando hace falta
+
+- **WHEN** el formulario de edición de tarjeta muestra el resumen actual con cierre `2026-06-25` y el próximo con `start_date='2026-06-26'` y cierre `2026-07-25`, y el usuario cambia el actual a cierre `2026-10-22` / vencimiento `2026-11-01` y el próximo a cierre `2026-11-30` / vencimiento `2026-12-06`
+- **THEN** el guardado termina sin error
+- **AND** el próximo queda con `start_date='2026-10-23'`, `end_date='2026-11-30'`, `due_date='2026-12-06'`
+- **AND** el actual queda con `end_date='2026-10-22'`, `due_date='2026-11-01'`
+
+### Requirement: Un resumen cerrado sin consumos no se paga ni vence
+
+Un `card_periods` cuyo estado derivado es `closed` u `overdue` y que no tiene ninguna transacción imputada SHALL presentarse como **"Sin consumos"**: el resumen se cierra solo. En consecuencia:
+
+- NO SHALL contar como "A pagar" en el hero, en el total del grupo ni en la fila, y NO SHALL presentarse como "Vencido" en ninguna superficie (listado, detalle de tarjeta, listado de resúmenes, detalle del resumen).
+- El detalle del resumen NO SHALL ofrecer la acción "Pagar resumen", y la pantalla de pago de ese resumen NO SHALL permitir registrar un pago.
+- El estado sigue siendo **derivado, nunca persistido**: si luego se registra una transacción con fecha dentro de ese resumen, el resumen SHALL volver a presentarse como a pagar o vencido según sus fechas, sin ningún paso adicional.
+
+La misma regla aplica en web y en mobile.
+
+#### Scenario: Un resumen vencido y vacío no figura a pagar
+
+- **WHEN** una tarjeta tiene un período con `end_date='2026-06-25'`, `due_date='2026-07-08'`, sin transacciones ni pago, y `today='2026-10-06'`
+- **THEN** ese período se muestra como "Sin consumos" en el listado de resúmenes de la tarjeta
+- **AND** no aparece como "Vencido" ni suma en "A pagar"
+
+#### Scenario: El detalle de un resumen vacío no ofrece pagar
+
+- **WHEN** el usuario abre el detalle de un período `closed` sin transacciones
+- **THEN** no se muestra la acción "Pagar resumen"
+- **AND** entrar directamente a la pantalla de pago de ese período no permite registrar el pago
+
+#### Scenario: Un consumo cargado después reactiva el resumen
+
+- **WHEN** un período `overdue` estaba "Sin consumos" y el usuario registra un consumo con fecha dentro de su rango
+- **THEN** el período pasa a mostrarse como vencido, con su monto, y vuelve a ofrecer "Pagar resumen"
+
 ### Requirement: El listado de tarjetas se muestra como wallet con hero de pago mensual
 
 El sistema SHALL renderizar el listado de tarjetas de crédito (`/cards`) como una **vista compacta agrupada por banco** (NO como wallet de cards grandes), conservando el hero unificado, con esta estructura de arriba hacia abajo:
@@ -237,7 +318,7 @@ El sistema SHALL renderizar el listado de tarjetas de crédito (`/cards`) como u
    - **Mobile**: lista densa equivalente (filas de ~2 líneas) agrupada por banco, sin tabla horizontal.
 5. **Sección "Archivadas"** colapsable debajo, cerrada por defecto, solo cuando existe ≥1 tarjeta archivada, con encabezado "Archivadas (N)" y enlace al detalle de cada una. Web usa `<details>` nativo; mobile usa `Pressable` + `useState`.
 
-**Estado por fila (vinculante).** Cada fila SHALL exponer SIEMPRE un indicador de estado derivado de `pillTone(activePeriod.alert, activePeriod.variant)` (vencido / por vencer / al día). El indicador SHALL permanecer visible en cualquier orden o agrupado, de modo que una deuda no quede escondida; combinado con el badge de urgencia del encabezado y la regla de auto-colapso, un grupo con deuda nunca queda oculto sin señal. "Visible" es literal: los tres tonos SHALL pintarse con **tokens existentes del design system de la plataforma**. Una clase de color que el sistema de estilos no resuelve (p. ej. un color inexistente en `@grana/ui-tokens`) deja el indicador transparente y viola este requirement, aunque el elemento esté en el árbol.
+**Estado por fila (vinculante).** Cada fila SHALL exponer SIEMPRE un indicador de estado derivado de `pillTone(activePeriod.alert, activePeriod.variant)` (a pagar / por vencer / al día / sin consumos). El indicador SHALL permanecer visible en cualquier orden o agrupado, de modo que una deuda no quede escondida; combinado con el badge de urgencia del encabezado y la regla de auto-colapso, un grupo con deuda nunca queda oculto sin señal. "Visible" es literal: los cuatro tonos SHALL pintarse con **tokens existentes del design system de la plataforma**. Una clase de color que el sistema de estilos no resuelve (p. ej. un color inexistente en `@grana/ui-tokens`) deja el indicador transparente y viola este requirement, aunque el elemento esté en el árbol.
 
 **Bimoneda en el monto (vinculante).** La zona de monto del resumen SHALL respetar Bimoneda: si solo una moneda tiene saldo, ese monto; si ambas tienen saldo, ARS primario arriba y USD subordinado debajo, **nunca sumados ni convertidos**. Los montos de dinero usan los tonos editoriales (`text-income`/`text-expense`), no tokens crudos.
 
@@ -248,6 +329,8 @@ El sistema SHALL renderizar el listado de tarjetas de crédito (`/cards`) como u
 **Uso del resumen (vinculante).** El stat **Uso** de la fila 2 SHALL mostrar el porcentaje de uso del **resumen vigente**, calculado `min(100, round(pendingARS_del_resumen_vigente / credit_limit * 100))`, del resumen vigente, NO el cupo disponible. Cuando `credit_limit` es null, el stat Uso SHALL mostrar el texto **"Sin límite"**. Se renderiza como un stat apilado compacto junto a Cierre/Vence (no una barra ni pegado al monto de la derecha). Mismo tratamiento en web y mobile (paridad).
 
 **Agrupación por banco (vinculante).** El agrupado usa el nombre de la institución (`institution.name`). Las tarjetas con `institution_id` null SHALL agruparse en un grupo fallback **"Sin banco"**, siempre último, nunca mezclado con otro banco.
+
+**Tono "Sin consumos" (vinculante).** Cuando la tarjeta no tiene un resumen a pagar y su resumen vigente no tiene ninguna transacción imputada (`tx_count = 0`), el indicador SHALL mostrar **"Sin consumos"** en tono neutro (gris), con prioridad sobre "por vencer" y "al día": un resumen vacío no tiene nada que vencer. El tono "Sin consumos" NO SHALL contar para el predicado `Vencen pronto` ni para el badge de urgencia del grupo. El badge del encabezado de un grupo cuyas tarjetas están todas "Sin consumos" SHALL decir "Sin consumos" en web (y, como cualquier estado sin urgencia, no se renderiza en mobile).
 
 **Conteo "en uso" (vinculante).** El contador "M en uso" del encabezado de grupo y el filtro `En uso` SHALL derivar del flag `inUse` por tarjeta (`activePeriod.tx_count > 0 || activeInstallmentsCount > 0`).
 
@@ -343,6 +426,14 @@ La navegación de una fila (click web / tap mobile) SHALL ir a `/cards/[id]`. La
 - **WHEN** una tarjeta tiene su resumen próximo a vencer (tono ámbar) en la app nativa
 - **THEN** el dot de estado de su fila y el badge de urgencia de su grupo se pintan con el token `warning` del design system
 - **AND** ninguna de las dos superficies usa una clase de color que `@grana/ui-tokens` no define
+
+#### Scenario: Una tarjeta sin uso muestra "Sin consumos" y el ciclo en curso
+
+- **WHEN** una tarjeta activa no tiene consumos desde su alta (último cierre cargado `2026-06-25`) y el usuario abre `/cards` con `today='2026-10-06'`
+- **THEN** la fila muestra `$ 0` y el indicador "Sin consumos" en tono neutro
+- **AND** las etiquetas Cierre y Vence muestran las fechas estimadas del ciclo que contiene `2026-10-06`
+- **AND** la tarjeta no suma en "A pagar" ni aparece en el predicado `Vencen pronto`
+- **AND** el badge de su grupo no muestra un vencimiento pasado en rojo
 
 ### Requirement: El detalle de tarjeta muestra el resumen actual, próximo, y acciones primarias
 
