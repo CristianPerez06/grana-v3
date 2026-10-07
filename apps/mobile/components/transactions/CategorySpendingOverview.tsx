@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import Svg, { Circle } from 'react-native-svg'
-import { ChevronDown, ChevronLeft } from 'lucide-react-native'
+import { ChevronDown, ChevronLeft, ChevronUp } from 'lucide-react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
   DONUT_FALLBACK,
@@ -303,12 +303,12 @@ export const CategorySpendingOverview = ({
                   accessibilityRole="button"
                   className="flex-row items-center gap-2 rounded-lg px-2 py-2"
                 >
-                  <ChevronDown
-                    size={14}
-                    color={colors.textMuted}
-                    strokeWidth={2.6}
-                    style={{ transform: [{ rotate: tailExpanded ? '180deg' : '0deg' }] }}
-                  />
+                  {/* Two icons, not one rotated: a `transform` rotation on the SVG icon made the chevron vanish on iOS. */}
+                  {tailExpanded ? (
+                    <ChevronUp size={14} color={colors.textMuted} strokeWidth={2.6} />
+                  ) : (
+                    <ChevronDown size={14} color={colors.textMuted} strokeWidth={2.6} />
+                  )}
                   <Text className="flex-1 text-[12px] font-semibold text-text-soft">
                     {tailExpanded
                       ? t('transactions.spending.show_less')

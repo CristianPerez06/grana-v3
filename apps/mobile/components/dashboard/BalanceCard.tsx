@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { ChevronDown } from 'lucide-react-native'
+import { ChevronDown, ChevronUp } from 'lucide-react-native'
 import {
   densestAmountDensity,
   derivePlacement,
@@ -153,11 +153,12 @@ const Flow = ({
       >
         <View className="size-[7px] rounded-full" style={{ backgroundColor: dotColor }} />
         <Text className="text-[10.5px] font-bold text-text-muted">{label}</Text>
-        <ChevronDown
-          size={11}
-          color={colors.textMuted}
-          style={expanded ? { transform: [{ rotate: '180deg' }] } : undefined}
-        />
+        {/* Two icons, not one rotated: a `transform` rotation on the SVG icon made the chevron vanish on iOS. */}
+        {expanded ? (
+          <ChevronUp size={11} color={colors.textMuted} />
+        ) : (
+          <ChevronDown size={11} color={colors.textMuted} />
+        )}
       </Pressable>
     ) : (
       <View className="flex-row items-center gap-1.5">
