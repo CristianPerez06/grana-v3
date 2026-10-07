@@ -89,7 +89,7 @@ export type {
 } from './types'
 
 export {
-  shouldOpenReviewBlock,
+  REVIEW_BLOCK_STARTS_OPEN,
   reviewUrgency,
   resolutionPreview,
   materializationOutcome,

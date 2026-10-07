@@ -15,19 +15,19 @@ import type { PendingRecurrenceInstance, RecurrenceInstance } from './types'
  */
 
 /**
- * Should the block start OPEN?
+ * The block ALWAYS starts collapsed, whatever it holds — overdue or not.
  *
- * Yes whenever anything is already due, however many there are. It used to do
- * the opposite — collapse from two onwards — so the more the user had to review,
- * the better it was hidden. Only a block made entirely of occurrences that have
- * not fallen due yet stays collapsed.
+ * It used to open whenever anything was due, so that a backlog would not be
+ * hidden. In daily use that pushed the rest of the screen out of view, and the
+ * user decided against it (`link-from-review-block`). Nothing overdue is hidden
+ * by collapsing: the header keeps the count, and the stuck-rule lines and the
+ * rebuild notice stay outside the fold. Only the rows fold.
+ *
+ * A constant and not a function of the rows, on purpose: a function that
+ * ignores its arguments would claim to decide something it does not. It lives
+ * here so both platforms read the same answer, and the parity test pins that.
  */
-export function shouldOpenReviewBlock(
-  instances: Pick<PendingRecurrenceInstance, 'due_date'>[],
-  today: string,
-): boolean {
-  return instances.some((instance) => instance.due_date <= today)
-}
+export const REVIEW_BLOCK_STARTS_OPEN = false
 
 export type ReviewUrgency =
   | { kind: 'overdue'; days: number }
@@ -136,7 +136,7 @@ export type StuckRule = {
   recurrence_id: string
   /** The vencimiento of the oldest unresolved occurrence. */
   since: string
-  /** How many unresolved occurrences of this rule are THERE TO REVIEW. */
+  /** How many unresolved occurrences of this rule, already arrived, are THERE TO REVIEW. */
   count: number
 }
 
@@ -147,10 +147,12 @@ export type StuckRule = {
  * costs nothing and is what turns a three-day annoyance into something the user
  * can act on; the silence is what let #96 run for three months.
  *
- * THE THRESHOLD, and why it takes two conditions. `two or more` alone would flag
- * a fortnightly rule that produced the month's two occurrences and owes neither
- * yet. `something is overdue` alone would flag anyone who did not open the app
- * over a weekend. Together they describe a rule that stopped moving.
+ * THE THRESHOLD: two or more unresolved occurrences WHOSE DATE HAS ARRIVED.
+ * Counting every row would flag a fortnightly rule that produced the month's
+ * two occurrences and owes neither yet, or a rule whose only extra row is an
+ * occurrence the user unlinked ahead of its date. `something is overdue` alone
+ * would flag anyone who did not open the app over a weekend. Two arrived
+ * occurrences describe a rule that stopped moving.
  *
  * IT IS A PROPERTY OF THE RULE, not of the block. Three rules with one overdue
  * each are not three stuck rules — that is a user who was away for a few days,
@@ -180,6 +182,10 @@ export function stuckRules(
 ): StuckRule[] {
   const byRule = new Map<string, string[]>()
   for (const instance of instances) {
+    // ONLY WHAT HAS ALREADY ARRIVED. An unresolved occurrence dated after today
+    // — the one unlinking leaves behind, typically — is not a rule that stopped
+    // moving, so it neither makes a rule stuck nor counts on its line.
+    if (instance.due_date > today) continue
     const dates = byRule.get(instance.recurrence.id)
     if (dates) dates.push(instance.due_date)
     else byRule.set(instance.recurrence.id, [instance.due_date])
@@ -188,10 +194,9 @@ export function stuckRules(
   const stuck: StuckRule[] = []
   for (const [recurrence_id, dates] of byRule) {
     if (dates.length < 2) continue
-    // The oldest one has to have fallen due already. Sorting beats Math.min on
-    // ISO dates read as strings, and keeps the comparison textual throughout.
+    // Every date here has already arrived, so "the oldest is overdue" holds by
+    // construction. Reducing keeps the comparison textual on ISO dates.
     const since = dates.reduce((oldest, date) => (date < oldest ? date : oldest))
-    if (since > today) continue
     stuck.push({ recurrence_id, since, count: dates.length })
   }
   stuck.sort((a, b) => a.since.localeCompare(b.since) || a.recurrence_id.localeCompare(b.recurrence_id))

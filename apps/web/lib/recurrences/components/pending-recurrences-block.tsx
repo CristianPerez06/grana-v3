@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, Clock, Pencil, Repeat, Users, X } from 'lucide-react'
+import { Check, ChevronDown, Clock, Link2, Pencil, Repeat, Users, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatDateISO, formatShortDate, getTodayAR } from '@/lib/date'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
@@ -17,7 +17,7 @@ import {
   recurrenceTitle,
   resolutionPreview,
   reviewUrgency,
-  shouldOpenReviewBlock,
+  REVIEW_BLOCK_STARTS_OPEN,
   stuckRules,
   type StuckRule,
 } from '@grana/recurrences'
@@ -32,6 +32,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import { invalidateAfterRecurrenceInstanceMutation } from '@/lib/transactions/invalidation'
+import { AlreadyLoadedAction } from './already-loaded-action'
 import type { MovementFormAccount } from '@grana/movement-form'
 import type { PendingRecurrenceInstance } from '@/lib/recurrences/types'
 
@@ -96,7 +97,7 @@ export const PendingRecurrencesBlock = ({
   //
   // Only a block made entirely of occurrences that have NOT fallen due yet stays
   // collapsed, and it is not really this block's job to shout about those.
-  const [isOpen, setIsOpen] = useState(() => shouldOpenReviewBlock(pending, todayISO))
+  const [isOpen, setIsOpen] = useState(REVIEW_BLOCK_STARTS_OPEN)
 
   // WHICH RULES STOPPED MOVING. Read from the same materialization context the
   // failure notice uses, so the count can say whether it is the whole backlog or
@@ -274,6 +275,17 @@ export const PendingRecurrencesBlock = ({
     })
   }
 
+  // Linking creates nothing and moves no balance, but the linked movement now
+  // carries the rule (and may have turned shared), so the movement reads go
+  // stale along with the pending feed.
+  const handleLinked = (instance: PendingRecurrenceInstance) => {
+    setErrorByInstance((prev) => ({ ...prev, [instance.id]: '' }))
+    setEditingId(null)
+    setSuccessMessage(t('link.linked_success'))
+    invalidateAfterRecurrenceInstanceMutation(queryClient, { confirmed: true })
+    router.refresh()
+  }
+
   // Soft, non-blocking warning: confirming this instance would leave the source
   // account's available balance negative. Off-ledger credit consumptions and
   // incomes never warn. Compared per account + currency. Uses the edited amount
@@ -356,7 +368,9 @@ export const PendingRecurrencesBlock = ({
         </div>
       )}
 
-      {isOpen && stuck.length > 0 && (
+      {/* OUTSIDE THE FOLD. The block always starts collapsed, so these lines
+          are what keeps a backlog from hiding behind it: only the rows fold. */}
+      {stuck.length > 0 && (
         <div className="mx-4 mb-3 flex flex-col gap-1.5 sm:mx-6">
           {/* ONE LINE PER STUCK RULE, never a total. Two stuck rules are two
               lines: a single "tenés 30 vencimientos trabados" would tell a story
@@ -723,7 +737,9 @@ export const PendingRecurrencesBlock = ({
                 />
               )}
 
-              <div className="flex gap-2.5 pl-[58px] sm:pl-[62px]">
+              {/* Wraps instead of truncating: three actions do not always fit a
+                  phone-width row, and a cut label is worse than a second line. */}
+              <div className="flex flex-wrap gap-2.5 pl-[58px] sm:pl-[62px]">
                 <Button
                   type="button"
                   variant="primary"
@@ -736,6 +752,31 @@ export const PendingRecurrencesBlock = ({
                   <Check className="size-4" aria-hidden />
                   {t('pending.confirm')}
                 </Button>
+                {/* NO «Ya lo pagué» here: Confirmar already opens the amount,
+                    account and date — it is the same action. What this row lacked
+                    was the way to point at a movement the user already loaded
+                    without creating a second one (#162). */}
+                <AlreadyLoadedAction
+                  recurrenceId={instance.recurrence.id}
+                  dueDate={instance.due_date}
+                  ruleAmount={amount}
+                  ruleCurrency={instance.currency_code}
+                  shared={instance.household_id != null}
+                  onLinked={() => handleLinked(instance)}
+                  renderTrigger={(open) => (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="w-auto"
+                      onClick={open}
+                      disabled={busy}
+                    >
+                      <Link2 className="size-3.5" aria-hidden />
+                      {t('link.already_loaded')}
+                    </Button>
+                  )}
+                />
                 <Button
                   type="button"
                   variant="secondary"

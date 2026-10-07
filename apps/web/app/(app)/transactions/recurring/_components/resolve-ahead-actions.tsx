@@ -1,11 +1,11 @@
 'use client'
 
-import { useMemo, useRef, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Check, ChevronDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { parseMoneyInput } from '@grana/validation'
-import { resolveAheadMessageKeys, type LinkCandidate } from '@grana/recurrences'
+import { resolveAheadMessageKeys } from '@grana/recurrences'
 import type { MovementFormAccount } from '@grana/movement-form'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { createClient } from '@/lib/supabase/client'
@@ -21,11 +21,8 @@ import { Popover } from '@/components/ui/popover'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { DatePicker } from '@/components/ui/date-picker'
-import {
-  getRecurrenceLinkCandidates,
-  registerRecurrenceAhead,
-} from '@/app/_actions/recurrences'
-import { LinkCandidatesDrawer } from './link-candidates-drawer'
+import { registerRecurrenceAhead } from '@/app/_actions/recurrences'
+import { AlreadyLoadedAction } from '@/lib/recurrences/components/already-loaded-action'
 import { useRecurrenceNotice } from './recurrence-notice'
 
 type RuleProps = {
@@ -326,97 +323,44 @@ export const ResolveAheadActions = ({ shared, ...rule }: Props) => {
   const msg = resolveAheadMessageKeys(rule.movementType)
   const [formOpen, setFormOpen] = useState(false)
 
-  // ── «Ya lo tengo cargado» ──────────────────────────────────────────────────
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [candidates, setCandidates] = useState<LinkCandidate[] | null>(null)
-  const [loadError, setLoadError] = useState(false)
-  const [widened, setWidened] = useState(false)
-
-  // La lectura vive acá, disparada por el click, y no en un efecto del drawer:
-  // un efecto que setea estado al abrirse es exactamente el patrón que el lint
-  // del repo prohíbe, y además deja la carga atada al montaje en vez de a la
-  // intención del usuario.
-  // SÓLO CONTESTA LA ÚLTIMA BÚSQUEDA PEDIDA. «Ampliar» se ofrece también
-  // mientras la primera está en vuelo, así que las dos pueden convivir: si la
-  // angosta llega después, pisa la lista ampliada y el cartel sigue diciendo
-  // «ampliada» sobre resultados que no lo son. El usuario no ve su movimiento y
-  // lo carga de nuevo — el duplicado que esta pantalla existe para evitar.
-  const requestRef = useRef(0)
-
-  const load = (widen: boolean) => {
-    const token = ++requestRef.current
-    setCandidates(null)
-    setLoadError(false)
-    getRecurrenceLinkCandidates(rule.recurrenceId, rule.dueDate, widen)
-      .then((rows) => {
-        if (token !== requestRef.current) return
-        setCandidates(rows)
-      })
-      .catch(() => {
-        if (token !== requestRef.current) return
-        // «No hay» y «no sabemos» no son lo mismo: confundirlos manda al usuario
-        // a cargar el gasto de nuevo, que es el duplicado que queremos evitar.
-        setCandidates([])
-        setLoadError(true)
-      })
-  }
-
-  const openDrawer = () => {
-    setWidened(false)
-    setDrawerOpen(true)
-    load(false)
-  }
-
-  const widen = () => {
-    setWidened(true)
-    load(true)
-  }
-
   return (
-    <>
-      {formOpen ? (
-        <PayAheadForm
-          {...rule}
-          onDone={() => setFormOpen(false)}
-          onCancel={() => setFormOpen(false)}
-        />
-      ) : (
-        // LAS DOS SALIDAS, UNA AL LADO DE LA OTRA Y CON EL MISMO PESO. El
-        // primitivo `Button` es `w-full` por diseño, así que dos botones sueltos
-        // se apilan y cada uno ocupa el ancho entero: quedaban dos bloques
-        // enormes bajo cada fila. Cada uno va en su mitad.
-        //
-        // Las dos con `secondary`: con una llena y la otra fantasma, la primera
-        // parecía la opción elegida y la segunda un texto suelto. No son eso —
-        // son dos caminos equivalentes, y ninguno es el recomendado.
-        <div className="flex items-stretch gap-2">
-          <div className="flex-1">
-            <Button variant="secondary" size="xs" onPress={() => setFormOpen(true)}>
-              {t(msg.action)}
-            </Button>
+    <AlreadyLoadedAction
+      recurrenceId={rule.recurrenceId}
+      dueDate={rule.dueDate}
+      ruleAmount={rule.ruleAmount}
+      ruleCurrency={rule.ruleCurrency}
+      shared={shared}
+      onLinked={() => notify(t('linked_success'))}
+      renderTrigger={(openDrawer) =>
+        formOpen ? (
+          <PayAheadForm
+            {...rule}
+            onDone={() => setFormOpen(false)}
+            onCancel={() => setFormOpen(false)}
+          />
+        ) : (
+          // LAS DOS SALIDAS, UNA AL LADO DE LA OTRA Y CON EL MISMO PESO. El
+          // primitivo `Button` es `w-full` por diseño, así que dos botones sueltos
+          // se apilan y cada uno ocupa el ancho entero: quedaban dos bloques
+          // enormes bajo cada fila. Cada uno va en su mitad.
+          //
+          // Las dos con `secondary`: con una llena y la otra fantasma, la primera
+          // parecía la opción elegida y la segunda un texto suelto. No son eso —
+          // son dos caminos equivalentes, y ninguno es el recomendado.
+          <div className="flex items-stretch gap-2">
+            <div className="flex-1">
+              <Button variant="secondary" size="xs" onPress={() => setFormOpen(true)}>
+                {t(msg.action)}
+              </Button>
+            </div>
+            <div className="flex-1">
+              <Button variant="secondary" size="xs" onPress={openDrawer}>
+                {t('already_loaded')}
+              </Button>
+            </div>
           </div>
-          <div className="flex-1">
-            <Button variant="secondary" size="xs" onPress={openDrawer}>
-              {t('already_loaded')}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <LinkCandidatesDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        recurrenceId={rule.recurrenceId}
-        dueDate={rule.dueDate}
-        ruleAmount={rule.ruleAmount}
-        ruleCurrency={rule.ruleCurrency}
-        shared={shared}
-        candidates={candidates}
-        loadError={loadError}
-        widened={widened}
-        onWiden={widen}
-        onLinked={() => notify(t('linked_success'))}
-      />
-    </>
+        )
+      }
+    />
   )
 }

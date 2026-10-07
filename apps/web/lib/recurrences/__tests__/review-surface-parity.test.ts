@@ -63,7 +63,31 @@ describe('both review blocks read the vencimiento, not the legacy column', () =>
   it.each([WEB_BLOCK, NATIVE_BLOCK])('%s shares the urgency and collapse rules', (file) => {
     const source = read(file)
     expect(source).toContain('reviewUrgency')
-    expect(source).toContain('shouldOpenReviewBlock')
+    expect(source).toContain('REVIEW_BLOCK_STARTS_OPEN')
+  })
+})
+
+describe('both review blocks offer the same actions on a row', () => {
+  // #162: a vencimiento that already existed had only Confirmar and Omitir, so
+  // a user who had already loaded the movement could only duplicate it or lose
+  // the link by skipping. Both blocks mount the platform's single «Ya lo tengo
+  // cargado» piece — the one the hub uses — rather than a copy of its read.
+  it.each([WEB_BLOCK, NATIVE_BLOCK])('%s mounts «Ya lo tengo cargado» on each row', (file) => {
+    const source = read(file)
+    expect(source).toContain('<AlreadyLoadedAction')
+    expect(source).toContain('link.already_loaded')
+    expect(source).toContain('link.linked_success')
+  })
+
+  it.each([WEB_BLOCK, NATIVE_BLOCK])('%s does not add «Ya lo pagué»', (file) => {
+    // Confirmar already opens amount, account and date: it IS that action.
+    expect(read(file)).not.toContain('resolveAheadMessageKeys')
+  })
+
+  it.each([WEB_BLOCK, NATIVE_BLOCK])('%s keeps the stuck-rule lines outside the fold', (file) => {
+    // The block always starts collapsed; these lines are what keeps a backlog
+    // from hiding behind it. Behind `isOpen` they would vanish with the rows.
+    expect(read(file)).not.toMatch(/isOpen\s*&&\s*stuck\.length/)
   })
 })
 

@@ -136,7 +136,11 @@ describe('registrar por anticipado, en nativo', () => {
     // contadores existen para impedir—. Apareció en el teléfono, no en un test.
     // Comparar las EXPRESIONES no alcanza: `payKey` y `sheetKey` se escriben
     // distinto y valen lo mismo. Lo que se exige es el prefijo fijo.
-    const actions = read('components/recurrences/ResolveAheadActions.tsx')
+    // La hoja de candidatos vive en `AlreadyLoadedAction`, que el hub y el bloque
+    // de por revisar comparten; la de registrar sigue acá. Se miran los dos.
+    const actions =
+      read('components/recurrences/ResolveAheadActions.tsx') +
+      read('components/recurrences/AlreadyLoadedAction.tsx')
     const keys = [...actions.matchAll(/\skey=\{(`[^`]*`|[^}]+)\}/g)].map((m) => m[1])
     expect(keys.length, 'el test dejó de mirar las `key`').toBeGreaterThan(1)
     for (const key of keys) {

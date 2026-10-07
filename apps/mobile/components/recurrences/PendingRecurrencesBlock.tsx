@@ -8,7 +8,7 @@ import {
   resolutionPreview,
   reviewFeedState,
   reviewUrgency,
-  shouldOpenReviewBlock,
+  REVIEW_BLOCK_STARTS_OPEN,
   stuckRules,
 } from '@grana/recurrences'
 import type { PendingRecurrenceInstance } from '@grana/recurrences'
@@ -25,9 +25,10 @@ import { fmtMoney, formatShortDate } from '../transactions/detail/format'
 import { amountSign, amountToneClass, categoryName, movementLabel, subcategoryName } from './format'
 import { Card } from '../ui/Card'
 import { RecurrenceFailureNotice } from './MaterializationNotice'
+import { AlreadyLoadedAction } from './AlreadyLoadedAction'
 import { useRecurrenceMaterialization } from '../../lib/recurrences/materialization-context'
 
-type DoneAction = 'confirmed' | 'skipped'
+type DoneAction = 'confirmed' | 'skipped' | 'linked'
 
 // Spelled out rather than interpolated, so a renamed message key still turns up
 // in a grep and in the i18n key suite.
@@ -143,6 +144,28 @@ function PendingRow({
             {busy ? t('recurrences.pending.confirming') : t('recurrences.pending.confirm')}
           </Text>
         </Pressable>
+        {/* NO «Ya lo pagué» here — Confirmar already is that action. What the
+            row lacked was pointing at a movement already loaded, without
+            creating a second one (#162). Same piece the hub mounts. */}
+        <AlreadyLoadedAction
+          recurrenceId={instance.recurrence.id}
+          dueDate={instance.due_date}
+          ruleAmount={Number(instance.amount)}
+          ruleCurrency={instance.currency_code}
+          shared={instance.household_id != null}
+          onLinked={() => onDone('linked')}
+          renderTrigger={(open, linking) => (
+            <Pressable
+              onPress={open}
+              disabled={busy || linking}
+              className="items-center justify-center rounded-xl border border-border px-3 py-2.5 active:bg-page disabled:opacity-60"
+            >
+              <Text className="text-[13px] font-semibold text-text">
+                {t('recurrences.link.already_loaded')}
+              </Text>
+            </Pressable>
+          )}
+        />
         <Pressable
           onPress={() => run('skip')}
           disabled={busy}
@@ -185,10 +208,9 @@ export function PendingRecurrencesBlock() {
   })
 
   const [notice, setNotice] = useState<string | null>(null)
-  // Derived, not synced: the list arrives via `useQuery`, so on first render it
-  // is empty and a `useState(instances.length <= 1)` would freeze open forever.
-  // An effect that reset it would instead stomp the user's choice on every
-  // refetch-on-focus. Deriving does both: follow the data until the user picks.
+  // The block always starts collapsed (`REVIEW_BLOCK_STARTS_OPEN`, shared with
+  // web) and the user's choice wins from then on. Never synced from the data by
+  // an effect: that would stomp the choice on every refetch-on-focus.
   const [openOverride, setOpenOverride] = useState<boolean | null>(null)
 
   // A FAILED READ IS NOT AN EMPTY LIST. `query.data ?? []` made the block
@@ -199,7 +221,7 @@ export function PendingRecurrencesBlock() {
   const feed = reviewFeedState(query)
   const instances = feed.kind === 'list' ? (query.data ?? []) : []
   const todayISO = formatDateISO(getTodayAR())
-  const isOpen = openOverride ?? shouldOpenReviewBlock(instances, todayISO)
+  const isOpen = openOverride ?? REVIEW_BLOCK_STARTS_OPEN
 
   // WHICH RULES STOPPED MOVING — same decision as web, from the same module, so
   // the two platforms cannot answer it differently. The materialization context
@@ -262,10 +284,14 @@ export function PendingRecurrencesBlock() {
       t(
         action === 'confirmed'
           ? 'recurrences.pending.confirmed_success'
-          : 'recurrences.pending.skipped_success',
+          : action === 'linked'
+            ? 'recurrences.link.linked_success'
+            : 'recurrences.pending.skipped_success',
       ),
     )
-    invalidateAfterRecurrenceResolution(queryClient)
+    // Linking already invalidated inside `AlreadyLoadedAction`, which owns it so
+    // no surface can pick the narrow helper.
+    if (action !== 'linked') invalidateAfterRecurrenceResolution(queryClient)
   }
 
   // RN has no `spread` on shadows, so web's 4px gold halo becomes a real ring:
@@ -332,7 +358,9 @@ export function PendingRecurrencesBlock() {
             </View>
           ) : null}
 
-          {isOpen && stuck.length > 0 ? (
+          {/* OUTSIDE THE FOLD, like web. The block always starts collapsed, so
+              these lines are what keeps a backlog from hiding behind it. */}
+          {stuck.length > 0 ? (
             <View className="mx-4 mb-3 gap-1.5">
               {/* ONE LINE PER STUCK RULE, never a total — same rule as web. The
                   list below stays flat; grouping it by rule is its own

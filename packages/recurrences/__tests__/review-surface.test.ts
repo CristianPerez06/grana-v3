@@ -5,7 +5,7 @@ import {
   resolutionPreview,
   reviewFeedState,
   reviewUrgency,
-  shouldOpenReviewBlock,
+  REVIEW_BLOCK_STARTS_OPEN,
 } from '../src/review-surface'
 
 const TODAY = '2026-09-08'
@@ -20,28 +20,12 @@ const instance = (over: Record<string, unknown> = {}) =>
     ...over,
   }) as never
 
-describe('shouldOpenReviewBlock', () => {
-  it('opens with a single overdue occurrence', () => {
-    expect(shouldOpenReviewBlock([{ due_date: '2026-08-23' }], TODAY)).toBe(true)
-  })
-
-  it('OPENS with several — the more there is to review, the more visible', () => {
-    // The old rule collapsed from two onwards, so a user with a backlog got the
-    // block hidden. That was one of the three reported symptoms.
-    const three = [{ due_date: '2026-06-23' }, { due_date: '2026-07-23' }, { due_date: '2026-08-23' }]
-    expect(shouldOpenReviewBlock(three, TODAY)).toBe(true)
-  })
-
-  it('opens when today IS the vencimiento', () => {
-    expect(shouldOpenReviewBlock([{ due_date: TODAY }], TODAY)).toBe(true)
-  })
-
-  it('stays collapsed when nothing has fallen due yet', () => {
-    expect(shouldOpenReviewBlock([{ due_date: '2026-10-23' }], TODAY)).toBe(false)
-  })
-
-  it('is closed for an empty list', () => {
-    expect(shouldOpenReviewBlock([], TODAY)).toBe(false)
+describe('REVIEW_BLOCK_STARTS_OPEN', () => {
+  it('the block starts collapsed, even with overdue occurrences', () => {
+    // Decided by the user in `link-from-review-block`: open by default, the
+    // block pushed the rest of the screen out of view. The stuck-rule lines stay
+    // visible while collapsed, so nothing overdue is hidden by this.
+    expect(REVIEW_BLOCK_STARTS_OPEN).toBe(false)
   })
 })
 
@@ -195,6 +179,32 @@ describe('stuckRules', () => {
     const upToDate = [owed('r1', '2026-09-15'), owed('r1', '2026-09-30')]
 
     expect(stuckRules(upToDate, TODAY)).toEqual([])
+  })
+
+  it('does NOT count an occurrence dated after today', () => {
+    // One overdue plus one the user unlinked ahead of its date: the rule is not
+    // stuck — the future one is not a backlog, it just has not arrived.
+    const overdueAndUnlinked = [owed('r1', '2026-08-25'), owed('r1', '2026-11-23')]
+
+    expect(stuckRules(overdueAndUnlinked, TODAY)).toEqual([])
+  })
+
+  it('leaves future occurrences out of the count on the line', () => {
+    const backlog = [
+      owed('r1', '2026-07-10'),
+      owed('r1', '2026-08-10'),
+      owed('r1', '2026-11-23'),
+    ]
+
+    expect(stuckRules(backlog, TODAY)).toEqual([
+      { recurrence_id: 'r1', since: '2026-07-10', count: 2 },
+    ])
+  })
+
+  it('counts an occurrence due TODAY as arrived', () => {
+    expect(stuckRules([owed('r1', '2026-08-08'), owed('r1', TODAY)], TODAY)).toEqual([
+      { recurrence_id: 'r1', since: '2026-08-08', count: 2 },
+    ])
   })
 
   it('is decided PER RULE, not over the block', () => {
