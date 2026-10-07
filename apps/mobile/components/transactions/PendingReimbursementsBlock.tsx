@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Alert, Pressable, Text, View } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, Undo2, X } from 'lucide-react-native'
+import { Check, ChevronDown, ChevronRight, Undo2, X } from 'lucide-react-native'
 import { parseMoneyInput } from '@grana/validation'
 import { getPendingReimbursementsFeed, type PendingReimbursementVM } from '../../lib/transactions/queries'
 import { confirmReimbursement, cancelReimbursement } from '../../lib/transactions/mutators'
@@ -236,11 +236,13 @@ export function PendingReimbursementsBlock({ todayISO }: { todayISO: string }) {
               {t('transactions.reimbursement.pending.count', { count: items.length })}
             </Text>
           ) : null}
-          <ChevronDown
-            size={20}
-            color={colors.textMuted}
-            style={{ transform: [{ rotate: isOpen ? '0deg' : '-90deg' }] }}
-          />
+          {/* Two icons, not one rotated: a `transform` rotation on the SVG icon
+              left the collapsed state with no chevron at all on iOS. */}
+          {isOpen ? (
+            <ChevronDown size={20} color={colors.textMuted} />
+          ) : (
+            <ChevronRight size={20} color={colors.textMuted} />
+          )}
         </Pressable>
 
         {isOpen && notice ? (
