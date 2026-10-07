@@ -67,3 +67,12 @@ export const CustomTrigger: Story = {
     )
   },
 }
+
+/** February 2027 starts on a Monday and spans exactly four weeks; the grid still
+ *  shows six, so stepping to March (five weeks) does not resize the popover. */
+export const ShortMonth: Story = {
+  render: () => {
+    const [value, setValue] = useState('2027-02-10')
+    return <DatePicker value={value} onChange={setValue} placeholder="Elegí una fecha" />
+  },
+}
