@@ -31,6 +31,12 @@ type Props = {
   movementType: string
   ruleAccountId: string | null
   transferDestinationAccountId: string | null
+  /**
+   * Cómo se titula la hoja, elegido por quien la monta con
+   * `resolveAheadMessageKeys`. No se recalcula acá: el botón que la abre y el
+   * título tienen que decir lo mismo, y dos llamadas pueden divergir.
+   */
+  actionKey: string
   /** El acuse lo da quien montó la hoja, donde la fila se queda. */
   onDone: () => void
 }
@@ -61,6 +67,7 @@ export function PayAheadSheet({
   movementType,
   ruleAccountId,
   transferDestinationAccountId,
+  actionKey,
   onDone,
 }: Props) {
   const t = useT()
@@ -139,10 +146,10 @@ export function PayAheadSheet({
   }
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} ariaLabel={t('recurrences.link.already_paid')}>
+    <BottomSheet visible={visible} onClose={onClose} ariaLabel={t(`recurrences.link.${actionKey}`)}>
       <FormSheetBody contentClassName="gap-4 px-5 pb-5">
         <Text className="text-[17px] font-bold text-text">
-          {t('recurrences.link.already_paid')}
+          {t(`recurrences.link.${actionKey}`)}
         </Text>
 
         <View className="gap-1.5">

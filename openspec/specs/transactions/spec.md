@@ -1560,6 +1560,21 @@ Lo que SHALL estar disponible por igual en web y en la app nativa es la **materi
 atraso y el **bloque de vencimientos por revisar**: que una ocurrencia exista, se vea y se pueda
 resolver NO SHALL depender de la plataforma.
 
+**LA ACCIÓN SE NOMBRA POR LO QUE LA REGLA MUEVE.** Las dos salidas se ofrecen sobre reglas de gasto,
+de ingreso y de transferencia, así que el rótulo del botón y el acuse que lo sigue SHALL depender del
+tipo de movimiento de la regla: un gasto se **paga**, un ingreso se **cobra** y una transferencia se
+**hace**. Un rótulo único escrito para gastos le afirma al usuario que le pagó a su propio sueldo.
+La elección SHALL vivir en un solo lugar compartido por las dos plataformas —son tres superficies las
+que la hacen, y tres copias de la misma tabla divergen—, y un tipo que la tabla no contemple SHALL
+caer en el rótulo de gasto antes que dejar una clave de traducción a la vista.
+
+#### Scenario: La acción se nombra según el tipo de la regla
+
+- **WHEN** el usuario mira una regla de ingreso con un vencimiento que todavía no llegó
+- **THEN** la acción de registrarlo dice «Ya lo cobré», no «Ya lo pagué»
+- **AND** al confirmarla, el acuse dice que se registró un cobro
+- **AND** sobre una regla de transferencia las dos dicen que se hizo, no que se pagó
+
 #### Scenario: Registrar un pago antes de que el vencimiento llegue
 
 - **WHEN** hoy es el `2026-09-03`, una regla mensual vence el `2026-09-23` y esa ocurrencia todavía no

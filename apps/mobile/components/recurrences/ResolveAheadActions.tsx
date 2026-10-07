@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Text, View } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
-import type { LinkCandidate } from '@grana/recurrences'
+import { resolveAheadMessageKeys, type LinkCandidate } from '@grana/recurrences'
 import { Button } from '../ui/Button'
 import { useT } from '../../lib/locale-context'
 import {
@@ -47,6 +47,9 @@ export function ResolveAheadActions({
   // dos podía elegir mal: elegían el helper angosto y el saldo quedaba viejo.
   // Acá no hay nada que elegir.
   const queryClient = useQueryClient()
+  // Gemelo de web: el rótulo y el acuse dependen de lo que la regla mueve. Un
+  // sueldo se cobra, una transferencia se hace; ninguno de los dos se paga.
+  const msg = resolveAheadMessageKeys(movementType)
   const [sheetOpen, setSheetOpen] = useState(false)
   // Cada apertura monta una hoja NUEVA. Cerrarla ya limpia su confirmación, pero
   // vincular con éxito la cierra desde acá, sin pasar por ese cierre: sin esto,
@@ -117,7 +120,7 @@ export function ResolveAheadActions({
 
   const paid = () => {
     setPayOpen(false)
-    setDone(t('recurrences.link.recorded_success'))
+    setDone(t(`recurrences.link.${msg.recorded}`))
     invalidateAfterRecurrenceResolution(queryClient)
   }
 
@@ -149,7 +152,7 @@ export function ResolveAheadActions({
       <View className="flex-row gap-2">
         <View className="flex-1">
           <Button variant="secondary" size="xs" onPress={openPayAhead} disabled={pending}>
-            {t('recurrences.link.already_paid')}
+            {t(`recurrences.link.${msg.action}`)}
           </Button>
         </View>
         <View className="flex-1">
@@ -180,6 +183,7 @@ export function ResolveAheadActions({
         movementType={movementType}
         ruleAccountId={ruleAccountId}
         transferDestinationAccountId={transferDestinationAccountId}
+        actionKey={msg.action}
         onDone={paid}
       />
       <LinkCandidatesSheet
