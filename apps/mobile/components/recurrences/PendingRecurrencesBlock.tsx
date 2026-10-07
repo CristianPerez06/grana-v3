@@ -134,47 +134,52 @@ function PendingRow({
         </Text>
       </View>
 
-      <View className="flex-row gap-2">
+      {/* Three actions do not fit one phone-width line: Confirmar across the
+          top, and below it «Ya lo tengo cargado» takes whatever Omitir leaves —
+          halves are too narrow for its label. Same as web at phone width. */}
+      <View className="gap-2">
         <Pressable
           onPress={() => run('confirm')}
           disabled={busy}
-          className="flex-1 items-center rounded-xl bg-navy py-2.5 active:opacity-90 disabled:opacity-60"
+          className="items-center rounded-xl bg-navy py-2.5 active:opacity-90 disabled:opacity-60"
         >
           <Text className="text-[13px] font-bold text-white">
             {busy ? t('recurrences.pending.confirming') : t('recurrences.pending.confirm')}
           </Text>
         </Pressable>
-        {/* NO «Ya lo pagué» here — Confirmar already is that action. What the
-            row lacked was pointing at a movement already loaded, without
-            creating a second one (#162). Same piece the hub mounts. */}
-        <AlreadyLoadedAction
-          recurrenceId={instance.recurrence.id}
-          dueDate={instance.due_date}
-          ruleAmount={Number(instance.amount)}
-          ruleCurrency={instance.currency_code}
-          shared={instance.household_id != null}
-          onLinked={() => onDone('linked')}
-          renderTrigger={(open, linking) => (
-            <Pressable
-              onPress={open}
-              disabled={busy || linking}
-              className="items-center justify-center rounded-xl border border-border px-3 py-2.5 active:bg-page disabled:opacity-60"
-            >
-              <Text className="text-[13px] font-semibold text-text">
-                {t('recurrences.link.already_loaded')}
-              </Text>
-            </Pressable>
-          )}
-        />
-        <Pressable
-          onPress={() => run('skip')}
-          disabled={busy}
-          className="items-center justify-center rounded-xl border border-border px-4 py-2.5 active:bg-page disabled:opacity-60"
-        >
-          <Text className="text-[13px] font-semibold text-text-muted">
-            {t('recurrences.pending.skip')}
-          </Text>
-        </Pressable>
+        <View className="flex-row gap-2">
+          {/* NO «Ya lo pagué» here — Confirmar already is that action. What the
+              row lacked was pointing at a movement already loaded, without
+              creating a second one (#162). Same piece the hub mounts. */}
+          <AlreadyLoadedAction
+            recurrenceId={instance.recurrence.id}
+            dueDate={instance.due_date}
+            ruleAmount={Number(instance.amount)}
+            ruleCurrency={instance.currency_code}
+            shared={instance.household_id != null}
+            onLinked={() => onDone('linked')}
+            renderTrigger={(open, linking) => (
+              <Pressable
+                onPress={open}
+                disabled={busy || linking}
+                className="flex-1 items-center justify-center rounded-xl border border-border px-3 py-2.5 active:bg-page disabled:opacity-60"
+              >
+                <Text className="text-[13px] font-semibold text-text">
+                  {t('recurrences.link.already_loaded')}
+                </Text>
+              </Pressable>
+            )}
+          />
+          <Pressable
+            onPress={() => run('skip')}
+            disabled={busy}
+            className="items-center justify-center rounded-xl border border-border px-4 py-2.5 active:bg-page disabled:opacity-60"
+          >
+            <Text className="text-[13px] font-semibold text-text-muted">
+              {t('recurrences.pending.skip')}
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   )

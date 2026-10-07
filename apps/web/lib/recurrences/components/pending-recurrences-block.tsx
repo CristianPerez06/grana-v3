@@ -737,14 +737,18 @@ export const PendingRecurrencesBlock = ({
                 />
               )}
 
-              {/* Wraps instead of truncating: three actions do not always fit a
-                  phone-width row, and a cut label is worse than a second line. */}
-              <div className="flex flex-wrap gap-2.5 pl-[58px] sm:pl-[62px]">
+              {/* THREE ACTIONS DO NOT FIT ONE PHONE-WIDTH LINE. Wrapping them
+                  freely stacked one per line (QA at 360px), so on a phone the
+                  layout is fixed instead: Confirmar across the top, and below it
+                  «Ya lo tengo cargado» takes whatever Omitir leaves — halves are
+                  too narrow for its label at 360px. Same as the native row. From
+                  `sm` up the three sit on one line, under the row's text. */}
+              <div className="grid grid-cols-[1fr_auto] gap-2 sm:flex sm:flex-wrap sm:gap-2.5 sm:pl-[62px]">
                 <Button
                   type="button"
                   variant="primary"
                   size="sm"
-                  className="w-auto"
+                  className="col-span-2 sm:w-auto"
                   onClick={() => handleConfirm(instance)}
                   disabled={busy}
                   loading={busy}
@@ -768,7 +772,7 @@ export const PendingRecurrencesBlock = ({
                       type="button"
                       variant="secondary"
                       size="sm"
-                      className="w-auto"
+                      className="sm:w-auto"
                       onClick={open}
                       disabled={busy}
                     >
@@ -781,7 +785,7 @@ export const PendingRecurrencesBlock = ({
                   type="button"
                   variant="secondary"
                   size="sm"
-                  className="w-auto"
+                  className="sm:w-auto"
                   onClick={() => handleSkip(instance)}
                   disabled={busy}
                 >
