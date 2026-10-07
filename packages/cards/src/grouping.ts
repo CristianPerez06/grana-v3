@@ -6,7 +6,11 @@
 import type { CreditCardSummary } from './types'
 
 /** Group urgency / row tone, matching `presentation.ts` → `pillTone`. */
-export type CardTone = 'due' | 'soon' | 'ok'
+export type CardTone = 'due' | 'soon' | 'ok' | 'empty'
+
+/** Variants of a statement with nothing imputed: nothing to pay, nothing to fall due. */
+export const isEmptyVariant = (variant: string | null | undefined): boolean =>
+  variant === 'sin_consumos' || variant === 'tarjeta_nueva'
 
 /** Sentinel key for cards without an issuing institution → "Sin banco" group. */
 export const NO_BANK_KEY = '__no_bank__'
@@ -42,14 +46,16 @@ export type BankGroup = {
   defaultCollapsed: boolean
 }
 
-const TONE_RANK: Record<CardTone, number> = { due: 0, soon: 1, ok: 2 }
+const TONE_RANK: Record<CardTone, number> = { due: 0, soon: 1, ok: 2, empty: 3 }
 
 /** Per-card tone, same rule as `pillTone(period.alert, period.variant)`. */
 export const cardTone = (card: CreditCardSummary): CardTone => {
   const period = card.activePeriod
   if (!period) return 'ok'
-  if (period.variant === 'vencido' || period.variant === 'cerrado_esperando_pago' || period.alert === 'red')
-    return 'due'
+  if (period.variant === 'vencido' || period.variant === 'cerrado_esperando_pago') return 'due'
+  // An empty statement has nothing to fall due: "Sin consumos" beats the alerts.
+  if (isEmptyVariant(period.variant)) return 'empty'
+  if (period.alert === 'red') return 'due'
   if (period.alert === 'amber') return 'soon'
   return 'ok'
 }
@@ -97,7 +103,10 @@ export const applyFilter = (cards: CreditCardSummary[], filter: ViewFilter): Cre
     case 'in-use':
       return cards.filter((c) => c.inUse)
     case 'due-soon':
-      return cards.filter((c) => cardTone(c) !== 'ok')
+      return cards.filter((c) => {
+        const tone = cardTone(c)
+        return tone === 'due' || tone === 'soon'
+      })
     case 'with-balance':
       return cards.filter(cardHasBalance)
     default:
@@ -149,7 +158,7 @@ export const groupCardsByBank = (cards: CreditCardSummary[]): BankGroup[] => {
     const sorted = sortCardsByDue(groupCards)
     let toPayARS = 0
     let toPayUSD = 0
-    let tone: CardTone = 'ok'
+    let tone: CardTone = 'empty'
     let nextDueDate: string | null = null
     let inUseCount = 0
     let allOkAndZero = true
@@ -164,7 +173,7 @@ export const groupCardsByBank = (cards: CreditCardSummary[]): BankGroup[] => {
       }
       const due = card.activePeriod?.due_date ?? null
       if (due && (nextDueDate === null || due < nextDueDate)) nextDueDate = due
-      if (t !== 'ok' || cardHasBalance(card)) allOkAndZero = false
+      if ((t !== 'ok' && t !== 'empty') || cardHasBalance(card)) allOkAndZero = false
     }
 
     groups.push({

@@ -54,6 +54,7 @@ const BADGE_TONE: Record<CardTone, string> = {
   due: 'bg-terracotta-soft text-terracotta',
   soon: 'bg-warning-soft text-warning-deep',
   ok: 'bg-emerald-soft text-emerald-deep',
+  empty: 'bg-border-soft text-text-muted',
 }
 
 export const CardsCompactView = ({ cards, networkNames, showCents = false }: Props) => {
@@ -222,9 +223,10 @@ const BankGroupCard = ({ group, networkLabel, showCents }: GroupProps) => {
 
 const GroupBadge = ({ group }: { group: BankGroup }) => {
   const t = useTranslations('cards')
-  // Neutral groups show only the "al día" tone; due/soon groups show the
-  // nearest due date so an urgent bank is legible even when collapsed.
-  const showDate = group.tone !== 'ok' && group.nextDueDate !== null
+  // Neutral groups show only their tone ("al día" / "sin consumos"); due/soon
+  // groups show the nearest due date so an urgent bank is legible even when
+  // collapsed.
+  const showDate = (group.tone === 'due' || group.tone === 'soon') && group.nextDueDate !== null
   return (
     <span
       className={cn(
@@ -234,7 +236,7 @@ const GroupBadge = ({ group }: { group: BankGroup }) => {
     >
       {showDate
         ? t('month_hero.upcoming_due', { date: formatDayMonth(group.nextDueDate) })
-        : t('pill.ok')}
+        : t(group.tone === 'empty' ? 'pill.empty' : 'pill.ok')}
     </span>
   )
 }

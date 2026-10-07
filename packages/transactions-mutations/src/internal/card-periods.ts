@@ -1,8 +1,8 @@
 import type { Database, GranaSupabaseClient } from '@grana/supabase'
 import {
   assignTransactionToPeriod,
+  planPeriodRollForward,
   suggestNextPeriodDates,
-  addDaysToISO,
 } from '@grana/money-logic'
 
 type CardPeriodRow = Database['public']['Tables']['card_periods']['Row']
@@ -169,26 +169,90 @@ export async function getOrCreatePeriodForDate(
   //    the only path that creates a period.
   const lastPeriod = periods[periods.length - 1]
   if (!lastPeriod || targetDate > lastPeriod.end_date) {
-    const { suggestedEndDate, suggestedDueDate } = suggestNextPeriodDates(periods, today)
-    const newStartDate = lastPeriod ? addDaysToISO(lastPeriod.end_date, 1) : targetDate
+    if (!lastPeriod) {
+      // No history to anchor on (cards are always created with periods; kept for
+      // safety): a single estimated period starting on the date itself.
+      const { suggestedEndDate, suggestedDueDate } = suggestNextPeriodDates([], today)
+      const { data: newPeriod, error } = await supabase
+        .from('card_periods')
+        .insert({
+          account_id: accountId,
+          start_date: targetDate,
+          end_date: suggestedEndDate,
+          due_date: suggestedDueDate,
+          is_estimated: true,
+        })
+        .select('id')
+        .single()
+      if (error) throw error
+      return newPeriod.id
+    }
 
-    const { data: newPeriod, error } = await supabase
-      .from('card_periods')
-      .insert({
-        account_id: accountId,
-        start_date: newStartDate,
-        end_date: suggestedEndDate,
-        due_date: suggestedDueDate,
-        is_estimated: true,
-      })
-      .select('id')
-      .single()
-
-    if (error) throw error
-    return newPeriod.id
+    // Create EVERY missing period up to the date — one is not enough when the
+    // card sat unused for months — and impute to the one that contains it.
+    const created = await rollCardPeriodsForward(supabase, accountId, targetDate, today, periods)
+    const cover = created.find((p) => p.start_date <= targetDate && targetDate <= p.end_date)
+    if (!cover) throw new CardConsumoUnassignableError(targetDate)
+    return cover.id
   }
 
   // 5. Inside the tracked range but uncovered and not paid-covered — a gap. With
   //    contiguous periods this is unreachable; reject rather than misassign.
   throw new CardConsumoUnassignableError(targetDate)
+}
+
+/**
+ * Create the estimated periods a card is missing so that one covers
+ * `throughDate` (I-CRED-12, lazy maintenance). Shared by consumo imputation and
+ * by the card reads, which roll the calendar up to today before reading it.
+ * Idempotent: with a period already reaching `throughDate` it writes nothing.
+ * A concurrent request that wins the UNIQUE (account_id, start_date) is not an
+ * error — its row is read back and used. Returns the periods created (or
+ * recovered), in order.
+ */
+export async function rollCardPeriodsForward(
+  supabase: GranaSupabaseClient,
+  accountId: string,
+  throughDate: string,
+  today: Date,
+  knownPeriods?: Array<{ start_date: string; end_date: string; due_date: string }>,
+): Promise<Array<{ id: string; start_date: string; end_date: string; due_date: string }>> {
+  let periods = knownPeriods
+  if (!periods) {
+    const { data, error } = await supabase
+      .from('card_periods')
+      .select('start_date, end_date, due_date')
+      .eq('account_id', accountId)
+      .order('start_date', { ascending: true })
+    if (error) throw error
+    periods = data ?? []
+  }
+
+  const plan = planPeriodRollForward(periods, throughDate, today)
+  const created: Array<{ id: string; start_date: string; end_date: string; due_date: string }> = []
+
+  for (const planned of plan) {
+    const { data: row, error } = await supabase
+      .from('card_periods')
+      .insert({ account_id: accountId, ...planned, is_estimated: true })
+      .select('id')
+      .single()
+
+    if (error && error.code === '23505') {
+      // Another request rolled the same period first: use what it wrote.
+      const { data: existing, error: readError } = await supabase
+        .from('card_periods')
+        .select('id, start_date, end_date, due_date')
+        .eq('account_id', accountId)
+        .eq('start_date', planned.start_date)
+        .single()
+      if (readError) throw readError
+      created.push(existing)
+      continue
+    }
+    if (error) throw error
+    created.push({ id: row.id, ...planned })
+  }
+
+  return created
 }

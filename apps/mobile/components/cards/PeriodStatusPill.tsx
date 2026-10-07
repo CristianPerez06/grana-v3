@@ -20,6 +20,7 @@ const VARIANT: Record<PeriodVariant, { bg: string; text: string; key: string }> 
   },
   vencido: { bg: 'bg-terracotta-soft', text: 'text-terracotta', key: 'cards.period.overdue' },
   pagado: { bg: 'bg-emerald-soft', text: 'text-emerald-deep', key: 'cards.period.paid' },
+  sin_consumos: { bg: 'bg-border-soft', text: 'text-text-muted', key: 'cards.period.no_charges' },
 }
 
 export function PeriodStatusPill({ variant }: { variant: PeriodVariant }) {

@@ -4,6 +4,7 @@ import {
   addDaysToISO,
   suggestNextPeriodDates,
   splitAmountIntoInstallments,
+  planPeriodEndEdit,
 } from '@grana/money-logic'
 import {
   normalizeMoneyAmount,
@@ -275,63 +276,95 @@ export async function updatePeriodDates(args: {
     return { ok: false, messageKey: 'cards.errors.close_after_start' }
   }
 
-  // Boundary cascade with the next period (see the running-cycle notes).
-  const { data: nextPeriod } = await supabase
+  // Boundary cascade with the periods after this one (see the running-cycle
+  // notes). Read all of them: the new close may swallow more than the next.
+  const { data: laterRows, error: laterError } = await supabase
     .from('card_periods')
-    .select('id, start_date, end_date')
+    .select('id, start_date, end_date, due_date, is_estimated')
     .eq('account_id', period.account_id)
     .gt('start_date', period.start_date)
     .order('start_date', { ascending: true })
-    .limit(1)
-    .maybeSingle()
 
-  if (nextPeriod) {
-    const newNextStart = addDaysToISO(data.end_date, 1)
-    const boundaryMoved = newNextStart !== nextPeriod.start_date
+  if (laterError) return { ok: false, errorCode: laterError.code }
+  const later = laterRows ?? []
 
-    if (boundaryMoved) {
-      const { data: nextPayment } = await supabase
-        .from('period_payments')
-        .select('id')
-        .eq('period_id', nextPeriod.id)
-        .limit(1)
-        .maybeSingle()
+  let laterPaidIds = new Set<string>()
+  let laterWithTxIds = new Set<string>()
+  if (later.length > 0) {
+    const laterIds = later.map((p) => p.id)
+    const [laterPayments, laterTx] = await Promise.all([
+      supabase.from('period_payments').select('period_id').in('period_id', laterIds),
+      supabase.from('transactions').select('card_period_id').in('card_period_id', laterIds),
+    ])
+    if (laterPayments.error) return { ok: false, errorCode: laterPayments.error.code }
+    if (laterTx.error) return { ok: false, errorCode: laterTx.error.code }
+    laterPaidIds = new Set((laterPayments.data ?? []).map((p) => p.period_id))
+    laterWithTxIds = new Set(
+      (laterTx.data ?? []).flatMap((t) => (t.card_period_id ? [t.card_period_id] : [])),
+    )
+  }
 
-      if (nextPayment) {
-        return { ok: false, messageKey: 'cards.errors.boundary_next_paid' }
-      }
+  const plan = planPeriodEndEdit({
+    oldEndDate: period.end_date,
+    newEndDate: data.end_date,
+    later: later.map((p) => ({
+      id: p.id,
+      start_date: p.start_date,
+      end_date: p.end_date,
+      is_estimated: p.is_estimated,
+      has_payment: laterPaidIds.has(p.id),
+      has_transactions: laterWithTxIds.has(p.id),
+    })),
+  })
 
-      if (data.end_date >= nextPeriod.end_date) {
-        return { ok: false, messageKey: 'cards.errors.would_swallow_next' }
-      }
-
-      const isExtending = data.end_date > period.end_date
-
-      if (isExtending) {
-        const { error: reassignError } = await supabase
-          .from('transactions')
-          .update({ card_period_id: periodId })
-          .eq('card_period_id', nextPeriod.id)
-          .lte('date', data.end_date)
-
-        if (reassignError) return { ok: false, errorCode: reassignError.code }
-      } else {
-        const { error: reassignError } = await supabase
-          .from('transactions')
-          .update({ card_period_id: nextPeriod.id })
-          .eq('card_period_id', periodId)
-          .gt('date', data.end_date)
-
-        if (reassignError) return { ok: false, errorCode: reassignError.code }
-      }
-
-      const { error: nextUpdateError } = await supabase
-        .from('card_periods')
-        .update({ start_date: newNextStart })
-        .eq('id', nextPeriod.id)
-
-      if (nextUpdateError) return { ok: false, errorCode: nextUpdateError.code }
+  if (plan.action === 'reject') {
+    return {
+      ok: false,
+      messageKey:
+        plan.reason === 'boundary_next_paid'
+          ? 'cards.errors.boundary_next_paid'
+          : 'cards.errors.would_swallow_next',
     }
+  }
+
+  // Bare projections the new close covers entirely: estimated, no transactions,
+  // no payment — nothing is lost by dropping them.
+  if (plan.deleteIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('card_periods')
+      .delete()
+      .in('id', plan.deleteIds)
+
+    if (deleteError) return { ok: false, errorCode: deleteError.code }
+  }
+
+  if (plan.shift) {
+    const { id: followingId, newStartDate, direction } = plan.shift
+
+    if (direction === 'extend') {
+      const { error: reassignError } = await supabase
+        .from('transactions')
+        .update({ card_period_id: periodId })
+        .eq('card_period_id', followingId)
+        .lte('date', data.end_date)
+
+      if (reassignError) return { ok: false, errorCode: reassignError.code }
+    } else {
+      const { error: reassignError } = await supabase
+        .from('transactions')
+        .update({ card_period_id: followingId })
+        .eq('card_period_id', periodId)
+        .gt('date', data.end_date)
+
+      if (reassignError) return { ok: false, errorCode: reassignError.code }
+    }
+
+    const { error: nextUpdateError } = await supabase
+      .from('card_periods')
+      .update({ start_date: newStartDate })
+      .eq('id', followingId)
+
+    if (nextUpdateError) return { ok: false, errorCode: nextUpdateError.code }
   }
 
   const { error: updateError } = await supabase
@@ -344,6 +377,35 @@ export async function updatePeriodDates(args: {
     .eq('id', periodId)
 
   if (updateError) return { ok: false, errorCode: updateError.code }
+
+  // The absorption left no period after this one: keep a "próximo resumen".
+  if (plan.createEstimatedAfter) {
+    const { data: earlier } = await supabase
+      .from('card_periods')
+      .select('end_date, due_date')
+      .eq('account_id', period.account_id)
+      .lte('start_date', period.start_date)
+      .order('start_date', { ascending: true })
+
+    // Read after the update, so the edited period already carries its new close.
+    // The history is never empty (it holds the edited period), so the `today`
+    // fallback of the suggestion is never reached — anchor it on the close anyway.
+    const history = earlier ?? []
+    const [ey, em, ed] = data.end_date.split('-').map(Number)
+    const { suggestedEndDate, suggestedDueDate } = suggestNextPeriodDates(
+      history.length > 0 ? history : [{ end_date: data.end_date, due_date: data.due_date }],
+      new Date(ey, em - 1, ed),
+    )
+    const { error: insertError } = await supabase.from('card_periods').insert({
+      account_id: period.account_id,
+      start_date: addDaysToISO(data.end_date, 1),
+      end_date: suggestedEndDate,
+      due_date: suggestedDueDate,
+      is_estimated: true,
+    })
+
+    if (insertError) return { ok: false, errorCode: insertError.code }
+  }
 
   return { ok: true }
 }

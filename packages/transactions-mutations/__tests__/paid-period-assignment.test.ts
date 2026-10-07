@@ -48,7 +48,7 @@ function makeClient(
             select: () => ({
               single: async () => {
                 insertedPeriods.push(row)
-                return { data: { id: 'rolled-forward-id' }, error: null }
+                return { data: { id: `rolled-forward-${insertedPeriods.length}` }, error: null }
               },
             }),
           }),
@@ -103,11 +103,24 @@ describe('getOrCreatePeriodForDate — paid-period guard and roll-forward discip
   })
 
   it('rolls forward only when the date is strictly after the last known period', async () => {
-    const { client, insertedPeriods } = makeClient([P1])
+    const { client, insertedPeriods } = makeClient([P1, P2])
     const id = await getOrCreatePeriodForDate(client, 'acc-1', '2026-08-01', today)
-    expect(id).toBe('rolled-forward-id')
+    expect(id).toBe('rolled-forward-1')
     expect(insertedPeriods).toHaveLength(1)
+    expect(insertedPeriods[0]).toMatchObject({ start_date: '2026-07-24', is_estimated: true })
+  })
+
+  it('rolls forward EVERY missing period on an unused card and imputes to the one containing the date', async () => {
+    // Last known close 2026-06-25, consumo on 2026-10-06: one period is not enough.
+    const { client, insertedPeriods } = makeClient([P1])
+    const id = await getOrCreatePeriodForDate(client, 'acc-1', '2026-10-06', today)
+    expect(insertedPeriods.length).toBeGreaterThan(1)
     expect(insertedPeriods[0]).toMatchObject({ start_date: '2026-06-26', is_estimated: true })
+    const index = insertedPeriods.findIndex(
+      (p) => (p.start_date as string) <= '2026-10-06' && '2026-10-06' <= (p.end_date as string),
+    )
+    expect(index).toBe(insertedPeriods.length - 1)
+    expect(id).toBe(`rolled-forward-${index + 1}`)
   })
 
   it('rejects a date that falls in a gap between periods — never fabricates a frontier', async () => {

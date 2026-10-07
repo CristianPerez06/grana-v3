@@ -736,6 +736,7 @@
       "future": "Futuro",
       "current": "En curso",
       "no_movements": "Sin movimientos",
+      "no_charges": "Sin consumos",
       "pending_payment": "Pendiente de pago",
       "overdue": "Vencido",
       "paid": "Pagado",
@@ -840,7 +841,8 @@
     "pill": {
       "due": "A pagar",
       "soon": "Cierra pronto",
-      "ok": "Al día"
+      "ok": "Al día",
+      "empty": "Sin consumos"
     },
     "wallet": {
       "subtitle": "{count, plural, =0 {Sin tarjetas} one {# tarjeta de crédito} other {# tarjetas de crédito}} · resúmenes de {month}",
@@ -1001,6 +1003,7 @@
       "running_end_not_after_paid_close": "El cierre del ciclo en curso debe ser posterior al {date} (cierre del resumen que estás pagando).",
       "running_next_already_paid": "El ciclo en curso ya tiene un pago registrado: sus fechas no se pueden modificar desde acá.",
       "boundary_next_paid": "El próximo resumen ya está pagado. No se puede modificar el borde entre ambos resúmenes.",
+      "period_empty": "No hay nada para pagar: este resumen cerró sin consumos.",
       "would_swallow_next": "La nueva fecha de cierre cubriría todo el próximo resumen. Editá primero las fechas del próximo resumen.",
       "running_cycle_invalid_dates": "No se pudo confirmar el ciclo en curso: las fechas son inválidas o se superponen con un resumen existente. El cierre debe ser posterior al {date} y el vencimiento posterior al cierre.",
       "eager_estimated_failed": "No se pudo crear el próximo resumen estimado.",

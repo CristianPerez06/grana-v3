@@ -13,7 +13,7 @@ import {
   updateCreditCard,
   updatePeriodDates,
 } from '@/app/_actions/credit-cards'
-import { cardMonogram } from '@grana/cards'
+import { cardMonogram, orderCycleDateWrites } from '@grana/cards'
 import {
   BankSelectorField,
   CardPreview,
@@ -191,29 +191,20 @@ export const EditCardForm = ({
         return
       }
 
-      // Cycle dates persist per period. Update the current period FIRST: it can
-      // cascade the boundary (shifting the next period's start), so the next
-      // period's own end/due must be written after that settles.
-      if (
-        cycle.currentPeriodId &&
-        (currentEnd !== (cycle.currentEndDate ?? '') || currentDue !== (cycle.currentDueDate ?? ''))
-      ) {
-        const r = await updatePeriodDates(cycle.currentPeriodId, {
-          end_date: currentEnd,
-          due_date: currentDue,
-        })
-        if (!r.ok) {
-          setFormError(r.formError ?? t('errors.edit_dates_failed'))
-          return
-        }
-      }
-      if (
-        cycle.nextPeriodId &&
-        (nextEnd !== (cycle.nextEndDate ?? '') || nextDue !== (cycle.nextDueDate ?? ''))
-      ) {
-        const r = await updatePeriodDates(cycle.nextPeriodId, {
-          end_date: nextEnd,
-          due_date: nextDue,
+      // Cycle dates persist per period. The order is decided once, in
+      // `orderCycleDateWrites` (shared with mobile): usually the current period
+      // first — it cascades the next one's start — but the next first when the
+      // new current close reaches past the next's stored close.
+      const writes = orderCycleDateWrites(cycle, {
+        currentEnd,
+        currentDue,
+        nextEnd,
+        nextDue,
+      })
+      for (const write of writes) {
+        const r = await updatePeriodDates(write.periodId, {
+          end_date: write.end_date,
+          due_date: write.due_date,
         })
         if (!r.ok) {
           setFormError(r.formError ?? t('errors.edit_dates_failed'))

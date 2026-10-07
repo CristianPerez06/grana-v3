@@ -223,6 +223,59 @@ describe('updatePeriodDates', () => {
   })
 })
 
+// ── updatePeriodDates › absorption of empty estimated periods ───────────────────
+
+describe('updatePeriodDates › absorbing empty estimated periods', () => {
+  const edited = { account_id: 'a1', start_date: '2026-09-24', end_date: '2026-10-23', due_date: '2026-11-04' }
+  const p2 = { id: 'p2', start_date: '2026-10-24', end_date: '2026-11-22', due_date: '2026-12-04', is_estimated: true }
+
+  const handlerWith = (opts: { p2Tx: boolean }) => (c: Ctx) => {
+    if (c.table === 'card_periods' && c.op === 'select' && c.cols.includes('account_id'))
+      return { data: edited, error: null }
+    if (c.table === 'card_periods' && c.op === 'select' && c.cols.includes('is_estimated'))
+      return { data: [p2], error: null }
+    if (c.table === 'card_periods' && c.op === 'select')
+      return { data: [{ end_date: '2026-11-25', due_date: '2026-12-05' }], error: null }
+    if (c.table === 'accounts') return { data: { id: 'a1' }, error: null }
+    if (c.table === 'period_payments') return { data: c.terminal === 'list' ? [] : null, error: null }
+    if (c.table === 'transactions' && c.op === 'select')
+      return { data: opts.p2Tx ? [{ card_period_id: 'p2' }] : [], error: null }
+    return OK
+  }
+
+  it('drops an empty estimated next it would swallow and projects a new one after', async () => {
+    const { supabase, calls } = makeSupabase(handlerWith({ p2Tx: false }))
+    const result = await updatePeriodDates({
+      supabase,
+      userId: USER,
+      periodId: 'p1',
+      input: { end_date: '2026-11-25', due_date: '2026-12-05' },
+    })
+    expect(result).toEqual({ ok: true })
+    expect(calls.deletes).toEqual([{ table: 'card_periods', filters: {} }])
+    expect(calls.updates.find((u) => u.table === 'card_periods')?.payload).toMatchObject({
+      end_date: '2026-11-25',
+      due_date: '2026-12-05',
+    })
+    const inserted = calls.inserts.find((i) => i.table === 'card_periods')?.payload
+    expect(inserted).toMatchObject({ account_id: 'a1', start_date: '2026-11-26', is_estimated: true })
+  })
+
+  it('still blocks when the swallowed next has transactions, touching nothing', async () => {
+    const { supabase, calls } = makeSupabase(handlerWith({ p2Tx: true }))
+    const result = await updatePeriodDates({
+      supabase,
+      userId: USER,
+      periodId: 'p1',
+      input: { end_date: '2026-11-25', due_date: '2026-12-05' },
+    })
+    expect(result).toEqual({ ok: false, messageKey: 'cards.errors.would_swallow_next' })
+    expect(calls.deletes).toHaveLength(0)
+    expect(calls.updates).toHaveLength(0)
+    expect(calls.inserts).toHaveLength(0)
+  })
+})
+
 // ── updateInstallmentParent ─────────────────────────────────────────────────────
 
 describe('updateInstallmentParent', () => {
@@ -412,6 +465,10 @@ const payInput = (over: Record<string, unknown> = {}) => ({
   ...over,
 })
 
+// The closed period has charges: an empty one closes by itself (`period_empty`).
+const periodHasCharges = (c: Ctx) =>
+  c.table === 'transactions' && c.op === 'select' && c.filters.card_period_id === PERIOD_ID
+
 // A closed period (end 2026-06-30 < today) owned by the user, unpaid.
 const closedPeriod = {
   id: PERIOD_ID,
@@ -470,6 +527,20 @@ describe('payCardPeriod › guards de lectura', () => {
     expect(result).toEqual({ ok: false, messageKey: 'cards.errors.period_not_closed' })
   })
 
+  it('period_empty when the closed statement has no charges ("Sin consumos")', async () => {
+    const { supabase, calls } = makeSupabase((c) => {
+      if (c.table === 'card_periods') return { data: closedPeriod, error: null }
+      if (c.table === 'accounts')
+        return { data: { user_id: USER, name: 'Galicia', stamp_tax_rate: null }, error: null }
+      if (c.table === 'period_payments') return { data: null, error: null }
+      if (periodHasCharges(c)) return { data: null, error: null }
+      return OK
+    })
+    const result = await payCardPeriod({ supabase, userId: USER, input: payInput(), today: TODAY })
+    expect(result).toEqual({ ok: false, messageKey: 'cards.errors.period_empty' })
+    expect(calls.rpcs).toHaveLength(0)
+  })
+
   it('un input con la forma plana vieja muere en la validación, sin tocar la base', async () => {
     // El monto suelto es exactamente lo que dejaba un resumen marcado como pagado
     // con cualquier número. Si esta forma volviera a pasar, el resto no importa.
@@ -489,6 +560,7 @@ describe('payCardPeriod › guards de lectura', () => {
 // pueden garantizarse. Lo que queda acá es traducirlas, y eso también se rompe.
 describe('payCardPeriod › traducción de los errores del RPC', () => {
   const upToRpc = (c: Ctx) => {
+    if (periodHasCharges(c)) return { data: { id: 'tx-1' }, error: null }
     if (c.table === 'card_periods' && c.terminal === 'single') return { data: closedPeriod, error: null }
     if (c.table === 'card_periods') return { data: [], error: null }
     if (c.table === 'accounts')
@@ -538,6 +610,7 @@ describe('payCardPeriod › happy path + alícuota del sello', () => {
   const baseHandler =
     (opts: { stampRate?: number | null } = {}) =>
     (c: Ctx) => {
+      if (periodHasCharges(c)) return { data: { id: 'tx-1' }, error: null }
       if (c.table === 'card_periods' && c.terminal === 'single') return { data: closedPeriod, error: null }
       if (c.table === 'card_periods') return { data: [], error: null } // sin períodos posteriores
       if (c.table === 'accounts' && c.op === 'select')

@@ -93,6 +93,27 @@ describe('cardTone', () => {
     expect(cardTone(mkCard({ period: { variant: 'actual' } }))).toBe('ok')
     expect(cardTone(mkCard({ period: null }))).toBe('ok')
   })
+  it('is "empty" ("Sin consumos") for a statement with no charges, even near its due date', () => {
+    expect(cardTone(mkCard({ period: { variant: 'sin_consumos', alert: 'red' } }))).toBe('empty')
+    expect(cardTone(mkCard({ period: { variant: 'tarjeta_nueva', alert: 'amber' } }))).toBe('empty')
+  })
+})
+
+describe('"Sin consumos" in filters and groups', () => {
+  const empty = (id: string) => mkCard({ id, period: { variant: 'sin_consumos', alert: 'red' } })
+  it('an empty card is not "Vencen pronto"', () => {
+    expect(applyFilter([empty('e1')], 'due-soon')).toEqual([])
+  })
+  it('a group of only empty cards is "empty", starts collapsed and owes nothing', () => {
+    const [g] = groupCardsByBank([empty('e1'), empty('e2')])
+    expect(g.tone).toBe('empty')
+    expect(g.defaultCollapsed).toBe(true)
+    expect(g.toPayARS).toBe(0)
+  })
+  it('a group mixing an empty card and an up-to-date one reads "ok"', () => {
+    const [g] = groupCardsByBank([empty('e1'), mkCard({ id: 'c2', period: { variant: 'actual' } })])
+    expect(g.tone).toBe('ok')
+  })
 })
 
 describe('cardHasBalance', () => {

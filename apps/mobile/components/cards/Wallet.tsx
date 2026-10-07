@@ -40,16 +40,19 @@ const DOT_CLASS: Record<CardTone, string> = {
   due: 'bg-negative',
   soon: 'bg-warning',
   ok: 'bg-emerald/40',
+  empty: 'bg-text-soft',
 }
 const BADGE_BG: Record<CardTone, string> = {
   due: 'bg-negative/10',
   soon: 'bg-warning-soft',
   ok: 'bg-emerald/10',
+  empty: 'bg-border-soft',
 }
 const BADGE_TEXT: Record<CardTone, string> = {
   due: 'text-negative',
   soon: 'text-warning-deep',
   ok: 'text-emerald',
+  empty: 'text-text-muted',
 }
 const dayMonth = (iso: string | null): string => {
   if (!iso) return '—'
@@ -142,9 +145,9 @@ const BankGroupMobile = ({ group, networkLabel }: GroupProps) => {
   const { masked } = useEyeMask()
   const [collapsed, setCollapsed] = useState(group.defaultCollapsed)
 
-  // The chip only earns its width when there is urgency to report: "al día" is
-  // already legible from the $0 total and the per-row dots.
-  const showBadge = group.tone !== 'ok'
+  // The chip only earns its width when there is urgency to report: "al día" and
+  // "sin consumos" are already legible from the $0 total and the per-row dots.
+  const showBadge = group.tone === 'due' || group.tone === 'soon'
   const badgeText = group.nextDueDate
     ? t('cards.month_hero.upcoming_due', { date: dayMonth(group.nextDueDate) })
     : t('cards.pill.ok')

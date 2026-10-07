@@ -35,6 +35,7 @@ export {
 export {
   getCardPeriodsWithStatus,
   getOrCreatePeriodForDate,
+  rollCardPeriodsForward,
   CardPurchasePredatesHistoryError,
   CardConsumoInPaidPeriodError,
   CardConsumoUnassignableError,
