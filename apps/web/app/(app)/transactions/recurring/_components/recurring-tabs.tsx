@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { AlertTriangle, ChevronRight, Repeat } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import { duplicateRuleIds, recurrenceTitle } from '@grana/recurrences'
+import { duplicateRuleIds, formatCompactDate, recurrenceTitle } from '@grana/recurrences'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
+import { formatDateISO, getTodayAR } from '@/lib/date'
 
 type Tab = 'active' | 'paused' | 'finished'
 
@@ -33,6 +34,8 @@ const formatDate = (iso: string | null) => {
 }
 
 export const RecurringTabs = ({ active, paused, finished }: Props) => {
+  const locale = useLocale()
+  const todayISO = formatDateISO(getTodayAR())
   const [tab, setTab] = useState<Tab>('active')
   // Reglas activas que colisionan con otra por (cuenta, moneda, tipo, monto).
   // Solo se SEÑALAN: la clave admite falsos positivos legítimos (dos servicios
@@ -128,11 +131,21 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
             // (rule.next_occurrence), NOT a pending instance's date: an existing
             // occurrence — overdue, or future after resolving ahead and unlinking —
             // is reviewed from its own row, never announced as upcoming.
-            const nextDate = formatDate(rule.next_occurrence)
-            const accountLine =
+            //
+            // Compact on purpose — `1 dic`, the year only when it is not this
+            // year's — because it shares a line with the account at phone width.
+            const nextDate = rule.next_occurrence
+              ? formatCompactDate(rule.next_occurrence, todayISO, locale === 'en' ? 'en' : 'es')
+              : null
+            // The FREQUENCY leads the account line as plain text («Mensual ·
+            // Billetera»), the way the review block already says it. As a chip
+            // beside the name it took the name's width; no icon says "monthly"
+            // without being learned first.
+            const accountLine = `${freqLabel} · ${
               rule.movement_type === 'transfer'
                 ? `${accountName} → ${destinationName ?? '—'}`
                 : accountName
+            }`
             // A finished rule that still has occurrences waiting says so. They
             // are the user's to confirm or skip, and hiding them because the
             // rule ended would strand them: the rule stops producing, it does
@@ -142,7 +155,7 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
                 ? `${tRec('limit.finished_with_pending', { count: rule.lifecycle.unresolved })} · ${accountLine}`
                 : tab === 'finished'
                   ? rule.end_date
-                    ? tRec('until_template', { date: formatDate(rule.end_date) ?? rule.end_date })
+                    ? `${freqLabel} · ${tRec('until_template', { date: formatDate(rule.end_date) ?? rule.end_date })}`
                     : rule.lifecycle.progress != null
                       ? `${tRec('limit.progress', {
                           spent: rule.lifecycle.progress.spent,
@@ -179,9 +192,6 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
                         category: rule.category ? getCategoryName(rule.category, tRoot) : null,
                         type: movementLabel,
                       })}
-                    </span>
-                    <span className="shrink-0 rounded-[6px] bg-[#F1F3F6] px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-text-muted">
-                      {freqLabel}
                     </span>
                     {duplicateIds.has(rule.id) && (
                       <span

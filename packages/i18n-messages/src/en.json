@@ -1819,7 +1819,7 @@
       "end_both_body_keep_one": "Only one condition is saved now: «{keeping}» stays and «{dropping}» is removed. Continue?",
       "end_both_body_drop_all": "You chose «no limit», so both are removed: «{first}» and «{second}». Continue?"
     },
-    "next_prefix": "next:",
+    "next_prefix": "Next",
     "upcoming": {
       "next_7_days": "Next 7 days",
       "next_30_days": "Next 30 days",
