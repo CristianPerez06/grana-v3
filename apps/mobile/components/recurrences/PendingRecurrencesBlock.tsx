@@ -97,40 +97,45 @@ function PendingRow({
 
   return (
     <View className="gap-2.5 px-4 py-3.5">
-      <View className="flex-row items-center justify-between">
-        <View className="min-w-0 flex-1 pr-3">
-          <View className="flex-row items-center gap-2">
-            <Text numberOfLines={1} className="flex-shrink text-[15px] font-bold text-text">
-              {title}
-            </Text>
-            {instance.household_id ? (
-              <Text className="shrink-0 overflow-hidden rounded-md bg-border-soft px-2 py-0.5 text-[10px] font-extrabold uppercase text-text-muted">
-                {t('transactions.list.shared_short')}
-              </Text>
-            ) : null}
-          </View>
-          <Text className="text-[12px] text-text-muted">
-            {formatShortDate(instance.due_date, locale)}
+      {/* Title and date get the whole row. Next to them the amount took the
+          width, so the sentence below ran many lines deep; the amount moves
+          onto the urgency line instead — the same layout as web at phone width. */}
+      <View>
+        <View className="flex-row items-center gap-2">
+          <Text numberOfLines={1} className="flex-shrink text-[15px] font-bold text-text">
+            {title}
           </Text>
+          {instance.household_id ? (
+            <Text className="shrink-0 overflow-hidden rounded-md bg-border-soft px-2 py-0.5 text-[10px] font-extrabold uppercase text-text-muted">
+              {t('transactions.list.shared_short')}
+            </Text>
+          ) : null}
+        </View>
+        <Text className="text-[12px] text-text-muted">
+          {formatShortDate(instance.due_date, locale)}
+        </Text>
+      </View>
+      <View>
+        <View className="flex-row items-center justify-between gap-3">
           <Text
-            className={`mt-0.5 text-[11px] font-extrabold uppercase ${
+            className={`min-w-0 flex-shrink text-[11px] font-extrabold uppercase ${
               urgency.kind === 'due_in' ? 'text-warning' : 'text-negative'
             }`}
           >
             {urgencyLabel}
           </Text>
-          <Text className="mt-1 text-[12px] text-text-soft">
-            {t(WILL_CREATE_KEY[preview.kind], {
-              amount,
-              date: formatShortDate(preview.date, locale),
-              account: preview.account ?? '—',
-              destination: preview.destination ?? '—',
-            })}
+          <Text className={`text-[15px] font-extrabold ${amountToneClass(type)}`}>
+            {amountSign(type)}
+            {amount}
           </Text>
         </View>
-        <Text className={`text-[15px] font-extrabold ${amountToneClass(type)}`}>
-          {amountSign(type)}
-          {amount}
+        <Text className="mt-1 text-[12px] text-text-soft">
+          {t(WILL_CREATE_KEY[preview.kind], {
+            amount,
+            date: formatShortDate(preview.date, locale),
+            account: preview.account ?? '—',
+            destination: preview.destination ?? '—',
+          })}
         </Text>
       </View>
 

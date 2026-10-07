@@ -503,38 +503,10 @@ export const PendingRecurrencesBlock = ({
                       </span>
                     )}
                   </span>
-                  <span
-                    className="mt-0.5 inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em]"
-                    style={{ color: urgency.overdue ? '#D9534F' : 'var(--warning)' }}
-                  >
-                    {urgency.overdue && (
-                      <span className="size-1.5 rounded-full" style={{ backgroundColor: '#D9534F' }} />
-                    )}
-                    {urgency.label}
-                  </span>
-                  {/* WHAT RESOLVING IT WILL DO, spelled out. The row above says
-                      what is due; this says what the app is about to write —
-                      which movement, with which date, in which account — so the
-                      user is not asked to confirm something they have to infer.
-                      Hidden while editing: the form itself is showing the values
-                      it will use. */}
-                  {!isEditing && (
-                    <span className="text-[12px] text-text-soft">
-                      {t(WILL_CREATE_KEY[preview.kind], {
-                        amount: formatted,
-                        // Read by a person, not by a machine: the raw ISO sat
-                        // under a header saying "Jueves, 10 de septiembre".
-                        // Native already formatted it; this is what closes that gap.
-                        date: formatShortDate(preview.date),
-                        account: preview.account ?? accountName,
-                        destination: preview.destination ?? '—',
-                      })}
-                    </span>
-                  )}
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className={`text-[16px] font-bold tracking-[-0.025em] tabular-nums sm:text-[18px] ${amtClass}`}>
+                  <span className={`hidden text-[18px] font-bold tracking-[-0.025em] tabular-nums sm:inline ${amtClass}`}>
                     {amtSign}{formatted}
                   </span>
                   {!isEditing && (
@@ -562,6 +534,49 @@ export const PendingRecurrencesBlock = ({
                     </button>
                   )}
                 </div>
+              </div>
+
+              {/* BELOW THE TITLE, NOT BESIDE IT. Inside the title column these
+                  lines had what the tile and the amount left — at 360px about 90px
+                  — so the name truncated after a few letters and the sentence ran
+                  six lines deep. Down here they take the row's width on a phone;
+                  from `sm` up they stay aligned under the text (tile 46 + gap 16).
+                  On a phone the amount moves onto the urgency line, which is the
+                  one line with room for it. Same layout as the native row. */}
+              <div className="flex flex-col gap-1 sm:pl-[62px]">
+                <div className="flex items-center justify-between gap-3">
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em]"
+                    style={{ color: urgency.overdue ? '#D9534F' : 'var(--warning)' }}
+                  >
+                    {urgency.overdue && (
+                      <span className="size-1.5 rounded-full" style={{ backgroundColor: '#D9534F' }} />
+                    )}
+                    {urgency.label}
+                  </span>
+                  <span className={`text-[16px] font-bold tracking-[-0.025em] tabular-nums sm:hidden ${amtClass}`}>
+                    {amtSign}{formatted}
+                  </span>
+                </div>
+                {/* WHAT RESOLVING IT WILL DO, spelled out. The row above says
+                    what is due; this says what the app is about to write —
+                    which movement, with which date, in which account — so the
+                    user is not asked to confirm something they have to infer.
+                    Hidden while editing: the form itself is showing the values
+                    it will use. */}
+                {!isEditing && (
+                  <span className="text-[12px] text-text-soft">
+                    {t(WILL_CREATE_KEY[preview.kind], {
+                      amount: formatted,
+                      // Read by a person, not by a machine: the raw ISO sat
+                      // under a header saying "Jueves, 10 de septiembre".
+                      // Native already formatted it; this is what closes that gap.
+                      date: formatShortDate(preview.date),
+                      account: preview.account ?? accountName,
+                      destination: preview.destination ?? '—',
+                    })}
+                  </span>
+                )}
               </div>
 
               {isEditing && (
