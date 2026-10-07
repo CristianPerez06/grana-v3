@@ -20,7 +20,7 @@
 
 ## 4. Verificación
 
-- [ ] 4.1 `pnpm verify` en verde.
+- [x] 4.1 `pnpm verify` en verde.
 - [x] 4.2 QA a mano en web a ancho de teléfono y en nativo: el bloque arranca plegado con vencidos y muestra las trabadas; vincular un vencido desde el bloque no crea movimiento ni mueve el saldo; desvincular una ocurrencia futura desde la ficha y volver a vincularle otro movimiento desde el bloque; una regla con una vencida y una futura no figura como trabada; el aviso de Compartido no cuenta una compartida futura. Lo que no se pueda correr en esta sesión queda escrito como pendiente para el usuario.
 
   - No corrido en esta sesión (sin credenciales de Supabase ni dispositivo): queda entero como pendiente para el usuario, en web a 360px y en nativo. Mirar en especial la fila con tres botones: en web los botones bajan de renglón si no entran; en nativo Confirmar se estira y los otros dos van a su lado.

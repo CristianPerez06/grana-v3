@@ -5,6 +5,7 @@
 Cubre las recurrencias de gasto compartidas con un hogar. Una regla de recurrencia de tipo `expense` puede pertenecer a un hogar de dos miembros y llevar un `default_split` por porcentaje (el "template" del reparto, cuyos porcentajes suman 100), definido **estructuralmente al alta** —como cuenta, categoría y tipo— y no editable desde el edit drawer. El estado compartido se hereda cuando la regla nace de un movimiento compartido (copia su `household_id` y arma el split desde las filas `shared_expense_split` del seed) y se propaga a cada instancia generada como snapshot (`split` propio, distinto del template, para habilitar override por instancia a futuro). Las instancias compartidas pendientes son **base caja**: no generan deuda en el hogar ni impactan el gasto hasta confirmarse; al confirmar, la instancia con `household_id` crea un gasto compartido reutilizando el alta de gasto compartido existente (`shared = { household_id, splits }`), de modo que la deuda del hogar se deriva como con cualquier gasto compartido manual. La confirmación vive únicamente en el hub de recurrencias —que sella las instancias compartidas pendientes con "Compartido"—; el módulo Compartido refleja el gasto recién al confirmar. Income y compras de tarjeta recurrentes quedan fuera de alcance.
 
 ## Requirements
+
 ### Requirement: Una regla de recurrencia de gasto puede ser compartida con un hogar
 
 El sistema SHALL permitir que una regla de recurrencia de tipo `expense` pertenezca a un
@@ -287,3 +288,25 @@ advertirlo antes, nombrando también ahí la acción que corresponde a su estado
 - **THEN** la pantalla de confirmación advierte que para deshacer esa conversión va a tener que
   resolver esa liquidación primero
 - **AND** nombra la acción que corresponde a su estado
+
+### Requirement: El aviso de gastos compartidos recurrentes por confirmar cuenta sólo lo que ya llegó
+
+El módulo Compartido SHALL avisar cuántos gastos compartidos recurrentes hay por confirmar, y ese
+conteo SHALL incluir únicamente las ocurrencias compartidas sin resolver **cuya fecha ya llegó**
+—vencidas o de hoy—, evaluada contra la fecha financiera del usuario (`hoy` inyectado, nunca el reloj
+del servidor). Una ocurrencia compartida sin resolver con fecha futura —por ejemplo, una que el
+usuario desvinculó antes de su vencimiento— NO SHALL contar: el aviso pide al usuario que confirme
+algo que ya tendría que haber pasado, y un vencimiento que todavía no llegó no es eso. Esa ocurrencia
+sigue a la vista y resoluble en el bloque de vencimientos por revisar.
+
+Sin ocurrencias que cuenten, el aviso NO SHALL mostrarse.
+
+#### Scenario: Una compartida con fecha futura no cuenta para el aviso
+
+- **WHEN** hoy es `2026-10-07` y la única ocurrencia compartida sin resolver vence el `2026-11-23`
+- **THEN** el módulo Compartido no muestra el aviso de gastos compartidos por confirmar
+
+#### Scenario: Una compartida vencida cuenta para el aviso
+
+- **WHEN** hoy es `2026-10-07` y hay una ocurrencia compartida sin resolver del `2026-09-30` y otra del `2026-11-23`
+- **THEN** el aviso dice que hay un gasto compartido recurrente por confirmar
