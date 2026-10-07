@@ -30,6 +30,7 @@ import {
   type RecurrenceMapErrorCode,
 } from './mapper'
 import type { RecurrenceCurrencyCode, RecurrenceMovementType } from './types'
+import type { RecurrenceGuard, RecurrenceGuardCode } from './guards'
 
 // Isomorphic result of a recurrence mutation. Mirrors the web ActionResult plus
 // the extras platform shells localize: `errorCode` (a Postgres error code the
@@ -42,6 +43,9 @@ export type RecurrenceActionResult<T> =
       ok: false
       fieldErrors?: Partial<Record<keyof T, string>>
       formError?: string
+      /** Qué rechazo fue, para que cada plataforma lo traduzca (`recurrences.guards.*`). */
+      guardCode?: RecurrenceGuardCode
+      guardParams?: Record<string, string | number>
       errorCode?: string
       mapErrorCode?: RecurrenceMapErrorCode
     }
@@ -56,14 +60,14 @@ export type RecurrenceHousehold = {
 
 // Verifica que la cuenta pertenezca al usuario, esté activa y tenga la moneda
 // activa (la activación de moneda vive en account_currencies, no en accounts).
-// Devuelve un mensaje de error o null si la cuenta es usable.
+// Devuelve el rechazo (código + texto) o null si la cuenta es usable.
 async function assertAccountUsable(
   supabase: GranaSupabaseClient,
   userId: string,
   accountId: string,
   currencyCode: string,
-  labels: { notFound: string; archived: string; currency: string },
-): Promise<string | null> {
+  labels: { notFound: RecurrenceGuard; archived: RecurrenceGuard; currency: RecurrenceGuard },
+): Promise<RecurrenceGuard | null> {
   const { data: account, error } = await supabase
     .from('accounts')
     .select('id, is_active')
@@ -122,13 +126,21 @@ export async function createRecurrence(
     data = validation.data
   } else {
     // Excluye adjustment/exchange y cualquier tipo no soportado por recurrencia.
-    return { ok: false, formError: 'Tipo de movimiento inválido para una recurrencia.' }
+    return {
+      ok: false,
+      guardCode: 'invalid_movement_type',
+      formError: 'Tipo de movimiento inválido para una recurrencia.',
+    }
   }
 
   // Invariantes por tipo (el schema cubre la forma; acá reforzamos pertenencia).
   if (data.movement_type === 'transfer') {
     if (data.transfer_destination_account_id === data.account_id) {
-      return { ok: false, formError: 'La cuenta origen y destino no pueden ser iguales.' }
+      return {
+        ok: false,
+        guardCode: 'same_account_as_destination',
+        formError: 'La cuenta origen y destino no pueden ser iguales.',
+      }
     }
   }
 
@@ -139,12 +151,15 @@ export async function createRecurrence(
     data.account_id,
     data.currency_code,
     {
-      notFound: 'Cuenta no encontrada.',
-      archived: 'La cuenta está archivada.',
-      currency: 'La cuenta no tiene esa moneda activa.',
+      notFound: { guardCode: 'account_not_found', formError: 'Cuenta no encontrada.' },
+      archived: { guardCode: 'account_archived', formError: 'La cuenta está archivada.' },
+      currency: {
+        guardCode: 'account_currency_inactive',
+        formError: 'La cuenta no tiene esa moneda activa.',
+      },
     },
   )
-  if (originError) return { ok: false, formError: originError }
+  if (originError) return { ok: false, ...originError }
 
   // Cuenta destino (solo transfer): misma validación.
   if (data.movement_type === 'transfer') {
@@ -154,12 +169,21 @@ export async function createRecurrence(
       data.transfer_destination_account_id,
       data.currency_code,
       {
-        notFound: 'La cuenta destino no existe.',
-        archived: 'La cuenta destino está archivada.',
-        currency: 'La cuenta destino no tiene esa moneda activa.',
+        notFound: {
+          guardCode: 'destination_account_not_found',
+          formError: 'La cuenta destino no existe.',
+        },
+        archived: {
+          guardCode: 'destination_account_archived',
+          formError: 'La cuenta destino está archivada.',
+        },
+        currency: {
+          guardCode: 'destination_account_currency_inactive',
+          formError: 'La cuenta destino no tiene esa moneda activa.',
+        },
       },
     )
-    if (destError) return { ok: false, formError: destError }
+    if (destError) return { ok: false, ...destError }
   }
 
   // Presets derivan su intervalo; 'custom' lo trae explícito.
@@ -182,16 +206,25 @@ export async function createRecurrence(
   let defaultSplit: { user_id: string; percentage: number }[] | null = null
   if (data.movement_type === 'expense' && data.shared) {
     if (!household || household.members.length < 2) {
-      return { ok: false, formError: 'No tenés un hogar de dos miembros para compartir.' }
+      return {
+        ok: false,
+        guardCode: 'no_two_member_household',
+        formError: 'No tenés un hogar de dos miembros para compartir.',
+      }
     }
     if (household.id !== data.shared.household_id) {
-      return { ok: false, formError: 'El hogar indicado no coincide con el tuyo.' }
+      return {
+        ok: false,
+        guardCode: 'household_mismatch',
+        formError: 'El hogar indicado no coincide con el tuyo.',
+      }
     }
     const memberIds = new Set(household.members.map((m) => m.userId))
     const splitIds = data.shared.splits.map((s) => s.user_id)
     if (splitIds.length !== memberIds.size || !splitIds.every((id) => memberIds.has(id))) {
       return {
         ok: false,
+        guardCode: 'split_members_mismatch',
         formError: 'El reparto debe incluir exactamente a los miembros del hogar.',
       }
     }
@@ -231,13 +264,15 @@ export async function createRecurrence(
   if (insertError || !recurrence) {
     return {
       ok: false,
+      guardCode: 'save_failed',
       formError: insertError?.message ?? 'No se pudo crear la regla recurrente.',
     }
   }
 
-  // Eagerly materialize the first due instance (start_date is today/past) so the
-  // "por confirmar" aviso shows without a manual refresh. Idempotent via the
-  // one-pending-per-rule unique index.
+  // Eagerly materialize the due occurrences (start_date is today/past) so the
+  // "por revisar" block shows them without a manual refresh. Idempotent via the
+  // one-row-per-occurrence identity (`UNIQUE (recurrence_id, due_date)`, 0064):
+  // the old one-pending-per-rule index is gone since 0066.
   await generateDueRecurrenceInstances(supabase, userId)
 
   return { ok: true, id: (recurrence as { id: string }).id }
@@ -283,11 +318,19 @@ export async function confirmRecurrenceInstance(
     .single()
 
   if (instanceError || !instance) {
-    return { ok: false, formError: 'Instancia recurrente no encontrada.' }
+    return {
+      ok: false,
+      guardCode: 'instance_not_found',
+      formError: 'Instancia recurrente no encontrada.',
+    }
   }
 
   if (instance.status !== 'pending') {
-    return { ok: false, formError: 'Esta instancia ya fue resuelta.' }
+    return {
+      ok: false,
+      guardCode: 'instance_already_resolved',
+      formError: 'Esta instancia ya fue resuelta.',
+    }
   }
 
   // NO VENCIMIENTO, NO CONFIRMATION. This is unreachable through any write this
@@ -314,10 +357,10 @@ export async function confirmRecurrenceInstance(
     .single()
 
   if (ruleError || !rule) {
-    return { ok: false, formError: 'Regla recurrente no encontrada.' }
+    return { ok: false, guardCode: 'rule_not_found', formError: 'Regla recurrente no encontrada.' }
   }
   if (rule.status === 'deleted') {
-    return { ok: false, formError: 'La regla recurrente fue eliminada.' }
+    return { ok: false, guardCode: 'rule_deleted', formError: 'La regla recurrente fue eliminada.' }
   }
 
   // Effective account: the instance's, or the one the user picked at confirm time
@@ -332,7 +375,11 @@ export async function confirmRecurrenceInstance(
     overrodeAccount &&
     instance.transfer_destination_account_id === effectiveAccountId
   ) {
-    return { ok: false, formError: 'La cuenta origen y destino no pueden ser iguales.' }
+    return {
+      ok: false,
+      guardCode: 'same_account_as_destination',
+      formError: 'La cuenta origen y destino no pueden ser iguales.',
+    }
   }
 
   const { data: account, error: accountError } = await supabase
@@ -345,6 +392,7 @@ export async function confirmRecurrenceInstance(
   if (accountError || !account) {
     return {
       ok: false,
+      guardCode: overrodeAccount ? 'chosen_account_missing' : 'rule_account_missing',
       formError: overrodeAccount
         ? 'La cuenta elegida no existe.'
         : 'La cuenta de la regla no existe.',
@@ -353,6 +401,7 @@ export async function confirmRecurrenceInstance(
   if (!account.is_active) {
     return {
       ok: false,
+      guardCode: overrodeAccount ? 'chosen_account_archived' : 'rule_account_archived',
       formError: overrodeAccount
         ? 'La cuenta elegida está archivada. Elegí otra para confirmar.'
         : 'La cuenta de la regla está archivada. Elegí otra cuenta para confirmar esta instancia.',
@@ -372,7 +421,11 @@ export async function confirmRecurrenceInstance(
       .eq('is_active', true)
       .single()
     if (!currency) {
-      return { ok: false, formError: 'La cuenta elegida no tiene esa moneda activa.' }
+      return {
+        ok: false,
+        guardCode: 'chosen_account_currency_inactive',
+        formError: 'La cuenta elegida no tiene esa moneda activa.',
+      }
     }
   }
 
@@ -517,11 +570,19 @@ export async function skipRecurrenceInstance(
     .single()
 
   if (instanceError || !instance) {
-    return { ok: false, formError: 'Instancia recurrente no encontrada.' }
+    return {
+      ok: false,
+      guardCode: 'instance_not_found',
+      formError: 'Instancia recurrente no encontrada.',
+    }
   }
 
   if (instance.status !== 'pending') {
-    return { ok: false, formError: 'Esta instancia ya fue resuelta.' }
+    return {
+      ok: false,
+      guardCode: 'instance_already_resolved',
+      formError: 'Esta instancia ya fue resuelta.',
+    }
   }
 
   const { data: updated, error: updateError } = await supabase
@@ -570,10 +631,14 @@ export async function updateRecurrence(
     .single()
 
   if (currentError || !current) {
-    return { ok: false, formError: 'Regla recurrente no encontrada.' }
+    return { ok: false, guardCode: 'rule_not_found', formError: 'Regla recurrente no encontrada.' }
   }
   if (current.status === 'deleted') {
-    return { ok: false, formError: 'La regla está eliminada y no se puede editar.' }
+    return {
+      ok: false,
+      guardCode: 'rule_deleted_cannot_edit',
+      formError: 'La regla está eliminada y no se puede editar.',
+    }
   }
 
   const updates = validation.data
@@ -589,17 +654,23 @@ export async function updateRecurrence(
 
   if (current.movement_type === 'transfer') {
     if (!mergedDestination) {
-      return { ok: false, formError: 'La transferencia requiere cuenta destino.' }
+      return {
+        ok: false,
+        guardCode: 'transfer_destination_required',
+        formError: 'La transferencia requiere cuenta destino.',
+      }
     }
     if (mergedDestination === mergedAccount) {
       return {
         ok: false,
+        guardCode: 'same_account_as_destination',
         formError: 'La cuenta origen y destino no pueden ser iguales.',
       }
     }
   } else if (mergedDestination != null) {
     return {
       ok: false,
+      guardCode: 'destination_only_for_transfers',
       formError: 'Solo las transferencias usan cuenta destino.',
     }
   }
@@ -607,6 +678,7 @@ export async function updateRecurrence(
   if (mergedEnd != null && mergedEnd < mergedStart) {
     return {
       ok: false,
+      guardCode: 'end_date_before_start',
       formError: 'La fecha de fin debe ser posterior o igual al inicio.',
     }
   }
@@ -630,12 +702,14 @@ export async function updateRecurrence(
       'recurrence_positions_spent',
       { p_id: id, p_today: formatDateISO(getTodayAR()) },
     )
-    if (spentError) return { ok: false, formError: spentError.message }
+    if (spentError) return { ok: false, guardCode: 'save_failed', formError: spentError.message }
 
     const positionsSpent = spent ?? 0
     if (updates.max_occurrences < positionsSpent) {
       return {
         ok: false,
+        guardCode: 'limit_below_spent',
+        guardParams: { spent: positionsSpent },
         formError: `Esta regla ya lleva ${positionsSpent} ${
           positionsSpent === 1 ? 'vencimiento' : 'vencimientos'
         }: el límite no puede ser menor.`,
@@ -714,7 +788,7 @@ export async function updateRecurrence(
       p_patch: patch as never,
       p_schedule_effective_from: updates.schedule_effective_from ?? null,
     })
-    if (rpcError) return { ok: false, formError: rpcError.message }
+    if (rpcError) return { ok: false, guardCode: 'save_failed', formError: rpcError.message }
     return { ok: true }
   }
 
@@ -724,7 +798,7 @@ export async function updateRecurrence(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (updateError) return { ok: false, formError: updateError.message }
+  if (updateError) return { ok: false, guardCode: 'save_failed', formError: updateError.message }
 
   return { ok: true }
 }
@@ -753,10 +827,10 @@ export async function pauseRecurrence(
     .single()
 
   if (ruleError || !rule) {
-    return { ok: false, formError: 'Regla recurrente no encontrada.' }
+    return { ok: false, guardCode: 'rule_not_found', formError: 'Regla recurrente no encontrada.' }
   }
   if (rule.status === 'deleted') {
-    return { ok: false, formError: 'La regla está eliminada.' }
+    return { ok: false, guardCode: 'rule_deleted', formError: 'La regla está eliminada.' }
   }
   if (rule.status === 'paused') return { ok: true }
 
@@ -784,11 +858,12 @@ export async function resumeRecurrence(
     .single()
 
   if (ruleError || !rule) {
-    return { ok: false, formError: 'Regla recurrente no encontrada.' }
+    return { ok: false, guardCode: 'rule_not_found', formError: 'Regla recurrente no encontrada.' }
   }
   if (rule.status === 'deleted') {
     return {
       ok: false,
+      guardCode: 'rule_deleted_cannot_resume',
       formError: 'La regla está eliminada y no puede reactivarse.',
     }
   }
@@ -825,7 +900,7 @@ export async function deleteRecurrence(
     .single()
 
   if (ruleError || !rule) {
-    return { ok: false, formError: 'Regla recurrente no encontrada.' }
+    return { ok: false, guardCode: 'rule_not_found', formError: 'Regla recurrente no encontrada.' }
   }
   if (rule.status === 'deleted') return { ok: true }
 
@@ -835,7 +910,7 @@ export async function deleteRecurrence(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (updateError) return { ok: false, formError: updateError.message }
+  if (updateError) return { ok: false, guardCode: 'save_failed', formError: updateError.message }
 
   const { error: deleteError } = await supabase
     .from('recurrence_instances')
@@ -845,7 +920,7 @@ export async function deleteRecurrence(
     .eq('status', 'pending')
 
   if (deleteError) {
-    return { ok: false, formError: deleteError.message }
+    return { ok: false, guardCode: 'save_failed', formError: deleteError.message }
   }
 
   return { ok: true }
@@ -924,11 +999,16 @@ export async function acceptRecurrenceSuggestion(
   const data = validation.data
 
   if (data.movement_type === 'transfer' && !data.transfer_destination_account_id) {
-    return { ok: false, formError: 'La transferencia requiere cuenta destino.' }
+    return {
+      ok: false,
+      guardCode: 'transfer_destination_required',
+      formError: 'La transferencia requiere cuenta destino.',
+    }
   }
   if (data.movement_type !== 'transfer' && !data.category_id) {
     return {
       ok: false,
+      guardCode: 'category_required',
       formError: 'Los ingresos y gastos requieren categoría.',
     }
   }
@@ -962,6 +1042,7 @@ export async function acceptRecurrenceSuggestion(
   if (insertError || !recurrence) {
     return {
       ok: false,
+      guardCode: 'save_failed',
       formError: insertError?.message ?? 'No se pudo crear la regla recurrente.',
     }
   }

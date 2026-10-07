@@ -602,10 +602,11 @@ export async function getMonthCategoryBreakdown(
 //    `pending` would make a past window SHRINK as the user confirms. `skipped` is
 //    never counted: that is the user saying the expense did not happen.
 //
-//    A past window is a RECONSTRUCTED RECORD, not a replay. The generator
-//    materializes one pending instance per rule and only once its date arrives,
-//    so at the cut the window's fixed expenses were unpersisted projection, and
-//    rules carry no history to rebuild it from. Re-projecting today's rules over
+//    A past window is a RECONSTRUCTED RECORD, not a replay. The generator only
+//    materializes occurrences whose date has arrived (resolving ahead is the one
+//    way a future one exists, and that is the user's doing, not the generator's),
+//    so at the cut most of the window's fixed expenses were unpersisted
+//    projection, and rules carry no history to rebuild it from. Re-projecting today's rules over
 //    an elapsed window would use today's amounts, lose the rules since retired
 //    and invent the ones created after — worse than not reconstructing.
 //
@@ -624,10 +625,14 @@ export async function getMonthCategoryBreakdown(
 // softening it here would have this card call a statement overdue while the
 // cards module calls the same one "closed, awaiting payment".
 //
-// KNOWN GAP: the materialized record has holes. `recurrence_instances` allows
-// one pending instance per rule and the generator produces none while one is
-// open, so a rule left unresolved in July generated nothing for August or
-// September, and those windows read $0 for it.
+// KNOWN GAP: the materialized record has holes BEFORE `fix-recurrence-backlog`
+// (0066). Until then `recurrence_instances` allowed one pending instance per
+// rule and the generator produced none while one was open, so a rule left
+// unresolved in July generated nothing for August or September, and those
+// windows read $0 for it. The generator now materializes every owed occurrence
+// up to twelve months back, but what those months lacked at the time is not
+// rebuilt: this read shows what was materialized, and the spec forbids
+// re-projecting the past.
 //
 // KNOWN GAP: same as getMonthCategoryBreakdown — the reads below have no
 // `.range()`. They are bounded by the window, which is an observation about the
@@ -836,8 +841,9 @@ export async function getCommittedOutlookForMonth(
   //    materialized — true for the current month AND for the previous one, whose
   //    window is the month now running. Once the window has ended the projection
   //    is dropped: it would price occurrences at the rules' CURRENT amounts
-  //    (confirm propagates a corrected amount back to the rule), lose the rules
-  //    retired since, and invent the ones created after.
+  //    (a rule's amount is edited from its detail; an amount corrected while
+  //    confirming stays on that occurrence and no longer rewrites the rule),
+  //    lose the rules retired since, and invent the ones created after.
   //
   // THE TWO MUST NOT OVERLAP, and what keeps them apart is the third read below:
   // every occurrence that already EXISTS in the window, in any state, subtracted

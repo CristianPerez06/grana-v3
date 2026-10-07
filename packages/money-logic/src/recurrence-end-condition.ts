@@ -167,9 +167,11 @@ export type EndConditionProblem =
 /**
  * Everything wrong with a draft, or null.
  *
- * Shared so the form and the write path apply the SAME rule. The form calling it
- * is a convenience; the write path calling it is the guarantee — see
- * `validateEndCondition`'s use in the recurrence mutations.
+ * Shared by the four forms (create and edit, web and native) so they apply the
+ * SAME rule. The form calling it is a convenience, not the guarantee: the write
+ * path (`updateRecurrence` in `@grana/recurrences`) re-checks the limit against
+ * the normative count of spent positions with its own guard — it does not call
+ * this helper, because that count lives in the database, not in the input.
  */
 export function validateEndCondition(
   draft: RecurrenceEndDraft,

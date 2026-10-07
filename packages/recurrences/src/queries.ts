@@ -844,9 +844,16 @@ export function selectReconstructionBatch(
     if (owed.length === 0) continue
 
     const current = owed[owed.length - 1]
-    // The rule's current occurrence is materialized when something NEWER than
-    // everything it is owed already exists. Otherwise the newest owed date is the
-    // current one, and the rule has nothing standing in for today.
+    // The rule's current occurrence is taken as materialized when something NEWER
+    // than everything it is owed already exists. Otherwise the newest owed date
+    // is the current one, and the rule has nothing standing in for today.
+    //
+    // KNOWN GAP: "newer exists" stopped implying "the current one exists" when
+    // resolving ahead was allowed — a rule with next month's occurrence already
+    // resolved, and this month's still owed, reads here as served and its
+    // current occurrence drops to the third tier. It still materializes on the
+    // following run; only the order within a backlog over `RECONSTRUCTION_BATCH_SIZE`
+    // is affected. Fixing it means asking whether `current` itself exists.
     const currentIsMissing = newestExisting == null || newestExisting < current
 
     if (currentIsMissing) {

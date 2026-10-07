@@ -144,3 +144,41 @@ describe('registrar por anticipado, en nativo', () => {
     }
   })
 })
+
+/**
+ * NATIVO TRADUCE EL CÓDIGO DEL RECHAZO, EN LAS DOS RAMAS.
+ *
+ * `localize` (ciclo de vida, instancias, vínculo) y `localizeForm` (crear y
+ * editar) son los dos únicos lugares por los que pasa un resultado del package
+ * antes de llegar a pantalla. La primera degradaba todo lo que no era vínculo a
+ * «Algo salió mal»; la segunda devolvía el texto del package en español aunque
+ * la app estuviera en inglés. Las dos tienen que consultar `guardCode` antes
+ * del genérico — si una deja de hacerlo, el defecto vuelve por esa rama sola y
+ * ningún test de tipos lo ve, porque `guardCode` es opcional.
+ */
+describe('traducción de los rechazos de guarda en nativo', () => {
+  const mutators = readFileSync(path.join(ROOT, 'lib', 'recurrences', 'mutators.ts'), 'utf-8')
+
+  const body = (name: string): string => {
+    const match = mutators.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n\\}`))
+    expect(match, `el test dejó de encontrar ${name}`).not.toBeNull()
+    return match?.[0] ?? ''
+  }
+
+  for (const name of ['localize', 'localizeForm']) {
+    it(`${name} traduce el código de guarda antes de caer al genérico`, () => {
+      const source = body(name)
+      const guard = source.indexOf('guardMessageKey(')
+      const generic = source.indexOf("t('recurrences.errors.generic')")
+      expect(guard, `${name} no consulta guardMessageKey`).toBeGreaterThan(-1)
+      expect(generic, `${name} perdió el fallback genérico`).toBeGreaterThan(-1)
+      expect(guard, `${name} pregunta por el código DESPUÉS del genérico`).toBeLessThan(generic)
+    })
+  }
+
+  it('localizeForm no devuelve el texto crudo del package', () => {
+    // Era la única rama que mostraba español en inglés: con código traducido
+    // ya no hace falta, y mantenerla es dejar la puerta abierta.
+    expect(body('localizeForm')).not.toMatch(/formError: result\.formError/)
+  })
+})

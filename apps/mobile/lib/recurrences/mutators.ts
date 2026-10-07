@@ -14,6 +14,8 @@ import {
   unlinkMovementFromRecurrence as unlinkMovementFromRecurrenceImpl,
   registerRecurrenceAhead as registerRecurrenceAheadImpl,
   linkErrorMessageKeys,
+  guardMessageKey,
+  type RecurrenceGuardCode,
   type RecurrenceHousehold,
   type GenerationResult,
   type LinkCandidate,
@@ -44,9 +46,12 @@ async function currentUserId(): Promise<string | null> {
 // Map the package result to a fully-localized outcome. A `mapErrorCode` (a
 // RecurrenceMapError from confirming) is translated via `recurrences.mapper_errors`;
 // un rechazo del circuito de vincular / registrar por anticipado se traduce con
-// la tabla del package; y todo lo demás degrada al error genérico para que la
-// copia quede consistente con el idioma (los mensajes de guarda del package son
-// sólo en español, como las guardas de borrado que nativo ya generaliza).
+// la tabla del package; un rechazo de guarda (`guardCode`: regla no encontrada,
+// instancia ya resuelta, cuenta sin esa moneda…) se traduce bajo
+// `recurrences.guards.*`; y sólo lo que no trae ningún código degrada al error
+// genérico. Antes todo lo que no era vínculo caía ahí: el usuario leía «Algo
+// salió mal» donde web nombraba el motivo, en español, aunque la app estuviera
+// en inglés.
 //
 // La rama de vínculo vive ACÁ, en la función que usan todas las mutaciones, y no
 // en una segunda función al lado: registrar un pago por anticipado llamaba a la
@@ -62,6 +67,8 @@ function localize(
         mapErrorCode?: string
         linkErrorCode?: LinkErrorCode
         blockedBy?: BlockingSettlements
+        guardCode?: RecurrenceGuardCode
+        guardParams?: Record<string, string | number>
         fieldErrors?: Record<string, string | undefined>
       },
   t: Translate,
@@ -74,14 +81,20 @@ function localize(
   if (linkKeys) {
     return { ok: false, formError: linkKeys.map((key) => t(`recurrences.link.${key}`)).join(' ') }
   }
+  const guardKey = guardMessageKey(result)
+  if (guardKey) {
+    return { ok: false, formError: t(`recurrences.${guardKey}`, result.guardParams) }
+  }
   return { ok: false, formError: t('recurrences.errors.generic') }
 }
 
-// Form variant: unlike the lifecycle mutations (which degrade to a generic
-// message), the create/edit forms want the package's own `formError` when it
-// carries one (e.g. a usable-account guard). Field-level validation is handled
-// client-side by the form, so a `fieldErrors`-only result — which shouldn't
-// happen once the form pre-validates — also degrades to the generic error.
+// Form variant for create/edit. The guards a form can hit (usable account,
+// destination equal to origin, limit below what is spent…) arrive with a
+// `guardCode` and are translated like everywhere else. It used to hand back the
+// package's raw `formError` — Spanish, whatever the app's language — because
+// that was the only way to show a reason at all. Field-level validation is
+// handled client-side by the form, so a `fieldErrors`-only result — which
+// shouldn't happen once the form pre-validates — degrades to the generic error.
 function localizeForm(
   result:
     | { ok: true }
@@ -90,12 +103,17 @@ function localizeForm(
         formError?: string
         errorCode?: string
         mapErrorCode?: string
+        guardCode?: RecurrenceGuardCode
+        guardParams?: Record<string, string | number>
         fieldErrors?: Record<string, string | undefined>
       },
   t: Translate,
 ): RecurrenceMutationOutcome {
   if (result.ok) return { ok: true }
-  if (result.formError) return { ok: false, formError: result.formError }
+  const guardKey = guardMessageKey(result)
+  if (guardKey) {
+    return { ok: false, formError: t(`recurrences.${guardKey}`, result.guardParams) }
+  }
   return { ok: false, formError: t('recurrences.errors.generic') }
 }
 

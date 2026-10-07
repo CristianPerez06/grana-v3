@@ -124,9 +124,10 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
             const tileIcon = rule.category?.icon
 
             // Meta line: active → next occurrence + account; otherwise status hint.
-            // "próximo" is the next calendar occurrence (rule.next_occurrence),
-            // NOT the pending instance's date — that one is the DUE occurrence
-            // awaiting confirmation and always sits at today-or-earlier.
+            // "próximo" is the next calendar occurrence that does not exist yet
+            // (rule.next_occurrence), NOT a pending instance's date: an existing
+            // occurrence — overdue, or future after resolving ahead and unlinking —
+            // is reviewed from its own row, never announced as upcoming.
             const nextDate = formatDate(rule.next_occurrence)
             const accountLine =
               rule.movement_type === 'transfer'

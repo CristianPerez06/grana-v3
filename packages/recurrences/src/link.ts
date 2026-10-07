@@ -233,7 +233,7 @@ export async function linkMovementToRecurrence(
   if (error) {
     const code = RPC_ERROR_BY_SQLSTATE[error.code ?? '']
     if (code) return { ok: false, linkErrorCode: code }
-    return { ok: false, errorCode: error.code, formError: error.message }
+    return { ok: false, errorCode: error.code, guardCode: 'save_failed', formError: error.message }
   }
 
   return { ok: true, instanceId: data as unknown as string }
@@ -288,7 +288,7 @@ export async function unlinkMovementFromRecurrence(
     return { ok: false, errorCode: 'GRN01', ...(blockedBy ? { blockedBy } : {}) }
   }
 
-  return { ok: false, errorCode: error.code, formError: error.message }
+  return { ok: false, errorCode: error.code, guardCode: 'save_failed', formError: error.message }
 }
 
 // ── Registrar antes del vencimiento ──────────────────────────────────────────
@@ -333,10 +333,10 @@ export async function registerRecurrenceAhead(
     .single()
 
   if (ruleError || !rule) {
-    return { ok: false, formError: 'Regla recurrente no encontrada.' }
+    return { ok: false, guardCode: 'rule_not_found', formError: 'Regla recurrente no encontrada.' }
   }
   if (rule.status === 'deleted') {
-    return { ok: false, formError: 'La regla recurrente fue eliminada.' }
+    return { ok: false, guardCode: 'rule_deleted', formError: 'La regla recurrente fue eliminada.' }
   }
 
   // VALIDAR EL VENCIMIENTO ANTES DE CREAR NADA, con la misma regla SQL que usa
@@ -365,9 +365,19 @@ export async function registerRecurrenceAhead(
     .eq('user_id', userId)
     .single()
 
-  if (!account) return { ok: false, formError: 'La cuenta de la regla no existe.' }
+  if (!account) {
+    return {
+      ok: false,
+      guardCode: 'rule_account_missing',
+      formError: 'La cuenta de la regla no existe.',
+    }
+  }
   if (!account.is_active) {
-    return { ok: false, formError: 'La cuenta de la regla está archivada. Elegí otra.' }
+    return {
+      ok: false,
+      guardCode: 'rule_account_archived',
+      formError: 'La cuenta de la regla está archivada. Elegí otra.',
+    }
   }
 
   const effective: InstanceSnapshot = {
@@ -469,6 +479,7 @@ export async function registerRecurrenceAhead(
     await supabase.from('transactions').delete().eq('id', transactionId)
     return {
       ok: false,
+      guardCode: 'register_failed',
       formError: written.error?.message ?? 'No se pudo registrar el vencimiento.',
     }
   }

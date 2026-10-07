@@ -46,6 +46,12 @@ export {
   type SeededRecurrenceResolution,
 } from './mutations'
 export {
+  RECURRENCE_GUARD_CODES,
+  guardMessageKey,
+  type RecurrenceGuard,
+  type RecurrenceGuardCode,
+} from './guards'
+export {
   closeAmounts,
   DUPLICATE_AMOUNT_TOLERANCE,
   findDuplicateRules,

@@ -37,6 +37,8 @@ import {
   unlinkMovementFromRecurrence as unlinkMovementFromRecurrenceImpl,
   registerRecurrenceAhead as registerRecurrenceAheadImpl,
   linkErrorMessageKeys,
+  guardMessageKey,
+  type RecurrenceGuardCode,
   type DuplicateCandidate,
   type DuplicateMatch,
   type LinkCandidate,
@@ -46,6 +48,32 @@ import {
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
+
+// ── Rechazos con código ───────────────────────────────────────────────────────
+// El package dice CUÁL fue el rechazo (`guardCode`, ver `guards.ts` en
+// @grana/recurrences) y conserva el texto en español como fallback. Acá se
+// traduce con el catálogo de web, bajo `recurrences.guards.*`. Antes el texto
+// llegaba tal cual a una app en inglés. Nativo hace lo mismo en su `localize`.
+
+type GuardCarrier = {
+  guardCode?: RecurrenceGuardCode
+  guardParams?: Record<string, string | number>
+}
+
+async function translateGuardMessage(result: GuardCarrier): Promise<string | undefined> {
+  const key = guardMessageKey(result)
+  if (!key) return undefined
+  const t = await getTranslations('recurrences')
+  return t(key, result.guardParams)
+}
+
+async function withGuardTranslated<
+  R extends { ok: true } | ({ ok: false; formError?: string } & GuardCarrier),
+>(result: R): Promise<R> {
+  if (result.ok) return result
+  const formError = await translateGuardMessage(result)
+  return formError ? { ...result, formError } : result
+}
 
 // ── createRecurrenceFromMovement ──────────────────────────────────────────────
 // Shell: auth + client + orchestrator + revalidate. Orchestration logic lives
@@ -99,7 +127,7 @@ export async function createRecurrence(
   const household = await getHousehold(supabase)
   const result = await createRecurrenceImpl(supabase, userId, input, household)
   if (result.ok) revalidateAfterRecurrenceMutation()
-  return result
+  return withGuardTranslated(result)
 }
 
 // ── confirmRecurrenceInstance ─────────────────────────────────────────────────
@@ -126,7 +154,7 @@ export async function confirmRecurrenceInstance(
     revalidateAfterRecurrenceMutation()
     revalidateAfterMovementMutation()
   }
-  return result
+  return withGuardTranslated(result)
 }
 
 // ── skipRecurrenceInstance ────────────────────────────────────────────────────
@@ -138,7 +166,7 @@ export async function skipRecurrenceInstance(
   const supabase = await createClient()
   const result = await skipRecurrenceInstanceImpl(supabase, userId, instanceId)
   if (result.ok) revalidateAfterRecurrenceMutation()
-  return result
+  return withGuardTranslated(result)
 }
 
 // ── updateRecurrence ──────────────────────────────────────────────────────────
@@ -151,7 +179,7 @@ export async function updateRecurrence(
   const supabase = await createClient()
   const result = await updateRecurrenceImpl(supabase, userId, id, input)
   if (result.ok) revalidateAfterRecurrenceMutation()
-  return result
+  return withGuardTranslated(result)
 }
 
 // ── pauseRecurrence / resumeRecurrence ────────────────────────────────────────
@@ -164,7 +192,7 @@ export async function pauseRecurrence(id: string): Promise<ActionResult<never>> 
     return { ok: false, formError: await translatePostgresError(result.errorCode, 'recurrence') }
   }
   if (result.ok) revalidateAfterRecurrenceMutation()
-  return result
+  return withGuardTranslated(result)
 }
 
 export async function resumeRecurrence(id: string): Promise<ActionResult<never>> {
@@ -175,7 +203,7 @@ export async function resumeRecurrence(id: string): Promise<ActionResult<never>>
     return { ok: false, formError: await translatePostgresError(result.errorCode, 'recurrence') }
   }
   if (result.ok) revalidateAfterRecurrenceMutation()
-  return result
+  return withGuardTranslated(result)
 }
 
 // ── deleteRecurrence (soft-delete) ────────────────────────────────────────────
@@ -185,7 +213,7 @@ export async function deleteRecurrence(id: string): Promise<ActionResult<never>>
   const supabase = await createClient()
   const result = await deleteRecurrenceImpl(supabase, userId, id)
   if (result.ok) revalidateAfterRecurrenceMutation()
-  return result
+  return withGuardTranslated(result)
 }
 
 // ── acceptRecurrenceSuggestion ────────────────────────────────────────────────
@@ -203,7 +231,7 @@ export async function acceptRecurrenceSuggestion(
     revalidateAfterRecurrenceMutation()
     revalidateAfterSuggestionMutation()
   }
-  return result
+  return withGuardTranslated(result)
 }
 
 // ── dismissRecurrenceSuggestion ───────────────────────────────────────────────
@@ -219,7 +247,7 @@ export async function dismissRecurrenceSuggestion(
   }
   // Dismissing only updates the suggestion list; no rule or movement change.
   if (result.ok) revalidateAfterSuggestionMutation()
-  return result
+  return withGuardTranslated(result)
 }
 
 // ── generateDueRecurrenceInstancesAction ──────────────────────────────────────
@@ -282,7 +310,9 @@ export async function linkMovementToRecurrence(args: {
     revalidateAfterMovementMutation()
     return { ok: true }
   }
-  const formError = await translateLinkError(result.linkErrorCode, undefined, result.errorCode)
+  const formError =
+    (await translateLinkError(result.linkErrorCode, undefined, result.errorCode)) ??
+    (await translateGuardMessage(result))
   return { ok: false, formError: formError ?? result.formError }
 }
 
@@ -297,11 +327,9 @@ export async function unlinkMovementFromRecurrence(
     revalidateAfterMovementMutation()
     return { ok: true }
   }
-  const formError = await translateLinkError(
-    result.linkErrorCode,
-    result.blockedBy,
-    result.errorCode,
-  )
+  const formError =
+    (await translateLinkError(result.linkErrorCode, result.blockedBy, result.errorCode)) ??
+    (await translateGuardMessage(result))
   return { ok: false, formError: formError ?? result.formError }
 }
 
@@ -327,6 +355,8 @@ export async function registerRecurrenceAhead(args: {
   // El rechazo de la validación del vencimiento —no es una posición del
   // calendario, excede el tope, ya está resuelto— llega como código y se
   // traduce acá, igual que en vincular. Sin esto el formulario mostraba nada.
-  const formError = await translateLinkError(result.linkErrorCode, undefined, result.errorCode)
+  const formError =
+    (await translateLinkError(result.linkErrorCode, undefined, result.errorCode)) ??
+    (await translateGuardMessage(result))
   return { ok: false, formError: formError ?? result.formError }
 }
