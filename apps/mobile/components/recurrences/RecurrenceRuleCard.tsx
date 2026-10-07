@@ -127,20 +127,21 @@ export function RecurrenceRuleCard({
         <Text numberOfLines={1} className="text-[13px] font-medium text-text-muted">
           {meta}
         </Text>
+        {/* The date lives under the account, not under the amount: there it made
+            the right column as wide as the date, and on a phone the name and the
+            account were left a letter each. Same as web at phone width. */}
+        {nextDate && (
+          <Text numberOfLines={1} className="text-[12px] font-semibold text-text-soft">
+            {t('recurrences.next_prefix')} {nextDate}
+          </Text>
+        )}
       </View>
 
       <View className="shrink-0 flex-row items-center gap-2">
-        <View className="items-end">
-          <Text className={`text-[16px] font-extrabold ${amountToneClass(rule.movement_type)}`}>
-            {amountSign(rule.movement_type)}
-            {fmtMoney(Number(rule.amount), rule.currency_code, showCents)}
-          </Text>
-          {nextDate && (
-            <Text className="text-[12px] font-semibold text-text-soft">
-              {t('recurrences.next_prefix')} {nextDate}
-            </Text>
-          )}
-        </View>
+        <Text className={`text-[16px] font-extrabold ${amountToneClass(rule.movement_type)}`}>
+          {amountSign(rule.movement_type)}
+          {fmtMoney(Number(rule.amount), rule.currency_code, showCents)}
+        </Text>
         <ChevronRight size={18} color="#B8C0CA" />
       </View>
     </Pressable>

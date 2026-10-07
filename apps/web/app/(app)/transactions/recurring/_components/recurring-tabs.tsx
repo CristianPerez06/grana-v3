@@ -157,7 +157,7 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
               <Link
                 key={rule.id}
                 href={`/transactions/recurring/${rule.id}`}
-                className="flex items-center gap-4 rounded-[14px] px-3.5 py-3.5 transition-colors hover:bg-page"
+                className="flex items-center gap-3 rounded-[14px] px-3.5 py-3.5 transition-colors hover:bg-page sm:gap-4"
               >
                 <span
                   className={`flex size-[46px] shrink-0 items-center justify-center rounded-[13px] text-[22px] ${
@@ -194,16 +194,26 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
                     )}
                   </div>
                   <span className="truncate text-[13px] font-medium text-text-muted">{meta}</span>
+                  {/* ON A PHONE THE DATE LIVES HERE, under the account. Next to
+                      the amount it made the right column as wide as the date, and
+                      at 360px the name and the account were left a letter each.
+                      From `sm` up there is room, and it stays under the amount.
+                      Same layout as the native row. */}
+                  {tab === 'active' && nextDate && (
+                    <span className="truncate text-[12px] font-semibold text-text-soft sm:hidden">
+                      {tRec('next_prefix')} {nextDate}
+                    </span>
+                  )}
                 </div>
 
-                <div className="flex shrink-0 items-center gap-4">
+                <div className="flex shrink-0 items-center gap-2 sm:gap-4">
                   <div className="flex flex-col items-end">
                     <span className={`text-[16px] font-extrabold tracking-[-0.02em] tabular-nums ${amtClass}`}>
                       {sign}
                       {formatRuleAmount(rule)}
                     </span>
                     {tab === 'active' && nextDate && (
-                      <span className="text-[12px] font-semibold text-text-soft">
+                      <span className="hidden text-[12px] font-semibold text-text-soft sm:inline">
                         {tRec('next_prefix')} {nextDate}
                       </span>
                     )}
