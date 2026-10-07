@@ -3,7 +3,9 @@
 ## Purpose
 
 Define el módulo de movimientos de Grana: registro de ingresos y gastos en cuentas `cash` y `bank`, transferencias entre cuentas, cambios de moneda (exchange), ajustes manuales, y manejo de recurrencias (plantillas e instancias generadas) bajo un contrato funcional unificado de Movimiento. Deriva el saldo disponible respetando los invariantes contables del proyecto (saldo negativo permitido con aviso no bloqueante, off-ledger credit cards, deterministic ordering ASC para cálculo / DESC para display, `Money` + `decimal.js`). Expone también el módulo global de Movimientos con búsqueda, filtros y destacado de ítems que requieren revisión. Los consumos y cuotas de tarjeta de crédito viven en `cards`.
+
 ## Requirements
+
 ### Requirement: El usuario puede registrar un ingreso en una cuenta
 
 El sistema SHALL permitir registrar un ingreso (plata que entra) en una cuenta de tipo `cash` o `bank`. El ingreso requiere: cuenta, moneda activa en esa cuenta, monto mayor a cero, fecha y categoría. La descripción y subcategoría son opcionales.
@@ -1232,7 +1234,7 @@ El server action SHALL rechazar entradas que violen los invariantes contables:
 - `max_occurrences`, si está presente, SHALL ser un entero ≥ 1.
 - `account_id` y la cuenta destino, si aplica, SHALL pertenecer al usuario y estar activas.
 
-Las reglas en tarjeta de crédito en moneda no-ARS NO SHALL capturar tipo de cambio al crearse: el `fx_rate` se solicita al confirmar cada instancia.
+Las reglas en tarjeta de crédito en moneda no-ARS NO SHALL capturar tipo de cambio al crearse **ni al confirmar cada instancia**: la conversión se resuelve al pagar el resumen, con la cotización de ese día (ver «El usuario puede confirmar una instancia recurrente», escenario «Confirmar consumo recurrente de tarjeta»). Este requirement decía antes que la cotización «se solicita al confirmar», contradiciendo a aquél; queda lo que la app hace.
 
 El sistema SHALL ofrecer un punto de entrada para este flujo desde la pantalla de recurrencias (`/transactions/recurring`).
 
@@ -1285,7 +1287,7 @@ El sistema SHALL ofrecer un punto de entrada para este flujo desde la pantalla d
 
 - **WHEN** el usuario crea una regla recurrente `expense` en una tarjeta de crédito con `currency_code = USD`
 - **THEN** la regla se crea sin tipo de cambio almacenado
-- **AND** el tipo de cambio se solicitará al confirmar cada instancia
+- **AND** confirmar cada instancia tampoco pide cotización: la conversión queda para el pago del resumen
 
 ### Requirement: El detalle de una regla recurrente muestra el historial de sus instancias
 
@@ -1760,8 +1762,10 @@ modo que colgárselo a cada línea haría que una regla pausada afirmara que se 
 atraso que nadie está recuperando. Las líneas por regla SHALL limitarse a nombrar la regla, su fecha
 y su conteo.
 
-El aviso NO SHALL bloquear ninguna acción, NO SHALL introducir una acción nueva —las que hay son
-confirmar, editar y omitir— y NO SHALL afirmar deuda, por la misma razón que el resto del bloque. Una
+El aviso NO SHALL bloquear ninguna acción, NO SHALL introducir por sí mismo ninguna acción —qué
+acciones lleva cada fila del bloque lo decide el requirement «Qué se puede hacer sobre un
+vencimiento depende de su estado, no de la pantalla», no este aviso— y NO SHALL afirmar deuda, por
+la misma razón que el resto del bloque. Una
 regla con ocurrencias acumuladas SHALL contar para este aviso **cualquiera sea su `status`**: el
 aviso describe vencimientos que quedaron sin resolver, y ninguna condición de la regla los resuelve
 por su cuenta.
@@ -1833,7 +1837,7 @@ El sistema SHALL exponer una pantalla `/transactions/recurring` para ver y gesti
 
 El agrupamiento de la pantalla SHALL usar el **estado mostrado** definido en "El fin de una regla se deriva de su calendario, no de una columna guardada", no la columna `status` en crudo: una regla que ya no puede producir nada NO SHALL aparecer junto a las que sí.
 
-La **próxima fecha** mostrada SHALL derivarse del mismo caminante de calendario que la proyección de próximas ocurrencias y que el generador, honrando `last_generated_date`: nunca SHALL anunciarse como próxima una ocurrencia ya cubierta por un movimiento real. Una regla sin próxima fecha NO SHALL mostrarse como activa.
+La **próxima fecha** mostrada SHALL derivarse del mismo caminante de calendario que la proyección de próximas ocurrencias y que el generador, descartando **el conjunto de fechas que la regla ya cubre** —la semilla de una regla creada desde un movimiento y toda ocurrencia materializada, en cualquier estado— y NO un cursor de avance como `last_generated_date`, que dejó de gobernar la generación (ver «El hub de recurrencias proyecta lo que viene en dos ventanas, sin repetir lo ya materializado»). Nunca SHALL anunciarse como próxima una ocurrencia que ya existe, esté cubierta por un movimiento real o siga sin resolver. Una regla sin próxima fecha NO SHALL mostrarse como activa.
 
 #### Scenario: Acceso desde Movimientos
 
@@ -1865,7 +1869,7 @@ La **próxima fecha** mostrada SHALL derivarse del mismo caminante de calendario
 
 #### Scenario: La próxima fecha no repite una ocurrencia ya cubierta
 
-- **WHEN** una regla mensual tiene `start_date = 2026-08-07` y `last_generated_date = 2026-08-07`, y hoy es `2026-08-04`
+- **WHEN** una regla mensual fue creada a partir de un movimiento del `2026-08-07`, de modo que su semilla cubre esa fecha, y hoy es `2026-08-04`
 - **THEN** el hub muestra `2026-09-07` como próxima fecha, no `2026-08-07`
 
 ### Requirement: El hub de recurrencias proyecta lo que viene en dos ventanas, sin repetir lo ya materializado
@@ -5742,3 +5746,123 @@ comporten distinto sin explicación.
 
 - **WHEN** el usuario abre un movimiento que la recurrencia creó al registrarse un pago
 - **THEN** la ficha dice que lo originó esa recurrencia
+
+### Requirement: Qué se puede hacer sobre un vencimiento depende de su estado, no de la pantalla
+
+El sistema SHALL distinguir dos preguntas que hoy se contestan con el mismo dato: **qué vencimiento se
+anuncia como próximo** y **sobre qué vencimiento se puede operar**. La primera existe para no nombrar
+dos veces la misma fecha, y por eso descarta lo que ya existe. La segunda NO SHALL excluir un
+vencimiento por el hecho de que ya exista como fila: lo que el usuario necesita resolver es,
+justamente, lo que ya existe y sigue sin resolver. Usar la definición de «próximo» para decidir sobre
+qué se puede operar es lo que dejó sin salida a un vencimiento materializado (#162).
+
+Lo que se ofrece SHALL depender únicamente del **estado del vencimiento**, igual en toda pantalla que
+lo muestre:
+
+- **Proyectado** —el calendario lo produce y todavía no existe como fila—: el hub y la ficha de la
+  regla SHALL ofrecer **registrarlo** («Ya lo pagué» / «Ya lo cobré» / «Ya la hice», según el tipo de
+  la regla) y **vincularlo** a un movimiento ya cargado («Ya lo tengo cargado»).
+- **Existente y sin resolver**, cualquiera sea su fecha —vencido, de hoy o futuro—: toda superficie
+  que lo muestre SHALL ofrecer **registrarlo**, **vincularlo** y **omitirlo**. Registrarlo y
+  confirmarlo son la misma acción: confirmar ya abre el formulario con importe, cuenta y fecha.
+- **Resuelto registrando** (`resolution_kind = 'created'`): NO SHALL ofrecerse ninguna acción de
+  deshacer mientras no exista una operación propia para borrar el movimiento que la recurrencia creó
+  (#104).
+- **Resuelto vinculando** (`resolution_kind = 'linked'`): el historial de la regla SHALL ofrecer
+  **desvincular**, y ninguna otra superficie SHALL hacerlo.
+
+La **ficha de la regla** SHALL seguir anunciando como «próxima fecha» la primera fecha que el
+calendario todavía no produjo. Los vencimientos existentes sin resolver se operan desde **su propia
+fila del historial**, no desde la próxima fecha: apuntar los botones de la próxima fecha «al más
+viejo sin resolver» resuelve uno y deja a los demás igual de huérfanos.
+
+Una regla **pausada** NO SHALL ofrecer registrar ni vincular por anticipado: una pausa es la regla
+diciendo que no está corriendo. Sus vencimientos **ya existentes** sin resolver SHALL seguir
+ofreciendo lo mismo que los de una regla activa, porque pausar no los resuelve.
+
+El hub SHALL ofrecer las acciones sobre el **mismo conjunto** de vencimientos proyectados en web y en
+nativo. Hoy web las ofrece sobre cada ocurrencia proyectada dentro de treinta días, y ninguna si la
+próxima cae más lejos; nativo las ofrece sobre la próxima de cada regla, sin tope de días. No es una
+divergencia forzada por la plataforma. El conjunto SHALL ser el de nativo: **la próxima ocurrencia
+de cada regla activa**, además de cada fila que la proyección muestre.
+
+**DIVERGENCIA CONOCIDA (#162).** Hoy registrar y vincular se ofrecen SÓLO sobre vencimientos
+proyectados; un vencimiento que ya existe y sigue sin resolver tiene únicamente confirmar y omitir en
+el bloque de por revisar, y nada en la ficha. Desvincular deja exactamente ese estado —una ocurrencia
+existente sin resolver, a veces con fecha futura—, de modo que un vencimiento desvinculado no puede
+volver a vincularse desde ninguna pantalla. El hub web tampoco ofrece todavía las acciones sobre el
+mismo conjunto que el nativo. Hasta que ese change se haga, el sistema NO SHALL darse por cumplido
+en el bloque de por revisar, en el historial de la ficha ni en el hub web; este requirement fija lo
+que esas pantallas tienen que ofrecer, no afirma que ya lo ofrezcan.
+
+#### Scenario: Un vencimiento proyectado ofrece registrar y vincular
+
+- **WHEN** una regla activa tiene su próximo vencimiento el `2026-10-23`, todavía sin fila, y hoy es el `2026-10-07`
+- **THEN** el hub y la ficha de la regla ofrecen registrarlo y vincularlo sobre esa fecha
+- **AND** no ofrecen omitirlo, porque no existe nada que omitir
+
+#### Scenario: Un vencimiento existente sin resolver ofrece registrar, vincular y omitir
+
+- **WHEN** el generador materializó el vencimiento del `2026-09-25` y sigue sin resolver
+- **THEN** el bloque de vencimientos por revisar y la fila de ese vencimiento en el historial de la regla ofrecen registrarlo, vincularlo y omitirlo
+- **AND** la ficha anuncia como próxima fecha la siguiente que el calendario todavía no produjo, no el `2026-09-25`
+
+#### Scenario: Un vencimiento desvinculado se puede volver a vincular
+
+- **WHEN** el usuario desvincula el movimiento del vencimiento del `2026-11-23`, cuya fecha todavía no llegó
+- **THEN** ese vencimiento queda existente y sin resolver, con fecha futura
+- **AND** sigue ofreciendo registrarlo, vincularlo y omitirlo, aunque ya exista como fila
+
+#### Scenario: Lo resuelto registrando no ofrece deshacer
+
+- **WHEN** el usuario abre en el historial una ocurrencia resuelta con un movimiento que la recurrencia creó
+- **THEN** la fila no ofrece desvincular ni ninguna otra acción de deshacer
+
+#### Scenario: Una regla pausada no ofrece resolver por anticipado
+
+- **WHEN** una regla está pausada y su calendario produciría un vencimiento el `2026-10-23`
+- **THEN** ni el hub ni la ficha ofrecen registrarlo ni vincularlo
+- **AND** un vencimiento que ya existía sin resolver antes de la pausa sigue ofreciendo registrar, vincular y omitir
+
+#### Scenario: Web y nativo ofrecen las acciones sobre los mismos vencimientos
+
+- **WHEN** una regla mensual activa tiene su próximo vencimiento a treinta y cinco días de hoy
+- **THEN** el hub web y el hub nativo ofrecen registrarlo y vincularlo sobre esa misma fecha
+
+### Requirement: Los rechazos del módulo de recurrencias se dicen en el idioma del usuario
+
+Todo mensaje con el que el módulo de recurrencias rechaza una operación y que llega a pantalla
+—regla no encontrada, instancia ya resuelta, cuenta sin esa moneda activa, cuenta archivada,
+transferencia sin destino, reparto que no coincide con el hogar, y los demás— SHALL salir del
+catálogo de textos de la aplicación, en el idioma del usuario, en web y en la app nativa por igual.
+
+El módulo compartido NO SHALL ser quien elige el texto: SHALL identificar cada rechazo con un
+**código** y cada plataforma SHALL traducirlo con su propio catálogo, que es el mismo mecanismo con
+el que ya se traducen los rechazos de vincular y registrar por anticipado. El catálogo SHALL tener
+texto para cada código en los dos idiomas, y los dos textos SHALL ser distintos: una traducción
+pegada del español pasa cualquier chequeo de existencia.
+
+Un rechazo sin código —un error de la base que el módulo sólo puede repetir— SHALL mostrarse con el
+mensaje genérico traducido, nunca con el texto crudo del motor.
+
+Hoy no es así: los mensajes están escritos en español dentro del módulo compartido. Web los muestra
+tal cual aunque la app esté en inglés, y nativo los degrada a «Algo salió mal» en todas las
+operaciones salvo crear y editar, de modo que el usuario no sabe qué pasó.
+
+#### Scenario: Un rechazo se muestra traducido en web
+
+- **WHEN** la app está en inglés y el usuario intenta confirmar una ocurrencia que otro proceso ya resolvió
+- **THEN** el mensaje que ve está en inglés
+- **AND** dice que la ocurrencia ya fue resuelta, no un texto genérico
+
+#### Scenario: Un rechazo se muestra con su motivo en la app nativa
+
+- **WHEN** desde la app nativa el usuario intenta reactivar una regla que fue eliminada
+- **THEN** el mensaje dice que la regla está eliminada y no puede reactivarse, en el idioma de la app
+- **AND** no dice «Algo salió mal»
+
+#### Scenario: El catálogo cubre cada código en los dos idiomas
+
+- **WHEN** se agrega un rechazo nuevo al módulo con su código
+- **THEN** una prueba falla si el catálogo no tiene texto para ese código en español y en inglés
+- **AND** falla también si los dos textos son iguales

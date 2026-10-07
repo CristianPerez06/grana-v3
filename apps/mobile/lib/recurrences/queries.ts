@@ -29,7 +29,8 @@ export type {
 }
 
 // Every active/paused rule (the hub partitions these into active/paused/finished
-// tabs — "finished" is derived from a past end_date, not a DB status).
+// tabs — "finished" is the DERIVED lifecycle state, asked of the calendar: no
+// occurrence from today on, by `end_date` or by the limit, and never a DB status).
 export async function getRecurrencesList(): Promise<RecurrenceSummary[]> {
   return getRecurrencesImpl(supabase, { statuses: ['active', 'paused'] })
 }

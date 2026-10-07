@@ -133,16 +133,20 @@ export type RecurrenceSummary = Recurrence & {
    * date when the rule was created from a movement — everything a projection has
    * to subtract so it does not announce as upcoming something that already is.
    *
-   * Bounded by construction: occurrences are only materialized up to today, so
-   * this holds today's at most, and a future `start_date` for a seeded rule.
+   * Small in practice but NOT bounded to today's: since `recurrence-link-movement`
+   * an occurrence can exist with a FUTURE due date — resolving ahead writes the
+   * November occurrence in September, and unlinking it leaves it pending there.
+   * The read takes every existing date from today onward, in any state.
    * A plain array, not a Set, because it crosses the server/client boundary.
    */
   covered_occurrences: string[]
   /**
-   * Next scheduled occurrence on or after today (the calendar "próximo"), or null
-   * if the rule has no further occurrence. Computed from start_date — NOT from
-   * `pending_instances`, whose dates are the DUE occurrences awaiting a decision
-   * and are always <= today.
+   * Next calendar occurrence on or after today that does NOT already exist (the
+   * "próximo" the surfaces announce), or null if the rule has no further
+   * occurrence. It answers "what is announced as next", never "what can be acted
+   * on": an existing occurrence — resolved or still pending, past or future —
+   * is excluded here and operated on from its own row (spec `transactions`, «Qué
+   * se puede hacer sobre un vencimiento depende de su estado, no de la pantalla»).
    */
   next_occurrence: string | null
   /**

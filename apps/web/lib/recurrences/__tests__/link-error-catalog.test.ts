@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { en, es } from '@grana/i18n-messages'
-import { LINK_ERROR_MESSAGE_KEYS, RESOLVE_AHEAD_MESSAGE_KEYS } from '@grana/recurrences'
+import {
+  LINK_ERROR_MESSAGE_KEYS,
+  RECURRENCE_GUARD_CODES,
+  RESOLVE_AHEAD_MESSAGE_KEYS,
+} from '@grana/recurrences'
 
 /**
  * EL CATÁLOGO TIENE TODOS LOS MENSAJES DEL CIRCUITO, EN LOS DOS IDIOMAS.
@@ -79,5 +83,45 @@ describe('rótulos de resolver por anticipado, por tipo de movimiento', () => {
       (key) => lookup(es, `recurrences.link.${key}`) === lookup(en, `recurrences.link.${key}`),
     )
     expect(untranslated).toEqual([])
+  })
+})
+
+/**
+ * LO MISMO PARA LOS RECHAZOS DE GUARDA DEL MÓDULO.
+ *
+ * Son los «regla no encontrada», «instancia ya resuelta», «la cuenta no tiene
+ * esa moneda activa» que antes viajaban como texto en español: web los mostraba
+ * tal cual en una app en inglés y nativo los degradaba a «Algo salió mal». Ahora
+ * viajan como código y cada app los traduce bajo `recurrences.guards.*`, así que
+ * un código sin texto vuelve a ser una clave cruda en pantalla.
+ */
+describe('rechazos de guarda del módulo de recurrencias', () => {
+  for (const [locale, catalog] of [
+    ['es', es],
+    ['en', en],
+  ] as const) {
+    it(`${locale} tiene texto para cada código`, () => {
+      const missing = RECURRENCE_GUARD_CODES.filter(
+        (code) => typeof lookup(catalog, `recurrences.guards.${code}`) !== 'string',
+      )
+      expect(missing).toEqual([])
+    })
+  }
+
+  it('los dos idiomas dicen cosas distintas: ninguno quedó copiado del otro', () => {
+    const untranslated = RECURRENCE_GUARD_CODES.filter(
+      (code) => lookup(es, `recurrences.guards.${code}`) === lookup(en, `recurrences.guards.${code}`),
+    )
+    expect(untranslated).toEqual([])
+  })
+
+  it('el catálogo no tiene códigos que el módulo no emite', () => {
+    // Un texto huérfano no rompe nada, pero es un rechazo que alguien creyó
+    // cubierto y el módulo nunca va a mostrar.
+    const listed = new Set<string>(RECURRENCE_GUARD_CODES)
+    const inCatalog = Object.keys(
+      (lookup(es, 'recurrences.guards') as Record<string, string>) ?? {},
+    )
+    expect(inCatalog.filter((code) => !listed.has(code))).toEqual([])
   })
 })
