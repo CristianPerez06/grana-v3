@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Alert, Pressable, Text, View } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, Clock, X } from 'lucide-react-native'
+import { Check, ChevronDown, ChevronRight, Clock, X } from 'lucide-react-native'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import {
   recurrenceTitle,
@@ -23,6 +23,7 @@ import { useShowCents } from '../../lib/preferences-context'
 import { colors } from '../../lib/colors'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
 import { amountSign, amountToneClass, categoryName, movementLabel, subcategoryName } from './format'
+import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { RecurrenceFailureNotice } from './MaterializationNotice'
 import { AlreadyLoadedAction } from './AlreadyLoadedAction'
@@ -142,16 +143,15 @@ function PendingRow({
       {/* Three actions do not fit one phone-width line: Confirmar across the
           top, and below it «Ya lo tengo cargado» takes whatever Omitir leaves —
           halves are too narrow for its label. Same as web at phone width. */}
+      {/* The app's `Button`, not hand-rolled Pressables: Confirmar was a navy
+          block here and green on web. Same variants as the web row — primary
+          for Confirmar, secondary for the other two. Omitir gets a fixed width
+          because the primitive fills its parent, and a content-sized parent in
+          a row has no width to fill. */}
       <View className="gap-2">
-        <Pressable
-          onPress={() => run('confirm')}
-          disabled={busy}
-          className="items-center rounded-xl bg-navy py-2.5 active:opacity-90 disabled:opacity-60"
-        >
-          <Text className="text-[13px] font-bold text-white">
-            {busy ? t('recurrences.pending.confirming') : t('recurrences.pending.confirm')}
-          </Text>
-        </Pressable>
+        <Button variant="primary" size="sm" onPress={() => run('confirm')} loading={busy}>
+          {t('recurrences.pending.confirm')}
+        </Button>
         <View className="flex-row gap-2">
           {/* NO «Ya lo pagué» here — Confirmar already is that action. What the
               row lacked was pointing at a movement already loaded, without
@@ -164,26 +164,18 @@ function PendingRow({
             shared={instance.household_id != null}
             onLinked={() => onDone('linked')}
             renderTrigger={(open, linking) => (
-              <Pressable
-                onPress={open}
-                disabled={busy || linking}
-                className="flex-1 items-center justify-center rounded-xl border border-border px-3 py-2.5 active:bg-page disabled:opacity-60"
-              >
-                <Text className="text-[13px] font-semibold text-text">
+              <View className="flex-1">
+                <Button variant="secondary" size="sm" onPress={open} disabled={busy || linking}>
                   {t('recurrences.link.already_loaded')}
-                </Text>
-              </Pressable>
+                </Button>
+              </View>
             )}
           />
-          <Pressable
-            onPress={() => run('skip')}
-            disabled={busy}
-            className="items-center justify-center rounded-xl border border-border px-4 py-2.5 active:bg-page disabled:opacity-60"
-          >
-            <Text className="text-[13px] font-semibold text-text-muted">
+          <View className="w-24">
+            <Button variant="secondary" size="sm" onPress={() => run('skip')} disabled={busy}>
               {t('recurrences.pending.skip')}
-            </Text>
-          </Pressable>
+            </Button>
+          </View>
         </View>
       </View>
     </View>
@@ -342,11 +334,14 @@ export function PendingRecurrencesBlock() {
                 {t('recurrences.pending.count', { count: instances.length })}
               </Text>
             ) : null}
-            <ChevronDown
-              size={20}
-              color={colors.textMuted}
-              style={{ transform: [{ rotate: isOpen ? '0deg' : '-90deg' }] }}
-            />
+            {/* Two icons, not one rotated. A `transform` rotation on the SVG
+                icon left the collapsed state with no chevron at all on iOS —
+                unnoticed while the block rarely started collapsed. */}
+            {isOpen ? (
+              <ChevronDown size={20} color={colors.textMuted} />
+            ) : (
+              <ChevronRight size={20} color={colors.textMuted} />
+            )}
           </Pressable>
 
           {isOpen && notice ? (
