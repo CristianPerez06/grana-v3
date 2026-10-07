@@ -1866,10 +1866,12 @@
       "end_label": "Termina"
     },
     "link": {
-      "already_paid": "Ya lo pagué",
-      "already_paid_hint": "Registrá el pago ahora, aunque falte para el vencimiento. El próximo sigue igual.",
+      "already_paid": {
+        "expense": "Ya lo pagué",
+        "income": "Ya lo cobré",
+        "transfer": "Ya la hice"
+      },
       "already_loaded": "Ya lo tengo cargado",
-      "already_loaded_hint": "Elegí el movimiento que ya cargaste. No se crea ninguno nuevo.",
       "candidates_title": "¿Cuál de estos es?",
       "candidates_subtitle": "Movimientos tuyos cerca del vencimiento del {date}",
       "candidates_empty": "No encontramos movimientos cerca de esa fecha.",
@@ -1880,7 +1882,11 @@
       "link": "Vincular",
       "linking": "Vinculando…",
       "linked_success": "Vencimiento resuelto con el movimiento que ya tenías.",
-      "recorded_success": "Pago registrado: el vencimiento quedó resuelto.",
+      "recorded_success": {
+        "expense": "Pago registrado: el vencimiento quedó resuelto.",
+        "income": "Cobro registrado: el vencimiento quedó resuelto.",
+        "transfer": "Transferencia registrada: el vencimiento quedó resuelto."
+      },
       "unlink": "Desvincular",
       "unlinking": "Desvinculando…",
       "unlinked_success": "Listo: el movimiento quedó suelto y el vencimiento volvió a por revisar.",

@@ -230,3 +230,51 @@ export function recurrenceLinkLabelKey(
 ): 'linked' | 'originated' {
   return resolutionKind === 'linked' ? 'linked' : 'originated'
 }
+
+// ── Cómo se nombra resolver por anticipado, según lo que la regla mueve ───────
+
+/** Los tres tipos de regla que pueden resolverse por anticipado. */
+export const RESOLVE_AHEAD_MOVEMENT_TYPES = ['expense', 'income', 'transfer'] as const
+
+export type ResolveAheadMovementType = (typeof RESOLVE_AHEAD_MOVEMENT_TYPES)[number]
+
+/**
+ * «YA LO PAGUÉ» ES UNA FRASE DE GASTO, y la acción se ofrece en los tres tipos.
+ *
+ * Sobre una regla de sueldo decía «Ya lo pagué» y, al confirmar, «Pago
+ * registrado» — como si el usuario le hubiera pagado a su sueldo. Lo mismo con
+ * una transferencia, que no se paga: se hace. Nada de esto rompía, así que
+ * sobrevivió al QA entero y lo encontró el usuario en producción.
+ *
+ * La elección vive acá y no en cada pantalla por la razón de siempre: son TRES
+ * lugares que la hacen —la fila de web, la del hub nativo y el título de la hoja
+ * nativa— y tres copias de una tabla de tres entradas divergen.
+ *
+ * El tipo desconocido cae en `expense` a propósito: es el caso que la app tuvo
+ * siempre, y un rótulo levemente impreciso es mejor que una clave cruda en
+ * pantalla. Si aparece un cuarto tipo de movimiento, el test de catálogo lo
+ * nombra antes de que nadie lo lea mal.
+ */
+export function resolveAheadMessageKeys(movementType: string): {
+  /** El botón: «Ya lo pagué» / «Ya lo cobré» / «Ya la hice». */
+  action: string
+  /** El acuse, después de confirmar. */
+  recorded: string
+} {
+  const kind = (RESOLVE_AHEAD_MOVEMENT_TYPES as readonly string[]).includes(movementType)
+    ? movementType
+    : 'expense'
+  return { action: `already_paid.${kind}`, recorded: `recorded_success.${kind}` }
+}
+
+/**
+ * Todas las claves que `resolveAheadMessageKeys` puede devolver, para que un
+ * test pueda exigir que el catálogo las tenga en los dos idiomas. Mismo motivo
+ * que `LINK_ERROR_MESSAGE_KEYS`: la clave se arma con una plantilla, así que el
+ * escáner de claves literales no la ve y una que falte llega a pantalla.
+ */
+export const RESOLVE_AHEAD_MESSAGE_KEYS: readonly string[] =
+  RESOLVE_AHEAD_MOVEMENT_TYPES.flatMap((kind) => [
+    `already_paid.${kind}`,
+    `recorded_success.${kind}`,
+  ])

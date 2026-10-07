@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Check, ChevronDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { parseMoneyInput } from '@grana/validation'
-import type { LinkCandidate } from '@grana/recurrences'
+import { resolveAheadMessageKeys, type LinkCandidate } from '@grana/recurrences'
 import type { MovementFormAccount } from '@grana/movement-form'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { createClient } from '@/lib/supabase/client'
@@ -74,6 +74,9 @@ const PayAheadForm = ({
   const tTx = useTranslations('transactions')
   const notify = useRecurrenceNotice()
   const currency = ruleCurrency as 'ARS' | 'USD'
+  // Cómo se llama esto según lo que la regla mueve: un sueldo no se paga, se
+  // cobra, y una transferencia no se paga, se hace. La elección es compartida.
+  const msg = resolveAheadMessageKeys(movementType)
 
   const [amount, setAmount] = useState(String(ruleAmount))
   // La FECHA DE PAGO, hoy por defecto. El vencimiento no se toca.
@@ -163,7 +166,7 @@ const PayAheadForm = ({
       }
       // El acuse lo da la pantalla: esta fila está por desaparecer, así que el
       // mensaje sube al bloque que se queda.
-      notify(tRec('link.recorded_success'))
+      notify(tRec(`link.${msg.recorded}`))
       onDone()
     })
   }
@@ -318,6 +321,9 @@ const PayAheadForm = ({
 export const ResolveAheadActions = ({ shared, ...rule }: Props) => {
   const t = useTranslations('recurrences.link')
   const notify = useRecurrenceNotice()
+  // El rótulo depende de lo que la regla mueve: «Ya lo pagué» sobre un sueldo
+  // suena a que el usuario le pagó a su sueldo.
+  const msg = resolveAheadMessageKeys(rule.movementType)
   const [formOpen, setFormOpen] = useState(false)
 
   // ── «Ya lo tengo cargado» ──────────────────────────────────────────────────
@@ -386,7 +392,7 @@ export const ResolveAheadActions = ({ shared, ...rule }: Props) => {
         <div className="flex items-stretch gap-2">
           <div className="flex-1">
             <Button variant="secondary" size="xs" onPress={() => setFormOpen(true)}>
-              {t('already_paid')}
+              {t(msg.action)}
             </Button>
           </div>
           <div className="flex-1">
