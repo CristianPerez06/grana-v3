@@ -1819,7 +1819,7 @@
       "end_both_body_keep_one": "Ahora se guarda una sola condición: va a quedar «{keeping}» y se quita «{dropping}». ¿Seguimos?",
       "end_both_body_drop_all": "Elegiste «sin límite», así que se quitan las dos: «{first}» y «{second}». ¿Seguimos?"
     },
-    "next_prefix": "próximo:",
+    "next_prefix": "Próx.",
     "upcoming": {
       "next_7_days": "Próximos 7 días",
       "next_30_days": "Próximos 30 días",

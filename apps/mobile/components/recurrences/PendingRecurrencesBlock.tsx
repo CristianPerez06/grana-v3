@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { Alert, Pressable, Text, View } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, Clock, X } from 'lucide-react-native'
+import { Check, ChevronDown, ChevronRight, Clock, X } from 'lucide-react-native'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import {
   recurrenceTitle,
   resolutionPreview,
   reviewFeedState,
   reviewUrgency,
-  shouldOpenReviewBlock,
+  REVIEW_BLOCK_STARTS_OPEN,
   stuckRules,
 } from '@grana/recurrences'
 import type { PendingRecurrenceInstance } from '@grana/recurrences'
@@ -23,11 +23,13 @@ import { useShowCents } from '../../lib/preferences-context'
 import { colors } from '../../lib/colors'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
 import { amountSign, amountToneClass, categoryName, movementLabel, subcategoryName } from './format'
+import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { RecurrenceFailureNotice } from './MaterializationNotice'
+import { AlreadyLoadedAction } from './AlreadyLoadedAction'
 import { useRecurrenceMaterialization } from '../../lib/recurrences/materialization-context'
 
-type DoneAction = 'confirmed' | 'skipped'
+type DoneAction = 'confirmed' | 'skipped' | 'linked'
 
 // Spelled out rather than interpolated, so a renamed message key still turns up
 // in a grep and in the i18n key suite.
@@ -96,62 +98,85 @@ function PendingRow({
 
   return (
     <View className="gap-2.5 px-4 py-3.5">
-      <View className="flex-row items-center justify-between">
-        <View className="min-w-0 flex-1 pr-3">
-          <View className="flex-row items-center gap-2">
-            <Text numberOfLines={1} className="flex-shrink text-[15px] font-bold text-text">
-              {title}
-            </Text>
-            {instance.household_id ? (
-              <Text className="shrink-0 overflow-hidden rounded-md bg-border-soft px-2 py-0.5 text-[10px] font-extrabold uppercase text-text-muted">
-                {t('transactions.list.shared_short')}
-              </Text>
-            ) : null}
-          </View>
-          <Text className="text-[12px] text-text-muted">
-            {formatShortDate(instance.due_date, locale)}
+      {/* Title and date get the whole row. Next to them the amount took the
+          width, so the sentence below ran many lines deep; the amount moves
+          onto the urgency line instead — the same layout as web at phone width. */}
+      <View>
+        <View className="flex-row items-center gap-2">
+          <Text numberOfLines={1} className="flex-shrink text-[15px] font-bold text-text">
+            {title}
           </Text>
+          {instance.household_id ? (
+            <Text className="shrink-0 overflow-hidden rounded-md bg-border-soft px-2 py-0.5 text-[10px] font-extrabold uppercase text-text-muted">
+              {t('transactions.list.shared_short')}
+            </Text>
+          ) : null}
+        </View>
+        <Text className="text-[12px] text-text-muted">
+          {formatShortDate(instance.due_date, locale)}
+        </Text>
+      </View>
+      <View>
+        <View className="flex-row items-center justify-between gap-3">
           <Text
-            className={`mt-0.5 text-[11px] font-extrabold uppercase ${
+            className={`min-w-0 flex-shrink text-[11px] font-extrabold uppercase ${
               urgency.kind === 'due_in' ? 'text-warning' : 'text-negative'
             }`}
           >
             {urgencyLabel}
           </Text>
-          <Text className="mt-1 text-[12px] text-text-soft">
-            {t(WILL_CREATE_KEY[preview.kind], {
-              amount,
-              date: formatShortDate(preview.date, locale),
-              account: preview.account ?? '—',
-              destination: preview.destination ?? '—',
-            })}
+          <Text className={`text-[15px] font-extrabold ${amountToneClass(type)}`}>
+            {amountSign(type)}
+            {amount}
           </Text>
         </View>
-        <Text className={`text-[15px] font-extrabold ${amountToneClass(type)}`}>
-          {amountSign(type)}
-          {amount}
+        <Text className="mt-1 text-[12px] text-text-soft">
+          {t(WILL_CREATE_KEY[preview.kind], {
+            amount,
+            date: formatShortDate(preview.date, locale),
+            account: preview.account ?? '—',
+            destination: preview.destination ?? '—',
+          })}
         </Text>
       </View>
 
-      <View className="flex-row gap-2">
-        <Pressable
-          onPress={() => run('confirm')}
-          disabled={busy}
-          className="flex-1 items-center rounded-xl bg-navy py-2.5 active:opacity-90 disabled:opacity-60"
-        >
-          <Text className="text-[13px] font-bold text-white">
-            {busy ? t('recurrences.pending.confirming') : t('recurrences.pending.confirm')}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => run('skip')}
-          disabled={busy}
-          className="items-center justify-center rounded-xl border border-border px-4 py-2.5 active:bg-page disabled:opacity-60"
-        >
-          <Text className="text-[13px] font-semibold text-text-muted">
-            {t('recurrences.pending.skip')}
-          </Text>
-        </Pressable>
+      {/* Three actions do not fit one phone-width line: Confirmar across the
+          top, and below it «Ya lo tengo cargado» takes whatever Omitir leaves —
+          halves are too narrow for its label. Same as web at phone width. */}
+      {/* The app's `Button`, not hand-rolled Pressables: Confirmar was a navy
+          block here and green on web. Same variants as the web row — primary
+          for Confirmar, secondary for the other two. Omitir gets a fixed width
+          because the primitive fills its parent, and a content-sized parent in
+          a row has no width to fill. */}
+      <View className="gap-2">
+        <Button variant="primary" size="sm" onPress={() => run('confirm')} loading={busy}>
+          {t('recurrences.pending.confirm')}
+        </Button>
+        <View className="flex-row gap-2">
+          {/* NO «Ya lo pagué» here — Confirmar already is that action. What the
+              row lacked was pointing at a movement already loaded, without
+              creating a second one (#162). Same piece the hub mounts. */}
+          <AlreadyLoadedAction
+            recurrenceId={instance.recurrence.id}
+            dueDate={instance.due_date}
+            ruleAmount={Number(instance.amount)}
+            ruleCurrency={instance.currency_code}
+            shared={instance.household_id != null}
+            onLinked={() => onDone('linked')}
+            renderTrigger={(open, linking) => (
+              <View className="flex-1">
+                <Button variant="secondary" size="sm" onPress={open} disabled={busy || linking}>
+                  {t('recurrences.link.already_loaded')}
+                </Button>
+              </View>
+            )}
+          />
+          <View className="w-24">
+            <Button variant="secondary" size="sm" onPress={() => run('skip')} disabled={busy}>
+              {t('recurrences.pending.skip')}
+            </Button>
+          </View>
+        </View>
       </View>
     </View>
   )
@@ -185,10 +210,9 @@ export function PendingRecurrencesBlock() {
   })
 
   const [notice, setNotice] = useState<string | null>(null)
-  // Derived, not synced: the list arrives via `useQuery`, so on first render it
-  // is empty and a `useState(instances.length <= 1)` would freeze open forever.
-  // An effect that reset it would instead stomp the user's choice on every
-  // refetch-on-focus. Deriving does both: follow the data until the user picks.
+  // The block always starts collapsed (`REVIEW_BLOCK_STARTS_OPEN`, shared with
+  // web) and the user's choice wins from then on. Never synced from the data by
+  // an effect: that would stomp the choice on every refetch-on-focus.
   const [openOverride, setOpenOverride] = useState<boolean | null>(null)
 
   // A FAILED READ IS NOT AN EMPTY LIST. `query.data ?? []` made the block
@@ -199,7 +223,7 @@ export function PendingRecurrencesBlock() {
   const feed = reviewFeedState(query)
   const instances = feed.kind === 'list' ? (query.data ?? []) : []
   const todayISO = formatDateISO(getTodayAR())
-  const isOpen = openOverride ?? shouldOpenReviewBlock(instances, todayISO)
+  const isOpen = openOverride ?? REVIEW_BLOCK_STARTS_OPEN
 
   // WHICH RULES STOPPED MOVING — same decision as web, from the same module, so
   // the two platforms cannot answer it differently. The materialization context
@@ -262,10 +286,14 @@ export function PendingRecurrencesBlock() {
       t(
         action === 'confirmed'
           ? 'recurrences.pending.confirmed_success'
-          : 'recurrences.pending.skipped_success',
+          : action === 'linked'
+            ? 'recurrences.link.linked_success'
+            : 'recurrences.pending.skipped_success',
       ),
     )
-    invalidateAfterRecurrenceResolution(queryClient)
+    // Linking already invalidated inside `AlreadyLoadedAction`, which owns it so
+    // no surface can pick the narrow helper.
+    if (action !== 'linked') invalidateAfterRecurrenceResolution(queryClient)
   }
 
   // RN has no `spread` on shadows, so web's 4px gold halo becomes a real ring:
@@ -306,11 +334,14 @@ export function PendingRecurrencesBlock() {
                 {t('recurrences.pending.count', { count: instances.length })}
               </Text>
             ) : null}
-            <ChevronDown
-              size={20}
-              color={colors.textMuted}
-              style={{ transform: [{ rotate: isOpen ? '0deg' : '-90deg' }] }}
-            />
+            {/* Two icons, not one rotated. A `transform` rotation on the SVG
+                icon left the collapsed state with no chevron at all on iOS —
+                unnoticed while the block rarely started collapsed. */}
+            {isOpen ? (
+              <ChevronDown size={20} color={colors.textMuted} />
+            ) : (
+              <ChevronRight size={20} color={colors.textMuted} />
+            )}
           </Pressable>
 
           {isOpen && notice ? (
@@ -332,7 +363,9 @@ export function PendingRecurrencesBlock() {
             </View>
           ) : null}
 
-          {isOpen && stuck.length > 0 ? (
+          {/* OUTSIDE THE FOLD, like web. The block always starts collapsed, so
+              these lines are what keeps a backlog from hiding behind it. */}
+          {stuck.length > 0 ? (
             <View className="mx-4 mb-3 gap-1.5">
               {/* ONE LINE PER STUCK RULE, never a total — same rule as web. The
                   list below stays flat; grouping it by rule is its own

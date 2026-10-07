@@ -588,15 +588,23 @@ export async function getRecurrenceDetail(
 
 // Cuántas instancias recurrentes COMPARTIDAS están pendientes de confirmar.
 // Liviano (head + count), RLS-scoped al usuario. Alimenta el teaser del módulo
-// Compartido que avisa y linkea al hub (la acción de confirmar vive solo ahí).
+// Compartido que avisa y linkea al hub.
+//
+// SÓLO LAS QUE YA LLEGARON (`due_date <= today`). El aviso pide confirmar algo
+// que ya tendría que haber pasado; una pendiente con fecha futura —la que deja
+// desvincular antes del vencimiento— no es eso, y sigue a la vista en el bloque
+// de por revisar. `today` es la fecha financiera inyectada, nunca el reloj del
+// servidor.
 export async function countPendingSharedRecurrenceInstances(
   supabase: GranaSupabaseClient,
+  today: string,
 ): Promise<number> {
   const { count } = await supabase
     .from('recurrence_instances')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending')
     .not('household_id', 'is', null)
+    .lte('due_date', today)
   return count ?? 0
 }
 

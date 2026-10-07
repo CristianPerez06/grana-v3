@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { AlertTriangle, ChevronRight, Repeat } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import { duplicateRuleIds, recurrenceTitle } from '@grana/recurrences'
+import { duplicateRuleIds, formatCompactDate, recurrenceTitle } from '@grana/recurrences'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
+import { formatDateISO, getTodayAR } from '@/lib/date'
 
 type Tab = 'active' | 'paused' | 'finished'
 
@@ -33,6 +34,8 @@ const formatDate = (iso: string | null) => {
 }
 
 export const RecurringTabs = ({ active, paused, finished }: Props) => {
+  const locale = useLocale()
+  const todayISO = formatDateISO(getTodayAR())
   const [tab, setTab] = useState<Tab>('active')
   // Reglas activas que colisionan con otra por (cuenta, moneda, tipo, monto).
   // Solo se SEÑALAN: la clave admite falsos positivos legítimos (dos servicios
@@ -128,11 +131,21 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
             // (rule.next_occurrence), NOT a pending instance's date: an existing
             // occurrence — overdue, or future after resolving ahead and unlinking —
             // is reviewed from its own row, never announced as upcoming.
-            const nextDate = formatDate(rule.next_occurrence)
-            const accountLine =
+            //
+            // Compact on purpose — `1 dic`, the year only when it is not this
+            // year's — because it shares a line with the account at phone width.
+            const nextDate = rule.next_occurrence
+              ? formatCompactDate(rule.next_occurrence, todayISO, locale === 'en' ? 'en' : 'es')
+              : null
+            // The FREQUENCY leads the account line as plain text («Mensual ·
+            // Billetera»), the way the review block already says it. As a chip
+            // beside the name it took the name's width; no icon says "monthly"
+            // without being learned first.
+            const accountLine = `${freqLabel} · ${
               rule.movement_type === 'transfer'
                 ? `${accountName} → ${destinationName ?? '—'}`
                 : accountName
+            }`
             // A finished rule that still has occurrences waiting says so. They
             // are the user's to confirm or skip, and hiding them because the
             // rule ended would strand them: the rule stops producing, it does
@@ -142,7 +155,7 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
                 ? `${tRec('limit.finished_with_pending', { count: rule.lifecycle.unresolved })} · ${accountLine}`
                 : tab === 'finished'
                   ? rule.end_date
-                    ? tRec('until_template', { date: formatDate(rule.end_date) ?? rule.end_date })
+                    ? `${freqLabel} · ${tRec('until_template', { date: formatDate(rule.end_date) ?? rule.end_date })}`
                     : rule.lifecycle.progress != null
                       ? `${tRec('limit.progress', {
                           spent: rule.lifecycle.progress.spent,
@@ -157,7 +170,7 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
               <Link
                 key={rule.id}
                 href={`/transactions/recurring/${rule.id}`}
-                className="flex items-center gap-4 rounded-[14px] px-3.5 py-3.5 transition-colors hover:bg-page"
+                className="flex items-center gap-3 rounded-[14px] px-3.5 py-3.5 transition-colors hover:bg-page sm:gap-4"
               >
                 <span
                   className={`flex size-[46px] shrink-0 items-center justify-center rounded-[13px] text-[22px] ${
@@ -180,9 +193,6 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
                         type: movementLabel,
                       })}
                     </span>
-                    <span className="shrink-0 rounded-[6px] bg-[#F1F3F6] px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-text-muted">
-                      {freqLabel}
-                    </span>
                     {duplicateIds.has(rule.id) && (
                       <span
                         title={tRec('duplicate_hint')}
@@ -194,16 +204,26 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
                     )}
                   </div>
                   <span className="truncate text-[13px] font-medium text-text-muted">{meta}</span>
+                  {/* ON A PHONE THE DATE LIVES HERE, under the account. Next to
+                      the amount it made the right column as wide as the date, and
+                      at 360px the name and the account were left a letter each.
+                      From `sm` up there is room, and it stays under the amount.
+                      Same layout as the native row. */}
+                  {tab === 'active' && nextDate && (
+                    <span className="truncate text-[12px] font-semibold text-text-soft sm:hidden">
+                      {tRec('next_prefix')} {nextDate}
+                    </span>
+                  )}
                 </div>
 
-                <div className="flex shrink-0 items-center gap-4">
+                <div className="flex shrink-0 items-center gap-2 sm:gap-4">
                   <div className="flex flex-col items-end">
                     <span className={`text-[16px] font-extrabold tracking-[-0.02em] tabular-nums ${amtClass}`}>
                       {sign}
                       {formatRuleAmount(rule)}
                     </span>
                     {tab === 'active' && nextDate && (
-                      <span className="text-[12px] font-semibold text-text-soft">
+                      <span className="hidden text-[12px] font-semibold text-text-soft sm:inline">
                         {tRec('next_prefix')} {nextDate}
                       </span>
                     )}

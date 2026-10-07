@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
 import { AlertTriangle, ChevronRight, Repeat } from 'lucide-react-native'
-import { recurrenceTitle, type RecurrenceSummary } from '@grana/recurrences'
+import { formatDateISO, getTodayAR } from '@grana/money-logic'
+import { formatCompactDate, recurrenceTitle, type RecurrenceSummary } from '@grana/recurrences'
 import { colors } from '../../lib/colors'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
@@ -19,9 +20,9 @@ type Tab = 'active' | 'paused' | 'finished'
 
 // A single rule row in the hub list. Mirrors web's recurring-tabs card anatomy
 // with native primitives: category-tinted tile (or a Repeat glyph for
-// transfers), title (description → category → type), a frequency badge, a meta
-// line (next occurrence + account), the tonal amount, and — on the active tab —
-// the "próximo {date}" caption. Tapping the row opens the rule detail; below
+// transfers), title (description → category → type), a meta line (frequency +
+// account), the tonal amount, and — on the active tab — the "Próx. {date}"
+// caption under the meta line. Tapping the row opens the rule detail; below
 // it, an active rule with a next date offers the two ways to resolve that date
 // before it arrives (web's hub does the same under each upcoming row).
 export function RecurrenceRuleCard({
@@ -52,10 +53,14 @@ export function RecurrenceRuleCard({
   })
 
   const accountName = rule.account?.name ?? '—'
-  const accountLine =
+  // The frequency leads the account line as plain text, web's twin: as a chip
+  // beside the name it took the name's width.
+  const freq = frequencyLabel(rule.frequency, t)
+  const accountLine = `${freq} · ${
     rule.movement_type === 'transfer'
       ? `${accountName} → ${rule.destination_account?.name ?? '—'}`
       : accountName
+  }`
 
   // A finished rule that still has occurrences waiting says so — web's twin. The
   // rule stops producing; it does not stop owing, and hiding them because it
@@ -65,7 +70,7 @@ export function RecurrenceRuleCard({
       ? `${t('recurrences.limit.finished_with_pending', { count: rule.lifecycle.unresolved })} · ${accountLine}`
       : tab === 'finished'
         ? rule.end_date
-          ? t('recurrences.until_template', { date: formatShortDate(rule.end_date, locale) })
+          ? `${freq} · ${t('recurrences.until_template', { date: formatShortDate(rule.end_date, locale) })}`
           : rule.lifecycle.progress != null
             ? `${t('recurrences.limit.progress', {
                 spent: rule.lifecycle.progress.spent,
@@ -76,9 +81,10 @@ export function RecurrenceRuleCard({
           ? `${t('recurrences.statuses.paused')} · ${accountLine}`
           : accountLine
 
+  // Compact — `1 dic`, the year only when it is not this year's — same helper as web.
   const nextDate =
     tab === 'active' && rule.next_occurrence
-      ? formatShortDate(rule.next_occurrence, locale)
+      ? formatCompactDate(rule.next_occurrence, formatDateISO(getTodayAR()), locale)
       : null
 
   // The actions sit OUTSIDE the row's Pressable: a Button inside a Pressable
@@ -109,9 +115,6 @@ export function RecurrenceRuleCard({
           <Text numberOfLines={1} className="flex-shrink text-[15px] font-bold text-text">
             {title}
           </Text>
-          <Text className="shrink-0 overflow-hidden rounded-md bg-border-soft px-2 py-0.5 text-[10.5px] font-extrabold uppercase text-text-muted">
-            {frequencyLabel(rule.frequency, t)}
-          </Text>
           {duplicate && (
             <View
               accessibilityLabel={t('recurrences.duplicate_hint')}
@@ -127,20 +130,21 @@ export function RecurrenceRuleCard({
         <Text numberOfLines={1} className="text-[13px] font-medium text-text-muted">
           {meta}
         </Text>
+        {/* The date lives under the account, not under the amount: there it made
+            the right column as wide as the date, and on a phone the name and the
+            account were left a letter each. Same as web at phone width. */}
+        {nextDate && (
+          <Text numberOfLines={1} className="text-[12px] font-semibold text-text-soft">
+            {t('recurrences.next_prefix')} {nextDate}
+          </Text>
+        )}
       </View>
 
       <View className="shrink-0 flex-row items-center gap-2">
-        <View className="items-end">
-          <Text className={`text-[16px] font-extrabold ${amountToneClass(rule.movement_type)}`}>
-            {amountSign(rule.movement_type)}
-            {fmtMoney(Number(rule.amount), rule.currency_code, showCents)}
-          </Text>
-          {nextDate && (
-            <Text className="text-[12px] font-semibold text-text-soft">
-              {t('recurrences.next_prefix')} {nextDate}
-            </Text>
-          )}
-        </View>
+        <Text className={`text-[16px] font-extrabold ${amountToneClass(rule.movement_type)}`}>
+          {amountSign(rule.movement_type)}
+          {fmtMoney(Number(rule.amount), rule.currency_code, showCents)}
+        </Text>
         <ChevronRight size={18} color="#B8C0CA" />
       </View>
     </Pressable>

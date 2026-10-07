@@ -23,7 +23,7 @@ import { describe, expect, it } from 'vitest'
 
 const FILE = resolve(
   __dirname,
-  '../../../app/(app)/transactions/recurring/_components/link-candidates-drawer.tsx',
+  '../components/link-candidates-drawer.tsx',
 )
 const source = readFileSync(FILE, 'utf-8').replace(/\r\n/g, '\n')
 

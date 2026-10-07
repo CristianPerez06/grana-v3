@@ -89,7 +89,7 @@ export type {
 } from './types'
 
 export {
-  shouldOpenReviewBlock,
+  REVIEW_BLOCK_STARTS_OPEN,
   reviewUrgency,
   resolutionPreview,
   materializationOutcome,
@@ -127,3 +127,4 @@ export { linkErrorMessageKeys, LINK_ERROR_MESSAGE_KEYS } from './link-messages'
 export { recurrenceTitle, type RecurrenceTitleParts } from './display-title'
 export { referenceDateChoice } from './schedule-edit'
 export type { ReferenceDateChoice } from './schedule-edit'
+export { formatCompactDate, type CompactDateLocale } from './compact-date'

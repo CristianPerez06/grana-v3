@@ -3,14 +3,16 @@ import { getTranslations } from 'next-intl/server'
 import { ChevronRight, Repeat } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { countPendingSharedRecurrenceInstances } from '@/lib/recurrences/queries'
+import { formatDateISO, getTodayAR } from '@/lib/date'
 
 // Non-actionable teaser: flags shared recurrences pending confirmation and links
-// to the hub (the confirm action lives only there, not in Compartido). Today-
-// anchored; own boundary so it never blocks the month-scoped sections.
+// to the hub. Counts only what has already arrived (a pending dated after today
+// is not overdue to confirm), against the AR financial date. Today-anchored;
+// own boundary so it never blocks the month-scoped sections.
 export const TeaserSection = async () => {
   const supabase = await createClient()
   const t = await getTranslations('shared')
-  const count = await countPendingSharedRecurrenceInstances(supabase)
+  const count = await countPendingSharedRecurrenceInstances(supabase, formatDateISO(getTodayAR()))
   if (count <= 0) return null
 
   return (

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { ChevronDown } from 'lucide-react-native'
+import { ChevronDown, ChevronRight } from 'lucide-react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { CreditCardSummary } from '../../lib/cards/queries'
@@ -161,11 +161,13 @@ const BankGroupMobile = ({ group, networkLabel }: GroupProps) => {
         accessibilityRole="button"
         className="flex-row items-center gap-2.5 px-4 py-3"
       >
-        <ChevronDown
-          size={16}
-          color="#8A94A3"
-          style={{ transform: [{ rotate: collapsed ? '-90deg' : '0deg' }] }}
-        />
+        {/* Two icons, not one rotated: a `transform` rotation on the SVG icon
+            left the collapsed state with no chevron at all on iOS. */}
+        {collapsed ? (
+          <ChevronRight size={16} color="#8A94A3" />
+        ) : (
+          <ChevronDown size={16} color="#8A94A3" />
+        )}
 
         <View className="min-w-0 flex-1 flex-col gap-1">
           <View className="flex-row items-center gap-2">

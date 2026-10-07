@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronRight } from 'lucide-react-native'
+import { ChevronDown, ChevronRight } from 'lucide-react-native'
 import { RESERVE_HISTORY_LIMIT } from '@grana/savings'
 import type { AvailableSums, ReserveEntry } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -60,11 +60,12 @@ export const SavingsLedger = ({
         onPress={() => setBankOpen((v) => !v)}
         className="min-h-[44px] flex-row items-center gap-1.5"
       >
-        <ChevronRight
-          size={13}
-          color={colors.textSoft}
-          style={{ transform: [{ rotate: bankOpen ? '90deg' : '0deg' }] }}
-        />
+        {/* Two icons, not one rotated: a `transform` rotation on the SVG icon made the chevron vanish on iOS. */}
+        {bankOpen ? (
+          <ChevronDown size={13} color={colors.textSoft} />
+        ) : (
+          <ChevronRight size={13} color={colors.textSoft} />
+        )}
         <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
           {t('savings.bank_fold')}
         </Text>
@@ -85,11 +86,12 @@ export const SavingsLedger = ({
         onPress={() => setHistoryOpen((v) => !v)}
         className="mt-3 min-h-[44px] flex-row items-center gap-1.5"
       >
-        <ChevronRight
-          size={13}
-          color={colors.textSoft}
-          style={{ transform: [{ rotate: historyOpen ? '90deg' : '0deg' }] }}
-        />
+        {/* Two icons, not one rotated: a `transform` rotation on the SVG icon made the chevron vanish on iOS. */}
+        {historyOpen ? (
+          <ChevronDown size={13} color={colors.textSoft} />
+        ) : (
+          <ChevronRight size={13} color={colors.textSoft} />
+        )}
         <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
           {t('savings.history_count', { count: String(history.entries.length) })}
         </Text>

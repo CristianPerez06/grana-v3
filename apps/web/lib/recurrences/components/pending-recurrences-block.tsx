@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, Clock, Pencil, Repeat, Users, X } from 'lucide-react'
+import { Check, ChevronDown, Clock, Link2, Pencil, Repeat, Users, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatDateISO, formatShortDate, getTodayAR } from '@/lib/date'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
@@ -17,7 +17,7 @@ import {
   recurrenceTitle,
   resolutionPreview,
   reviewUrgency,
-  shouldOpenReviewBlock,
+  REVIEW_BLOCK_STARTS_OPEN,
   stuckRules,
   type StuckRule,
 } from '@grana/recurrences'
@@ -32,6 +32,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import { invalidateAfterRecurrenceInstanceMutation } from '@/lib/transactions/invalidation'
+import { AlreadyLoadedAction } from './already-loaded-action'
 import type { MovementFormAccount } from '@grana/movement-form'
 import type { PendingRecurrenceInstance } from '@/lib/recurrences/types'
 
@@ -96,7 +97,7 @@ export const PendingRecurrencesBlock = ({
   //
   // Only a block made entirely of occurrences that have NOT fallen due yet stays
   // collapsed, and it is not really this block's job to shout about those.
-  const [isOpen, setIsOpen] = useState(() => shouldOpenReviewBlock(pending, todayISO))
+  const [isOpen, setIsOpen] = useState(REVIEW_BLOCK_STARTS_OPEN)
 
   // WHICH RULES STOPPED MOVING. Read from the same materialization context the
   // failure notice uses, so the count can say whether it is the whole backlog or
@@ -274,6 +275,17 @@ export const PendingRecurrencesBlock = ({
     })
   }
 
+  // Linking creates nothing and moves no balance, but the linked movement now
+  // carries the rule (and may have turned shared), so the movement reads go
+  // stale along with the pending feed.
+  const handleLinked = (instance: PendingRecurrenceInstance) => {
+    setErrorByInstance((prev) => ({ ...prev, [instance.id]: '' }))
+    setEditingId(null)
+    setSuccessMessage(t('link.linked_success'))
+    invalidateAfterRecurrenceInstanceMutation(queryClient, { confirmed: true })
+    router.refresh()
+  }
+
   // Soft, non-blocking warning: confirming this instance would leave the source
   // account's available balance negative. Off-ledger credit consumptions and
   // incomes never warn. Compared per account + currency. Uses the edited amount
@@ -356,7 +368,9 @@ export const PendingRecurrencesBlock = ({
         </div>
       )}
 
-      {isOpen && stuck.length > 0 && (
+      {/* OUTSIDE THE FOLD. The block always starts collapsed, so these lines
+          are what keeps a backlog from hiding behind it: only the rows fold. */}
+      {stuck.length > 0 && (
         <div className="mx-4 mb-3 flex flex-col gap-1.5 sm:mx-6">
           {/* ONE LINE PER STUCK RULE, never a total. Two stuck rules are two
               lines: a single "tenés 30 vencimientos trabados" would tell a story
@@ -489,38 +503,10 @@ export const PendingRecurrencesBlock = ({
                       </span>
                     )}
                   </span>
-                  <span
-                    className="mt-0.5 inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em]"
-                    style={{ color: urgency.overdue ? '#D9534F' : 'var(--warning)' }}
-                  >
-                    {urgency.overdue && (
-                      <span className="size-1.5 rounded-full" style={{ backgroundColor: '#D9534F' }} />
-                    )}
-                    {urgency.label}
-                  </span>
-                  {/* WHAT RESOLVING IT WILL DO, spelled out. The row above says
-                      what is due; this says what the app is about to write —
-                      which movement, with which date, in which account — so the
-                      user is not asked to confirm something they have to infer.
-                      Hidden while editing: the form itself is showing the values
-                      it will use. */}
-                  {!isEditing && (
-                    <span className="text-[12px] text-text-soft">
-                      {t(WILL_CREATE_KEY[preview.kind], {
-                        amount: formatted,
-                        // Read by a person, not by a machine: the raw ISO sat
-                        // under a header saying "Jueves, 10 de septiembre".
-                        // Native already formatted it; this is what closes that gap.
-                        date: formatShortDate(preview.date),
-                        account: preview.account ?? accountName,
-                        destination: preview.destination ?? '—',
-                      })}
-                    </span>
-                  )}
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className={`text-[16px] font-bold tracking-[-0.025em] tabular-nums sm:text-[18px] ${amtClass}`}>
+                  <span className={`hidden text-[18px] font-bold tracking-[-0.025em] tabular-nums sm:inline ${amtClass}`}>
                     {amtSign}{formatted}
                   </span>
                   {!isEditing && (
@@ -548,6 +534,49 @@ export const PendingRecurrencesBlock = ({
                     </button>
                   )}
                 </div>
+              </div>
+
+              {/* BELOW THE TITLE, NOT BESIDE IT. Inside the title column these
+                  lines had what the tile and the amount left — at 360px about 90px
+                  — so the name truncated after a few letters and the sentence ran
+                  six lines deep. Down here they take the row's width on a phone;
+                  from `sm` up they stay aligned under the text (tile 46 + gap 16).
+                  On a phone the amount moves onto the urgency line, which is the
+                  one line with room for it. Same layout as the native row. */}
+              <div className="flex flex-col gap-1 sm:pl-[62px]">
+                <div className="flex items-center justify-between gap-3">
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em]"
+                    style={{ color: urgency.overdue ? '#D9534F' : 'var(--warning)' }}
+                  >
+                    {urgency.overdue && (
+                      <span className="size-1.5 rounded-full" style={{ backgroundColor: '#D9534F' }} />
+                    )}
+                    {urgency.label}
+                  </span>
+                  <span className={`text-[16px] font-bold tracking-[-0.025em] tabular-nums sm:hidden ${amtClass}`}>
+                    {amtSign}{formatted}
+                  </span>
+                </div>
+                {/* WHAT RESOLVING IT WILL DO, spelled out. The row above says
+                    what is due; this says what the app is about to write —
+                    which movement, with which date, in which account — so the
+                    user is not asked to confirm something they have to infer.
+                    Hidden while editing: the form itself is showing the values
+                    it will use. */}
+                {!isEditing && (
+                  <span className="text-[12px] text-text-soft">
+                    {t(WILL_CREATE_KEY[preview.kind], {
+                      amount: formatted,
+                      // Read by a person, not by a machine: the raw ISO sat
+                      // under a header saying "Jueves, 10 de septiembre".
+                      // Native already formatted it; this is what closes that gap.
+                      date: formatShortDate(preview.date),
+                      account: preview.account ?? accountName,
+                      destination: preview.destination ?? '—',
+                    })}
+                  </span>
+                )}
               </div>
 
               {isEditing && (
@@ -723,12 +752,18 @@ export const PendingRecurrencesBlock = ({
                 />
               )}
 
-              <div className="flex gap-2.5 pl-[58px] sm:pl-[62px]">
+              {/* THREE ACTIONS DO NOT FIT ONE PHONE-WIDTH LINE. Wrapping them
+                  freely stacked one per line (QA at 360px), so on a phone the
+                  layout is fixed instead: Confirmar across the top, and below it
+                  «Ya lo tengo cargado» takes whatever Omitir leaves — halves are
+                  too narrow for its label at 360px. Same as the native row. From
+                  `sm` up the three sit on one line, under the row's text. */}
+              <div className="grid grid-cols-[1fr_auto] gap-2 sm:flex sm:flex-wrap sm:gap-2.5 sm:pl-[62px]">
                 <Button
                   type="button"
                   variant="primary"
                   size="sm"
-                  className="w-auto"
+                  className="col-span-2 sm:w-auto"
                   onClick={() => handleConfirm(instance)}
                   disabled={busy}
                   loading={busy}
@@ -736,11 +771,36 @@ export const PendingRecurrencesBlock = ({
                   <Check className="size-4" aria-hidden />
                   {t('pending.confirm')}
                 </Button>
+                {/* NO «Ya lo pagué» here: Confirmar already opens the amount,
+                    account and date — it is the same action. What this row lacked
+                    was the way to point at a movement the user already loaded
+                    without creating a second one (#162). */}
+                <AlreadyLoadedAction
+                  recurrenceId={instance.recurrence.id}
+                  dueDate={instance.due_date}
+                  ruleAmount={amount}
+                  ruleCurrency={instance.currency_code}
+                  shared={instance.household_id != null}
+                  onLinked={() => handleLinked(instance)}
+                  renderTrigger={(open) => (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="sm:w-auto"
+                      onClick={open}
+                      disabled={busy}
+                    >
+                      <Link2 className="size-3.5" aria-hidden />
+                      {t('link.already_loaded')}
+                    </Button>
+                  )}
+                />
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
-                  className="w-auto"
+                  className="sm:w-auto"
                   onClick={() => handleSkip(instance)}
                   disabled={busy}
                 >
