@@ -112,16 +112,24 @@ filas de split, y la deuda del hogar se derive como con cualquier gasto comparti
 
 ### Requirement: El hub de recurrencias señala las instancias compartidas
 
-El sistema SHALL marcar visualmente, en el hub de recurrencias pendientes ("por
-confirmar"), las instancias compartidas con un sello "Compartido", de modo que el usuario
-sepa antes de confirmar que el movimiento se va a repartir con el hogar. La acción de
-confirmar SHALL seguir viviendo únicamente en el hub (no se fragmenta entre módulos); el
-módulo Compartido refleja el gasto recién cuando la instancia se confirma (base caja).
+El sistema SHALL marcar visualmente las instancias compartidas pendientes con un sello
+"Compartido" en toda superficie de recurrencias que las liste para confirmar —el hub y el
+bloque «Vencimientos por revisar» de Movimientos y del inicio—, de modo que el usuario sepa
+antes de confirmar que el movimiento se va a repartir con el hogar. La acción de confirmar
+SHALL vivir en esas superficies de recurrencias y NO SHALL ofrecerse en el módulo
+Compartido, que sólo avisa y lleva al hub; el módulo Compartido refleja el gasto recién
+cuando la instancia se confirma (base caja).
 
 #### Scenario: Instancia compartida pendiente muestra el sello
 
 - **WHEN** el hub de recurrencias lista una instancia pendiente con `household_id`
 - **THEN** la fila muestra un sello "Compartido"; una instancia individual no lo muestra
+
+#### Scenario: El bloque de por revisar también muestra el sello
+
+- **WHEN** el bloque «Vencimientos por revisar» lista una instancia pendiente con `household_id`
+- **THEN** la fila muestra el sello "Compartido" y ofrece confirmarla desde ahí
+- **AND** el módulo Compartido no ofrece confirmarla: sólo avisa que hay compartidos por confirmar
 
 ### Requirement: Vincular un movimiento a una regla compartida no altera la deuda en silencio
 
