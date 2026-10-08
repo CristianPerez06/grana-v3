@@ -6,7 +6,10 @@ import type { MovementKind } from '@grana/money-logic'
 import type { SeededRecurrenceInfo } from '@grana/transactions-mutations'
 import {
   getRecurrenceLinkForTransaction,
+  occurrenceAfterDelete,
   recurrenceLinkLabelKey,
+  recurrenceTitle,
+  type RecurrenceMovementType,
   type SeededRecurrenceResolution,
 } from '@grana/recurrences'
 import { supabase } from '../../../../lib/supabase'
@@ -18,10 +21,15 @@ import {
   deleteMovement,
   resolveSeededRecurrenceAndDelete,
 } from '../../../../lib/transactions/mutators'
-import { invalidateAfterMovementMutation } from '../../../../lib/transactions/invalidate'
-import { invalidateAfterRecurrenceMutation } from '../../../../lib/recurrences/invalidate'
+import { invalidateAfterRecurrenceResolution } from '../../../../lib/recurrences/invalidate'
 import { colors } from '../../../../lib/colors'
-import { useT } from '../../../../lib/locale-context'
+import { useLocale, useT } from '../../../../lib/locale-context'
+import { formatShortDate } from '../../../../components/transactions/detail/format'
+import {
+  categoryName,
+  movementLabel,
+  subcategoryName,
+} from '../../../../components/recurrences/format'
 
 // Section title (navy header) per kind. The hero carries the specific title, so
 // the header stays a stable, generic type label — no duplication, visible from
@@ -48,6 +56,7 @@ const TITLE_KEY: Record<MovementKind, string> = {
 export default function MovementDetailScreen() {
   const t = useT()
   const router = useRouter()
+  const locale = useLocale()
   const queryClient = useQueryClient()
   const { txId, from } = useLocalSearchParams<{ txId: string; from?: string }>()
   const fromQuery = from ? `?from=${encodeURIComponent(from)}` : ''
@@ -112,7 +121,37 @@ export default function MovementDetailScreen() {
         : data.transaction.is_parent
           ? t('transactions.detail.actions.delete_warning_parent')
           : t('transactions.detail.actions.delete_warning_default')
-    Alert.alert(t('transactions.detail.actions.delete'), warning, [
+    // If this movement resolves an occurrence, deleting it reopens it (0075,
+    // #104): the confirmation says which one, and that the balance changes.
+    // Web's twin is `occurrenceNotice` in the detail page.
+    const link = linkQuery.data
+    let occurrenceNotice: string | null = null
+    if (link) {
+      const typeLabel = movementLabel(link.movement_type as RecurrenceMovementType, t)
+      const ruleName =
+        recurrenceTitle({
+          description: link.rule.description,
+          subcategory: subcategoryName(link.rule.subcategory, t),
+          category: categoryName(link.rule.category, t),
+          type: typeLabel,
+        }) ?? typeLabel
+      occurrenceNotice = [
+        t('recurrences.link.delete_balance_changes'),
+        occurrenceAfterDelete(link) === 'back_to_review' && link.due_date
+          ? t('recurrences.link.delete_back_to_review', {
+              dueDate: formatShortDate(link.due_date, locale),
+              rule: ruleName,
+            })
+          : link.rule.status === 'deleted'
+            ? t('recurrences.link.delete_leaves_history_deleted_rule', { rule: ruleName })
+            : t('recurrences.link.delete_leaves_history', { rule: ruleName }),
+      ].join(' ')
+    }
+    const body =
+      occurrenceNotice && data.movement.kind !== 'card_payment'
+        ? `${warning}\n\n${occurrenceNotice}`
+        : warning
+    Alert.alert(t('transactions.detail.actions.delete'), body, [
       { text: t('transactions.detail.actions.cancel'), style: 'cancel' },
       {
         text: t('transactions.detail.actions.delete_confirm'),
@@ -132,8 +171,10 @@ export default function MovementDetailScreen() {
   }
 
   const finishDeleted = () => {
-    invalidateAfterMovementMutation(queryClient)
-    invalidateAfterRecurrenceMutation(queryClient)
+    // The wide helper: deleting a movement can reopen an occurrence (0075), and
+    // a shared expense moves the household debt — this one refreshes recurrences,
+    // movements, balances, dashboard, cards AND Compartido.
+    invalidateAfterRecurrenceResolution(queryClient)
     router.push('/transactions')
   }
 

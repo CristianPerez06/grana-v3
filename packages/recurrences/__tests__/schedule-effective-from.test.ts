@@ -157,8 +157,15 @@ describe('the effective date is required, not inferred', () => {
 describe('the outgoing version is closed so the two never overlap', () => {
   it('closes it yesterday when the new one starts today', async () => {
     // Anchored on today's own day of the month, so the FIRST candidate is today.
+    //
+    // In MAY, not June. With June the anchor was `2026-06-<today's day>`, which
+    // on the 8th of any month IS the rule's own anchor (`seedRule` starts it on
+    // 2026-06-08): the correction changed nothing, no version was closed, and the
+    // test failed once a month. And on the 31st it built 2026-06-31, a date that
+    // does not exist. May has 31 days and is not the seed's month, so the anchor
+    // always moves and always exists.
     const now = await today()
-    const anchor = `2026-06-${now.slice(8)}`
+    const anchor = `2026-05-${now.slice(8)}`
     const rule = await seedRule()
     const [immediate] = await candidatesFor(anchor)
     expect(immediate).toBe(now)

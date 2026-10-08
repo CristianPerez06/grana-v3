@@ -12,7 +12,10 @@ import {
 } from '@/app/_actions/transactions'
 import type { SeededRecurrenceInfo } from '@grana/transactions-mutations'
 import type { SeededRecurrenceResolution } from '@grana/recurrences'
-import { invalidateAfterMovementMutation } from '@/lib/transactions/invalidation'
+import {
+  invalidateAfterMovementMutation,
+  invalidateAfterRecurrenceInstanceMutation,
+} from '@/lib/transactions/invalidation'
 
 // Acciones del detalle en la topbar: "Eliminar" (icon button) + "Editar" (icon
 // button navy), iguales en todos los viewports. En mobile la topbar es sticky,
@@ -26,6 +29,12 @@ type Props = {
   canDelete: boolean
   isParent: boolean
   isCardPayment: boolean
+  /**
+   * When this movement resolves a recurrence's occurrence: what deleting it does
+   * to that occurrence (back to review, or out of the history). Said in the
+   * confirmation, before the user deletes.
+   */
+  occurrenceNotice?: string | null
   /** When set, "Editar" opens the in-context drawer instead of navigating. */
   onEdit?: () => void
 }
@@ -36,6 +45,7 @@ export const DetailActions = ({
   canDelete,
   isParent,
   isCardPayment,
+  occurrenceNotice = null,
   onEdit,
 }: Props) => {
   const t = useTranslations('transactions.detail.actions')
@@ -66,7 +76,10 @@ export const DetailActions = ({
       : t('delete_warning_default')
 
   const finishDeleted = () => {
-    invalidateAfterMovementMutation(queryClient)
+    // A movement that resolved an occurrence reopens it (0075), so the review
+    // block refetches too. That helper already covers every movement key.
+    if (occurrenceNotice) invalidateAfterRecurrenceInstanceMutation(queryClient, { confirmed: true })
+    else invalidateAfterMovementMutation(queryClient)
     setDeleteOpen(false)
     setSeeded(null)
     router.push('/transactions')
@@ -160,6 +173,12 @@ export const DetailActions = ({
                   : tSeed('body_untitled')
                 : deleteWarning}
             </AlertDialog.Description>
+
+            {!seeded && !isCardPayment && occurrenceNotice && (
+              <p className="mt-2 text-[13px] font-semibold leading-relaxed text-text">
+                {occurrenceNotice}
+              </p>
+            )}
 
             {seeded?.next_occurrence && (
               <p className="mt-2 text-[12.5px] font-semibold text-text-soft">

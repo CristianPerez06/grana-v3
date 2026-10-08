@@ -125,6 +125,11 @@ type Props = {
    * resuelto —texto y destino— porque el detalle no traduce ni arma rutas.
    */
   recurrenceRelation?: { href: string; text: string } | null
+  /**
+   * What deleting this movement does to the occurrence it resolves, already
+   * worded. Absent when the movement resolves none.
+   */
+  occurrenceNotice?: string | null
   /** Resolved card-period label ("Mayo 2026") for the context note. */
   contextPeriodLabel?: string
 }
@@ -146,6 +151,7 @@ export const GlobalTransactionDetail = ({
   monthWeightSlices = null,
   recurrence = null,
   recurrenceRelation = null,
+  occurrenceNotice = null,
   contextPeriodLabel,
 }: Props) => {
   const showCents = useShowCents()
@@ -558,6 +564,7 @@ export const GlobalTransactionDetail = ({
               canDelete={canDelete}
               isParent={transaction.is_parent}
               isCardPayment={!!transaction.period_payments?.[0]}
+              occurrenceNotice={occurrenceNotice}
               onEdit={canUseEditDrawer ? () => setEditOpen(true) : undefined}
             />
           ) : undefined

@@ -1618,6 +1618,17 @@
       "body": "You edited this movement and haven't saved yet. Closing now loses the changes.",
       "discard": "Discard",
       "keep_editing": "Keep editing"
+    },
+    "delete_errors": {
+      "installment_child": "To delete an installment, delete the whole purchase from the parent movement.",
+      "paid": "This charge is on a statement that's already paid. To delete it, first undo the statement payment from Cards.",
+      "settlement": "It's part of a household settlement. Reverse it from the shared balance.",
+      "card_payment": "It's a card statement payment. Undo it from the period detail, in Cards.",
+      "blocked_revert": "Can't delete: there's a household settlement after this expense. Reverse it and try again.",
+      "blocked_cancel_own": "Can't delete: there's a settlement of yours awaiting assignment after this expense. Cancel it and try again.",
+      "blocked_cancel_other": "Can't delete: there's a settlement awaiting assignment after this expense, recorded by the other person. They need to cancel it.",
+      "blocked_unknown": "Can't delete: there's a household settlement after this expense. Check it in the shared balance to see whether it needs reversing or cancelling.",
+      "blocked_multiple": "More than one settlement is blocking it, so resolving just one isn't enough."
     }
   },
   "recurrences": {
@@ -1945,7 +1956,22 @@
         "already_resolved": "That due date was already resolved."
       },
       "accounts_loading": "Reading your accounts…",
-      "accounts_unavailable": "We could not read your accounts. Close and try again."
+      "accounts_unavailable": "We could not read your accounts. Close and try again.",
+      "undo": "Undo",
+      "undoing": "Undoing…",
+      "undo_title": "Undo this payment?",
+      "undo_body": "The {amount} movement will be deleted and the {account} balance will change.",
+      "undo_back_to_review": "The {dueDate} due date goes back to review.",
+      "undo_leaves_history": "This payment is from before September 2026 and we don't know which due date it covered: it won't go back to review, it leaves the history.",
+      "undo_leaves_history_deleted_rule": "The rule was already deleted: this payment leaves the history.",
+      "undo_confirm": "Yes, undo",
+      "undo_cancel": "Cancel",
+      "undone_success": "Done: the movement was deleted and the due date went back to review.",
+      "undone_success_left_history": "Done: the movement was deleted.",
+      "delete_back_to_review": "The {dueDate} due date of {rule} goes back to review.",
+      "delete_leaves_history": "This {rule} payment is from before September 2026: it won't go back to review, it leaves the rule's history.",
+      "delete_leaves_history_deleted_rule": "The {rule} rule was already deleted: this payment leaves its history.",
+      "delete_balance_changes": "The account balance will change."
     }
   },
   "subcategories": {

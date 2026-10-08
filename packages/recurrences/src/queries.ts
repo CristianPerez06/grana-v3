@@ -28,8 +28,10 @@ import type {
   PendingInstance,
   PendingRecurrenceInstance,
   Recurrence,
+  RecurrenceCategory,
   RecurrenceDetail,
   RecurrenceStatus,
+  RecurrenceSubcategory,
   RecurrenceSummary,
 } from './types'
 
@@ -637,7 +639,56 @@ export async function getRecurrenceLinkedTransactionIds(
 export async function getRecurrenceLinkForTransaction(
   supabase: GranaSupabaseClient,
   transactionId: string,
-): Promise<{
+): Promise<RecurrenceLinkForTransaction | null> {
+  const { data: instance, error } = await supabase
+    .from('recurrence_instances')
+    .select(`
+      recurrence_id,
+      resolution_kind,
+      due_date,
+      recurrence:recurrences!inner(
+        movement_type, frequency, status, description,
+        category:categories(id, name, canonical_name, color, icon, user_id),
+        subcategory:subcategories(id, name, canonical_name, category_id, user_id)
+      )
+    `)
+    .eq('confirmed_transaction_id', transactionId)
+    .maybeSingle()
+
+  if (error || !instance) return null
+
+  const recurrence = (instance as unknown as {
+    recurrence: {
+      movement_type: string
+      frequency: string
+      status: string
+      description: string | null
+      category: RecurrenceCategory | null
+      subcategory: RecurrenceSubcategory | null
+    }
+  }).recurrence
+
+  return {
+    recurrence_id: instance.recurrence_id as string,
+    movement_type: recurrence.movement_type,
+    frequency: recurrence.frequency,
+    resolution_kind: (instance.resolution_kind as string | null) ?? null,
+    due_date: (instance.due_date as string | null) ?? null,
+    rule: {
+      status: recurrence.status,
+      description: recurrence.description,
+      category: recurrence.category,
+      subcategory: recurrence.subcategory,
+    },
+  }
+}
+
+/**
+ * What a movement's detail knows about the occurrence it resolves — enough to
+ * label the link AND to say, before deleting it, what happens to that
+ * occurrence.
+ */
+export type RecurrenceLinkForTransaction = {
   recurrence_id: string
   movement_type: string
   frequency: string
@@ -649,29 +700,29 @@ export async function getRecurrenceLinkForTransaction(
    * deshacer se ofrece.
    */
   resolution_kind: string | null
-} | null> {
-  const { data: instance, error } = await supabase
-    .from('recurrence_instances')
-    .select(`
-      recurrence_id,
-      resolution_kind,
-      recurrence:recurrences!inner(movement_type, frequency)
-    `)
-    .eq('confirmed_transaction_id', transactionId)
-    .maybeSingle()
-
-  if (error || !instance) return null
-
-  const recurrence = (instance as unknown as {
-    recurrence: { movement_type: string; frequency: string }
-  }).recurrence
-
-  return {
-    recurrence_id: instance.recurrence_id as string,
-    movement_type: recurrence.movement_type,
-    frequency: recurrence.frequency,
-    resolution_kind: (instance.resolution_kind as string | null) ?? null,
+  /** `null` = a payment from before 0064: its vencimiento is unknown. */
+  due_date: string | null
+  /** The RULE's own naming fields, for `recurrenceTitle`, and its status. */
+  rule: {
+    status: string
+    description: string | null
+    category: RecurrenceCategory | null
+    subcategory: RecurrenceSubcategory | null
   }
+}
+
+/**
+ * What deleting this movement does to its occurrence (0075): it goes back to
+ * review — unless its vencimiento is unknown or its rule was deleted, and then
+ * the occurrence leaves the history instead. One decision for both apps and
+ * both doors (delete from the detail, «Deshacer» from the rule).
+ */
+export function occurrenceAfterDelete(
+  link: Pick<RecurrenceLinkForTransaction, 'due_date'> & { rule: { status: string } },
+): 'back_to_review' | 'leaves_history' {
+  return link.due_date == null || link.rule.status === 'deleted'
+    ? 'leaves_history'
+    : 'back_to_review'
 }
 
 // ── generateDueRecurrenceInstances ─────────────────────────────────────────────
