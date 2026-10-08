@@ -40,7 +40,7 @@ Ninguna.
 
 ## Impact
 
-- **Base de datos:** migración `0075`. Hace que borrar un movimiento que resuelve un vencimiento, venga de donde venga, devuelva el vencimiento a revisión con los datos de la regla en la misma operación. También cambia `recurrence_unlink_movement` para que restaure los datos de la regla.
+- **Base de datos:** migración `0075`. Hace que borrar un movimiento que resuelve un vencimiento, venga de donde venga, devuelva el vencimiento a revisión con los datos de la regla en la misma operación. Cualquier vuelta de un vencimiento a revisión, incluido desvincular, trae los datos de la regla.
 - **`@grana/transactions-mutations`:** `deleteTransaction` deja de fallar en estos movimientos.
 - **`@grana/recurrences`:** la lectura de la ficha dice qué filas ofrecen «Deshacer».
 - **Web y nativo, en el mismo commit:**

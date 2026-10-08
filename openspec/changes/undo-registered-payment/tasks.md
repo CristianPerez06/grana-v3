@@ -1,24 +1,23 @@
 ## 1. Base de datos — migración 0075
 
-- [ ] 1.1 Reproducir #104 en el harness PGlite (`packages/recurrences/__tests__/support/recurrence-identity-db.ts`).
+- [x] 1.1 Reproducir #104 en el harness PGlite (`packages/recurrences/__tests__/support/recurrence-identity-db.ts`).
   - Test nuevo `undo-reopens-occurrence.test.ts`: borrar un movimiento que resuelve una ocurrencia `created` falla con el CHECK sin 0075. Lo mismo con una `linked`.
-  - Verificar que el test está rojo antes de escribir la migración.
-- [ ] 1.2 Escribir `supabase/migrations/0075_undo_reopens_occurrence.sql`. El número se eligió contra `main`, donde la última es 0074.
-  - `recurrence_reopen_occurrence(uuid)`: interna, sin `EXECUTE` para `authenticated`. Restaura de la regla descripción, categoría, subcategoría, cuenta e importe, y limpia el vínculo.
-  - El trigger `BEFORE DELETE` `trg_reopen_occurrence_on_delete` en `transactions`. Reabre la ocurrencia si tiene `due_date` y la regla no está eliminada; si no, borra la fila.
-  - `recurrence_unlink_movement`, reemplazada entera: idéntica a 0072 salvo el `update` final, que pasa a usar la función.
+  - El test carga sin 0075 con la opción `undoReopens: false`.
+- [x] 1.2 Escribir `supabase/migrations/0075_undo_reopens_occurrence.sql`. El número se eligió contra `main`, donde la última es 0074.
+  - `trg_occurrence_back_to_review`: al pasar de `confirmed` a `pending`, la ocurrencia trae de la regla descripción, categoría, subcategoría, cuenta e importe.
+  - `trg_reopen_occurrence_on_delete`: reabre la ocurrencia, o borra la fila si es un pago viejo o de una regla eliminada.
   - Self-check al final.
-  - Cargar 0075 en el harness. Verificar que 1.1 queda verde.
-- [ ] 1.3 Tests de la migración en `undo-reopens-occurrence.test.ts`. Verificar todos en verde:
+  - Cargar 0075 en el harness.
+- [x] 1.3 Tests de la migración en `undo-reopens-occurrence.test.ts`, todos en verde:
   - `created` y `linked` vuelven a `pending` con fecha intacta y datos de la regla;
-  - un pago anterior a 0064 (`due_date NULL`) borra la fila;
+  - un pago anterior a 0064 borra la fila;
   - una regla eliminada borra la fila;
   - una regla pausada reabre;
-  - un gasto compartido con liquidación vigente posterior falla con `GRN01` y no cambia ni el movimiento ni la ocurrencia;
-  - un pago anticipado deshecho libera la posición de `recurrence_positions_spent`, y uno con fecha pasada no;
-  - deshacer y volver a registrar no agrega posiciones.
-- [ ] 1.4 Desvincular restaura los datos de la regla: el caso del #186, con $500 en Billetera vs «Comida» $3.333,33 en Visa Galicia. Ajustar los tests existentes de `link-movement-rpc.test.ts` que asumían la foto del movimiento tras desvincular. Verificar con `pnpm --filter @grana/recurrences test`.
-- [ ] 1.5 Comparar `packages/supabase/src/types.ts` contra 0075 línea por línea. No se espera cambio: no hay RPC expuesta nueva ni columnas. Verificar con `pnpm typecheck` + `pnpm typecheck:mobile`.
+  - un gasto compartido con liquidación vigente posterior falla con `GRN01` y no cambia nada;
+  - un pago anticipado deshecho libera la posición, y uno con fecha pasada no;
+  - deshacer y volver a resolver no agrega vencimientos.
+- [x] 1.4 Desvincular restaura los datos de la regla: el caso del #186, con $500 en Billetera vs «Comida» $3.333,33 en Visa Galicia. Los tests existentes de `link-movement-rpc.test.ts` siguen en verde sin cambios.
+- [x] 1.5 `packages/supabase/src/types.ts`: 0075 no agrega columnas ni RPC, así que no hay nada que reflejar. `pnpm typecheck` se corre en 5.2.
 
 ## 2. Paquetes compartidos
 

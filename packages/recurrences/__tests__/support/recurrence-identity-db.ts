@@ -35,6 +35,7 @@ export const MIGRATION_0070 = read('0070_recurrence_positions_spent_batch.sql')
 export const MIGRATION_0071 = read('0071_pause_looks_forward.sql')
 export const MIGRATION_0072 = read('0072_recurrence_link_movement.sql')
 export const MIGRATION_0074 = read('0074_link_snapshot_follows_the_movement.sql')
+export const MIGRATION_0075 = read('0075_undo_reopens_occurrence.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -279,6 +280,7 @@ export async function createRecurrenceIdentityDb(
     scheduleGap?: boolean
     seedRepair?: boolean
     snapshotFix?: boolean
+    undoReopens?: boolean
   } = {},
 ): Promise<PGlite> {
   const db = new PGlite()
@@ -305,6 +307,10 @@ export async function createRecurrenceIdentityDb(
       // regla sobre una ocurrencia que ya existía. Se puede saltear
       // (`snapshotFix: false`) para reproducir el defecto.
       if (options.snapshotFix !== false) await db.exec(MIGRATION_0074)
+      // 0075: borrar el movimiento que resuelve una ocurrencia la devuelve a
+      // revisión, y volver a revisión trae los datos de la regla. Se puede
+      // saltear (`undoReopens: false`) para reproducir #104.
+      if (options.undoReopens !== false) await db.exec(MIGRATION_0075)
     }
   }
   return db

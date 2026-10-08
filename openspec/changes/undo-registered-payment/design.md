@@ -37,10 +37,10 @@ Ver proposal.md para el porqué. Esto es lo que hay hoy y condiciona el cómo:
 
 La migración 0075 agrega `trg_reopen_occurrence_on_delete` sobre `public.transactions`. Antes de borrar la fila, si alguna ocurrencia tiene `confirmed_transaction_id = OLD.id`, la trata así:
 
-- **Con `due_date` conocido y regla no eliminada:** la reabre con los datos de la regla (decisión 2).
+- **Con `due_date` conocido y regla no eliminada:** la pasa a `pending`, limpia el vínculo, y el trigger de la decisión 2 le pone los datos de la regla.
 - **Con `due_date` desconocido (anterior a 0064), o con la regla en `status = 'deleted'`:** borra la fila de la ocurrencia.
 
-Para cuando el `SET NULL` de la FK se evalúa, la ocurrencia ya no apunta al movimiento, así que no hay nada que poner en NULL y el CHECK nunca se viola. La FK queda como está.
+Para cuando la FK evalúa su `SET NULL`, ya nada apunta al movimiento, así que el CHECK nunca se viola. La FK queda como está.
 
 **Por qué un trigger y no una RPC que llame cada cliente:** la regla tiene que valer para cualquier borrado: el detalle web, el nativo, la puerta de la ficha y SQL manual. Es el mismo argumento que llevó a 0053 a poner la garantía de la semilla en la base: que no dependa de que cada frontend se acuerde. Con una RPC, un `DELETE` directo seguiría fallando con el CHECK.
 
@@ -50,25 +50,26 @@ Para cuando el `SET NULL` de la FK se evalúa, la ocurrencia ya no apunta al mov
 
 Sobre el trigger:
 
-- Es `SECURITY INVOKER`: el usuario solo puede borrar sus propios movimientos, y RLS ya le deja escribir sus ocurrencias.
+- Es `SECURITY INVOKER`: el `DELETE` ya pasó por RLS, la ocurrencia es del mismo usuario y RLS le deja escribirla.
 - No atrapa errores. Si la guarda de liquidaciones levanta `GRN01`, se cae todo el `DELETE` y la ocurrencia no cambia. Todo o nada, igual que desvincular.
 
-### 2. `recurrence_reopen_occurrence(instance_id)`: una sola definición de «volver a revisión»
+### 2. «Volver a revisión» se define una vez, en la tabla: `trg_occurrence_back_to_review`
 
-Es una función interna de 0075, sin `EXECUTE` para `authenticated`. Pone `status = 'pending'`, limpia `confirmed_transaction_id`, `resolution_kind`, `linked_conversion` y `resolved_at`, y copia de la regla `description`, `category_id`, `subcategory_id`, `account_id` y `amount`.
-
-La usan:
+Es un trigger `BEFORE UPDATE OF status` sobre `recurrence_instances`, con `WHEN (OLD.status = 'confirmed' AND NEW.status = 'pending')`. Copia de la regla `description`, `category_id`, `subcategory_id`, `account_id` y `amount`. Vale para cualquier camino que devuelva una ocurrencia a revisión:
 
 - el trigger de la decisión 1;
-- `recurrence_unlink_movement`, que 0075 reemplaza entero, igual que hizo 0074 con vincular. Lo único que cambia en desvincular es el `update` final, que pasa a llamar a esta función. Lo demás queda idéntico a 0072: el chequeo `not_linked`, revertir la conversión y no atrapar `GRN01`.
+- `recurrence_unlink_movement`, que no se toca: su `update` a `pending` ya lo dispara;
+- un `UPDATE` directo de un cliente.
 
-**Alternativa descartada:** copiar el `update` en los dos lugares. Es exactamente cómo divergieron vincular y crear en 0072 → 0074.
+**Alternativa descartada: una función `recurrence_reopen_occurrence` que llamen el trigger y desvincular.** Así se planificó primero. No funciona bien con los permisos de Postgres: las funciones `SECURITY INVOKER` necesitan `EXECUTE` para el rol que llama. Para que desvincular pudiera llamarla, había que dársela a `authenticated`, y eso dejaba abierta una puerta para reabrir una ocurrencia `created` sin borrar su movimiento. Con el trigger no hay nada nuevo que llamar, y ningún camino futuro puede olvidarse de restaurar.
+
+**Alternativa descartada: copiar el `update` en los dos lugares.** Es exactamente cómo divergieron vincular y crear en 0072 → 0074.
 
 La migración termina con un self-check, en el estilo de 0071/0072:
 
-- el trigger existe;
-- desvincular llama a la función;
-- `recurrence_positions_spent` no se tocó.
+- los dos triggers existen;
+- el de borrado no atrapa errores;
+- `recurrence_positions_spent` sigue siendo la de 0072.
 
 ### 3. Las dos puertas pasan por `deleteTransaction`
 
@@ -115,5 +116,5 @@ Después de deshacer o de eliminar un movimiento que resolvía una ocurrencia, c
 ## Migration Plan
 
 1. Pegar `0075_undo_reopens_occurrence.sql` en el SQL Editor del proyecto online, después de 0074. El self-check aborta si algo no quedó.
-2. `packages/supabase/src/types.ts`: 0075 no cambia el contrato público (no hay RPC nueva expuesta ni columnas), así que no se espera cambio. Se verifica contra el SQL.
-3. **Rollback:** recrear `recurrence_unlink_movement` desde 0072 y hacer `DROP TRIGGER` + `DROP FUNCTION`. Los datos que el trigger ya reabrió quedan correctos igual.
+2. `packages/supabase/src/types.ts`: 0075 no cambia el contrato público (sin RPC ni columnas nuevas), así que no hay cambio.
+3. **Rollback:** `DROP TRIGGER` + `DROP FUNCTION` de los dos triggers. Los datos que ya se reabrieron quedan correctos igual.
