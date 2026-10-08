@@ -3,6 +3,7 @@ import { Alert, Text, View } from 'react-native'
 import {
   canUndo,
   canUnlink,
+  recurrenceLinkLabelKey,
   type EnrichedRecurrenceInstance,
   type RecurrenceInstanceStatus,
 } from '@grana/recurrences'
@@ -138,76 +139,77 @@ export function RecurrenceInstancesList({
         </View>
       ) : (
         <View className="overflow-hidden rounded-2xl border border-border bg-card">
-          {instances.map((instance, i) => (
-            // DOS PISOS, como en web: el botón abajo, no disputando el ancho
-            // con la fecha y el importe.
-            <View
-              key={instance.id}
-              className={`gap-2 px-4 py-3 ${i > 0 ? 'border-t border-border-soft' : ''}`}
-            >
-              <View className="flex-row items-center justify-between">
-              <View className="min-w-0 flex-1 pr-3">
-                <Text className="text-[14px] font-semibold text-text">
-                  {formatShortDate(instance.scheduled_date, locale)}
-                </Text>
-                {instance.description ? (
-                  <Text numberOfLines={1} className="text-[12px] text-text-muted">
-                    {instance.description}
-                  </Text>
-                ) : null}
-                {/* Vinculado, no originado: el movimiento existía antes. */}
-                {instance.resolution_kind === 'linked' ? (
-                  <Text className="text-[11px] text-text-soft">
-                    {t('recurrences.link.label_linked')}
-                  </Text>
-                ) : null}
-              </View>
-              {/* Estado e importe en UNA línea, y el importe ÚLTIMO: apilados
-                  hacían la fila el doble de alta, y con el estado al final los
-                  números dejaban de alinearse entre sí —que es lo único que se
-                  compara de un vistazo en una lista de importes—. */}
-              <View className="flex-row items-center gap-2">
-                <Text className={`text-[11px] font-bold ${STATUS_TONE[instance.status]}`}>
-                  {t(`recurrences.instance_statuses.${instance.status}`)}
-                </Text>
-                <Text className="text-[14px] font-bold text-text">
-                  {fmtMoney(Number(instance.amount), instance.currency_code, showCents)}
-                </Text>
-              </View>
-              </View>
-              {/* Cada resolución se deshace a su manera, en el mismo lugar de la
-                  fila: lo vinculado se SUELTA (el movimiento queda), lo que creó
-                  la recurrencia se BORRA (#104). `canUndo`/`canUnlink` deciden. */}
-              {canUndo(instance) && instance.confirmed_transaction_id ? (
-                <View className="flex-row justify-end">
-                  <Button
-                    variant="secondary"
-                    size="2xs"
-                    onPress={() => undo(instance)}
-                    disabled={pendingId === instance.id}
-                  >
-                    {pendingId === instance.id
-                      ? t('recurrences.link.undoing')
-                      : t('recurrences.link.undo')}
-                  </Button>
+          {instances.map((instance, i) => {
+            const undoable = canUndo(instance) && instance.confirmed_transaction_id != null
+            const unlinkable = canUnlink(instance)
+            const busy = pendingId === instance.id
+            return (
+              // DOS RENGLONES, como en web:
+              //   1 · la fecha (y la descripción) | el estado y el importe
+              //   2 · cómo se resolvió             | cómo se deshace
+              // El rótulo va AL LADO de su botón —«Vinculado» con «Desvincular»,
+              // «Generado por la regla» con «Deshacer»—. Bajo la fecha peleaba el
+              // ancho con el importe y el botón quedaba solo en un tercer renglón.
+              <View
+                key={instance.id}
+                className={`gap-2 px-4 py-3 ${i > 0 ? 'border-t border-border-soft' : ''}`}
+              >
+                <View className="flex-row items-center justify-between">
+                  <View className="min-w-0 flex-1 pr-3">
+                    <Text className="text-[14px] font-semibold text-text">
+                      {formatShortDate(instance.scheduled_date, locale)}
+                    </Text>
+                    {instance.description ? (
+                      <Text numberOfLines={1} className="text-[12px] text-text-muted">
+                        {instance.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {/* Estado e importe en UNA línea, y el importe ÚLTIMO: apilados
+                      hacían la fila el doble de alta, y con el estado al final los
+                      números dejaban de alinearse entre sí —que es lo único que se
+                      compara de un vistazo en una lista de importes—. */}
+                  <View className="flex-row items-center gap-2">
+                    <Text className={`text-[11px] font-bold ${STATUS_TONE[instance.status]}`}>
+                      {t(`recurrences.instance_statuses.${instance.status}`)}
+                    </Text>
+                    <Text className="text-[14px] font-bold text-text">
+                      {fmtMoney(Number(instance.amount), instance.currency_code, showCents)}
+                    </Text>
+                  </View>
                 </View>
-              ) : null}
-              {canUnlink(instance) ? (
-                <View className="flex-row justify-end">
-                  <Button
-                    variant="secondary"
-                    size="2xs"
-                    onPress={() => unlink(instance.id)}
-                    disabled={pendingId === instance.id}
-                  >
-                    {pendingId === instance.id
-                      ? t('recurrences.link.unlinking')
-                      : t('recurrences.link.unlink')}
-                  </Button>
-                </View>
-              ) : null}
-            </View>
-          ))}
+                {undoable || unlinkable ? (
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text className="min-w-0 flex-1 text-[11px] text-text-soft">
+                      {t(`recurrences.link.label_${recurrenceLinkLabelKey(instance.resolution_kind)}`)}
+                    </Text>
+                    {/* Cada resolución se deshace a su manera: lo vinculado se
+                        SUELTA (el movimiento queda), lo que creó la recurrencia se
+                        BORRA (#104). `canUndo`/`canUnlink` deciden. */}
+                    {undoable ? (
+                      <Button
+                        variant="secondary"
+                        size="2xs"
+                        onPress={() => undo(instance)}
+                        disabled={busy}
+                      >
+                        {busy ? t('recurrences.link.undoing') : t('recurrences.link.undo')}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="2xs"
+                        onPress={() => unlink(instance.id)}
+                        disabled={busy}
+                      >
+                        {busy ? t('recurrences.link.unlinking') : t('recurrences.link.unlink')}
+                      </Button>
+                    )}
+                  </View>
+                ) : null}
+              </View>
+            )
+          })}
         </View>
       )}
       {error ? <Text className="text-[13px] text-terracotta">{error}</Text> : null}
