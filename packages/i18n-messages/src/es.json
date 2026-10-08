@@ -1618,6 +1618,17 @@
       "body": "Editaste el movimiento y todavía no guardaste. Si cerrás ahora, los cambios se pierden.",
       "discard": "Descartar",
       "keep_editing": "Seguir editando"
+    },
+    "delete_errors": {
+      "installment_child": "Para eliminar una cuota, eliminá la compra completa desde el movimiento padre.",
+      "paid": "Este consumo está en un resumen ya pagado. Para borrarlo, primero deshacé el pago del resumen desde Tarjetas.",
+      "settlement": "Es parte de una liquidación del hogar. Revertila desde la cuenta corriente.",
+      "card_payment": "Es el pago de un resumen de tarjeta. Deshacelo desde el detalle del período, en Tarjetas.",
+      "blocked_revert": "No se puede borrar: hay una liquidación del hogar posterior a este gasto. Revertila y volvé a intentarlo.",
+      "blocked_cancel_own": "No se puede borrar: hay una liquidación tuya pendiente de asignar posterior a este gasto. Cancelala y volvé a intentarlo.",
+      "blocked_cancel_other": "No se puede borrar: hay una liquidación pendiente de asignar posterior a este gasto, y la registró la otra persona. Tiene que cancelarla ella.",
+      "blocked_unknown": "No se puede borrar: hay una liquidación del hogar posterior a este gasto. Mirala en la cuenta corriente para ver si hay que revertirla o cancelarla.",
+      "blocked_multiple": "Hay más de una liquidación bloqueando, así que resolver una sola no alcanza."
     }
   },
   "recurrences": {
@@ -1945,7 +1956,22 @@
         "already_resolved": "Ese vencimiento ya fue resuelto."
       },
       "accounts_loading": "Leyendo tus cuentas…",
-      "accounts_unavailable": "No pudimos leer tus cuentas. Cerrá y volvé a intentar."
+      "accounts_unavailable": "No pudimos leer tus cuentas. Cerrá y volvé a intentar.",
+      "undo": "Deshacer",
+      "undoing": "Deshaciendo…",
+      "undo_title": "¿Deshacer este pago?",
+      "undo_body": "Se borra el movimiento de {amount} y el saldo de {account} cambia.",
+      "undo_back_to_review": "El vencimiento del {dueDate} vuelve a quedar por revisar.",
+      "undo_leaves_history": "Este pago es anterior a septiembre de 2026 y no sabemos qué vencimiento cubría: no vuelve a quedar por revisar, sale del historial.",
+      "undo_leaves_history_deleted_rule": "La regla ya fue eliminada: este pago sale del historial.",
+      "undo_confirm": "Sí, deshacer",
+      "undo_cancel": "Cancelar",
+      "undone_success": "Listo: el movimiento se borró y el vencimiento volvió a por revisar.",
+      "undone_success_left_history": "Listo: el movimiento se borró.",
+      "delete_back_to_review": "El vencimiento del {dueDate} de {rule} vuelve a quedar por revisar.",
+      "delete_leaves_history": "Este pago de {rule} es anterior a septiembre de 2026: no vuelve a quedar por revisar, sale del historial de la regla.",
+      "delete_leaves_history_deleted_rule": "La regla {rule} ya fue eliminada: este pago sale de su historial.",
+      "delete_balance_changes": "El saldo de la cuenta cambia."
     }
   },
   "subcategories": {

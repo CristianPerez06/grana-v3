@@ -20,9 +20,17 @@ const MUTATIONS = [
   'registerRecurrenceAhead',
   'linkMovementToRecurrence',
   'unlinkMovementFromRecurrence',
+  // Borrar un movimiento también resuelve —o mejor, DES-resuelve— un vencimiento:
+  // si lo resolvía, la base lo reabre (0075, #104). Es la puerta de «Eliminar» en
+  // el detalle y de «Deshacer» en la ficha, y las dos tienen que releer la plata
+  // y el bloque de por revisar.
+  'deleteMovement',
 ]
-/** El módulo que expone las mutaciones no invalida nada: no tiene el cliente. */
-const EXCLUDED = path.join('lib', 'recurrences', 'mutators.ts')
+/** Los módulos que exponen las mutaciones no invalidan nada: no tienen el cliente. */
+const EXCLUDED = [
+  path.join('lib', 'recurrences', 'mutators.ts'),
+  path.join('lib', 'transactions', 'mutators.ts'),
+]
 
 function sourceFiles(dir: string): string[] {
   const found: string[] = []
@@ -38,7 +46,7 @@ function sourceFiles(dir: string): string[] {
 describe('cableado de la invalidación al resolver un vencimiento', () => {
   const callers = sourceFiles(path.join(ROOT, 'app'))
     .concat(sourceFiles(path.join(ROOT, 'components')), sourceFiles(path.join(ROOT, 'lib')))
-    .filter((file) => !file.endsWith(EXCLUDED))
+    .filter((file) => !EXCLUDED.some((excluded) => file.endsWith(excluded)))
     .map((file) => ({ file: path.relative(ROOT, file), code: readFileSync(file, 'utf8') }))
     .filter(({ code }) => MUTATIONS.some((name) => code.includes(`${name}(`)))
 

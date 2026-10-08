@@ -1,5 +1,6 @@
 'use server'
 
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import {
@@ -7,6 +8,8 @@ import {
   revalidateAfterRecurrenceMutation,
 } from './_helpers'
 import {
+  deleteErrorMessageKeys,
+  deleteMovementExplained,
   deleteMovementResolvingRecurrence,
   type SeededRecurrenceResolution,
 } from '@grana/recurrences'
@@ -20,7 +23,6 @@ import {
   updateTransfer as updateTransferImpl,
   updateAdjustment as updateAdjustmentImpl,
   updateExchange as updateExchangeImpl,
-  deleteTransaction as deleteTransactionImpl,
   DELETE_GUARD_CODES,
   type ThinMutationResult,
   type SeededRecurrenceInfo,
@@ -110,11 +112,15 @@ export async function deleteTransaction(id: string): Promise<DeleteTransactionAc
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  const result = await deleteTransactionImpl(supabase, userId, id, {
+  // The same call «Deshacer» makes from a rule's history (#104): if this movement
+  // resolved an occurrence, the database reopens it (0075), so the recurrence
+  // routes are revalidated too.
+  const result = await deleteMovementExplained(supabase, userId, id, {
     today: formatDateISO(getTodayAR()),
   })
   if (result.ok) {
     revalidateAfterMovementMutation()
+    revalidateAfterRecurrenceMutation()
     return { ok: true }
   }
 
@@ -128,37 +134,15 @@ export async function deleteTransaction(id: string): Promise<DeleteTransactionAc
     }
   }
 
-  // Map the shared mutator's stable `errorCode` back to web's literal messages
-  // (the guards used to live inline here; behavior is unchanged). Unknown codes
-  // are generic Postgres failures → the shell translator.
-  switch (result.errorCode) {
-    case DELETE_GUARD_CODES.installmentChild:
-      return {
-        ok: false,
-        formError: 'Para eliminar una cuota, eliminá la compra completa desde el movimiento padre.',
-      }
-    case DELETE_GUARD_CODES.paid:
-      return { ok: false, formError: 'No podés eliminar un consumo que ya fue pagado en el resumen.' }
-    case DELETE_GUARD_CODES.settlement:
-      return {
-        ok: false,
-        formError: 'Es parte de una liquidación del hogar. Revertila desde la cuenta corriente.',
-      }
-    case DELETE_GUARD_CODES.cardPayment:
-      return {
-        ok: false,
-        formError:
-          'Es el pago de un resumen de tarjeta. Deshacelo desde el detalle del período, en Tarjetas.',
-      }
-    case 'GRN01':
-      return {
-        ok: false,
-        formError:
-          'No se puede borrar: hay una liquidación registrada después de este gasto en el hogar. Revertí esa liquidación primero.',
-      }
-    default:
-      return { ok: false, formError: await translatePostgresError(result.errorCode, 'transaction') }
+  // WHICH message is the package's (`deleteErrorMessageKeys`), the same table
+  // native reads; here it is only translated. Unknown codes are generic Postgres
+  // failures → the shell translator.
+  const keys = deleteErrorMessageKeys(result)
+  if (keys) {
+    const t = await getTranslations('transactions.delete_errors')
+    return { ok: false, formError: keys.map((key) => t(key)).join(' ') }
   }
+  return { ok: false, formError: await translatePostgresError(result.errorCode, 'transaction') }
 }
 
 // ── resolveSeededRecurrenceAndDelete ──────────────────────────────────────────

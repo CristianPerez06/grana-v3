@@ -13,6 +13,7 @@ export {
   countPendingSharedRecurrenceInstances,
   getRecurrenceLinkedTransactionIds,
   getRecurrenceLinkForTransaction,
+  occurrenceAfterDelete,
   generateDueRecurrenceInstances,
   withGenerationTimeout,
   GENERATION_TIMEOUT_MS,
@@ -28,6 +29,7 @@ export {
   type RuleBacklog,
   type GenerationResult,
   type RecurrenceRuleForGeneration,
+  type RecurrenceLinkForTransaction,
 } from './queries'
 
 export {
@@ -95,6 +97,7 @@ export {
   materializationOutcome,
   reviewFeedState,
   stuckRules,
+  canUndo,
   canUnlink,
   recurrenceLinkLabelKey,
   resolveAheadMessageKeys,
@@ -128,3 +131,8 @@ export { recurrenceTitle, type RecurrenceTitleParts } from './display-title'
 export { referenceDateChoice } from './schedule-edit'
 export type { ReferenceDateChoice } from './schedule-edit'
 export { formatCompactDate, type CompactDateLocale } from './compact-date'
+export {
+  deleteMovementExplained,
+  deleteErrorMessageKeys,
+  DELETE_ERROR_MESSAGE_KEYS,
+} from './undo'

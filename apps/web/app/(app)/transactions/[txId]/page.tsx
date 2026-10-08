@@ -11,6 +11,9 @@ import {
 import { toFinancialMovement } from '@/lib/transactions/movements'
 import { getCardPeriodDetail } from '@/lib/cards/queries'
 import { getRecurrenceDetail, getRecurrenceLinkForTransaction } from '@/lib/recurrences/queries'
+import { occurrenceAfterDelete, recurrenceTitle } from '@grana/recurrences'
+import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
+import { formatShortDate } from '@/lib/date'
 import { getMovementSharedInfo } from '@grana/shared'
 import { buildMovementEditContext } from '@/lib/transactions/edit-context'
 import { GlobalTransactionDetail } from './_components/global-transaction-detail'
@@ -134,6 +137,37 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
       }
     : null
 
+  // What deleting this movement does to the occurrence it resolves (#104): the
+  // database reopens it (0075), and the dialog says so before the user confirms.
+  // Resolved here, where the catalog is, like `recurrenceRelation`.
+  let occurrenceNotice: string | null = null
+  if (recurrenceLink) {
+    const tRoot = await getTranslations()
+    const type = recurrenceLink.movement_type
+    const typeLabel =
+      type === 'income' || type === 'expense' || type === 'transfer' ? t(`types.${type}`) : type
+    const { rule } = recurrenceLink
+    const ruleName =
+      recurrenceTitle({
+        description: rule.description,
+        subcategory: rule.subcategory ? getSubcategoryName(rule.subcategory, tRoot) : null,
+        category: rule.category ? getCategoryName(rule.category, tRoot) : null,
+        type: typeLabel,
+      }) ?? typeLabel
+    const outcome = occurrenceAfterDelete(recurrenceLink)
+    occurrenceNotice = [
+      tLink('delete_balance_changes'),
+      outcome === 'back_to_review' && recurrenceLink.due_date
+        ? tLink('delete_back_to_review', {
+            dueDate: formatShortDate(recurrenceLink.due_date),
+            rule: ruleName,
+          })
+        : rule.status === 'deleted'
+          ? tLink('delete_leaves_history_deleted_rule', { rule: ruleName })
+          : tLink('delete_leaves_history', { rule: ruleName }),
+    ].join(' ')
+  }
+
   return (
     <>
       <GlobalTransactionDetail
@@ -153,6 +187,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         monthWeightSlices={monthWeightSlices}
         recurrence={recurrenceSummary}
         recurrenceRelation={recurrenceRelation}
+        occurrenceNotice={occurrenceNotice}
         contextPeriodLabel={contextPeriodLabel}
       />
     </>

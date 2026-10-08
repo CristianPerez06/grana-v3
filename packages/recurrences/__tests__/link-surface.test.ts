@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { GranaSupabaseClient } from '@grana/supabase'
-import { canUnlink, recurrenceLinkLabelKey } from '../src/review-surface'
+import { canUndo, canUnlink, recurrenceLinkLabelKey } from '../src/review-surface'
 import { blockingAction, describeBlockingSettlements } from '../src/link'
 
 const YO = '00000000-0000-0000-0000-0000000000a1'
@@ -22,6 +22,23 @@ describe('canUnlink', () => {
   it('no lo ofrece sobre una ocurrencia sin resolver ni sobre una omitida', () => {
     expect(canUnlink({ status: 'pending', resolution_kind: null })).toBe(false)
     expect(canUnlink({ status: 'skipped', resolution_kind: null })).toBe(false)
+  })
+})
+
+describe('canUndo', () => {
+  it('ofrece deshacer sobre un pago que creó la recurrencia', () => {
+    expect(canUndo({ status: 'confirmed', resolution_kind: 'created' })).toBe(true)
+  })
+
+  it('NO lo ofrece sobre lo que el usuario vinculó', () => {
+    // Deshacer BORRA el movimiento: sobre uno vinculado borraría un gasto que el
+    // usuario cargó por su cuenta. Para eso está desvincular.
+    expect(canUndo({ status: 'confirmed', resolution_kind: 'linked' })).toBe(false)
+  })
+
+  it('no lo ofrece sobre una ocurrencia sin resolver ni sobre una omitida', () => {
+    expect(canUndo({ status: 'pending', resolution_kind: null })).toBe(false)
+    expect(canUndo({ status: 'skipped', resolution_kind: null })).toBe(false)
   })
 })
 

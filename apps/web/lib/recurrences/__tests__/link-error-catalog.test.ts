@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { en, es } from '@grana/i18n-messages'
 import {
+  DELETE_ERROR_MESSAGE_KEYS,
   LINK_ERROR_MESSAGE_KEYS,
   RECURRENCE_GUARD_CODES,
   RESOLVE_AHEAD_MESSAGE_KEYS,
@@ -123,5 +124,35 @@ describe('rechazos de guarda del módulo de recurrencias', () => {
       (lookup(es, 'recurrences.guards') as Record<string, string>) ?? {},
     )
     expect(inCatalog.filter((code) => !listed.has(code))).toEqual([])
+  })
+})
+
+/**
+ * LO MISMO PARA LOS RECHAZOS DE BORRAR UN MOVIMIENTO (#104).
+ *
+ * Las dos puertas de «Deshacer» —la ficha y el detalle— y las dos apps leen
+ * estas claves. Nativo las degradaba a «Algo salió mal»; una clave faltante lo
+ * volvería a hacer, esta vez con la clave cruda.
+ */
+describe('rechazos de borrar un movimiento', () => {
+  for (const [locale, catalog] of [
+    ['es', es],
+    ['en', en],
+  ] as const) {
+    it(`${locale} tiene texto para cada rechazo`, () => {
+      const missing = DELETE_ERROR_MESSAGE_KEYS.filter(
+        (key) => typeof lookup(catalog, `transactions.delete_errors.${key}`) !== 'string',
+      )
+      expect(missing).toEqual([])
+    })
+  }
+
+  it('los dos idiomas dicen cosas distintas', () => {
+    const untranslated = DELETE_ERROR_MESSAGE_KEYS.filter(
+      (key) =>
+        lookup(es, `transactions.delete_errors.${key}`) ===
+        lookup(en, `transactions.delete_errors.${key}`),
+    )
+    expect(untranslated).toEqual([])
   })
 })

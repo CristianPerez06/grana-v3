@@ -210,18 +210,28 @@ export function stuckRules(
  * pantalla y se deshacen distinto, y esa diferencia se decide en UN solo lugar
  * para las dos plataformas.
  *
- *   `created`  la recurrencia creó el movimiento → deshacerlo sería BORRARLO,
- *              que es otra operación y tiene su propio alcance (#104).
- *   `linked`   el usuario señaló un movimiento suyo → soltar el vínculo lo deja
- *              como estaba, y eso sí se ofrece.
+ *   `created`  la recurrencia creó el movimiento → «Deshacer» lo BORRA y el
+ *              vencimiento vuelve a revisión (#104). Es la misma operación que
+ *              eliminar el movimiento desde su detalle: la base reabre la
+ *              ocurrencia en cualquier borrado (0075).
+ *   `linked`   el usuario señaló un movimiento suyo → «Desvincular» suelta el
+ *              vínculo y lo deja como estaba, sin borrarlo.
  *
- * Una superficie que ofreciera «Desvincular» sobre una resolución `created`
- * borraría un gasto real del historial del usuario.
+ * Una superficie que ofreciera «Deshacer» sobre una resolución `linked` borraría
+ * un gasto real que el usuario cargó por su cuenta; una que ofreciera
+ * «Desvincular» sobre una `created` dejaría suelto un movimiento que nadie cargó.
  */
 export function canUnlink(
   instance: Pick<RecurrenceInstance, 'status' | 'resolution_kind'>,
 ): boolean {
   return instance.status === 'confirmed' && instance.resolution_kind === 'linked'
+}
+
+/** «Deshacer»: sólo sobre lo que la recurrencia creó. Ver `canUnlink`. */
+export function canUndo(
+  instance: Pick<RecurrenceInstance, 'status' | 'resolution_kind'>,
+): boolean {
+  return instance.status === 'confirmed' && instance.resolution_kind === 'created'
 }
 
 /**

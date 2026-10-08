@@ -14,7 +14,6 @@ import {
   registerInstallments,
   saveExpenseReimbursement as saveExpenseReimbursementImpl,
   createRecurrenceFromMovement,
-  deleteTransaction as deleteTransactionImpl,
   confirmReimbursement as confirmReimbursementImpl,
   cancelReimbursement as cancelReimbursementImpl,
   DELETE_GUARD_CODES,
@@ -24,6 +23,8 @@ import {
 import { updateInstallmentParent } from '@grana/cards'
 import {
   createRecurrence,
+  deleteErrorMessageKeys,
+  deleteMovementExplained,
   deleteMovementResolvingRecurrence,
   type SeededRecurrenceResolution,
 } from '@grana/recurrences'
@@ -171,13 +172,15 @@ export function createMovementMutators(t: Translate): Mutators {
   }
 }
 
-// Delete a movement from the detail screen. Not part of the form `Mutators`
-// contract (the form never deletes) — it's a standalone one-shot the detail
-// action invokes. Delegates to the shared thin `deleteTransaction` (guards live
-// there) and localizes the result. The guard codes (installment child / paid /
-// settlement) are already prevented by the detail's `canDelete` gate, so they're
-// defensive here; the realistic runtime failure is `GRN01` (a settled shared
-// expense). Mobile surfaces the generic message — web keeps its specific copy.
+// Delete a movement — from the detail screen, and from «Deshacer» on a rule's
+// history row (#104): the same operation, so both doors answer the same. Not
+// part of the form `Mutators` contract (the form never deletes). If the movement
+// resolved a recurrence's occurrence, the database reopens it (0075).
+//
+// Every rejection says what to resolve first, in the same words web uses
+// (`deleteErrorMessageKeys`). This used to collapse them all into «Algo salió
+// mal», which left the native «Deshacer» unable to explain a paid statement or
+// a settlement in the way.
 export type DeleteMovementOutcome =
   | { ok: true }
   | { ok: false; formError: string }
@@ -189,14 +192,20 @@ export type DeleteMovementOutcome =
 export async function deleteMovement(id: string, t: Translate): Promise<DeleteMovementOutcome> {
   const userId = await currentUserId()
   if (!userId) return { ok: false, formError: t('transactions.errors.generic') }
-  const result = await deleteTransactionImpl(supabase, userId, id, {
+  const result = await deleteMovementExplained(supabase, userId, id, {
     today: formatDateISO(getTodayAR()),
   })
   if (result.ok) return { ok: true }
   if (result.errorCode === DELETE_GUARD_CODES.seededRecurrence && result.seededRecurrence) {
     return { ok: false, seededRecurrence: result.seededRecurrence }
   }
-  return { ok: false, formError: t('transactions.errors.generic') }
+  const keys = deleteErrorMessageKeys(result)
+  return {
+    ok: false,
+    formError: keys
+      ? keys.map((key) => t(`transactions.delete_errors.${key}`)).join(' ')
+      : t('transactions.errors.generic'),
+  }
 }
 
 // Second step of deleting a seeded movement: the user chose. Same shared

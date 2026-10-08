@@ -1,8 +1,9 @@
 import { getTranslations } from 'next-intl/server'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatShortDate } from '@/lib/date'
-import { canUnlink } from '@grana/recurrences'
+import { canUndo, canUnlink } from '@grana/recurrences'
 import type { EnrichedRecurrenceInstance } from '@/lib/recurrences/types'
+import { UndoInstanceButton } from './undo-instance-button'
 import { UnlinkInstanceButton } from './unlink-instance-button'
 
 type Props = {
@@ -32,6 +33,12 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
 
   const fmtAmount = (amount: number) =>
     currencyCode === 'ARS' ? formatARS(amount, false) : formatUSD(amount, false)
+
+  const fmtSigned = (instance: EnrichedRecurrenceInstance) => {
+    const type = instance.recurrence.movement_type
+    const sign = type === 'income' ? '+' : type === 'transfer' ? '' : '−'
+    return `${sign}${fmtAmount(Number(instance.amount))}`
+  }
 
   return (
     <section className="flex flex-col gap-3">
@@ -102,9 +109,25 @@ export const RecurrenceInstancesList = async ({ instances, currencyCode }: Props
                 })()}
               </div>
               </div>
-              {/* Sólo sobre lo que el usuario vinculó: sobre un pago que creó
-                  la recurrencia, deshacer sería BORRAR ese movimiento. */}
+              {/* Cada resolución se deshace a su manera, en el mismo lugar de la
+                  fila: lo vinculado se SUELTA (el movimiento queda), lo que creó
+                  la recurrencia se BORRA (#104). `canUndo`/`canUnlink` deciden. */}
               {canUnlink(instance) && <UnlinkInstanceButton instanceId={instance.id} />}
+              {canUndo(instance) && instance.confirmed_transaction_id && (
+                <UndoInstanceButton
+                  transactionId={instance.confirmed_transaction_id}
+                  amount={fmtSigned(instance)}
+                  account={instance.account?.name ?? '—'}
+                  dueDate={instance.due_date ? formatShortDate(instance.due_date) : null}
+                  leavesHistory={
+                    instance.recurrence.status === 'deleted'
+                      ? 'deleted_rule'
+                      : instance.due_date == null
+                        ? 'unknown_due_date'
+                        : null
+                  }
+                />
+              )}
             </li>
           ))}
         </ul>

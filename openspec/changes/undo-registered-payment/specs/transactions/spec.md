@@ -367,9 +367,9 @@ Un movimiento que **resuelve un vencimiento** de una regla recurrente —porque 
 
 #### Scenario: Eliminar un consumo pagado dice dónde se resuelve
 
-- **WHEN** el usuario intenta eliminar un consumo de tarjeta que está en un resumen ya pagado
-- **THEN** el sistema rechaza la eliminación
-- **AND** dice que primero hay que deshacer el pago del resumen desde la tarjeta
+- **WHEN** un consumo de tarjeta está en un resumen ya pagado
+- **THEN** el detalle del movimiento no ofrece «Eliminar»
+- **AND** si se intenta borrarlo por otra puerta, como «Deshacer» en la ficha de la regla, el sistema lo rechaza y dice que primero hay que deshacer el pago del resumen desde la tarjeta
 
 ### Requirement: El usuario puede desvincular un movimiento de un vencimiento
 

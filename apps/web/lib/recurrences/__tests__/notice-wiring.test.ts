@@ -29,7 +29,7 @@ describe('quién provee el acuse', () => {
     expect(abre).toBeGreaterThan(-1)
 
     // La ficha de arriba monta las dos acciones de resolver por anticipado; el
-    // historial monta desvincular. Los tres avisan, así que los tres van dentro.
+    // historial monta desvincular y deshacer. Todos avisan, así que van dentro.
     for (const dentro of ['<RecurrenceDetail', '<RecurrenceInstancesList']) {
       const pos = page.indexOf(dentro)
       expect(pos, `${dentro} no está en la página`).toBeGreaterThan(-1)
@@ -52,7 +52,10 @@ describe('quién provee el acuse', () => {
       })
 
     const consumidores = walk('.').filter((f) => read(f).includes('useRecurrenceNotice('))
+    // «Deshacer» (#104) vive en la misma fila que desvincular, dentro del
+    // historial, que el primer caso ya exige dentro del proveedor.
     expect(consumidores.sort()).toEqual([
+      '[id]/_components/undo-instance-button.tsx',
       '[id]/_components/unlink-instance-button.tsx',
       '_components/resolve-ahead-actions.tsx',
     ])

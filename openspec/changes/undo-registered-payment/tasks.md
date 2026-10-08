@@ -21,46 +21,37 @@
 
 ## 2. Paquetes compartidos
 
-- [ ] 2.1 `canUndo(instance)` en `packages/recurrences/src/review-surface.ts`, junto a `canUnlink`. Tests en `link-surface.test.ts`: sí para `created`, no para `linked`, `pending` ni `skipped`.
-- [ ] 2.2 `getRecurrenceLinkForTransaction` devuelve además:
-  - `due_date`;
-  - el nombre de la regla vía `recurrenceTitle`;
-  - el estado de la regla.
+- [x] 2.1 `canUndo(instance)` en `packages/recurrences/src/review-surface.ts`, junto a `canUnlink`. Tests en `link-surface.test.ts`: sí para `created`, no para `linked`, `pending` ni `skipped`.
+- [x] 2.2 `getRecurrenceLinkForTransaction` devuelve además `due_date` y la regla (estado y los datos para `recurrenceTitle`). `occurrenceAfterDelete` decide, una vez para las dos apps, si el vencimiento vuelve a revisión o sale del historial. Tests en `link-for-transaction.test.ts`, incluido el pago viejo.
+- [x] 2.3 `deleteMovementExplained` y `deleteErrorMessageKeys` en `packages/recurrences/src/undo.ts`. Es la llamada de las dos puertas en las dos apps: en un `GRN01` describe qué liquidación traba, y el mapeo dice dónde se resuelve cada rechazo. Tests en `delete-messages.test.ts`.
+- [x] 2.4 Mensajes en `es.json` y `en.json`:
+  - `transactions.delete_errors.*`;
+  - `recurrences.link.undo*`, `undone_success*` y `delete_*`.
 
-  Test de la lectura con un pago viejo (`due_date null`).
-- [ ] 2.3 Mensajes en `packages/i18n-messages/src/es.json` y `en.json`. Verificar que existen en los dos catálogos:
-  - el botón «Deshacer» y su estado en curso;
-  - el título y el cuerpo de la confirmación, con la variante de pago viejo y regla eliminada;
-  - la línea nueva del diálogo de eliminar;
-  - el texto de `paid` que dice dónde se resuelve;
-  - las claves de guarda de borrado para nativo.
+  Test de catálogo en `apps/web/lib/recurrences/__tests__/link-error-catalog.test.ts`.
 
 ## 3. Web
 
-- [ ] 3.1 Acción de borrado (`apps/web/app/_actions/transactions.ts`):
-  - `GRN01` usa `describeBlockingSettlements` y los textos de `recurrences.link.errors.blocked_*`;
-  - `paid` dice dónde se resuelve;
-  - si el movimiento resolvía una ocurrencia, revalida también `revalidateAfterRecurrenceMutation()`.
+- [x] 3.1 La acción `deleteTransaction` usa `deleteMovementExplained` y traduce con `deleteErrorMessageKeys`:
+  - `GRN01` dice revertir o cancelar según la liquidación;
+  - `paid` dice dónde se resuelve.
 
-  Verificar con un test de la acción o del mapeo.
-- [ ] 3.2 Diálogo de eliminar del detalle (`detail-actions.tsx` + `page.tsx`): la línea «El vencimiento del … de … vuelve a quedar por revisar», o la variante de pago viejo. Verificar a 360 px.
-- [ ] 3.3 Botón «Deshacer» en `recurrence-instances-list.tsx`, en el lugar de «Desvincular».
-  - Usa el primitivo `Button` y un `AlertDialog` de confirmación.
-  - Llama a la acción de borrado con el `confirmed_transaction_id`.
-  - Los errores se muestran inline, igual que desvincular.
-
-  Verificar a 360 px que la fila no se rompe.
+  Revalida también las rutas de recurrencias.
+- [x] 3.2 Diálogo de eliminar del detalle: `page.tsx` arma `occurrenceNotice` (el saldo cambia, y qué vencimiento de qué regla vuelve a revisión o sale del historial) y `DetailActions` lo muestra. Después de borrar, invalida también por revisar.
+- [x] 3.3 `UndoInstanceButton` en la fila del historial, junto a «Desvincular».
+  - Usa los primitivos `Button` y `Dialog`, con confirmación destructiva.
+  - Llama a la misma acción de borrado con el `confirmed_transaction_id`.
+  - El rechazo se lee dentro del diálogo.
+  - `notice-wiring.test.ts` lo suma a los consumidores del acuse.
 
 ## 4. Nativo
 
-- [ ] 4.1 `deleteMovement` (`apps/mobile/lib/transactions/mutators.ts`) localiza cada guarda de borrado y `GRN01` (con `describeBlockingSettlements`) en vez de `generic`. Test en `apps/mobile/lib/**/__tests__`.
-- [ ] 4.2 Detalle nativo (`app/(app)/transactions/[txId]/index.tsx`):
-  - la línea del vencimiento en la confirmación;
-  - después de borrar, `invalidateAfterRecurrenceResolution`.
-- [ ] 4.3 Botón «Deshacer» en `components/recurrences/RecurrenceInstancesList.tsx`.
-  - Usa el `Button` de la app, sin íconos girados con `transform`.
-  - Confirmación con `Alert.alert` destructivo, y después `invalidateAfterRecurrenceResolution`.
-- [ ] 4.4 Sumar los llamadores de `deleteMovement` a `invalidation-wiring.test.ts`. Verificar que falla si se usa la invalidación angosta.
+- [x] 4.1 `deleteMovement` usa `deleteMovementExplained` y localiza con `deleteErrorMessageKeys`, en vez de caer siempre en `generic`. Test en `apps/mobile/lib/transactions/__tests__/delete-errors.test.ts`.
+- [x] 4.2 Detalle nativo:
+  - la confirmación agrega la línea del vencimiento, con las mismas claves que web;
+  - después de borrar, `invalidateAfterRecurrenceResolution`, que incluye Compartido.
+- [x] 4.3 «Deshacer» en `RecurrenceInstancesList.tsx`, con el `Button` de la app y sin íconos. Confirmación con `Alert.alert` destructivo, y después `invalidateAfterRecurrenceResolution`.
+- [x] 4.4 `invalidation-wiring.test.ts` suma `deleteMovement` a las mutaciones vigiladas. Sus dos llamadores usan la invalidación ancha.
 
 ## 5. Spec y cierre
 
