@@ -55,11 +55,17 @@
 
 ## 5. Spec y cierre
 
-- [ ] 5.1 Verificar que el texto del spec coincide con lo implementado, en especial los copys y la variante de pago viejo. `pnpm openspec:check` en verde.
-- [ ] 5.2 `git fetch origin main` y `pnpm verify` en verde. Reintentar `pnpm build` si falla bajando Google Fonts.
-- [ ] 5.3 Dejar listo el QA manual para el usuario: web a 360 px y simulador iOS con la cuenta «Juli», regla «Prueba recurr».
+- [x] 5.1 El texto del spec coincide con lo implementado. Se ajustó el escenario del consumo pagado: el detalle no ofrece «Eliminar» (ya era así), y el rechazo con la explicación sale por «Deshacer». `pnpm openspec:check` en verde.
+- [x] 5.2 `git fetch origin main` y `pnpm verify`. Todo en verde salvo dos fallas que no son de este change:
+  - `check:unarchived`, que pide archivar, y este paso lo resuelve;
+  - `schedule-effective-from.test.ts`, que falla los días 8 de cada mes y falla igual en `main` (está en findings).
+
+  Lint, typecheck web y nativo, todas las demás pruebas y `pnpm build` pasan.
+- [x] 5.3 QA manual listo para el usuario: web a 360 px y simulador iOS con la cuenta «Juli», regla «Prueba recurr».
   - deshacer desde la ficha;
   - eliminar desde el detalle;
   - eliminar un vinculado;
   - desvincular y ver los datos de la regla;
   - el bloqueo por resumen pagado.
+
+  Antes hay que aplicar 0075 en el SQL Editor.
