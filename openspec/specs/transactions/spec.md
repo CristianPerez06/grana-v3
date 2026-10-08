@@ -1691,9 +1691,9 @@ Omitir una ocurrencia NO SHALL impedir que se materialicen ni se resuelvan las s
 
 ### Requirement: El usuario puede editar una instancia antes de confirmarla
 
-El sistema SHALL permitir editar los campos mutables de una instancia recurrente pendiente antes de confirmarla. Los cambios de fecha, descripcion, categoria, subcategoria y **cuenta** SHALL aplicar a la instancia puntual. Si el usuario modifica el monto, el sistema SHALL actualizar tambien el monto de la regla recurrente.
+El sistema SHALL permitir editar los campos mutables de una instancia recurrente pendiente antes de confirmarla. Los cambios de fecha, descripcion, categoria, subcategoria, **cuenta** y **monto** SHALL aplicar a la instancia puntual y NO SHALL propagarse a la regla recurrente. El monto se propagaba antes, mientras una regla sólo podía tener una ocurrencia pendiente. Con varias ocurrencias resolubles en cualquier orden, resolver junio, julio y agosto con montos distintos dejaría en la regla el último que se escribió: un resultado que depende del orden de ejecución. Cambiar el monto de la regla es una acción aparte y explícita: editar la regla.
 
-El cambio de **cuenta** SHALL ser un override de la instancia puntual y NO SHALL propagarse a la regla recurrente: las instancias futuras se siguen generando con la cuenta de la regla. Es la diferencia deliberada con el monto — usar otro medio de pago una vez no redefine el medio por defecto.
+El cambio de **cuenta** SHALL ser un override de la instancia puntual y NO SHALL propagarse a la regla recurrente: las instancias futuras se siguen generando con la cuenta de la regla. Usar otro medio de pago una vez no redefine el medio por defecto.
 
 La confirmación SHALL registrar la transacción real en la cuenta efectiva de la instancia, y SHALL derivar el tipo de movimiento resultante del tipo de esa cuenta: una cuenta de crédito produce un consumo de tarjeta (con su asignación de período), una cuenta cash/bank produce un movimiento on-ledger. La instancia confirmada SHALL conservar la cuenta con la que se confirmó, no la de la regla.
 
@@ -1706,11 +1706,11 @@ Cuando la cuenta de la regla está archivada, el sistema SHALL permitir resolver
 - **WHEN** el usuario cambia la fecha de una instancia pendiente de tarjeta
 - **THEN** la confirmacion usa la nueva fecha para asignar el `card_period_id`
 
-#### Scenario: Editar monto y actualizar regla
+#### Scenario: Editar el monto no cambia la regla
 
-- **WHEN** el usuario cambia el monto de una instancia pendiente
-- **THEN** la instancia se confirma con el nuevo monto
-- **AND** las futuras instancias de la regla se generan con ese nuevo monto
+- **WHEN** el usuario confirma una instancia de una regla de $500 cambiando el monto a $620
+- **THEN** la instancia se confirma con $620
+- **AND** la regla sigue siendo de $500, y las siguientes instancias se generan con $500
 
 #### Scenario: Editar la cuenta no cambia la regla
 
