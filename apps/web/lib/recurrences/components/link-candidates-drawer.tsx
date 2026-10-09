@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import type { LinkCandidate } from '@grana/recurrences'
+import { linkAmountDiffers, recurrenceTitle, type LinkCandidate } from '@grana/recurrences'
+import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
@@ -66,6 +67,8 @@ export const LinkCandidatesDrawer = ({
   onLinked,
 }: Props) => {
   const t = useTranslations('recurrences.link')
+  const tTx = useTranslations('transactions')
+  const tRoot = useTranslations()
   const [error, setError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState<LinkCandidate | null>(null)
   const [pending, startTransition] = useTransition()
@@ -167,7 +170,18 @@ export const LinkCandidatesDrawer = ({
             ) : (
               <ul>
                 {candidates.map((candidate) => {
-                  const differs = Math.abs(candidate.amount - ruleAmount) > 0.004
+                  const differs = linkAmountDiffers(candidate.amount, ruleAmount)
+                  // El mismo orden con que la app nombra una regla o una
+                  // ocurrencia; la etiqueta del tipo nunca falta, así que
+                  // ninguna fila queda sin nombre (#190).
+                  const title = recurrenceTitle({
+                    description: candidate.description,
+                    subcategory: candidate.subcategory
+                      ? getSubcategoryName(candidate.subcategory, tRoot)
+                      : null,
+                    category: candidate.category ? getCategoryName(candidate.category, tRoot) : null,
+                    type: tTx(`types.${candidate.type}` as 'types.income'),
+                  })
                   return (
                     <li
                       key={candidate.id}
@@ -180,15 +194,15 @@ export const LinkCandidatesDrawer = ({
                         className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-page/50 disabled:opacity-60"
                       >
                         <div className="flex min-w-0 flex-1 flex-col">
-                          {/* Sin descripción se dice que no la tiene. Caer en la
-                              fecha la imprimía dos veces seguidas, una como
-                              nombre y otra como subtítulo, y esa fila no decía
-                              nada de lo que se está eligiendo. */}
                           <span className="truncate text-[14.5px] font-semibold text-text">
-                            {candidate.description?.trim() || t('no_description')}
+                            {title}
                           </span>
-                          <span className="text-[12.5px] text-text-muted">
-                            {formatDay(candidate.date)}
+                          {/* La cuenta, para distinguir dos filas iguales en nombre
+                              e importe: «Visa Galicia · 18 sept». */}
+                          <span className="truncate text-[12.5px] text-text-muted">
+                            {candidate.account
+                              ? `${candidate.account.name} · ${formatDay(candidate.date)}`
+                              : formatDay(candidate.date)}
                           </span>
                           {differs ? (
                             <span className="mt-0.5 text-[12px] text-text-soft">

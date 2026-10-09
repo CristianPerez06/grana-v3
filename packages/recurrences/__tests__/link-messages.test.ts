@@ -17,6 +17,7 @@ import {
 
 const CODES: LinkErrorCode[] = [
   'movement_incompatible',
+  'movement_not_linkable',
   'movement_already_linked',
   'movement_shared_elsewhere',
   'conversion_not_confirmed',

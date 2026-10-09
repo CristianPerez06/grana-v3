@@ -59,6 +59,7 @@ export function linkErrorMessageKeys(result: {
  */
 export const LINK_ERROR_MESSAGE_KEYS: readonly string[] = [
   'errors.movement_incompatible',
+  'errors.movement_not_linkable',
   'errors.movement_already_linked',
   'errors.movement_shared_elsewhere',
   'errors.conversion_not_confirmed',

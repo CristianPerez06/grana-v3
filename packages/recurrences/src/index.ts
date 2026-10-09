@@ -112,6 +112,7 @@ export {
 } from './review-surface'
 export {
   getRecurrenceLinkCandidates,
+  linkAmountDiffers,
   linkMovementToRecurrence,
   unlinkMovementFromRecurrence,
   registerRecurrenceAhead,

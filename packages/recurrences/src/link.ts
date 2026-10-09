@@ -12,6 +12,7 @@
 
 import type { GranaSupabaseClient } from '@grana/supabase'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
+import { Money } from '@grana/validation'
 import {
   createExpense,
   createIncome,
@@ -24,7 +25,13 @@ import {
   type InstanceSnapshot,
 } from './mapper'
 import type { RecurrenceActionResult } from './mutations'
-import type { RecurrenceCurrencyCode, RecurrenceMovementType } from './types'
+import type {
+  RecurrenceAccount,
+  RecurrenceCategory,
+  RecurrenceCurrencyCode,
+  RecurrenceMovementType,
+  RecurrenceSubcategory,
+} from './types'
 
 // ── Candidatos ───────────────────────────────────────────────────────────────
 
@@ -39,7 +46,33 @@ export type LinkCandidate = {
   is_shared: boolean
   /** El movimiento es personal y la regla es compartida: vincularlo lo convierte. */
   needs_conversion: boolean
+  /**
+   * Con qué se nombra la fila (#190): la cuenta y la clasificación del
+   * movimiento, en la misma forma que traen las ocurrencias (`INSTANCE_SELECT`),
+   * para que cada app los traduzca con los ayudantes que ya usa y los ordene con
+   * `recurrenceTitle`.
+   */
+  account: RecurrenceAccount | null
+  category: RecurrenceCategory | null
+  subcategory: RecurrenceSubcategory | null
+  /** El último recurso del nombre («Gasto», «Ingreso»…): nunca falta. */
+  type: RecurrenceMovementType
 }
+
+type LinkCandidateNames = Pick<LinkCandidate, 'account' | 'category' | 'subcategory' | 'type'> & {
+  id: string
+}
+
+type LinkCandidateRow = Omit<LinkCandidate, 'account' | 'category' | 'subcategory' | 'type'>
+
+/** Las mismas columnas que embebe `INSTANCE_SELECT` para una ocurrencia. */
+const CANDIDATE_NAMES_SELECT = `
+  id,
+  type,
+  account:accounts!transactions_account_id_fkey(id, name, type),
+  category:categories(id, name, canonical_name, color, icon, user_id),
+  subcategory:subcategories(id, name, canonical_name, category_id, user_id)
+`
 
 /**
  * Los movimientos que se pueden ofrecer para resolver un vencimiento.
@@ -61,7 +94,50 @@ export async function getRecurrenceLinkCandidates(
     p_widen: args.widen ?? false,
   })
   if (error) throw new Error(error.message)
-  return (data ?? []) as LinkCandidate[]
+  const rows = (data ?? []) as LinkCandidateRow[]
+  if (rows.length === 0) return []
+
+  // LOS NOMBRES, APARTE DEL RPC. Qué entra y en qué orden lo decide la base; con
+  // qué se nombra cada fila sale de la misma lectura embebida que ya usan las
+  // ocurrencias. Ponerlo en el RPC obligaba a cambiar su tipo de retorno y dejaba
+  // dos formas de traer una clasificación.
+  const { data: names, error: namesError } = await supabase
+    .from('transactions')
+    .select(CANDIDATE_NAMES_SELECT)
+    .in(
+      'id',
+      rows.map((row) => row.id),
+    )
+  if (namesError) throw new Error(namesError.message)
+
+  const namesById = new Map(
+    ((names ?? []) as unknown as LinkCandidateNames[]).map((row) => [row.id, row]),
+  )
+  // Se conserva el ORDEN DEL RPC, que es el de proximidad. Un id que no vuelve en
+  // la segunda lectura se borró entre las dos: se descarta en vez de mostrarse
+  // sin nombre, porque vincularlo fallaría igual.
+  return rows.flatMap((row) => {
+    const named = namesById.get(row.id)
+    if (!named) return []
+    return [
+      {
+        ...row,
+        account: named.account ?? null,
+        category: named.category ?? null,
+        subcategory: named.subcategory ?? null,
+        type: named.type,
+      },
+    ]
+  })
+}
+
+/**
+ * ¿El importe del candidato difiere del de la regla? Decide si la fila muestra
+ * «La regla venía de…». Con `Money`, no con números crudos: las dos pantallas
+ * hacían `Math.abs(a - b) > 0.004`, aritmética de coma flotante sobre plata.
+ */
+export function linkAmountDiffers(candidateAmount: number | string, ruleAmount: number | string): boolean {
+  return Money.compare(Money.from(candidateAmount), Money.from(ruleAmount)) !== 0
 }
 
 // ── Por qué no se puede desvincular ──────────────────────────────────────────
@@ -164,6 +240,7 @@ export async function describeBlockingSettlements(
 /** Los rechazos que el RPC distingue, para que la UI diga cuál fue. */
 export type LinkErrorCode =
   | 'movement_incompatible'
+  | 'movement_not_linkable'
   | 'movement_already_linked'
   | 'movement_shared_elsewhere'
   | 'conversion_not_confirmed'
@@ -181,6 +258,9 @@ const RPC_ERROR_BY_SQLSTATE: Record<string, LinkErrorCode> = {
   GRN16: 'not_an_occurrence',
   GRN17: 'beyond_limit',
   GRN18: 'already_resolved',
+  // 0076: una cuota, el débito de un pago de resumen, un reintegro o una
+  // liquidación — lo que la lista no ofrece.
+  GRN19: 'movement_not_linkable',
 }
 
 /**

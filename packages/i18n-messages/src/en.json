@@ -1917,7 +1917,6 @@
       "candidates_title": "Which one is it?",
       "candidates_subtitle": "Your movements around the {date} due date",
       "candidates_empty": "We found no movements near that date.",
-      "no_description": "Movement with no description",
       "widen": "Widen the search",
       "widened": "Showing a wider period",
       "amount_differs": "The rule was at {ruleAmount}; this movement is {amount}.",
@@ -1942,6 +1941,7 @@
       "convert_cancel": "Cancel",
       "errors": {
         "movement_incompatible": "That movement is not the same type or currency as the rule.",
+        "movement_not_linkable": "That movement can't settle a due date: it's an installment, a statement payment, a reimbursement or a settlement.",
         "movement_already_linked": "That movement is already linked to another due date.",
         "movement_shared_elsewhere": "That movement is shared with a different split. Fix its split and try again.",
         "conversion_not_confirmed": "You need to confirm that the expense becomes shared.",

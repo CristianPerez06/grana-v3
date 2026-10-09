@@ -1917,7 +1917,6 @@
       "candidates_title": "¿Cuál de estos es?",
       "candidates_subtitle": "Movimientos tuyos cerca del vencimiento del {date}",
       "candidates_empty": "No encontramos movimientos cerca de esa fecha.",
-      "no_description": "Movimiento sin descripción",
       "widen": "Ampliar la búsqueda",
       "widened": "Mostrando un período más amplio",
       "amount_differs": "La regla venía de {ruleAmount}; este movimiento es de {amount}.",
@@ -1942,6 +1941,7 @@
       "convert_cancel": "Cancelar",
       "errors": {
         "movement_incompatible": "Ese movimiento no es del mismo tipo o moneda que la regla.",
+        "movement_not_linkable": "Ese movimiento no puede resolver un vencimiento: es una cuota, el pago de un resumen, un reintegro o una liquidación.",
         "movement_already_linked": "Ese movimiento ya está vinculado a otro vencimiento.",
         "movement_shared_elsewhere": "Ese movimiento está compartido con otro reparto. Arreglá su reparto y volvé a intentarlo.",
         "conversion_not_confirmed": "Hace falta confirmar que el gasto pase a ser compartido.",

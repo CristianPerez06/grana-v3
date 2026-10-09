@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
-import type { LinkCandidate } from '@grana/recurrences'
+import { linkAmountDiffers, recurrenceTitle, type LinkCandidate } from '@grana/recurrences'
 import { SelectSheet } from '../ui/SelectSheet'
 import { Button } from '../ui/Button'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { fmtMoney, formatShortDate } from '../transactions/detail/format'
+import { categoryName, movementLabel, subcategoryName } from './format'
 
 type Props = {
   visible: boolean
@@ -147,7 +148,15 @@ export function LinkCandidatesSheet({
         </View>
       }
       renderRow={(candidate) => {
-        const differs = Math.abs(candidate.amount - ruleAmount) > 0.004
+        const differs = linkAmountDiffers(candidate.amount, ruleAmount)
+        // El mismo orden con que la app nombra una regla o una ocurrencia; la
+        // etiqueta del tipo nunca falta. Gemelo de web (#190).
+        const title = recurrenceTitle({
+          description: candidate.description,
+          subcategory: subcategoryName(candidate.subcategory, t),
+          category: categoryName(candidate.category, t),
+          type: movementLabel(candidate.type, t),
+        })
         return (
           <Pressable
             onPress={() => pick(candidate)}
@@ -156,12 +165,14 @@ export function LinkCandidatesSheet({
           >
             <View className="min-w-0 flex-1">
               <Text className="text-[14.5px] font-semibold text-text" numberOfLines={1}>
-                {/* `trim() ||` y no `??`: una descripción de puros espacios no
-                    es null, y dejaba la fila con el nombre en blanco. */}
-                {candidate.description?.trim() || t('recurrences.link.no_description')}
+                {title}
               </Text>
-              <Text className="text-[12.5px] text-text-muted">
-                {formatShortDate(candidate.date, locale)}
+              {/* La cuenta, para distinguir dos filas iguales en nombre e
+                  importe: «Visa Galicia · 18 sept». */}
+              <Text className="text-[12.5px] text-text-muted" numberOfLines={1}>
+                {candidate.account
+                  ? `${candidate.account.name} · ${formatShortDate(candidate.date, locale)}`
+                  : formatShortDate(candidate.date, locale)}
               </Text>
               {differs ? (
                 <Text className="mt-0.5 text-[12px] text-text-soft">

@@ -36,6 +36,7 @@ export const MIGRATION_0071 = read('0071_pause_looks_forward.sql')
 export const MIGRATION_0072 = read('0072_recurrence_link_movement.sql')
 export const MIGRATION_0074 = read('0074_link_snapshot_follows_the_movement.sql')
 export const MIGRATION_0075 = read('0075_undo_reopens_occurrence.sql')
+export const MIGRATION_0076 = read('0076_link_eligibility.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -180,7 +181,18 @@ const SCHEMA = `
     is_shared boolean not null default false,
     household_id uuid,
     is_parent boolean not null default false,
+    -- La cuota apunta a su compra (0010). 0076 la excluye de lo vinculable.
+    parent_id uuid references public.transactions(id) on delete cascade,
     due_date date
+  );
+
+  -- Las patas de un pago de resumen (0061), reducidas a lo que 0076 mira: qué
+  -- movimiento es el débito y cuál el impuesto de sellos.
+  create table public.period_payments (
+    id uuid primary key default gen_random_uuid(),
+    period_id uuid not null default gen_random_uuid(),
+    transaction_id uuid references public.transactions(id) on delete restrict,
+    stamp_tax_transaction_id uuid references public.transactions(id) on delete set null
   );
 
   -- El reparto por miembro, y la liquidación: lo que la rama compartida de
@@ -281,6 +293,7 @@ export async function createRecurrenceIdentityDb(
     seedRepair?: boolean
     snapshotFix?: boolean
     undoReopens?: boolean
+    linkEligibility?: boolean
   } = {},
 ): Promise<PGlite> {
   const db = new PGlite()
@@ -311,6 +324,15 @@ export async function createRecurrenceIdentityDb(
       // revisión, y volver a revisión trae los datos de la regla. Se puede
       // saltear (`undoReopens: false`) para reproducir #104.
       if (options.undoReopens !== false) await db.exec(MIGRATION_0075)
+      // 0076: una sola definición de qué movimiento puede resolver un
+      // vencimiento, la que comparten la lista y vincular. Se puede saltear
+      // (`linkEligibility: false`) para reproducir #190. Reescribe vincular
+      // entera con el cuerpo de 0074, así que un arnés que saltea 0074 para
+      // reproducir su defecto también la saltea: sino lo arreglaría por la otra
+      // puerta.
+      if (options.linkEligibility !== false && options.snapshotFix !== false) {
+        await db.exec(MIGRATION_0076)
+      }
     }
   }
   return db

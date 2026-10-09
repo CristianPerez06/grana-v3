@@ -180,6 +180,10 @@ class Query implements PromiseLike<{ data: unknown[] | null; error: QueryError |
         row[embed.alias] = related.get(row[embed.fkColumn]) ?? null
       }
     }
+    for (const embed of this.embeds) {
+      if (!embed.dropFkColumn) continue
+      for (const row of typed) delete row[embed.fkColumn]
+    }
     return typed
   }
 }
@@ -250,7 +254,14 @@ const PGLITE_QUERY_OPTIONS = {
  * An embedded resource in a PostgREST select: `alias:table(cols)`, optionally
  * with a `!constraint` hint when two foreign keys point at the same table.
  */
-type Embed = { alias: string; table: string; columns: string; fkColumn: string }
+type Embed = {
+  alias: string
+  table: string
+  columns: string
+  fkColumn: string
+  /** The select did not name the key: fetched to join, then removed from the row. */
+  dropFkColumn?: boolean
+}
 
 /** Split a select list on commas that are NOT inside an embed's parentheses. */
 function splitSelect(select: string): string[] {
@@ -308,7 +319,19 @@ function parseSelect(
     })
   }
 
-  return { columns: columns.length === 0 ? '*' : columns.join(', '), embeds }
+  if (columns.length === 0) return { columns: '*', embeds }
+  // `*` ya trae todas las claves: nada que agregar ni que sacar después.
+  if (columns.includes('*')) return { columns: columns.join(', '), embeds }
+  // PostgREST resuelve un embebido aunque el select no nombre su clave foránea,
+  // y no la devuelve. Acá la clave se pide igual —sin ella no hay con qué
+  // unir— y `attachEmbeds` la saca de la fila si nadie la pidió.
+  for (const embed of embeds) {
+    if (!columns.includes(embed.fkColumn)) {
+      columns.push(embed.fkColumn)
+      embed.dropFkColumn = true
+    }
+  }
+  return { columns: columns.join(', '), embeds }
 }
 
 function quote(value: unknown): string {
