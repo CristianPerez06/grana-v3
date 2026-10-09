@@ -17,5 +17,5 @@
 
 ## 4. Verificación
 
-- [ ] 4.1 `pnpm verify` en verde.
+- [x] 4.1 `pnpm verify` en verde.
 - [ ] 4.2 Pegar 0076 en el SQL Editor del proyecto online (paso manual del usuario) y recorrer los pasos de verificación del #190 en web a ancho de teléfono y en la app nativa.

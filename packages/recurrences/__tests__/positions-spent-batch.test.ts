@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { PGlite } from '@electric-sql/pglite'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { getRecurrences } from '../src/queries'
 import {
   actAs,
@@ -86,6 +87,16 @@ async function database(): Promise<PGlite> {
             3, '2026-07-10', '${SEED_TX}');
   `)
 
+  // The effective date has to be one of the rule's NEXT occurrences as of the
+  // real today: 0068 reads `now()`, which a test cannot freeze. A fixed date here
+  // was a time bomb — '2026-10-08' stopped being "next" on 2026-10-09 and the
+  // whole suite failed to build its database. The first 8th after today is
+  // always one, while the rule's cap (11 from March 2026) still has room.
+  const today = getTodayAR()
+  const effective = formatDateISO(
+    new Date(today.getFullYear(), today.getMonth() + (today.getDate() < 8 ? 0 : 1), 8),
+  )
+
   // The anchor correction, through the only door there is: a plain `update` of
   // `start_date` is refused since 0068, because moving an anchor has to say from
   // when. This is what leaves `schedule_positions_before` carrying the positions
@@ -93,7 +104,7 @@ async function database(): Promise<PGlite> {
   await actAs(db, U_A)
   await db.exec(`
     select public.update_recurrence_schedule(
-      '${CORRECTED}'::uuid, jsonb_build_object('start_date', '2026-05-08'::date), '2026-10-08'::date
+      '${CORRECTED}'::uuid, jsonb_build_object('start_date', '2026-05-08'::date), '${effective}'::date
     );
   `)
   await actAsAdmin(db)

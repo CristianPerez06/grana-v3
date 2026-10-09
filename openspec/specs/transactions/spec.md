@@ -5511,6 +5511,35 @@ de dos vencimientos consecutivos se superponga es **aceptado a propósito**: la 
 sabe a qué período correspondió un pago, y quien sabe es el usuario. Un movimiento ya vinculado
 desaparece de toda otra lista, así que no puede resolver dos vencimientos.
 
+**QUÉ NUNCA ES CANDIDATO.** Hay movimientos que no son el pago de una obligación recurrente aunque
+coincidan en tipo, moneda y fecha. NO SHALL ofrecerse, ni siquiera al ampliar la búsqueda:
+
+- **una compra en cuotas**: ni la compra original ni ninguna de sus cuotas. Una cuota no es un
+  movimiento que el usuario pueda borrar o editar por sí sola, y las reglas recurrentes ya excluyen
+  las compras en cuotas como origen;
+- **el débito con que se pagó un resumen de tarjeta, y su impuesto de sellos**: los crea y los borra
+  la operación de pagar o revertir el resumen, no el usuario. Si uno resolviera un vencimiento,
+  revertir el pago desde Tarjetas reabriría ese vencimiento sin que ninguna pantalla lo dijera;
+- **un reintegro o una liquidación de Compartido**: no son movimientos del usuario en este sentido.
+
+Una compra con tarjeta **en un solo pago** SÍ es candidata: es el caso típico de un servicio que se
+paga con la tarjeta.
+
+**VINCULAR APLICA LA MISMA REGLA QUE LA LISTA.** Qué movimiento se puede vincular SHALL decidirse en
+un solo lugar, que comparten la lista y la operación de vincular. Un movimiento que la lista no
+ofrecería SHALL rechazarse también al vincular, con un motivo propio —distinto del de tipo o moneda
+incompatible— y sin crear ni modificar ninguna ocurrencia. Sin eso, la lista sería la única defensa
+y cualquier otro camino podría vincular lo que ella esconde.
+
+Las ocurrencias que ya quedaron vinculadas a uno de esos movimientos antes de esta regla NO SHALL
+modificarse automáticamente: siguen resueltas y se pueden desvincular como cualquier otra.
+
+**CADA CANDIDATO SE RECONOCE SIN SALIR DE LA LISTA.** Cada fila SHALL nombrarse en el mismo orden con
+que la app nombra una regla o una ocurrencia —descripción, subcategoría, categoría, etiqueta del
+tipo; un texto en blanco cuenta como ausente— y SHALL mostrar además la **cuenta** del movimiento y
+su fecha. Una categoría o subcategoría del sistema SHALL mostrarse traducida al idioma del usuario.
+Como la etiqueta del tipo nunca falta, ninguna fila SHALL quedar sin nombre.
+
 **EL IMPORTE Y LA CUENTA ORDENAN, NO EXCLUYEN.** El sistema SHALL ordenar los candidatos por
 proximidad —misma cuenta primero, luego importe más parecido, luego fecha más cercana al
 vencimiento— y NO SHALL usar ninguno de esos criterios para dejar un movimiento fuera de la lista. Un
@@ -5607,6 +5636,50 @@ dirección, para que un pago hecho antes del primer vencimiento siga entrando.
 - **WHEN** el vencimiento del `2026-09-23` es el primero de su regla mensual y el usuario cargó un
   gasto el `2026-09-03`
 - **THEN** ese gasto aparece entre los candidatos
+
+#### Scenario: Un candidato sin descripción se nombra por su clasificación y su cuenta
+
+- **WHEN** dentro de la ventana hay un gasto sin descripción, de la subcategoría «Supermercado»,
+  cargado en la cuenta «Visa Galicia»
+- **THEN** la fila se llama «Supermercado» y muestra «Visa Galicia» y su fecha
+- **AND** ninguna fila dice «Movimiento sin descripción»
+
+#### Scenario: Un candidato con descripción se nombra por ella
+
+- **WHEN** un gasto de la ventana tiene la descripción «Alquiler depto» y la categoría «Vivienda»
+- **THEN** la fila se llama «Alquiler depto»
+
+#### Scenario: Las cuotas no se ofrecen
+
+- **WHEN** el usuario compró en 6 cuotas con su tarjeta y una de las cuotas cae dentro de la ventana
+  de una regla de gasto en pesos
+- **THEN** ni la compra ni ninguna de sus cuotas aparece entre los candidatos
+- **AND** tampoco aparecen al ampliar la búsqueda
+
+#### Scenario: Una compra con tarjeta en un pago sí se ofrece
+
+- **WHEN** el usuario pagó un servicio con su tarjeta en un solo pago, dentro de la ventana
+- **THEN** esa compra aparece entre los candidatos
+
+#### Scenario: El débito de un pago de resumen no se ofrece
+
+- **WHEN** el usuario pagó el resumen de su tarjeta desde su cuenta bancaria dentro de la ventana de
+  una regla de gasto, con impuesto de sellos
+- **THEN** ni el débito del pago ni el impuesto de sellos aparecen entre los candidatos
+
+#### Scenario: Vincular rechaza lo que la lista no ofrece
+
+- **WHEN** se intenta vincular a un vencimiento una cuota de una compra en cuotas, o el débito de un
+  pago de resumen, por un camino que no es la lista
+- **THEN** la operación se rechaza diciendo que ese movimiento no puede resolver un vencimiento
+- **AND** el vencimiento sigue sin resolver
+- **AND** no queda ninguna ocurrencia nueva
+
+#### Scenario: Un vínculo previo a una cuota se conserva y se puede deshacer
+
+- **WHEN** antes de esta regla el usuario había vinculado una cuota a un vencimiento
+- **THEN** ese vencimiento sigue resuelto con esa cuota
+- **AND** el usuario puede desvincularlo, y el vencimiento vuelve a «por revisar»
 
 ### Requirement: El usuario puede desvincular un movimiento de un vencimiento
 
