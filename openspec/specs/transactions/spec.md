@@ -5520,6 +5520,10 @@ coincidan en tipo, moneda y fecha. NO SHALL ofrecerse, ni siquiera al ampliar la
 - **el débito con que se pagó un resumen de tarjeta, y su impuesto de sellos**: los crea y los borra
   la operación de pagar o revertir el resumen, no el usuario. Si uno resolviera un vencimiento,
   revertir el pago desde Tarjetas reabriría ese vencimiento sin que ninguna pantalla lo dijera;
+  el sello de un pago registrado antes de que la app atara cada sello a su pago también queda
+  afuera: es el impuesto de sellos que la app cargó en la tarjeta, dentro del resumen de ese pago.
+  Un impuesto de sellos cargado a mano en una cuenta propia SÍ es candidato: puede ser justamente
+  un gasto que se repite;
 - **un reintegro o una liquidación de Compartido**: no son movimientos del usuario en este sentido.
 
 Una compra con tarjeta **en un solo pago** SÍ es candidata: es el caso típico de un servicio que se
@@ -5540,11 +5544,21 @@ tipo; un texto en blanco cuenta como ausente— y SHALL mostrar además la **cue
 su fecha. Una categoría o subcategoría del sistema SHALL mostrarse traducida al idioma del usuario.
 Como la etiqueta del tipo nunca falta, ninguna fila SHALL quedar sin nombre.
 
-**EL IMPORTE Y LA CUENTA ORDENAN, NO EXCLUYEN.** El sistema SHALL ordenar los candidatos por
-proximidad —misma cuenta primero, luego importe más parecido, luego fecha más cercana al
-vencimiento— y NO SHALL usar ninguno de esos criterios para dejar un movimiento fuera de la lista. Un
-alquiler que aumentó es justo el caso en que el usuario más necesita encontrarlo, y filtrar por
-importe lo esconde exactamente ahí.
+**EL NOMBRE, EL IMPORTE Y LA FECHA ORDENAN, NO EXCLUYEN.** El sistema SHALL ordenar los candidatos
+así:
+
+1. **primero, los que coinciden por nombre con la regla.** Si la regla tiene descripción, coincide
+   un movimiento con la misma descripción, sin distinguir mayúsculas, acentos ni espacios en los
+   bordes. Si la regla no tiene descripción, coincide un movimiento de la misma subcategoría, o de
+   la misma categoría cuando la regla no tiene subcategoría;
+2. **después, el importe más parecido** al de la regla;
+3. **después, la fecha más cercana** al vencimiento.
+
+La cuenta NO SHALL intervenir en el orden: lo que el usuario reconoce de su gasto es qué fue, no
+desde dónde lo pagó, y una misma obligación se paga a veces con una tarjeta y a veces con otra.
+Ninguno de los tres criterios SHALL dejar un movimiento fuera de la lista. Un alquiler que aumentó
+es justo el caso en que el usuario más necesita encontrarlo, y filtrar por importe lo esconde
+exactamente ahí.
 
 **AMPLIAR LA BÚSQUEDA SHALL estar siempre disponible**, incluso cuando la lista ya trae candidatos —
 no sólo cuando queda vacía—. El sistema NO SHALL exigir que el usuario escriba una búsqueda para
@@ -5577,6 +5591,36 @@ dirección, para que un pago hecho antes del primer vencimiento siga entrando.
 - **WHEN** el vencimiento es el `2026-09-23`, la regla es mensual y el usuario cargó un gasto el
   `2026-09-03`
 - **THEN** ese gasto aparece en la lista inicial de candidatos
+
+#### Scenario: Lo que coincide por nombre va primero, aunque el importe sea otro
+
+- **WHEN** la regla se llama «Gimnasio», es de $1.500, y en la ventana hay un gasto «Gimnasio» de
+  $10.000 y un gasto «Cine» de $1.400
+- **THEN** «Gimnasio» aparece antes que «Cine»
+
+#### Scenario: Sin descripción, coincide la clasificación de la regla
+
+- **WHEN** la regla no tiene descripción y su subcategoría es «Supermercado», y en la ventana hay un
+  gasto de esa subcategoría por $9.000 y otro de otra subcategoría por $1.000
+- **THEN** el de «Supermercado» aparece primero
+
+#### Scenario: La cuenta no ordena
+
+- **WHEN** dos candidatos no coinciden por nombre, uno está en la cuenta de la regla y es de $5.000,
+  y el otro está en otra cuenta y es de $1.100, con una regla de $1.000
+- **THEN** el de $1.100 aparece primero
+
+#### Scenario: El sello de un pago anterior al vínculo no se ofrece
+
+- **WHEN** un resumen se pagó antes de que la app atara cada impuesto de sellos a su pago, y su
+  sello cae en la ventana
+- **THEN** ese sello no aparece entre los candidatos, tampoco al ampliar
+- **AND** vincularlo por otro camino se rechaza
+
+#### Scenario: Un impuesto de sellos cargado a mano en una cuenta sí se ofrece
+
+- **WHEN** el usuario cargó «Imp. sellos» como gasto en su cuenta bancaria, dentro de la ventana
+- **THEN** ese gasto aparece entre los candidatos
 
 #### Scenario: Un importe distinto no esconde el movimiento
 

@@ -240,7 +240,7 @@ describe('recurrence_link_candidates', () => {
     expect((await candidates()).map((r) => r.id)).not.toContain(usd)
   })
 
-  it('ordena por proximidad: misma cuenta, después importe, después fecha', async () => {
+  it('ordena por proximidad: sin coincidencia de nombre, el importe más parecido primero', async () => {
     await makeRule({ amount: 1000 })
     const lejano = await makeMovement({ date: '2026-09-01', amount: 9999 })
     const cercano = await makeMovement({ date: '2026-09-20', amount: 1000 })

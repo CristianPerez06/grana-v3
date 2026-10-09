@@ -37,6 +37,7 @@ export const MIGRATION_0072 = read('0072_recurrence_link_movement.sql')
 export const MIGRATION_0074 = read('0074_link_snapshot_follows_the_movement.sql')
 export const MIGRATION_0075 = read('0075_undo_reopens_occurrence.sql')
 export const MIGRATION_0076 = read('0076_link_eligibility.sql')
+export const MIGRATION_0077 = read('0077_link_candidates_order_by_name.sql')
 
 export const U_A = '00000000-0000-0000-0000-0000000000a1'
 export const U_B = '00000000-0000-0000-0000-0000000000b2'
@@ -183,6 +184,9 @@ const SCHEMA = `
     is_parent boolean not null default false,
     -- La cuota apunta a su compra (0010). 0076 la excluye de lo vinculable.
     parent_id uuid references public.transactions(id) on delete cascade,
+    -- El resumen en que cae un consumo con tarjeta. 0077 lo usa para reconocer
+    -- el sello de un pago anterior al vínculo de 0050.
+    card_period_id uuid,
     due_date date
   );
 
@@ -192,7 +196,9 @@ const SCHEMA = `
     id uuid primary key default gen_random_uuid(),
     period_id uuid not null default gen_random_uuid(),
     transaction_id uuid references public.transactions(id) on delete restrict,
-    stamp_tax_transaction_id uuid references public.transactions(id) on delete set null
+    stamp_tax_transaction_id uuid references public.transactions(id) on delete set null,
+    -- 0050: false en los pagos anteriores al vínculo, que no saben cuál fue su sello.
+    stamp_tax_link_known boolean not null default true
   );
 
   -- El reparto por miembro, y la liquidación: lo que la rama compartida de
@@ -332,6 +338,8 @@ export async function createRecurrenceIdentityDb(
       // puerta.
       if (options.linkEligibility !== false && options.snapshotFix !== false) {
         await db.exec(MIGRATION_0076)
+        // 0077 redefine lo vinculable y el orden sobre 0076: viaja con ella.
+        await db.exec(MIGRATION_0077)
       }
     }
   }

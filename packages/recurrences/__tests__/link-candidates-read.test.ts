@@ -54,6 +54,7 @@ afterEach(async () => {
 
 const movement = async (opts: {
   amount: number
+  description?: string | null
   accountId?: string | null
   categoryId?: string | null
   subcategoryId?: string | null
@@ -61,11 +62,13 @@ const movement = async (opts: {
   await actAsAdmin(db)
   const { rows } = await db.query<{ id: string }>(`
     insert into public.transactions
-      (user_id, date, amount, type, currency_code, account_id, category_id, subcategory_id)
+      (user_id, date, amount, type, currency_code, account_id, category_id, subcategory_id,
+       description)
     values ('${U_A}', '${VENCE}', ${opts.amount}, 'expense', 'ARS',
             ${opts.accountId ? `'${opts.accountId}'` : 'null'},
             ${opts.categoryId ? `'${opts.categoryId}'` : 'null'},
-            ${opts.subcategoryId ? `'${opts.subcategoryId}'` : 'null'})
+            ${opts.subcategoryId ? `'${opts.subcategoryId}'` : 'null'},
+            ${opts.description ? `'${opts.description}'` : 'null'})
     returning id
   `)
   return rows[0].id
@@ -107,14 +110,14 @@ describe('getRecurrenceLinkCandidates — con qué se nombra cada fila', () => {
     })
   })
 
-  it('conserva el orden de proximidad del RPC', async () => {
-    // El RPC ordena misma cuenta primero, después importe más parecido. La
-    // segunda lectura vuelve en el orden que se le ocurra a la base: la fusión
-    // tiene que respetar el del RPC.
+  it('conserva el orden del RPC', async () => {
+    // La segunda lectura vuelve en el orden que se le ocurra a la base: la fusión
+    // tiene que respetar el del RPC. Sin coincidencia por nombre ordena el
+    // importe, y la cuenta de la regla no adelanta a nadie (0077).
     const lejos = await movement({ amount: 9000 })
     const cerca = await movement({ amount: 1100 })
     const mismaCuenta = await movement({ amount: 5000, accountId: CUENTA })
-    expect((await read()).map((c) => c.id)).toEqual([mismaCuenta, cerca, lejos])
+    expect((await read()).map((c) => c.id)).toEqual([cerca, mismaCuenta, lejos])
   })
 
   it('sin candidatos devuelve una lista vacía', async () => {
@@ -133,5 +136,55 @@ describe('linkAmountDiffers', () => {
 
   it('distintos', () => {
     expect(linkAmountDiffers(610000, 450000)).toBe(true)
+  })
+})
+
+/** La regla de la prueba, con su nombre. Sin descripción ni clasificación por defecto. */
+const nameRule = async (fields: {
+  description?: string | null
+  categoryId?: string | null
+  subcategoryId?: string | null
+}) => {
+  await actAsAdmin(db)
+  await db.query(
+    'update public.recurrences set description = $1, category_id = $2, subcategory_id = $3 where id = $4',
+    [fields.description ?? null, fields.categoryId ?? null, fields.subcategoryId ?? null, REGLA],
+  )
+}
+
+describe('recurrence_link_candidates — el orden (0077)', () => {
+  it('primero lo que coincide con la descripción de la regla, aunque el importe sea otro', async () => {
+    await nameRule({ description: 'Gimnasio' })
+    const cine = await movement({ amount: 1000, description: 'Cine' })
+    const gimnasio = await movement({ amount: 10000, description: 'Gimnasio' })
+    expect((await read()).map((c) => c.id)).toEqual([gimnasio, cine])
+  })
+
+  it('la descripción coincide sin distinguir mayúsculas, acentos ni espacios', async () => {
+    await nameRule({ description: 'Música' })
+    const otro = await movement({ amount: 1000, description: 'Cine' })
+    const musica = await movement({ amount: 10000, description: '  MUSICA ' })
+    expect((await read()).map((c) => c.id)).toEqual([musica, otro])
+  })
+
+  it('sin descripción, coincide la subcategoría de la regla', async () => {
+    await nameRule({ categoryId: CATEGORIA, subcategoryId: SUBCATEGORIA })
+    const misma = await movement({ amount: 9000, categoryId: CATEGORIA, subcategoryId: SUBCATEGORIA })
+    const soloCategoria = await movement({ amount: 1000, categoryId: CATEGORIA })
+    expect((await read()).map((c) => c.id)).toEqual([misma, soloCategoria])
+  })
+
+  it('sin descripción ni subcategoría, coincide la categoría', async () => {
+    await nameRule({ categoryId: CATEGORIA })
+    const otra = await movement({ amount: 1000 })
+    const misma = await movement({ amount: 9000, categoryId: CATEGORIA })
+    expect((await read()).map((c) => c.id)).toEqual([misma, otra])
+  })
+
+  it('entre los que coinciden, el importe más parecido primero', async () => {
+    await nameRule({ description: 'Gimnasio' })
+    const lejos = await movement({ amount: 9000, description: 'Gimnasio' })
+    const cerca = await movement({ amount: 1200, description: 'Gimnasio' })
+    expect((await read()).map((c) => c.id)).toEqual([cerca, lejos])
   })
 })

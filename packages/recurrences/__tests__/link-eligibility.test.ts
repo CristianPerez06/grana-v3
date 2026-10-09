@@ -174,4 +174,55 @@ describe('recurrence_movement_linkable (0076)', () => {
     )
     expect(after.rows[0]).toEqual({ status: 'pending', confirmed_transaction_id: null })
   })
+
+  describe('el sello de un pago anterior al vínculo (0077)', () => {
+    const SELLOS = '00000000-0000-4000-8000-0000000d0177'
+    const PERIODO = '00000000-0000-4000-8000-0000000e0177'
+
+    const sello = async (opts: { cardPeriodId: string | null }): Promise<string> => {
+      await actAsAdmin(db)
+      await db.exec(`
+        insert into public.subcategories (id, user_id, name, canonical_name)
+        values ('${SELLOS}', null, 'Impuesto de sellos', 'impuesto-de-sellos')
+        on conflict (id) do nothing;
+      `)
+      const { rows } = await db.query<{ id: string }>(`
+        insert into public.transactions
+          (user_id, date, amount, type, currency_code, subcategory_id, card_period_id, description)
+        values ('${U_A}', '${VENCE}', 1000, 'expense', 'ARS', '${SELLOS}',
+                ${opts.cardPeriodId ? `'${opts.cardPeriodId}'` : 'null'}, 'Impuesto de sellos')
+        returning id
+      `)
+      return rows[0].id
+    }
+
+    it('el de un resumen pagado antes del vínculo no se ofrece ni se vincula', async () => {
+      const id = await sello({ cardPeriodId: PERIODO })
+      const debito = await movement()
+      await actAsAdmin(db)
+      await db.exec(`
+        insert into public.period_payments (period_id, transaction_id, stamp_tax_link_known)
+        values ('${PERIODO}', '${debito}', false);
+      `)
+      await expectNotLinkable(id)
+    })
+
+    it('el de un resumen cuyo pago sí registra el sello no se esconde por la subcategoría', async () => {
+      // Ese pago ata su sello por id; un sello suelto en el mismo resumen no es el
+      // suyo, así que la heurística no aplica.
+      const id = await sello({ cardPeriodId: PERIODO })
+      const debito = await movement()
+      await actAsAdmin(db)
+      await db.exec(`
+        insert into public.period_payments (period_id, transaction_id, stamp_tax_link_known)
+        values ('${PERIODO}', '${debito}', true);
+      `)
+      expect(await candidates()).toContain(id)
+    })
+
+    it('uno cargado a mano en una cuenta bancaria sí se ofrece', async () => {
+      const id = await sello({ cardPeriodId: null })
+      expect(await candidates()).toContain(id)
+    })
+  })
 })
