@@ -66,7 +66,10 @@ async function database(): Promise<PGlite> {
   // if every shape spent the same number of positions, comparing the two ways of
   // asking would pass on a fixture that proves nothing.
   await db.exec(rule(PLAIN, U_A, '2026-03-10', 11))
-  await db.exec(rule(CORRECTED, U_A, '2026-03-10', 11))
+  // A cap far enough away that the rule never runs out of next occurrences: a
+  // spent cap leaves no effective date to choose, and the correction below would
+  // be refused on whatever day the calendar caught up with it.
+  await db.exec(rule(CORRECTED, U_A, '2026-03-10', 120))
   await db.exec(rule(PAUSED, U_A, '2026-01-10', 11))
   await db.exec(rule(UNCAPPED, U_A, '2026-06-10', null))
   await db.exec(rule(OTHERS, U_B, '2026-03-10', 11))
@@ -90,10 +93,24 @@ async function database(): Promise<PGlite> {
   // `start_date` is refused since 0068, because moving an anchor has to say from
   // when. This is what leaves `schedule_positions_before` carrying the positions
   // spent under the old anchor — the shape the batch must not get wrong.
+  //
+  // The effective date is asked of the database, never written down: the
+  // function only accepts one of the next occurrences counted from the REAL
+  // today, so a literal date turns this suite red the day it falls in the past.
+  // Same approach as `schedule-effective-from.test.ts`.
+  const { rows: candidates } = await db.query<{ d: string }>(`
+    select effective_from::text as d
+      from public.recurrence_candidate_effective_dates(
+        '2026-05-08'::date, 1, 'month',
+        (now() at time zone 'America/Argentina/Buenos_Aires')::date)
+     order by effective_from
+     limit 1
+  `)
   await actAs(db, U_A)
   await db.exec(`
     select public.update_recurrence_schedule(
-      '${CORRECTED}'::uuid, jsonb_build_object('start_date', '2026-05-08'::date), '2026-10-08'::date
+      '${CORRECTED}'::uuid, jsonb_build_object('start_date', '2026-05-08'::date),
+      '${candidates[0].d}'::date
     );
   `)
   await actAsAdmin(db)
