@@ -1,6 +1,10 @@
 -- Tarjetas — un solo vencimiento por mes calendario en los resúmenes estimados.
 --
--- Run AFTER 0075_undo_reopens_occurrence.sql.
+-- Run AFTER 0077_link_candidates_order_by_name.sql.
+--
+-- Número: 0076 y 0077 están tomados por `bugfix/190-link-candidates-names-and-eligibility`,
+-- todavía sin mergear. Esta migración es independiente de ellas (no toca
+-- recurrencias ni vínculos): el orden entre ellas no importa.
 --
 -- Change: openspec/changes/archive/2026-11-01-one-due-date-per-month/
 --

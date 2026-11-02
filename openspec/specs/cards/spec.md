@@ -141,7 +141,7 @@ La regla del paso 7 SHALL aplicarse solo a fechas proyectadas. Un `due_date` que
 #### Scenario: Los estimados ya guardados se corrigen
 
 - **WHEN** un período `is_estimated = true` y sin pago tiene `due_date` en el mismo mes que el `due_date` del período anterior de su tarjeta
-- **THEN** la migración `0076` le asigna como `due_date` el día 1 del mes siguiente al vencimiento anterior
+- **THEN** la migración `0078` le asigna como `due_date` el día 1 del mes siguiente al vencimiento anterior
 - **AND** no toca `start_date`, `end_date`, los períodos confirmados ni los pagados
 
 ---
