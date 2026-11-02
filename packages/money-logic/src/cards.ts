@@ -149,7 +149,7 @@ export function suggestNextPeriodDates(
     const nextEnd = addDaysToISO(only.end_date, 30)
     return {
       suggestedEndDate: nextEnd,
-      suggestedDueDate: addDaysToISO(nextEnd, gapDays),
+      suggestedDueDate: dueAfterPreviousDueMonth(addDaysToISO(nextEnd, gapDays), only.due_date),
     }
   }
 
@@ -168,11 +168,28 @@ export function suggestNextPeriodDates(
   const avgCycleDays = Math.round(totalCycleDays / count)
   const avgGapDays = Math.round(totalGapDays / count)
 
-  const lastEnd = sorted[sorted.length - 1].end_date
-  const nextEnd = addDaysToISO(lastEnd, avgCycleDays)
-  const nextDue = addDaysToISO(nextEnd, avgGapDays)
+  const last = sorted[sorted.length - 1]
+  const nextEnd = addDaysToISO(last.end_date, avgCycleDays)
+  const nextDue = dueAfterPreviousDueMonth(addDaysToISO(nextEnd, avgGapDays), last.due_date)
 
   return { suggestedEndDate: nextEnd, suggestedDueDate: nextDue }
+}
+
+/**
+ * A card falls due once per calendar month — that is how banks issue
+ * statements. Averaging days can still land a projected due date in the SAME
+ * month as the previous statement's (previous due 02/11, close 19/11 + 11 days
+ * → 30/11), which would put two statements of one card in November and none in
+ * December. When the projection does not reach a later month than the previous
+ * due date, it moves to the 1st of the month right after it.
+ *
+ * Only projections go through here: a due date the user typed from a real
+ * statement is stored as given.
+ */
+export function dueAfterPreviousDueMonth(projectedDue: string, previousDue: string): string {
+  if (projectedDue.slice(0, 7) > previousDue.slice(0, 7)) return projectedDue
+  const [y, m] = previousDue.split('-').map(Number)
+  return formatDateISO(new Date(y, m, 1))
 }
 
 // ─── Running-cycle confirmation planning (statement payment) ──────────────────
