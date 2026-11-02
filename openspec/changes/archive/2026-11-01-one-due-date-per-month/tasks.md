@@ -7,7 +7,7 @@
 ## 2. Datos existentes
 
 - [x] 2.1 `supabase/migrations/0078_one_due_date_per_month.sql`. El número se eligió contra `main`, donde la última es 0075, pero 0076 y 0077 ya están tomadas por `bugfix/190-link-candidates-names-and-eligibility`. Corre solo el `due_date` de períodos estimados sin pago, en vueltas hasta que no quede ninguno.
-- [ ] 2.2 Pegar 0078 en el SQL Editor de Supabase (lo hace una persona).
+- [x] 2.2 Pegar 0078 en el SQL Editor de Supabase (lo hace una persona).
 
 ## 3. Verificación
 
