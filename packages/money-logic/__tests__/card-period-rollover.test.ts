@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   MAX_ROLL_FORWARD_PERIODS,
   derivePeriodVariant,
+  dueAfterPreviousDueMonth,
   planPeriodEndEdit,
   planPeriodRollForward,
+  suggestNextPeriodDates,
   type PeriodEndEditLater,
 } from '../src/cards'
 
@@ -137,5 +139,60 @@ describe('planPeriodEndEdit', () => {
         later: [later({ id: 'p2', has_payment: true })],
       }),
     ).toEqual({ action: 'reject', reason: 'boundary_next_paid' })
+  })
+})
+
+describe('suggestNextPeriodDates — one due date per calendar month', () => {
+  const today = new Date(2026, 10, 1)
+
+  it('moves a projection that lands in the previous due month to the 1st of the next one', () => {
+    // Previous statement closed 21/10 and is due 01/11; the running one closes
+    // 19/11 and the 11-day gap would put it due 30/11 — November twice.
+    expect(
+      suggestNextPeriodDates(
+        [
+          { end_date: '2026-09-22', due_date: '2026-10-03' },
+          { end_date: '2026-10-21', due_date: '2026-11-01' },
+        ],
+        today,
+      ),
+    ).toEqual({ suggestedEndDate: '2026-11-19', suggestedDueDate: '2026-12-01' })
+  })
+
+  it('applies the same rule with a single known period', () => {
+    // Due 01/10 one day after the close; 30 days later closes 30/10 and would
+    // be due 31/10 — October twice.
+    expect(
+      suggestNextPeriodDates([{ end_date: '2026-09-30', due_date: '2026-10-01' }], today),
+    ).toEqual({ suggestedEndDate: '2026-10-30', suggestedDueDate: '2026-11-01' })
+  })
+
+  it('leaves a projection that already falls in a later month untouched', () => {
+    expect(
+      suggestNextPeriodDates(
+        [
+          { end_date: '2026-04-15', due_date: '2026-04-30' },
+          { end_date: '2026-05-15', due_date: '2026-05-30' },
+        ],
+        today,
+      ),
+    ).toEqual({ suggestedEndDate: '2026-06-14', suggestedDueDate: '2026-06-29' })
+  })
+
+  it('rolls the year over in December', () => {
+    expect(dueAfterPreviousDueMonth('2026-12-30', '2026-12-02')).toBe('2027-01-01')
+  })
+
+  it('keeps the rule across a whole roll-forward walk', () => {
+    const plan = planPeriodRollForward(
+      [
+        { start_date: '2026-09-22', end_date: '2026-10-21', due_date: '2026-11-01' },
+      ],
+      '2027-06-30',
+      today,
+    )
+    const months = plan.map((p) => p.due_date.slice(0, 7))
+    expect(new Set(months).size).toBe(months.length)
+    expect(months[0]).toBe('2026-12')
   })
 })
