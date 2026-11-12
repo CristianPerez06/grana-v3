@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
   computeRunningBalances,
+  runningBalanceCurrencies,
   type RunningBalanceRow,
 } from '@grana/money-logic'
 import { MovementList } from '@/lib/transactions/components/movement-list'
@@ -125,7 +126,7 @@ export function MovementListAccountContainer({ accountId }: Props) {
 
   // Running balance: needs the FULL ascending history + the account's per-currency
   // initial balances. Both come from cached queries; recompute only when one changes.
-  const runningBalances = useMemo(() => {
+  const running = useMemo(() => {
     if (!ascendingQ.data || !accountQ.data) return null
     const account = accountQ.data
     const initial = {
@@ -136,10 +137,15 @@ export function MovementListAccountContainer({ accountId }: Props) {
         account.currencies.find((c) => c.currency_code === 'USD')?.initial_balance ?? 0,
       ),
     }
-    const snapshots = computeRunningBalances(
-      ascendingQ.data as RunningBalanceRow[],
+    const rows = ascendingQ.data as RunningBalanceRow[]
+    const snapshots = computeRunningBalances(rows, accountId, initial)
+    // How many balances each row shows: decided once for the whole account,
+    // so every row (and every month) shows the same ARS / ARS+USD / USD set.
+    const currencies = runningBalanceCurrencies(
+      rows,
       accountId,
       initial,
+      account.currencies.map((c) => c.currency_code),
     )
     // The synthetic "saldo inicial" rows snapshot the starting balance itself
     // (their row displays the per-currency value before any movement).
@@ -147,7 +153,7 @@ export function MovementListAccountContainer({ accountId }: Props) {
       if (Number(c.initial_balance) === 0) continue
       snapshots.set(`${INITIAL_BALANCE_ID_PREFIX}${c.currency_code}`, initial)
     }
-    return snapshots
+    return { snapshots, currencies }
   }, [ascendingQ.data, accountQ.data, accountId])
 
   // Display order (most recent first) + user filters + client-side pagination.
@@ -221,7 +227,10 @@ export function MovementListAccountContainer({ accountId }: Props) {
 
   const variant = resolveEmptyVariant(filters)
   const recurrenceLinkedIds = linkedQ.data ? new Set(linkedQ.data) : undefined
-  const showRunningBalance = !hasActiveContentFilters(filters) ? runningBalances : null
+  // Content filters AND a text search both skip rows, so a running balance
+  // over what is left would be wrong: hide it in either case.
+  const showRunningBalance =
+    !hasActiveContentFilters(filters) && !hasActiveSearch(filters) ? running : null
 
   return (
     <div id="movement-list" className="scroll-mt-6 flex flex-col gap-6">
@@ -231,7 +240,8 @@ export function MovementListAccountContainer({ accountId }: Props) {
         todayISO={formatDateISO(getTodayAR())}
         showAccount={false}
         recurrenceLinkedIds={recurrenceLinkedIds}
-        runningBalances={showRunningBalance}
+        runningBalances={showRunningBalance?.snapshots ?? null}
+        runningBalanceCurrencies={showRunningBalance?.currencies ?? null}
         emptyState={{
           variant,
           query: filters.query,

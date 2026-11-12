@@ -278,6 +278,53 @@ export function computeRunningBalances(
   return snapshots
 }
 
+/**
+ * Which currencies the running-balance column of one account shows, always in
+ * ARS → USD order. A currency is "used" when its initial balance is non-zero or
+ * when any row of the account's FULL history moves it from this account —
+ * including the received leg of an exchange. Decided on the whole history (not
+ * the visible month, not per row) so every row of the account shows the same
+ * number of balances in any month.
+ *
+ * An account with no usage at all falls back to its configured currencies, so
+ * the column never renders empty. Pure: the caller passes rows it already has.
+ */
+export function runningBalanceCurrencies(
+  rows: RunningBalanceRow[],
+  accountId: string,
+  initial: Record<BalanceCurrency, number>,
+  configured: readonly BalanceCurrency[],
+): BalanceCurrency[] {
+  const used = new Set<BalanceCurrency>()
+  for (const currency of ['ARS', 'USD'] as const) {
+    if (!Money.isZero(Money.from(initial[currency] ?? 0))) used.add(currency)
+  }
+
+  for (const row of rows) {
+    if (row.account_id === accountId && isBalanceCurrency(row.currency_code)) {
+      // A pending/cancelled/statement reimbursement never touches this account.
+      if (row.type !== 'reimbursement' || reimbursementCreditsAccount(row)) {
+        used.add(row.currency_code)
+      }
+    }
+    if (row.transfer_destination_account_id === accountId) {
+      if (row.type === 'transfer' && isBalanceCurrency(row.currency_code)) {
+        used.add(row.currency_code)
+      } else if (
+        row.type === 'exchange' &&
+        row.destination_currency &&
+        isBalanceCurrency(row.destination_currency)
+      ) {
+        used.add(row.destination_currency)
+      }
+    }
+  }
+
+  const ordered = (['ARS', 'USD'] as const).filter((c) => used.has(c))
+  if (ordered.length > 0) return ordered
+  return (['ARS', 'USD'] as const).filter((c) => configured.includes(c))
+}
+
 export type PeriodTotals = { in: number; out: number; committed: number }
 export type PeriodSummary = Record<BalanceCurrency, PeriodTotals>
 

@@ -55,6 +55,13 @@ export type MovementView = {
   counterpartyDirection: 'in' | 'out' | null
   /** Whether the movement belongs to the "categorized" icon family. */
   isCategorized: boolean
+  /**
+   * The leg that comes back INTO this same account. Only set for an exchange
+   * seen from an account that is both its source and its destination (e.g.
+   * ARS → USD inside one bank account): `amount`/`currencyCode` above are the
+   * outgoing leg, this is the incoming one (always an inflow).
+   */
+  receivedLeg?: { amount: number; currencyCode: BalanceCurrency }
 }
 
 const TWO_LEGGED = new Set<MovementKind>(['transfer', 'exchange'])
@@ -84,7 +91,7 @@ export function resolveMovementView(
 
     if (isSource) {
       // Money leaves this account → source leg, outflow.
-      return {
+      const view: MovementView = {
         sign: '-',
         amount: input.amount,
         currencyCode: input.currencyCode,
@@ -92,6 +99,19 @@ export function resolveMovementView(
         counterpartyDirection: 'out',
         isCategorized,
       }
+      // Same-account exchange: the other leg lands back here, so show it too.
+      if (
+        input.kind === 'exchange' &&
+        input.destinationAccountId === perspective.accountId &&
+        input.destinationCurrency &&
+        input.destinationAmount != null
+      ) {
+        view.receivedLeg = {
+          amount: input.destinationAmount,
+          currencyCode: input.destinationCurrency,
+        }
+      }
+      return view
     }
 
     // This account is the destination → received leg, inflow. For an exchange

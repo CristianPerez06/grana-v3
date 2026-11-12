@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import { getTodayAR, formatDateISO } from '@grana/money-logic'
+import { getTodayAR, formatDateISO, type BalanceCurrency } from '@grana/money-logic'
 import type { TransactionWithDetails } from '@grana/transactions'
 import { useShowCents } from '../../lib/preferences-context'
 import { useLocale, useT } from '../../lib/locale-context'
@@ -10,6 +10,10 @@ import { accountMovementView, resolveCategoryLabel } from '../../lib/accounts/mo
 type Props = {
   tx: TransactionWithDetails
   accountId: string
+  /** Account balance per currency AFTER this movement; null hides it (filters active). */
+  runningBalance?: Record<BalanceCurrency, number> | null
+  /** Which currencies of the balance to show, ARS first — the same for every row of the account. */
+  runningBalanceCurrencies?: readonly BalanceCurrency[]
 }
 
 const MONTHS: Record<Locale, readonly string[]> = {
@@ -24,10 +28,19 @@ function formatMovementDate(iso: string, locale: Locale, today: string): string 
   return `${d} ${MONTHS[locale][m - 1]}`
 }
 
-// Read-only movement row: date/description + signed amount with tone. No per-row
-// running balance — parity with the web app at mobile breakpoints (the running
-// balance column is `hidden md:block` on web; the total lives in the hero).
-export function MovementRow({ tx, accountId }: Props) {
+const formatMoney = (amount: number, currency: BalanceCurrency, showCents: boolean) =>
+  currency === 'ARS' ? formatARS(amount, showCents) : formatUSD(amount, showCents)
+
+// Read-only movement row: date/description + signed amount with tone, and under
+// the amount the running balance (saldo corriente) — parity with the web app at
+// phone width, where the balance has no column of its own and sits under the
+// amount. A same-account exchange shows both legs.
+export function MovementRow({
+  tx,
+  accountId,
+  runningBalance = null,
+  runningBalanceCurrencies = [],
+}: Props) {
   const t = useT()
   const locale = useLocale()
   const showCents = useShowCents()
@@ -46,10 +59,7 @@ export function MovementRow({ tx, accountId }: Props) {
   }
 
   const prefix = view.sign === '+' ? '+ ' : view.sign === '-' ? '- ' : ''
-  const formatted =
-    view.currencyCode === 'ARS'
-      ? formatARS(view.amount, showCents)
-      : formatUSD(view.amount, showCents)
+  const formatted = formatMoney(view.amount, view.currencyCode, showCents)
   const toneClass =
     view.sign === '+' ? 'text-emerald-deep' : view.sign === '-' ? 'text-negative' : 'text-text'
 
@@ -63,10 +73,35 @@ export function MovementRow({ tx, accountId }: Props) {
           {metaParts.join(' · ')}
         </Text>
       </View>
-      <Text className={`text-[14px] font-extrabold tabular-nums ${toneClass}`}>
-        {prefix}
-        {formatted}
-      </Text>
+      <View className="items-end">
+        <Text className={`text-[14px] font-extrabold tabular-nums ${toneClass}`}>
+          {prefix}
+          {formatted}
+        </Text>
+        {/* Same-account exchange: the leg that came back into this account. */}
+        {view.receivedLeg && (
+          <Text className="text-[13px] font-extrabold tabular-nums text-emerald-deep">
+            {'+ '}
+            {formatMoney(view.receivedLeg.amount, view.receivedLeg.currencyCode, showCents)}
+          </Text>
+        )}
+        {runningBalance && runningBalanceCurrencies.length > 0 && (
+          <View className="mt-1.5 items-end">
+            {runningBalanceCurrencies.map((currency) => (
+              <Text
+                key={currency}
+                className={`tabular-nums text-text-muted ${
+                  currency === 'USD' && runningBalanceCurrencies.length > 1
+                    ? 'text-[11px] font-semibold'
+                    : 'text-[12px] font-bold'
+                }`}
+              >
+                {formatMoney(runningBalance[currency], currency, showCents)}
+              </Text>
+            ))}
+          </View>
+        )}
+      </View>
     </View>
   )
 }

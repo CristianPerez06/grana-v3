@@ -5,6 +5,12 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Repeat, Search, SlidersHorizontal, X } from 'lucide-react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
+  computeRunningBalances,
+  runningBalanceCurrencies,
+  type BalanceCurrency,
+  type RunningBalanceRow,
+} from '@grana/money-logic'
+import {
   toFinancialMovement,
   type FinancialMovement,
   type TransactionWithDetails,
@@ -31,8 +37,11 @@ import {
 } from '../movements/ActiveFilterChips'
 
 type Props = {
+  /** The account's full history, ascending (calculation order). */
   movements: TransactionWithDetails[]
   accountId: string
+  /** The account's currencies with their initial balance: where the running balance starts. */
+  currencies: readonly { currency_code: BalanceCurrency; initial_balance: number | string }[]
   loading: boolean
 }
 
@@ -41,7 +50,7 @@ type Props = {
 // currency / amount) with removable active-filter chips. Parity with the web
 // account-detail movements toolbar; filtering reuses the shared month range and
 // a native filter pass over `TransactionWithDetails`.
-export function MovementsSection({ movements, accountId, loading }: Props) {
+export function MovementsSection({ movements, accountId, currencies, loading }: Props) {
   const t = useT()
   const locale = useLocale()
   const router = useRouter()
@@ -77,11 +86,34 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
     return map
   }, [movements])
 
+  // Running balance (saldo corriente) per row — same shared functions as the web
+  // account detail: snapshots over the FULL ascending history, and which
+  // currencies to show decided once for the whole account.
+  const running = useMemo(() => {
+    const initial = {
+      ARS: Number(currencies.find((c) => c.currency_code === 'ARS')?.initial_balance ?? 0),
+      USD: Number(currencies.find((c) => c.currency_code === 'USD')?.initial_balance ?? 0),
+    }
+    const rows = movements as RunningBalanceRow[]
+    return {
+      snapshots: computeRunningBalances(rows, accountId, initial),
+      currencies: runningBalanceCurrencies(
+        rows,
+        accountId,
+        initial,
+        currencies.map((c) => c.currency_code),
+      ),
+    }
+  }, [movements, accountId, currencies])
+
   const filtered = useMemo(
     () => applyAccountFilters(movements, filters, movementById).slice().reverse(),
     [movements, filters, movementById],
   )
   const activeCount = activeFilterCount(filters)
+  // Filters and a text search skip rows: a running balance over what is left
+  // would be wrong, so it hides (same rule as the web account detail).
+  const showRunningBalance = activeCount === 0 && filters.query.trim().length === 0
 
   const categoryLabelFor = (id: string) => {
     const category = options?.categories.find((c) => c.id === id)
@@ -249,7 +281,12 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
         <View className="-mx-5">
           {filtered.map((tx, index) => (
             <View key={tx.id} className={index === 0 ? '' : 'border-t border-border-soft'}>
-              <MovementRow tx={tx} accountId={accountId} />
+              <MovementRow
+                tx={tx}
+                accountId={accountId}
+                runningBalance={showRunningBalance ? running.snapshots.get(tx.id) ?? null : null}
+                runningBalanceCurrencies={running.currencies}
+              />
             </View>
           ))}
         </View>

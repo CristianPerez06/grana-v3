@@ -15,6 +15,7 @@ import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
   resolveMovementView,
+  type BalanceCurrency,
   type MovementPerspective,
   type MovementKind,
 } from '@grana/money-logic'
@@ -62,6 +63,12 @@ type Props = {
   isRecurrent?: boolean
   /** Running balance after this movement, per currency (account view, no filters). */
   runningBalanceSnapshot?: Record<'ARS' | 'USD', number> | null
+  /**
+   * Which currencies of the snapshot to show, ARS first. Decided once per
+   * account (`runningBalanceCurrencies`) so every row shows the same count.
+   * Absent ⇒ only the movement's own currency.
+   */
+  runningBalanceCurrencies?: readonly BalanceCurrency[] | null
   /** Installment chip label (e.g. "Cuota 2 de 6"); shown on card-statement rows. */
   installmentChip?: string | null
   /** Render the installment chip on its own line below the subtitle (card statement layout). */
@@ -74,6 +81,7 @@ export const MovementRow = ({
   showAccount = false,
   isRecurrent = false,
   runningBalanceSnapshot = null,
+  runningBalanceCurrencies = null,
   installmentChip = null,
   installmentChipBelow = false,
 }: Props) => {
@@ -106,7 +114,13 @@ export const MovementRow = ({
     (movement.kind === 'installment_purchase' && movement.installments_total
       ? t('installments_count', { count: movement.installments_total })
       : null)
-  const runningBalance = runningBalanceSnapshot ? runningBalanceSnapshot[view.currencyCode] : null
+  const balanceLines: { currency: BalanceCurrency; amount: number }[] = runningBalanceSnapshot
+    ? (runningBalanceCurrencies ?? [view.currencyCode]).map((currency) => ({
+        currency,
+        amount: runningBalanceSnapshot[currency],
+      }))
+    : []
+  const hasRunningBalance = balanceLines.length > 0
   const isPendingReimbursement =
     movement.kind === 'reimbursement' && movement.state !== 'received'
 
@@ -167,11 +181,12 @@ export const MovementRow = ({
   //     (running balance hidden), 3 cols ≥md.
   //   • Without running balance (/transactions, generic list): 2 cols, the
   //     amount column sized to its content.
-  const gridCls = runningBalance != null
+  const gridCls = hasRunningBalance
     ? 'grid grid-cols-[minmax(0,1fr)_112px] md:grid-cols-[minmax(0,1fr)_126px_126px] items-center gap-4 md:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
     : 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
 
   const amountCls = 'text-right'
+  const amountTone = toneToClass(resolveTone(movement.kind, view.sign, isPendingReimbursement))
 
   return (
     <div className={gridCls}>
@@ -245,21 +260,56 @@ export const MovementRow = ({
 
       <div className={amountCls}>
         <p
-          className={`text-[14px] font-extrabold tabular-nums ${toneToClass(resolveTone(movement.kind, view.sign, isPendingReimbursement))}`}
+          className={`text-[14px] font-extrabold tabular-nums ${amountTone}`}
         >
           {view.sign}
           {formatAmount(view.amount, view.currencyCode, showCents)}
         </p>
-        {view.currencyCode === 'USD' && (
+        {view.currencyCode === 'USD' && !view.receivedLeg && (
           <p className="text-[11px] font-normal text-muted-foreground">USD</p>
+        )}
+        {/* Same-account exchange: the leg that came back into this account. */}
+        {view.receivedLeg && (
+          <p className={`text-[13px] font-extrabold tabular-nums ${amountTone}`}>
+            +{formatAmount(view.receivedLeg.amount, view.receivedLeg.currencyCode, showCents)}
+          </p>
+        )}
+        {/* Below md the balance has no column of its own: it sits under the amount. */}
+        {hasRunningBalance && (
+          <div className="mt-1.5 md:hidden">
+            <RunningBalanceLines lines={balanceLines} showCents={showCents} />
+          </div>
         )}
       </div>
 
-      {runningBalance != null && (
-        <div className="hidden text-right text-[12px] font-bold text-muted-foreground tabular-nums md:block">
-          {formatAmount(runningBalance, view.currencyCode, showCents)}
+      {hasRunningBalance && (
+        <div className="hidden md:block">
+          <RunningBalanceLines lines={balanceLines} showCents={showCents} />
         </div>
       )}
     </div>
   )
 }
+
+/**
+ * The running balance after a movement: one line per currency the account uses,
+ * ARS on top in the main size and USD below, smaller (bi-currency hierarchy).
+ */
+const RunningBalanceLines = ({
+  lines,
+  showCents,
+}: {
+  lines: { currency: BalanceCurrency; amount: number }[]
+  showCents: boolean
+}) => (
+  <div className="text-right tabular-nums text-muted-foreground">
+    {lines.map(({ currency, amount }) => (
+      <p
+        key={currency}
+        className={currency === 'USD' && lines.length > 1 ? 'text-[11px] font-semibold' : 'text-[12px] font-bold'}
+      >
+        {formatAmount(amount, currency, showCents)}
+      </p>
+    ))}
+  </div>
+)

@@ -113,6 +113,7 @@ export default function AccountDetailScreen() {
             <MovementsSection
               movements={movements}
               accountId={id}
+              currencies={account.currencies}
               loading={movementsQ.isPending}
             />
           </>

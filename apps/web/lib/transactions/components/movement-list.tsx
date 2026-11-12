@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
-import type { MovementPerspective } from '@grana/money-logic'
+import type { BalanceCurrency, MovementPerspective } from '@grana/money-logic'
 import { Button } from '@/components/ui/button'
 import type { FinancialMovement } from '../movements'
 import { MovementRow } from './movement-row'
@@ -48,6 +48,8 @@ type Props = {
   recurrenceLinkedIds?: Set<string>
   /** Per-movement running balance snapshots (account view, no filters); null hides them. */
   runningBalances?: Map<string, Record<'ARS' | 'USD', number>> | null
+  /** Currencies each running balance shows (same for every row of the account). */
+  runningBalanceCurrencies?: readonly BalanceCurrency[] | null
   /** Per-movement installment chip labels (e.g. "Cuota 2 de 6"), keyed by id. */
   installmentChips?: Map<string, string>
   /** Render the installment chip on a separate line below the subtitle (card statement layout). */
@@ -65,6 +67,7 @@ export const MovementList = ({
   showAccount = false,
   recurrenceLinkedIds,
   runningBalances = null,
+  runningBalanceCurrencies = null,
   installmentChips,
   installmentChipBelow = false,
   groupByDate = true,
@@ -154,6 +157,7 @@ export const MovementList = ({
         showAccount={showAccount}
         isRecurrent={recurrenceLinkedIds?.has(movement.id) ?? false}
         runningBalanceSnapshot={runningBalances?.get(movement.id) ?? null}
+        runningBalanceCurrencies={runningBalanceCurrencies}
         installmentChip={installmentChips?.get(movement.id) ?? null}
         installmentChipBelow={installmentChipBelow}
       />
