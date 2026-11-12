@@ -5,7 +5,9 @@
 El módulo `accounts` modela las cuentas donde el usuario lleva su dinero — efectivo y cuentas bancarias/débito. Una cuenta agrupa saldos por moneda (bimoneda ARS/USD) y es el contenedor sobre el cual se registran las transacciones. El saldo de cada moneda se calcula on-the-fly desde `initial_balance + Σ transactions`; nunca se persiste.
 
 Este módulo es **prerequisito** del módulo `transactions` y de cualquier módulo financiero posterior (tarjetas de crédito, recurrencias, gastos compartidos, ahorros).
+
 ## Requirements
+
 ### Requirement: Cuenta Efectivo por defecto en el signup
 
 El sistema SHALL crear automáticamente una cuenta `Billetera` (type `cash`, sin institución) para todo usuario nuevo en el momento del signup. La cuenta default se inicializa con dos `account_currencies` activas — ARS y USD — ambas con `initial_balance = 0`. Este bootstrap se ejecuta vía trigger `SECURITY DEFINER` sobre `auth.users` y bypassa RLS.
@@ -1089,7 +1091,7 @@ Las acciones por fila SHALL presentarse vía el patrón de action sheet nativo d
 
 ### Requirement: El detalle de cuenta en mobile muestra saldos, movimientos y reintegros (mobile)
 
-La pantalla `accounts/[id]/index` SHALL mostrar un hero con la identidad de la cuenta (avatar, nombre, institución/tipo, badge Archivada si aplica) y los saldos ARS/USD totales, obtenidos de `getAccountDetail` de `@grana/accounts`. SHALL mostrar la lista de movimientos de la cuenta usando `getAccountMovementsAscending` de `@grana/transactions`. La presentación SHALL replicar la del web app dentro de los breakpoints mobile: cada fila muestra fecha/descripción + monto con tono, SIN columna de saldo corriente por fila (en web esa columna es `hidden md:block`; el saldo total vive en el hero). El signo/monto por fila desde la perspectiva de la cuenta SHALL derivarse de `resolveMovementView` de `@grana/money-logic`, sin reimplementar la lógica de patas (transferencias/cambios) en mobile. SHALL mostrar la card de reintegros pendientes ("A confirmar") usando `getPendingReimbursements` de `@grana/transactions` scopeado a la cuenta. SHALL ofrecer un acceso a agregar moneda cuando haya monedas disponibles.
+La pantalla `accounts/[id]/index` SHALL mostrar un hero con la identidad de la cuenta (avatar, nombre, institución/tipo, badge Archivada si aplica) y los saldos ARS/USD totales, obtenidos de `getAccountDetail` de `@grana/accounts`. SHALL mostrar la lista de movimientos de la cuenta usando `getAccountMovementsAscending` de `@grana/transactions`. La presentación SHALL replicar la del web app en viewport de celular: cada fila muestra fecha/descripción + monto con tono y, debajo del monto, el **saldo corriente por fila** con las mismas reglas que la web (spec `transactions`, requirement "El listado de una cuenta muestra el saldo corriente por fila"): un saldo por cada moneda que la cuenta usa, ARS arriba y USD debajo; las dos patas del monto en un cambio de moneda dentro de la misma cuenta; y el saldo oculto mientras haya filtros de contenido activos (tipo, categoría, subcategoría, moneda, rango de monto o búsqueda de texto). El saldo corriente SHALL calcularse con `computeRunningBalances` de `@grana/money-logic` sobre el historial ascendente que la pantalla ya carga, partiendo del saldo inicial por moneda de la cuenta; NO SHALL pedir datos nuevos al servidor. El signo/monto por fila desde la perspectiva de la cuenta SHALL derivarse de `resolveMovementView` de `@grana/money-logic`, sin reimplementar la lógica de patas (transferencias/cambios) en mobile. SHALL mostrar la card de reintegros pendientes ("A confirmar") usando `getPendingReimbursements` de `@grana/transactions` scopeado a la cuenta. SHALL ofrecer un acceso a agregar moneda cuando haya monedas disponibles.
 
 #### Scenario: El detalle muestra saldos y movimientos (mobile)
 
@@ -1099,9 +1101,19 @@ La pantalla `accounts/[id]/index` SHALL mostrar un hero con la identidad de la c
 
 #### Scenario: La presentación de movimientos replica el web app en mobile (mobile)
 
-- **WHEN** la pantalla renderiza la lista de movimientos
-- **THEN** cada fila muestra fecha/descripción + monto con tono, sin saldo corriente por fila (paridad con el web app en breakpoints mobile, donde esa columna está oculta)
+- **WHEN** la pantalla renderiza la lista de movimientos sin filtros de contenido
+- **THEN** cada fila muestra fecha/descripción + monto con tono y, debajo del monto, el saldo corriente con la misma cantidad de saldos que la web en viewport de celular
 - **AND** el signo/monto por fila desde la perspectiva de la cuenta se deriva de `resolveMovementView` de `@grana/money-logic`, sin reimplementar la lógica en mobile
+
+#### Scenario: Una cuenta con pesos y dólares muestra ambos saldos (mobile)
+
+- **WHEN** el usuario abre el detalle de una cuenta que usa ARS y USD
+- **THEN** cada fila muestra el saldo ARS y, debajo, el saldo USD resultantes después de ese movimiento, iguales a los que muestra la web para esa fila
+
+#### Scenario: Un filtro oculta el saldo corriente (mobile)
+
+- **WHEN** el usuario aplica un filtro o escribe una búsqueda en el detalle de la cuenta
+- **THEN** las filas dejan de mostrar el saldo corriente
 
 ### Requirement: El detalle de cuenta en mobile filtra los movimientos con un toolbar (mobile)
 
@@ -1190,4 +1202,3 @@ Las mutations de cuentas en mobile SHALL ejecutarse por un mutator (`apps/mobile
 - **WHEN** el usuario crea, edita, archiva, reactiva o elimina una cuenta, o agrega/desactiva una moneda
 - **THEN** el mutator invalida los query keys de cuentas afectados (lista, detalle, instituciones)
 - **AND** las pantallas montadas refetchean la data actualizada
-

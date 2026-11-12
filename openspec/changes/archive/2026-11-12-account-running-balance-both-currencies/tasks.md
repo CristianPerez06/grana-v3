@@ -7,7 +7,7 @@
 
 - [x] 2.1 `MovementRow`: recibir la lista de monedas a mostrar y renderizar un saldo por moneda (ARS arriba, USD debajo más chico) en la columna `md:` y, debajo de `md`, debajo del monto; renderizar `receivedLeg` debajo del monto con signo `+`. Verificar con `pnpm typecheck` y `pnpm lint`
 - [x] 2.2 `MovementList` y `movement-list-account-container.tsx`: calcular las monedas con `runningBalanceCurrencies` sobre el historial ascendente y pasarlas a las filas; ocultar el saldo también con búsqueda activa. Verificar con `pnpm test:web`
-- [ ] 2.3 Verificar en el navegador el detalle de una cuenta bimoneda con un cambio de moneda en la misma cuenta, a 1280px y a 390px: dos saldos por fila, las dos patas en el cambio, el saldo oculto al filtrar o buscar; y una cuenta de una sola moneda igual que antes
+- [x] 2.3 Verificar en el navegador el detalle de una cuenta bimoneda con un cambio de moneda en la misma cuenta, a 1280px y a 390px: dos saldos por fila, las dos patas en el cambio, el saldo oculto al filtrar o buscar; y una cuenta de una sola moneda igual que antes
 
 ## 3. App nativa
 
@@ -17,4 +17,4 @@
 
 ## 4. Cierre
 
-- [ ] 4.1 Correr `pnpm verify` (o, si el build no puede correr acá, todos sus pasos menos `build`) y dejarlo en verde
+- [x] 4.1 Correr `pnpm verify` (o, si el build no puede correr acá, todos sus pasos menos `build`) y dejarlo en verde
