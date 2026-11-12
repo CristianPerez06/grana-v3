@@ -70,7 +70,10 @@ async function database(): Promise<PGlite> {
   // spent cap leaves no effective date to choose, and the correction below would
   // be refused on whatever day the calendar caught up with it.
   await db.exec(rule(CORRECTED, U_A, '2026-03-10', 120))
-  await db.exec(rule(PAUSED, U_A, '2026-01-10', 11))
+  // Same reason for the paused one: the hub reads it against the REAL today, and
+  // a cap of 11 from January ran out on 2026-11-10 — from then on the hub rightly
+  // called it finalizada and the «paused, not finished» assertion went red.
+  await db.exec(rule(PAUSED, U_A, '2026-01-10', 120))
   await db.exec(rule(UNCAPPED, U_A, '2026-06-10', null))
   await db.exec(rule(OTHERS, U_B, '2026-03-10', 11))
 
