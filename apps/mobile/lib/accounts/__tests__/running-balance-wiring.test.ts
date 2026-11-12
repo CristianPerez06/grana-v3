@@ -41,4 +41,9 @@ describe('saldo corriente en el detalle de cuenta nativo', () => {
     expect(row).toMatch(/runningBalanceCurrencies\.map\(/)
     expect(row).toMatch(/view\.receivedLeg/)
   })
+
+  it('el tono sale de resolveTone, como en la web y el feed, y el signo va pegado', () => {
+    expect(row).toMatch(/resolveTone\(movement\.kind, view\.sign/)
+    expect(row).not.toMatch(/'- '|'\+ '/)
+  })
 })

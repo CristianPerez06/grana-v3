@@ -1,7 +1,12 @@
 import { Text, View } from 'react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { getTodayAR, formatDateISO, type BalanceCurrency } from '@grana/money-logic'
-import type { TransactionWithDetails } from '@grana/transactions'
+import {
+  resolveTone,
+  toFinancialMovement,
+  type TransactionWithDetails,
+} from '@grana/transactions'
+import { toneToClass } from '../movements/tone'
 import { useShowCents } from '../../lib/preferences-context'
 import { useLocale, useT } from '../../lib/locale-context'
 import type { Locale } from '../../lib/locale'
@@ -58,10 +63,13 @@ export function MovementRow({
     metaParts.push(view.counterpartyName)
   }
 
-  const prefix = view.sign === '+' ? '+ ' : view.sign === '-' ? '- ' : ''
   const formatted = formatMoney(view.amount, view.currencyCode, showCents)
-  const toneClass =
-    view.sign === '+' ? 'text-emerald-deep' : view.sign === '-' ? 'text-negative' : 'text-text'
+  // Same tone and sign as the web row and the native feed: a transfer or an
+  // exchange between own accounts is neutral, neither spending nor income.
+  const movement = toFinancialMovement(tx)
+  const isPendingReimbursement =
+    movement.kind === 'reimbursement' && movement.state !== 'received'
+  const toneClass = toneToClass(resolveTone(movement.kind, view.sign, isPendingReimbursement))
 
   return (
     <View className="flex-row items-center gap-3 px-[18px] py-[13px]">
@@ -75,14 +83,13 @@ export function MovementRow({
       </View>
       <View className="items-end">
         <Text className={`text-[14px] font-extrabold tabular-nums ${toneClass}`}>
-          {prefix}
+          {view.sign}
           {formatted}
         </Text>
         {/* Same-account exchange: the leg that came back into this account. */}
         {view.receivedLeg && (
-          <Text className="text-[13px] font-extrabold tabular-nums text-emerald-deep">
-            {'+ '}
-            {formatMoney(view.receivedLeg.amount, view.receivedLeg.currencyCode, showCents)}
+          <Text className={`text-[13px] font-extrabold tabular-nums ${toneClass}`}>
+            +{formatMoney(view.receivedLeg.amount, view.receivedLeg.currencyCode, showCents)}
           </Text>
         )}
         {runningBalance && runningBalanceCurrencies.length > 0 && (
