@@ -5,7 +5,7 @@
 
 ## 2. Datos existentes
 
-- [ ] 2.1 Corregir a mano el reintegro afectado en producción con la consulta del SQL Editor (lo hace una persona).
+- [x] 2.1 Corregir a mano el reintegro afectado en producción con la consulta del SQL Editor (lo hace una persona).
 
 ## 3. Verificación
 
