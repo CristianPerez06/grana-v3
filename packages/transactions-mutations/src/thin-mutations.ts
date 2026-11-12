@@ -483,6 +483,28 @@ export async function updateTransaction(
 
   if (error) return { ok: false, errorCode: error.code }
 
+  // Period cascade to the linked 'statement' reimbursement(s). A statement
+  // reimbursement nets in a card period, defaulted to its expense's at creation;
+  // when the expense moves to another statement, one that was still following it
+  // (same period AND same date as the expense's OLD ones) moves too. Without this
+  // the expense landed in the right statement and its credit stayed behind in the
+  // old one, overstating one total and understating the other. Runs BEFORE the
+  // date cascade, which rewrites the `date` this filter matches on. No paid guard
+  // is needed: the source period is the expense's own (an unpaid consumo), and a
+  // paid target was already rejected above.
+  if (periodReassignment && existing.card_period_id != null && existing.date != null) {
+    const { error: periodError } = await supabase
+      .from('transactions')
+      .update({ card_period_id: periodReassignment.card_period_id })
+      .eq('linked_transaction_id', id)
+      .eq('type', 'reimbursement')
+      .eq('user_id', userId)
+      .eq('reimbursement_target', 'statement')
+      .eq('card_period_id', existing.card_period_id)
+      .eq('date', existing.date)
+    if (periodError) return { ok: false, errorCode: periodError.code }
+  }
+
   // Date cascade to the linked reimbursement(s). A reimbursement's accounting
   // date defaults to its origin expense's; when the expense's date moves, a
   // reimbursement that was still following it (its date == the expense's OLD

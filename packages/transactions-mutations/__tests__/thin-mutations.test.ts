@@ -362,3 +362,132 @@ describe('thin-mutations — updateTransaction reimbursement date cascade', () =
     expect(capture.reimbDate).toBeUndefined()
   })
 })
+
+// Mock for updateTransaction's card-consumo re-dating path. Every query builder
+// method records its filters and returns the chain; awaiting it (or `.single()`)
+// resolves by table + operation. Captures each UPDATE with its payload and
+// filters, in order, so the test can pin both cascades and their sequence.
+type RecordedUpdate = { payload: Record<string, unknown>; filter: Record<string, unknown> }
+
+function cardRedateClient(opts: {
+  existing: Record<string, unknown>
+  periods: Array<Record<string, unknown>>
+  updates: RecordedUpdate[]
+}): GranaSupabaseClient {
+  return {
+    from(table: string) {
+      const filter: Record<string, unknown> = {}
+      let op: 'select' | 'update' = 'select'
+      let payload: Record<string, unknown> = {}
+      const resolveValue = () => {
+        if (op === 'update') {
+          opts.updates.push({ payload, filter: { ...filter } })
+          return { error: null }
+        }
+        if (table === 'card_periods') {
+          if ('id' in filter) {
+            return { data: opts.periods.find((p) => p.id === filter.id) ?? null, error: null }
+          }
+          return { data: opts.periods, error: null }
+        }
+        if (table === 'period_payments') return { data: [], error: null }
+        if (table === 'transactions' && 'user_id' in filter) {
+          return { data: opts.existing, error: null }
+        }
+        return { data: [], error: null }
+      }
+      const chain = {
+        select: () => chain,
+        update(p: Record<string, unknown>) {
+          op = 'update'
+          payload = p
+          return chain
+        },
+        eq(col: string, val: unknown) {
+          filter[col] = val
+          return chain
+        },
+        in: () => chain,
+        order: () => chain,
+        single: async () => resolveValue(),
+        then(resolve: (v: unknown) => void) {
+          resolve(resolveValue())
+        },
+      }
+      return chain
+    },
+  } as unknown as GranaSupabaseClient
+}
+
+describe('thin-mutations — updateTransaction statement reimbursement follows the period', () => {
+  const OLD_PERIOD = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  const NEW_PERIOD = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  const periods = [
+    {
+      id: NEW_PERIOD,
+      account_id: ACCOUNT,
+      start_date: '2026-09-24',
+      end_date: '2026-10-22',
+      due_date: '2026-11-04',
+    },
+    {
+      id: OLD_PERIOD,
+      account_id: ACCOUNT,
+      start_date: '2026-10-23',
+      end_date: '2026-11-20',
+      due_date: '2026-12-03',
+    },
+  ]
+  // A card consumo loaded "today" (12/11) by mistake, then re-dated to 30/09.
+  const consumo = {
+    id: TX,
+    status: 'pending',
+    account_id: ACCOUNT,
+    card_period_id: OLD_PERIOD,
+    parent_id: null,
+    currency_code: 'ARS',
+    date: '2026-11-12',
+  }
+
+  it('moves a following statement reimbursement to the expense new period, before re-dating it', async () => {
+    const updates: RecordedUpdate[] = []
+    const result = await updateTransaction(
+      cardRedateClient({ existing: consumo, periods, updates }),
+      USER,
+      TX,
+      { date: '2026-09-30' },
+      today,
+    )
+    expect(result.ok).toBe(true)
+
+    const [expense, reimbPeriod, reimbDate] = updates
+    expect(expense.payload).toMatchObject({ date: '2026-09-30', card_period_id: NEW_PERIOD })
+    // Only a statement reimbursement still sitting on the expense's OLD period
+    // and OLD date follows it.
+    expect(reimbPeriod.payload).toEqual({ card_period_id: NEW_PERIOD })
+    expect(reimbPeriod.filter).toMatchObject({
+      linked_transaction_id: TX,
+      type: 'reimbursement',
+      user_id: USER,
+      reimbursement_target: 'statement',
+      card_period_id: OLD_PERIOD,
+      date: '2026-11-12',
+    })
+    // The date cascade runs after, still matching on the OLD date.
+    expect(reimbDate.payload).toEqual({ date: '2026-09-30' })
+    expect(reimbDate.filter).toMatchObject({ date: '2026-11-12' })
+  })
+
+  it('does not touch the reimbursement period when the consumo stays in its statement', async () => {
+    const updates: RecordedUpdate[] = []
+    const result = await updateTransaction(
+      cardRedateClient({ existing: consumo, periods, updates }),
+      USER,
+      TX,
+      { date: '2026-11-05' },
+      today,
+    )
+    expect(result.ok).toBe(true)
+    expect(updates.some((u) => 'card_period_id' in u.payload)).toBe(false)
+  })
+})
