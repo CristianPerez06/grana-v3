@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { runningBalanceCurrencies, type RunningBalanceRow } from '../src/balance'
-import { resolveMovementView, type MovementViewInput } from '../src/movements'
+import { legInCurrency, resolveMovementView, type MovementViewInput } from '../src/movements'
 
 const ACC = 'acc-1'
 const OTHER = 'acc-2'
@@ -119,5 +119,42 @@ describe('resolveMovementView — receivedLeg', () => {
 
   it('the global perspective has no received leg', () => {
     expect(resolveMovementView(exchange(), { kind: 'global' }).receivedLeg).toBeUndefined()
+  })
+})
+
+describe('legInCurrency', () => {
+  const base: MovementViewInput = {
+    kind: 'exchange',
+    accountId: ACC,
+    accountName: 'Santander',
+    destinationAccountId: ACC,
+    destinationAccountName: 'Santander',
+    amount: 3_859_133.55,
+    currencyCode: 'ARS',
+    destinationAmount: 2482,
+    destinationCurrency: 'USD',
+    baseSign: '-',
+  }
+  const account = { kind: 'account', accountId: ACC } as const
+
+  it('a same-account exchange shows its outgoing leg in ARS and its incoming leg in USD', () => {
+    const view = resolveMovementView(base, account)
+    expect(legInCurrency(view, 'ARS')).toEqual({ sign: '-', amount: 3_859_133.55, currencyCode: 'ARS' })
+    expect(legInCurrency(view, 'USD')).toEqual({ sign: '+', amount: 2482, currencyCode: 'USD' })
+  })
+
+  it('an ARS expense has no USD leg', () => {
+    const view = resolveMovementView(
+      { ...base, kind: 'expense', destinationAccountId: null, destinationAccountName: null, destinationAmount: null, destinationCurrency: null },
+      account,
+    )
+    expect(legInCurrency(view, 'USD')).toBeNull()
+    expect(legInCurrency(view, 'ARS')).toMatchObject({ sign: '-', amount: 3_859_133.55 })
+  })
+
+  it('an exchange into this account from another one shows only in the destination currency', () => {
+    const view = resolveMovementView({ ...base, accountId: OTHER }, account)
+    expect(legInCurrency(view, 'ARS')).toBeNull()
+    expect(legInCurrency(view, 'USD')).toEqual({ sign: '+', amount: 2482, currencyCode: 'USD' })
   })
 })

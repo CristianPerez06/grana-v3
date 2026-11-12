@@ -14,6 +14,7 @@ import {
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
+  legInCurrency,
   resolveMovementView,
   type BalanceCurrency,
   type MovementPerspective,
@@ -64,11 +65,12 @@ type Props = {
   /** Running balance after this movement, per currency (account view, no filters). */
   runningBalanceSnapshot?: Record<'ARS' | 'USD', number> | null
   /**
-   * Which currencies of the snapshot to show, ARS first. Decided once per
-   * account (`runningBalanceCurrencies`) so every row shows the same count.
-   * Absent ⇒ only the movement's own currency.
+   * Account detail currency lens (ARS | USD): the row shows only its leg in this
+   * currency and the balance of this currency. A same-account exchange shows
+   * its outgoing leg in one lens and its incoming leg in the other. Absent ⇒
+   * the movement's own currency and, for that exchange, both legs.
    */
-  runningBalanceCurrencies?: readonly BalanceCurrency[] | null
+  currencyLens?: BalanceCurrency | null
   /** Installment chip label (e.g. "Cuota 2 de 6"); shown on card-statement rows. */
   installmentChip?: string | null
   /** Render the installment chip on its own line below the subtitle (card statement layout). */
@@ -81,7 +83,7 @@ export const MovementRow = ({
   showAccount = false,
   isRecurrent = false,
   runningBalanceSnapshot = null,
-  runningBalanceCurrencies = null,
+  currencyLens = null,
   installmentChip = null,
   installmentChipBelow = false,
 }: Props) => {
@@ -89,7 +91,10 @@ export const MovementRow = ({
   const tRoot = useTranslations()
   const showCents = useShowCents()
 
-  const view = resolveMovementView(toMovementViewInput(movement), perspective)
+  const fullView = resolveMovementView(toMovementViewInput(movement), perspective)
+  // Under a lens the row speaks only that currency: its leg there, no second leg.
+  const lensLeg = currencyLens ? legInCurrency(fullView, currencyLens) : null
+  const view = lensLeg ? { ...fullView, ...lensLeg, receivedLeg: undefined } : fullView
   const typeLabel = t(typeLabelKey[movement.kind])
 
   // System categories/subcategories render localized; user-owned keep their name.
@@ -114,13 +119,8 @@ export const MovementRow = ({
     (movement.kind === 'installment_purchase' && movement.installments_total
       ? t('installments_count', { count: movement.installments_total })
       : null)
-  const balanceLines: { currency: BalanceCurrency; amount: number }[] = runningBalanceSnapshot
-    ? (runningBalanceCurrencies ?? [view.currencyCode]).map((currency) => ({
-        currency,
-        amount: runningBalanceSnapshot[currency],
-      }))
-    : []
-  const hasRunningBalance = balanceLines.length > 0
+  const runningBalance = runningBalanceSnapshot ? runningBalanceSnapshot[view.currencyCode] : null
+  const hasRunningBalance = runningBalance != null
   const isPendingReimbursement =
     movement.kind === 'reimbursement' && movement.state !== 'received'
 
@@ -275,41 +275,19 @@ export const MovementRow = ({
           </p>
         )}
         {/* Below md the balance has no column of its own: it sits under the amount. */}
-        {hasRunningBalance && (
-          <div className="mt-1.5 md:hidden">
-            <RunningBalanceLines lines={balanceLines} showCents={showCents} />
-          </div>
+        {runningBalance != null && (
+          <p className="mt-1 text-[12px] font-bold tabular-nums text-muted-foreground md:hidden">
+            {formatAmount(runningBalance, view.currencyCode, showCents)}
+          </p>
         )}
       </div>
 
-      {hasRunningBalance && (
-        <div className="hidden md:block">
-          <RunningBalanceLines lines={balanceLines} showCents={showCents} />
+      {runningBalance != null && (
+        <div className="hidden text-right text-[12px] font-bold text-muted-foreground tabular-nums md:block">
+          {formatAmount(runningBalance, view.currencyCode, showCents)}
         </div>
       )}
     </div>
   )
 }
 
-/**
- * The running balance after a movement: one line per currency the account uses,
- * ARS on top in the main size and USD below, smaller (bi-currency hierarchy).
- */
-const RunningBalanceLines = ({
-  lines,
-  showCents,
-}: {
-  lines: { currency: BalanceCurrency; amount: number }[]
-  showCents: boolean
-}) => (
-  <div className="text-right tabular-nums text-muted-foreground">
-    {lines.map(({ currency, amount }) => (
-      <p
-        key={currency}
-        className={currency === 'USD' && lines.length > 1 ? 'text-[11px] font-semibold' : 'text-[12px] font-bold'}
-      >
-        {formatAmount(amount, currency, showCents)}
-      </p>
-    ))}
-  </div>
-)

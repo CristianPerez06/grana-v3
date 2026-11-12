@@ -6,9 +6,13 @@ import Link from 'next/link'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
   computeRunningBalances,
+  legInCurrency,
+  resolveMovementView,
   runningBalanceCurrencies,
+  type BalanceCurrency,
   type RunningBalanceRow,
 } from '@grana/money-logic'
+import { toMovementViewInput } from '@grana/transactions'
 import { MovementList } from '@/lib/transactions/components/movement-list'
 import { MovementListSkeleton } from '@/lib/transactions/components/movement-list-skeleton'
 import { Button } from '@/components/ui/button'
@@ -43,7 +47,8 @@ type Props = {
 
 /** Empty-state variant: which message + action to show when the visible list is empty. */
 function resolveEmptyVariant(filters: TransactionsFilters): 'none' | 'search' | 'filter' {
-  if (hasActiveContentFilters(filters)) return 'filter'
+  // The currency is the account's lens (ARS | USD pills), not a filter to clear.
+  if (hasActiveContentFilters({ ...filters, currency: null })) return 'filter'
   if (hasActiveSearch(filters)) return 'search'
   return 'none'
 }
@@ -59,12 +64,19 @@ function applyAccountFilters(
   movements: FinancialMovement[],
   filters: TransactionsFilters,
   range: { from?: string; to?: string },
+  accountId: string,
+  lens: BalanceCurrency | null,
 ): FinancialMovement[] {
   return movements.filter((m) => {
     if (range.from && m.date < range.from) return false
     if (range.to && m.date > range.to) return false
     if (filters.type && m.kind !== filters.type) return false
-    if (filters.currency && m.currency_code !== filters.currency) return false
+    // The currency lens keeps every movement with a leg in that currency for
+    // THIS account — a same-account exchange belongs to both ledgers.
+    if (lens) {
+      const view = resolveMovementView(toMovementViewInput(m), { kind: 'account', accountId })
+      if (!legInCurrency(view, lens)) return false
+    }
     if (filters.categoryId && m.category_id !== filters.categoryId) return false
     if (filters.subcategoryId) {
       if (filters.subcategoryId === SUBCATEGORY_NONE_MARKER) {
@@ -192,9 +204,17 @@ export function MovementListAccountContainer({ accountId }: Props) {
 
   const range = useMemo(() => resolveRange(filters), [filters])
 
+  // Currency lens: an account that uses both currencies shows one ledger at a
+  // time (ARS by default, the primary currency); the ARS | USD pills switch it.
+  // It is the same `filters.currency` the filters sheet sets, so both controls
+  // always agree. A one-currency account has no pills and its lens is that one.
+  const usedCurrencies = running?.currencies ?? null
+  const showCurrencyLens = (usedCurrencies?.length ?? 0) > 1
+  const lens: BalanceCurrency | null = filters.currency ?? usedCurrencies?.[0] ?? null
+
   const filteredMovements = useMemo(
-    () => applyAccountFilters(allDisplayMovements, filters, range),
-    [allDisplayMovements, filters, range],
+    () => applyAccountFilters(allDisplayMovements, filters, range, accountId, lens),
+    [allDisplayMovements, filters, range, accountId, lens],
   )
 
   const pagedMovements = useMemo(
@@ -227,13 +247,21 @@ export function MovementListAccountContainer({ accountId }: Props) {
 
   const variant = resolveEmptyVariant(filters)
   const recurrenceLinkedIds = linkedQ.data ? new Set(linkedQ.data) : undefined
-  // Content filters AND a text search both skip rows, so a running balance
-  // over what is left would be wrong: hide it in either case.
-  const showRunningBalance =
-    !hasActiveContentFilters(filters) && !hasActiveSearch(filters) ? running : null
+  // Content filters AND a text search skip rows, so a running balance over what
+  // is left would be wrong: hide it. The currency is the exception — it is the
+  // lens, and it skips no row of the ledger whose balance is shown.
+  const skipsRows =
+    hasActiveContentFilters({ ...filters, currency: null }) || hasActiveSearch(filters)
+  const showRunningBalance = !skipsRows ? running : null
 
   return (
     <div id="movement-list" className="scroll-mt-6 flex flex-col gap-6">
+      {showCurrencyLens && lens && (
+        <CurrencyLensPills
+          value={lens}
+          onChange={(currency) => dispatch({ type: 'setCurrency', currency })}
+        />
+      )}
       <MovementList
         movements={pagedMovements}
         perspective={{ kind: 'account', accountId }}
@@ -241,7 +269,7 @@ export function MovementListAccountContainer({ accountId }: Props) {
         showAccount={false}
         recurrenceLinkedIds={recurrenceLinkedIds}
         runningBalances={showRunningBalance?.snapshots ?? null}
-        runningBalanceCurrencies={showRunningBalance?.currencies ?? null}
+        currencyLens={lens}
         emptyState={{
           variant,
           query: filters.query,
@@ -273,6 +301,42 @@ export function MovementListAccountContainer({ accountId }: Props) {
           </Button>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * ARS | USD pills — the same control and look as the currency switch of
+ * «¿En qué gasté?» in /transactions, so the two lenses read as one app.
+ */
+function CurrencyLensPills({
+  value,
+  onChange,
+}: {
+  value: BalanceCurrency
+  onChange: (currency: BalanceCurrency) => void
+}) {
+  return (
+    <div className="-mb-3 flex items-center gap-1" role="tablist">
+      {(['ARS', 'USD'] as const).map((code) => {
+        const active = value === code
+        return (
+          <button
+            key={code}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(code)}
+            className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+              active
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border bg-card text-text-muted hover:text-text'
+            }`}
+          >
+            {code}
+          </button>
+        )
+      })}
     </div>
   )
 }

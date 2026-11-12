@@ -1,8 +1,9 @@
 import { resolveMonthRange } from '@grana/dashboard'
-import { getTodayAR } from '@grana/money-logic'
+import { getTodayAR, legInCurrency, type BalanceCurrency } from '@grana/money-logic'
 import { movementMatchesText, type FinancialMovement, type TransactionWithDetails } from '@grana/transactions'
 import type { Locale } from '../locale'
 import type { MovementFiltersState } from '../transactions/feed-filters'
+import { accountMovementView } from './movement-view'
 
 // The filters SHAPE now lives with the feed (`lib/transactions/feed-filters.ts`)
 // so the account detail and the global Movimientos tab share one sheet and one
@@ -77,16 +78,22 @@ export {
 // account's whole history (it needs it for the per-row running balance), while
 // the feed paginates, so filtering a partial page there would answer a different
 // question than the user asked. Do not "fix" the feed by filtering its page.
+//
+// The currency is the account's LENS (ARS | USD pills), not a plain match on
+// `currency_code`: it keeps every movement with a leg in that currency for this
+// account, so a same-account exchange belongs to both ledgers — same rule as web.
 export function applyAccountFilters(
   movements: TransactionWithDetails[],
   filters: AccountMovementFilters,
   movementById: Map<string, FinancialMovement>,
+  accountId: string,
+  lens: BalanceCurrency | null,
 ): TransactionWithDetails[] {
   const { from, to } = resolveMonthRange(filters.month)
   return movements.filter((tx) => {
     if (tx.date < from || tx.date > to) return false
     if (filters.type && movementById.get(tx.id)?.kind !== filters.type) return false
-    if (filters.currency && tx.currency_code !== filters.currency) return false
+    if (lens && !legInCurrency(accountMovementView(tx, accountId), lens)) return false
     if (filters.accountId && tx.account_id !== filters.accountId) return false
     if (filters.categoryId && tx.category_id !== filters.categoryId) return false
     if (filters.subcategoryId && tx.subcategory_id !== filters.subcategoryId) return false

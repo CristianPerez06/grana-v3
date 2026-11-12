@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import { getTodayAR, formatDateISO, type BalanceCurrency } from '@grana/money-logic'
+import { getTodayAR, formatDateISO, legInCurrency, type BalanceCurrency } from '@grana/money-logic'
 import {
   resolveTone,
   toFinancialMovement,
@@ -17,8 +17,12 @@ type Props = {
   accountId: string
   /** Account balance per currency AFTER this movement; null hides it (filters active). */
   runningBalance?: Record<BalanceCurrency, number> | null
-  /** Which currencies of the balance to show, ARS first — the same for every row of the account. */
-  runningBalanceCurrencies?: readonly BalanceCurrency[]
+  /**
+   * Currency lens (ARS | USD): the row shows only its leg and the balance in
+   * this currency; a same-account exchange shows its outgoing leg in one lens
+   * and its incoming leg in the other. Same rule as the web row.
+   */
+  currencyLens?: BalanceCurrency | null
 }
 
 const MONTHS: Record<Locale, readonly string[]> = {
@@ -44,13 +48,15 @@ export function MovementRow({
   tx,
   accountId,
   runningBalance = null,
-  runningBalanceCurrencies = [],
+  currencyLens = null,
 }: Props) {
   const t = useT()
   const locale = useLocale()
   const showCents = useShowCents()
 
-  const view = accountMovementView(tx, accountId)
+  const fullView = accountMovementView(tx, accountId)
+  const lensLeg = currencyLens ? legInCurrency(fullView, currencyLens) : null
+  const view = lensLeg ? { ...fullView, ...lensLeg, receivedLeg: undefined } : fullView
   const categoryLabel = resolveCategoryLabel(tx.category, t)
   const todayIso = formatDateISO(getTodayAR())
   const dateLabel = formatMovementDate(tx.date, locale, todayIso) ?? t('common.today')
@@ -92,21 +98,10 @@ export function MovementRow({
             +{formatMoney(view.receivedLeg.amount, view.receivedLeg.currencyCode, showCents)}
           </Text>
         )}
-        {runningBalance && runningBalanceCurrencies.length > 0 && (
-          <View className="mt-1.5 items-end">
-            {runningBalanceCurrencies.map((currency) => (
-              <Text
-                key={currency}
-                className={`tabular-nums text-text-muted ${
-                  currency === 'USD' && runningBalanceCurrencies.length > 1
-                    ? 'text-[11px] font-semibold'
-                    : 'text-[12px] font-bold'
-                }`}
-              >
-                {formatMoney(runningBalance[currency], currency, showCents)}
-              </Text>
-            ))}
-          </View>
+        {runningBalance && (
+          <Text className="mt-1 text-[12px] font-bold tabular-nums text-text-muted">
+            {formatMoney(runningBalance[view.currencyCode], view.currencyCode, showCents)}
+          </Text>
         )}
       </View>
     </View>

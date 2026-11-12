@@ -48,8 +48,8 @@ type Props = {
   recurrenceLinkedIds?: Set<string>
   /** Per-movement running balance snapshots (account view, no filters); null hides them. */
   runningBalances?: Map<string, Record<'ARS' | 'USD', number>> | null
-  /** Currencies each running balance shows (same for every row of the account). */
-  runningBalanceCurrencies?: readonly BalanceCurrency[] | null
+  /** Account detail currency lens: each row shows only its leg and balance in this currency. */
+  currencyLens?: BalanceCurrency | null
   /** Per-movement installment chip labels (e.g. "Cuota 2 de 6"), keyed by id. */
   installmentChips?: Map<string, string>
   /** Render the installment chip on a separate line below the subtitle (card statement layout). */
@@ -67,7 +67,7 @@ export const MovementList = ({
   showAccount = false,
   recurrenceLinkedIds,
   runningBalances = null,
-  runningBalanceCurrencies = null,
+  currencyLens = null,
   installmentChips,
   installmentChipBelow = false,
   groupByDate = true,
@@ -157,7 +157,7 @@ export const MovementList = ({
         showAccount={showAccount}
         isRecurrent={recurrenceLinkedIds?.has(movement.id) ?? false}
         runningBalanceSnapshot={runningBalances?.get(movement.id) ?? null}
-        runningBalanceCurrencies={runningBalanceCurrencies}
+        currencyLens={currencyLens}
         installmentChip={installmentChips?.get(movement.id) ?? null}
         installmentChipBelow={installmentChipBelow}
       />

@@ -142,6 +142,27 @@ export function resolveMovementView(
   }
 }
 
+/**
+ * The leg of a movement, seen from an account, in ONE currency — the account
+ * detail's currency lens (ARS | USD). A same-account exchange has a leg in each
+ * currency, so it shows in both lenses: its outgoing leg in one, its incoming
+ * leg (`receivedLeg`, always `+`) in the other. Returns `null` when the movement
+ * has no leg in that currency for this account, i.e. it does not belong to that
+ * ledger and the lens hides it.
+ */
+export function legInCurrency(
+  view: MovementView,
+  currency: BalanceCurrency,
+): { sign: '+' | '-' | null; amount: number; currencyCode: BalanceCurrency } | null {
+  if (view.currencyCode === currency) {
+    return { sign: view.sign, amount: view.amount, currencyCode: currency }
+  }
+  if (view.receivedLeg?.currencyCode === currency) {
+    return { sign: '+', amount: view.receivedLeg.amount, currencyCode: currency }
+  }
+  return null
+}
+
 /** Functional movement type for editability (`type` column of `transactions`). */
 export type MovementType = 'income' | 'expense' | 'transfer' | 'adjustment' | 'exchange'
 

@@ -32,14 +32,15 @@ describe('saldo corriente en el detalle de cuenta nativo', () => {
     expect(section).toMatch(/initial_balance/)
   })
 
-  it('lo oculta con filtros activos o con búsqueda', () => {
-    expect(section).toMatch(/showRunningBalance\s*=\s*activeCount === 0 && filters\.query\.trim\(\)\.length === 0/)
+  it('lo oculta con filtros o búsqueda, pero no por la moneda, que es la lente', () => {
+    expect(section).toMatch(/activeFilterCount\(\{ \.\.\.filters, currency: null \}\) === 0 && filters\.query\.trim\(\)\.length === 0/)
     expect(section).toMatch(/runningBalance=\{showRunningBalance \?/)
   })
 
-  it('la fila muestra el saldo de cada moneda y la pata recibida del cambio', () => {
-    expect(row).toMatch(/runningBalanceCurrencies\.map\(/)
-    expect(row).toMatch(/view\.receivedLeg/)
+  it('muestra una moneda por vez: la lente ARS | USD, solo si la cuenta usa las dos', () => {
+    expect(section).toMatch(/showCurrencyLens = running\.currencies\.length > 1/)
+    expect(section).toMatch(/applyAccountFilters\(movements, filters, movementById, accountId, lens\)/)
+    expect(row).toMatch(/legInCurrency\(fullView, currencyLens\)/)
   })
 
   it('el tono sale de resolveTone, como en la web y el feed, y el signo va pegado', () => {

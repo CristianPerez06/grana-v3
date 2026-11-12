@@ -106,14 +106,24 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
     }
   }, [movements, accountId, currencies])
 
+  // Currency lens: an account that uses both currencies shows one ledger at a
+  // time (ARS by default, the primary currency); the ARS | USD pills switch it.
+  // It is the same `filters.currency` the filters sheet sets, so both controls
+  // always agree — same rule as the web account detail.
+  const showCurrencyLens = running.currencies.length > 1
+  const lens: BalanceCurrency | null = filters.currency ?? running.currencies[0] ?? null
+
   const filtered = useMemo(
-    () => applyAccountFilters(movements, filters, movementById).slice().reverse(),
-    [movements, filters, movementById],
+    () =>
+      applyAccountFilters(movements, filters, movementById, accountId, lens).slice().reverse(),
+    [movements, filters, movementById, accountId, lens],
   )
   const activeCount = activeFilterCount(filters)
   // Filters and a text search skip rows: a running balance over what is left
-  // would be wrong, so it hides (same rule as the web account detail).
-  const showRunningBalance = activeCount === 0 && filters.query.trim().length === 0
+  // would be wrong, so it hides (same rule as the web account detail). The
+  // currency is the exception — it is the lens and skips no row of its ledger.
+  const showRunningBalance =
+    activeFilterCount({ ...filters, currency: null }) === 0 && filters.query.trim().length === 0
 
   const categoryLabelFor = (id: string) => {
     const category = options?.categories.find((c) => c.id === id)
@@ -270,6 +280,14 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
       {/* Active filter chips */}
       <ActiveFilterChips chips={chips} />
 
+      {/* Currency lens: one ledger at a time, only for a two-currency account. */}
+      {showCurrencyLens && lens && (
+        <CurrencyLensPills
+          value={lens}
+          onChange={(currency) => setFilters((f) => ({ ...f, currency }))}
+        />
+      )}
+
       {/* List */}
       {loading ? (
         <MovementRowsSkeleton />
@@ -285,7 +303,7 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
                 tx={tx}
                 accountId={accountId}
                 runningBalance={showRunningBalance ? running.snapshots.get(tx.id) ?? null : null}
-                runningBalanceCurrencies={running.currencies}
+                currencyLens={lens}
               />
             </View>
           ))}
@@ -336,5 +354,42 @@ function ActionChip({
         </View>
       )}
     </Pressable>
+  )
+}
+
+/**
+ * ARS | USD pills — the same control and look as the currency switch of
+ * «¿En qué gasté?» (`CategorySpendingOverview`), so the two lenses read as one
+ * app. Web renders the same control above the same list.
+ */
+function CurrencyLensPills({
+  value,
+  onChange,
+}: {
+  value: BalanceCurrency
+  onChange: (currency: BalanceCurrency) => void
+}) {
+  return (
+    <View className="flex-row items-center gap-1">
+      {(['ARS', 'USD'] as const).map((code) => {
+        const active = value === code
+        return (
+          <Pressable
+            key={code}
+            onPress={() => onChange(code)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            hitSlop={8}
+            className={`rounded-full border px-2.5 py-1 ${
+              active ? 'border-emerald bg-emerald-soft' : 'border-border-soft bg-card'
+            }`}
+          >
+            <Text className={`text-[11px] ${active ? 'font-extrabold text-text' : 'text-text-soft'}`}>
+              {code}
+            </Text>
+          </Pressable>
+        )
+      })}
+    </View>
   )
 }
