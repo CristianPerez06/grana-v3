@@ -11,7 +11,13 @@
 
 - [x] 3.1 `MovementsSection`, `MovementRow` y `applyAccountFilters`: mismo selector, misma regla de pertenencia y de saldo; actualizar `running-balance-wiring.test.ts`. Verificar con `pnpm typecheck:mobile`, `pnpm lint:mobile` y `pnpm test`
 
-## 4. Cierre
+## 4. Ajustes tras la primera prueba
 
-- [ ] 4.1 El usuario lo prueba en la web y en la app nativa y decide si se queda
-- [ ] 4.2 `pnpm verify` en verde (salvo el paso de archivo, que corre al archivar)
+- [x] 4.1 Selector al lado del título «Movimientos» (web: encabezado de la tarjeta, se acomoda debajo del título en pantallas angostas; app: fila del título, el mes pasa a su propia fila). Verificado a 1280, 390 y 360px
+- [x] 4.2 La moneda deja de ser un filtro cuando hay selector: sin chip, sin contar en el botón, sin bloque en la hoja, «Limpiar todo» no la cambia (web y app)
+- [x] 4.3 Quitar la etiqueta «USD» debajo de los montos en dólares en las filas de movimiento (web y feed nativo)
+
+## 5. Cierre
+
+- [ ] 5.1 El usuario lo prueba en la web y en la app nativa y decide si se queda
+- [ ] 5.2 `pnpm verify` en verde (salvo el paso de archivo, que corre al archivar)

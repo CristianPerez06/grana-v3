@@ -43,6 +43,12 @@ describe('saldo corriente en el detalle de cuenta nativo', () => {
     expect(row).toMatch(/legInCurrency\(fullView, currencyLens\)/)
   })
 
+  it('con la lente visible la moneda no es un filtro: ni hoja, ni chip, ni cuenta', () => {
+    expect(section).toMatch(/showCurrencyFilter=\{!showCurrencyLens\}/)
+    expect(section).toMatch(/filters\.currency && !showCurrencyLens/)
+    expect(section).toMatch(/activeFilterCount\(showCurrencyLens \? \{ \.\.\.filters, currency: null \} : filters\)/)
+  })
+
   it('el tono sale de resolveTone, como en la web y el feed, y el signo va pegado', () => {
     expect(row).toMatch(/resolveTone\(movement\.kind, view\.sign/)
     expect(row).not.toMatch(/'- '|'\+ '/)

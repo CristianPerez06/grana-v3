@@ -8,7 +8,6 @@ import {
   computeRunningBalances,
   legInCurrency,
   resolveMovementView,
-  runningBalanceCurrencies,
   type BalanceCurrency,
   type RunningBalanceRow,
 } from '@grana/money-logic'
@@ -40,6 +39,7 @@ import {
   type FinancialMovement,
 } from '@/lib/transactions/movements'
 import { useTransactionsFilters } from '@/lib/transactions/filters-context'
+import { useAccountCurrencyLens } from './use-account-currency-lens'
 
 type Props = {
   accountId: string
@@ -149,15 +149,10 @@ export function MovementListAccountContainer({ accountId }: Props) {
         account.currencies.find((c) => c.currency_code === 'USD')?.initial_balance ?? 0,
       ),
     }
-    const rows = ascendingQ.data as RunningBalanceRow[]
-    const snapshots = computeRunningBalances(rows, accountId, initial)
-    // How many balances each row shows: decided once for the whole account,
-    // so every row (and every month) shows the same ARS / ARS+USD / USD set.
-    const currencies = runningBalanceCurrencies(
-      rows,
+    const snapshots = computeRunningBalances(
+      ascendingQ.data as RunningBalanceRow[],
       accountId,
       initial,
-      account.currencies.map((c) => c.currency_code),
     )
     // The synthetic "saldo inicial" rows snapshot the starting balance itself
     // (their row displays the per-currency value before any movement).
@@ -165,7 +160,7 @@ export function MovementListAccountContainer({ accountId }: Props) {
       if (Number(c.initial_balance) === 0) continue
       snapshots.set(`${INITIAL_BALANCE_ID_PREFIX}${c.currency_code}`, initial)
     }
-    return { snapshots, currencies }
+    return snapshots
   }, [ascendingQ.data, accountQ.data, accountId])
 
   // Display order (most recent first) + user filters + client-side pagination.
@@ -205,12 +200,9 @@ export function MovementListAccountContainer({ accountId }: Props) {
   const range = useMemo(() => resolveRange(filters), [filters])
 
   // Currency lens: an account that uses both currencies shows one ledger at a
-  // time (ARS by default, the primary currency); the ARS | USD pills switch it.
-  // It is the same `filters.currency` the filters sheet sets, so both controls
-  // always agree. A one-currency account has no pills and its lens is that one.
-  const usedCurrencies = running?.currencies ?? null
-  const showCurrencyLens = (usedCurrencies?.length ?? 0) > 1
-  const lens: BalanceCurrency | null = filters.currency ?? usedCurrencies?.[0] ?? null
+  // time (ARS by default); the ARS | USD pills next to the «Movimientos» title
+  // switch it. A one-currency account has no pills and its lens is that one.
+  const { lens } = useAccountCurrencyLens(accountId)
 
   const filteredMovements = useMemo(
     () => applyAccountFilters(allDisplayMovements, filters, range, accountId, lens),
@@ -256,19 +248,13 @@ export function MovementListAccountContainer({ accountId }: Props) {
 
   return (
     <div id="movement-list" className="scroll-mt-6 flex flex-col gap-6">
-      {showCurrencyLens && lens && (
-        <CurrencyLensPills
-          value={lens}
-          onChange={(currency) => dispatch({ type: 'setCurrency', currency })}
-        />
-      )}
       <MovementList
         movements={pagedMovements}
         perspective={{ kind: 'account', accountId }}
         todayISO={formatDateISO(getTodayAR())}
         showAccount={false}
         recurrenceLinkedIds={recurrenceLinkedIds}
-        runningBalances={showRunningBalance?.snapshots ?? null}
+        runningBalances={showRunningBalance}
         currencyLens={lens}
         emptyState={{
           variant,
@@ -305,38 +291,3 @@ export function MovementListAccountContainer({ accountId }: Props) {
   )
 }
 
-/**
- * ARS | USD pills — the same control and look as the currency switch of
- * «¿En qué gasté?» in /transactions, so the two lenses read as one app.
- */
-function CurrencyLensPills({
-  value,
-  onChange,
-}: {
-  value: BalanceCurrency
-  onChange: (currency: BalanceCurrency) => void
-}) {
-  return (
-    <div className="-mb-3 flex items-center gap-1" role="tablist">
-      {(['ARS', 'USD'] as const).map((code) => {
-        const active = value === code
-        return (
-          <button
-            key={code}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(code)}
-            className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
-              active
-                ? 'bg-primary text-primary-foreground'
-                : 'border border-border bg-card text-text-muted hover:text-text'
-            }`}
-          >
-            {code}
-          </button>
-        )
-      })}
-    </div>
-  )
-}

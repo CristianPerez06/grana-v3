@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { adaptFiltersForQuery } from '@/lib/transactions/filters-state'
 import { useTransactionsFilters } from '@/lib/transactions/filters-context'
+import { useAccountCurrencyLens } from './use-account-currency-lens'
 
 type Props = {
   accountId: string
@@ -29,6 +30,7 @@ type Props = {
  */
 export function MovementFiltersAccountContainer({ accountId }: Props) {
   const { filters, dispatch } = useTransactionsFilters()
+  const currencyLens = useAccountCurrencyLens(accountId)
 
   const adapted = useMemo(() => adaptFiltersForQuery(filters), [filters])
 
@@ -64,9 +66,15 @@ export function MovementFiltersAccountContainer({ accountId }: Props) {
       onSetAmountMax: (max) =>
         dispatch({ type: 'setAmountRange', min: filters.amountMin, max }),
       onSetMonth: (month) => dispatch({ type: 'setMonth', month }),
-      onClearAll: () => dispatch({ type: 'clearAll' }),
+      onClearAll: () => {
+        dispatch({ type: 'clearAll' })
+        // «Limpiar todo» clears filters; the currency lens is not one of them.
+        if (currencyLens.show && filters.currency) {
+          dispatch({ type: 'setCurrency', currency: filters.currency })
+        }
+      },
     }),
-    [dispatch, filters.amountMin, filters.amountMax],
+    [dispatch, filters.amountMin, filters.amountMax, filters.currency, currencyLens.show],
   )
 
   return (
@@ -77,6 +85,7 @@ export function MovementFiltersAccountContainer({ accountId }: Props) {
       subcategories={filterOptions?.subcategories ?? []}
       showAccount={false}
       showAccountFilter={false}
+      showCurrencyFilter={!currencyLens.show}
       showMonthNav
       controller={controller}
       disabled={listLoading}

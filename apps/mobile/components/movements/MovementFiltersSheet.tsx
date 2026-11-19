@@ -36,6 +36,12 @@ type Props = {
    * single `Billetera` the account dimension is not offered at all.
    */
   showAccountFilter?: boolean
+  /**
+   * Hide the currency block. The account detail of a two-currency account does:
+   * its ARS | USD lens next to the «Movimientos» title owns the currency, so the
+   * sheet neither offers it nor clears it. Mirror of web's `showCurrencyFilter`.
+   */
+  showCurrencyFilter?: boolean
 }
 
 const CURRENCY_OPTIONS: MovementCurrencyFilter[] = ['ARS', 'USD']
@@ -97,6 +103,7 @@ export function MovementFiltersSheet({
   options,
   onDraftCategoryChange,
   showAccountFilter = true,
+  showCurrencyFilter = true,
 }: Props) {
   const t = useT()
   const insets = useSafeAreaInsets()
@@ -168,7 +175,7 @@ export function MovementFiltersSheet({
     setType(null)
     setAccountId(null)
     pickCategory(null)
-    setCurrency(null)
+    if (showCurrencyFilter) setCurrency(null)
     setAmountMin('')
     setAmountMax('')
   }
@@ -310,6 +317,7 @@ export function MovementFiltersSheet({
             )}
 
             {/* Currency */}
+            {showCurrencyFilter && (
             <View className="gap-2">
               <Label>{t('transactions.filters.currency')}</Label>
               <View className="flex-row flex-wrap gap-2">
@@ -328,6 +336,7 @@ export function MovementFiltersSheet({
                 ))}
               </View>
             </View>
+            )}
 
             {/* Amount range */}
             <View className="gap-2">

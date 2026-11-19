@@ -118,7 +118,9 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
       applyAccountFilters(movements, filters, movementById, accountId, lens).slice().reverse(),
     [movements, filters, movementById, accountId, lens],
   )
-  const activeCount = activeFilterCount(filters)
+  // With the lens shown, the currency is not a filter: no badge count, no chip,
+  // no block in the sheet (the sheet's «Limpiar» does not touch it either).
+  const activeCount = activeFilterCount(showCurrencyLens ? { ...filters, currency: null } : filters)
   // Filters and a text search skip rows: a running balance over what is left
   // would be wrong, so it hides (same rule as the web account detail). The
   // currency is the exception — it is the lens and skips no row of its ledger.
@@ -162,7 +164,7 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
       onRemove: () => setFilters((f) => ({ ...f, subcategoryId: null })),
     })
   }
-  if (filters.currency) {
+  if (filters.currency && !showCurrencyLens) {
     chips.push({
       key: 'currency',
       label: filters.currency,
@@ -194,9 +196,21 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
 
   return (
     <View className="gap-3 rounded-[18px] border border-border bg-card p-5">
-      {/* Toolbar: title + month nav */}
-      <View className="flex-row items-center justify-between gap-2">
+      {/* Title + ARS | USD lens: «Movimientos en pesos / en dólares» — a way of
+          looking at the account, not a filter. Same place as on web. */}
+      <View className="flex-row items-center gap-3">
         <Text className="text-[15px] font-bold text-text">{t('accounts.headers.movements')}</Text>
+        {showCurrencyLens && lens && (
+          <CurrencyLensPills
+            value={lens}
+            onChange={(currency) => setFilters((f) => ({ ...f, currency }))}
+          />
+        )}
+      </View>
+
+      {/* Month nav on its own row, left-aligned — as on web's toolbar. The title
+          row no longer has room for it next to the lens. */}
+      <View className="flex-row">
         <View className="flex-row items-center gap-0.5 rounded-lg border border-border px-1">
           <Pressable
             onPress={() => setFilters((f) => ({ ...f, month: shiftMonth(f.month, -1) }))}
@@ -280,13 +294,6 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
       {/* Active filter chips */}
       <ActiveFilterChips chips={chips} />
 
-      {/* Currency lens: one ledger at a time, only for a two-currency account. */}
-      {showCurrencyLens && lens && (
-        <CurrencyLensPills
-          value={lens}
-          onChange={(currency) => setFilters((f) => ({ ...f, currency }))}
-        />
-      )}
 
       {/* List */}
       {loading ? (
@@ -318,6 +325,7 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
         options={options}
         onDraftCategoryChange={setOptionsCategoryId}
         showAccountFilter={false}
+        showCurrencyFilter={!showCurrencyLens}
       />
     </View>
   )

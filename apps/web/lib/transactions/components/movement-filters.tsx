@@ -72,6 +72,13 @@ type MovementFiltersProps = {
   showAccount: boolean
   /** Account detail view hides the account filter (already scoped to one account). */
   showAccountFilter?: boolean
+  /**
+   * Hide the currency filter (sheet control, active chip and badge count). The
+   * account detail of a two-currency account does: its ARS | USD lens next to
+   * the «Movimientos» title already owns the currency, and showing it again as
+   * a removable filter repeated the choice and let «Limpiar todo» undo it.
+   */
+  showCurrencyFilter?: boolean
   /** Hide the month navigator when another control (the spending overview) owns it. */
   showMonthNav?: boolean
   /** Required controller — every filter mutation dispatches through it. */
@@ -117,6 +124,7 @@ export const MovementFilters = ({
   subcategories = [],
   showAccount,
   showAccountFilter = true,
+  showCurrencyFilter = true,
   showMonthNav = true,
   controller,
   sharedToggle,
@@ -246,7 +254,7 @@ export const MovementFilters = ({
   const goToMonth = (next: string) =>
     setParams({ month: next, from: null, to: null })
 
-  const count = activeContentCount(filters)
+  const count = activeContentCount(showCurrencyFilter ? filters : { ...filters, currency: undefined })
 
   // Active-filter chips derived from the URL state.
   const chips: Array<{ key: string; label: string; clear: () => void }> = []
@@ -297,7 +305,7 @@ export const MovementFilters = ({
       clear: () => setParams({ account: null }),
     })
   }
-  if (filters.currency)
+  if (filters.currency && showCurrencyFilter)
     chips.push({
       key: 'currency',
       label: filters.currency,
@@ -609,6 +617,7 @@ export const MovementFilters = ({
                 </div>
               )}
 
+              {showCurrencyFilter && (
               <div className="flex flex-col gap-2">
                 <Label>{t('filters.currency')}</Label>
                 {/* Two chips instead of a dropdown: tapping the active one again
@@ -635,6 +644,7 @@ export const MovementFilters = ({
                   })}
                 </div>
               </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-2">

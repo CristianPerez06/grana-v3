@@ -14,6 +14,8 @@ import { AccountDetailHeader } from './account-detail-header'
 import { PendingReimbursementsAccountContainer } from './pending-reimbursements-account-container'
 import { MovementFiltersAccountContainer } from './movement-filters-account-container'
 import { MovementListAccountContainer } from './movement-list-account-container'
+import { CurrencyLensPills } from './currency-lens-pills'
+import { useAccountCurrencyLens } from './use-account-currency-lens'
 
 type Props = {
   accountId: string
@@ -29,6 +31,7 @@ type Props = {
 export function AccountDetailContent({ accountId }: Props) {
   const t = useTranslations('accounts')
   const drawer = useMovementDrawer()
+  const currencyLens = useAccountCurrencyLens(accountId)
 
   // Cached by the header; dedupes — used here only to decide whether to show
   // the "agregar moneda" link (depends on the account's currencies set).
@@ -66,13 +69,22 @@ export function AccountDetailContent({ accountId }: Props) {
       )}
 
       <section className="overflow-hidden rounded-3xl border border-border bg-card">
-        <header className="flex items-center justify-between gap-4 border-b border-border-soft px-5 py-4">
-          <h2 className="text-[15px] font-extrabold leading-tight">
-            {t('headers.movements')}
-          </h2>
+        <header className="flex items-center justify-between gap-3 border-b border-border-soft px-5 py-4">
+          {/* The ARS | USD lens sits on the title: «Movimientos en pesos / en
+              dólares» — a way of looking at the account, not a filter. */}
+          {/* On a very narrow phone the pills wrap under the title instead of
+              sliding under «Agregar». */}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+            <h2 className="text-[15px] font-extrabold leading-tight">
+              {t('headers.movements')}
+            </h2>
+            {currencyLens.show && currencyLens.lens && (
+              <CurrencyLensPills value={currencyLens.lens} onChange={currencyLens.setLens} />
+            )}
+          </div>
           <Button
             size="sm"
-            className="w-auto"
+            className="w-auto shrink-0"
             disabled={!drawer}
             onClick={() => drawer?.openCreate(accountId)}
           >

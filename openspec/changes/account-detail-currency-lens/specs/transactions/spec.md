@@ -5,17 +5,55 @@
 **Reason**: Mostraba los saldos de las dos monedas uno abajo del otro en cada fila y las dos patas de un cambio en la misma fila; probado con datos reales, la lista se leía peor. Se reemplaza por "El listado de una cuenta muestra el saldo corriente por fila, de a una moneda", que muestra un libro por vez con un selector ARS | USD.
 **Migration**: Ninguna de datos. Las cuentas con pesos y dólares muestran el selector ARS | USD; las de una sola moneda se ven igual que antes.
 
+## MODIFIED Requirements
+
+### Requirement: Los primitivos visuales de ledger (MovementFilters, MovementList, MovementRow) comparten un lenguaje visual único en todas las rutas y anchos de pantalla
+
+Los componentes compartidos `MovementFilters`, `MovementList`, `MovementRow` y `PendingReimbursementsBlock` (`apps/web/lib/transactions/components/`) SHALL renderizarse con el mismo lenguaje visual en las tres rutas que los consumen: `/accounts/[id]`, `/transactions`, `/cards/[id]`. El lenguaje SHALL ser el definido en `docs/design/accounts-detail/components/`:
+
+- **`MovementRow`**: grid de 3 columnas en desktop `minmax(0, 1fr) 126px 126px` (icono + título/categoría / monto / running balance) y 2 columnas debajo de 760px `1fr 112px`. Debajo de 760px el running balance NO se oculta: SHALL mostrarse en la columna del monto, debajo de él, en tipografía chica y atenuada, separado del monto. Border-bottom suave entre filas, última sin border. Tipografía: título 13px font-semibold, meta 12px muted, monto tabular-nums con `text-expense` / `text-income` / `text-pending` / `text-neutral-amount` según corresponda. Un monto en dólares lleva su símbolo `US$` delante del número y NO SHALL repetir una etiqueta "USD" debajo; vale para todas las filas de movimiento, en web y en la app nativa.
+- **`MovementList`**: agrupación por día con headers (`Hoy`, `Ayer`, fecha formateada). La running balance per-row SHALL respetar `hasContentFilters` (se oculta cuando hay filtros de contenido activos), comportamiento existente preservado.
+- **`MovementFilters`**: barra compacta con navegación de mes (‹ ›), íconos compactos para búsqueda / recurrencia / filtros, y los chips de filtros activos debajo. Border y radius alineados al lenguaje de cards par.
+- **`PendingReimbursementsBlock`**: header con título y badge de conteo (`X pendiente`), lista con items expandidos mostrando los campos `Monto real` / `Fecha real` + botones `Confirmar` / `Cancelar` en línea. Superficie de tarjeta blanca cuando se renderiza dentro de `/accounts/[id]`.
+
+Los wrappers que envuelven estos primitivos (la `Tarjeta de movimientos` en `/accounts/[id]`, el `PageHeader` + `MovementListContainer` en `/transactions`, el `PeriodMovementsPane` en `/cards/[id]`) son responsables de su propio chrome (encabezado de sección, CTA primaria, navegación). Los primitivos NO SHALL imponer un wrapper visual; el lenguaje vive en row + lista + filtros, no en el contenedor.
+
+Los comportamientos de los primitivos (filtering, running balance, empty states `none` / `filter` / `search`, drawer wiring, paginación, recurrence indicators) SHALL mantenerse inalterados respecto al estado previo. Esta requirement es exclusivamente sobre el contrato visual.
+
+#### Scenario: `/transactions` y `/cards/[id]` heredan el nuevo lenguaje visual sin cambios de comportamiento
+
+- **WHEN** el usuario navega a `/transactions` o a `/cards/[id]` después del rediseño
+- **THEN** las filas de movimiento, la lista, y la barra de filtros se renderizan con el mismo lenguaje visual que en `/accounts/[id]`
+- **AND** el filtrado, la paginación y el running balance siguen comportándose como antes
+
+#### Scenario: Debajo de 760px el running balance va debajo del monto
+
+- **WHEN** la viewport es menor a 760px y el listado muestra running balance
+- **THEN** cada `MovementRow` renderiza el grid de 2 columnas (1fr + 112px)
+- **AND** el running balance se muestra debajo del monto, en la misma columna, con la misma cantidad de saldos que en desktop
+
+#### Scenario: Los wrappers de cada ruta proveen su propio chrome de sección
+
+- **WHEN** `MovementList` se renderiza dentro de la `Tarjeta de movimientos` en `/accounts/[id]`
+- **THEN** el encabezado de sección (`Movimientos`) y la CTA (`+ Agregar transacción`) viven en el wrapper de la tarjeta, no dentro del primitivo
+- **AND** el primitivo solo renderiza la lista de filas agrupadas por día
+
+#### Scenario: Un monto en dólares no repite la etiqueta USD
+
+- **WHEN** una fila de movimiento muestra un monto en dólares, en cualquier ruta o en la app nativa
+- **THEN** el monto se lee `US$ 2.482,60` y no hay una línea "USD" debajo
+
 ## ADDED Requirements
 
 ### Requirement: El listado de una cuenta muestra el saldo corriente por fila, de a una moneda
 
 En la perspectiva de cuenta, el sistema SHALL mostrar junto a cada fila el saldo corriente (running balance) de la cuenta resultante después de ese movimiento, en una sola moneda. El saldo corriente SHALL derivarse del historial de transacciones; NO SHALL persistirse en ninguna columna.
 
-**Una moneda por vez.** Cuando la cuenta **usa** las dos monedas, el listado SHALL ofrecer un selector **ARS | USD** arriba de la lista, con el mismo aspecto que el selector de moneda de «¿En qué gasté?», y SHALL mostrar solo los movimientos de la moneda elegida, cada uno con el saldo de esa moneda. La moneda inicial SHALL ser ARS (la principal). Una moneda se considera **usada** por la cuenta cuando su saldo inicial es distinto de cero o cuando algún movimiento del historial completo de la cuenta la mueve (incluida la pata recibida de un cambio de moneda); se decide sobre el historial completo, no sobre el mes visible. Una cuenta que usa una sola moneda NO SHALL mostrar el selector, y su listado muestra esa moneda.
+**Una moneda por vez.** Cuando la cuenta **usa** las dos monedas, el listado SHALL ofrecer un selector **ARS | USD** al lado del título «Movimientos» (en una pantalla muy angosta, debajo del título), con el mismo aspecto que el selector de moneda de «¿En qué gasté?», y SHALL mostrar solo los movimientos de la moneda elegida, cada uno con el saldo de esa moneda. La moneda inicial SHALL ser ARS (la principal). Una moneda se considera **usada** por la cuenta cuando su saldo inicial es distinto de cero o cuando algún movimiento del historial completo de la cuenta la mueve (incluida la pata recibida de un cambio de moneda); se decide sobre el historial completo, no sobre el mes visible. Una cuenta que usa una sola moneda NO SHALL mostrar el selector, y su listado muestra esa moneda.
 
 **Un movimiento pertenece a una moneda por su parte en esta cuenta.** Un movimiento SHALL aparecer en la moneda en la que mueve a esta cuenta. Un cambio de moneda con la cuenta como origen **y** destino SHALL aparecer en las dos: en la moneda de origen como salida (signo `−`) y en la de destino como entrada (signo `+`). Un cambio entre dos cuentas distintas aparece, en cada cuenta, solo en la moneda de la pata que la afecta.
 
-**El selector es la moneda de los filtros.** El selector y el filtro de moneda de la hoja de filtros SHALL ser el mismo estado: elegir una moneda en uno la elige en el otro. Elegir la moneda NO SHALL ocultar el saldo corriente, porque no saltea filas del libro cuyo saldo se muestra.
+**La moneda no es un filtro.** Con el selector visible, la hoja de filtros NO SHALL ofrecer el filtro de moneda, la moneda elegida NO SHALL aparecer como chip de filtro activo ni contar en el número del botón de filtros, y «Limpiar todo» NO SHALL cambiarla. Elegir la moneda NO SHALL ocultar el saldo corriente, porque no saltea filas del libro cuyo saldo se muestra. Una cuenta de una sola moneda, sin selector, conserva el filtro de moneda en la hoja como antes.
 
 El saldo corriente SHALL mostrarse cuando se ven los movimientos de la cuenta en orden, **incluida la navegación por mes**: navegar de mes es navegación temporal, no un filtro de contenido, y el saldo se recalcula sobre el historial previo al mes visible. Los **filtros de contenido** (búsqueda de texto, tipo, categoría, subcategoría, rango de monto) SÍ ocultan el saldo corriente, porque saltean filas y un acumulado parcial sería incorrecto. En la perspectiva global el saldo corriente NO SHALL mostrarse (mezclaría cuentas y monedas).
 
@@ -48,10 +86,11 @@ Esta regla es independiente del modelo de estado de los filtros (URL, React stat
 - **WHEN** el usuario cambia pesos de la cuenta A a dólares en la cuenta B
 - **THEN** en el detalle de A el cambio aparece solo en ARS, como salida, y en el detalle de B solo en USD, como entrada
 
-#### Scenario: El selector y el filtro de moneda son el mismo estado
+#### Scenario: La moneda elegida no se muestra como filtro
 
-- **WHEN** el usuario elige USD en la hoja de filtros del detalle de una cuenta con pesos y dólares
-- **THEN** el selector muestra USD elegido y la lista muestra el libro en dólares
+- **WHEN** el usuario elige USD en el selector del detalle de una cuenta con pesos y dólares
+- **THEN** no aparece un chip "USD" de filtro activo, el botón de filtros no cuenta la moneda y la hoja de filtros no ofrece moneda
+- **AND** «Limpiar todo» quita los demás filtros y deja la lista en USD
 
 #### Scenario: Navegar por mes no oculta el saldo corriente
 

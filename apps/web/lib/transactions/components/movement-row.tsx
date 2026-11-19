@@ -265,9 +265,6 @@ export const MovementRow = ({
           {view.sign}
           {formatAmount(view.amount, view.currencyCode, showCents)}
         </p>
-        {view.currencyCode === 'USD' && !view.receivedLeg && (
-          <p className="text-[11px] font-normal text-muted-foreground">USD</p>
-        )}
         {/* Same-account exchange: the leg that came back into this account. */}
         {view.receivedLeg && (
           <p className={`text-[13px] font-extrabold tabular-nums ${amountTone}`}>

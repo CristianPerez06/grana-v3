@@ -248,7 +248,6 @@ export function MovementRow({
           {view.sign}
           {formatAmount(view.amount, view.currencyCode, showCents)}
         </Text>
-        {view.currencyCode === 'USD' && <Text className="text-[11px] text-text-muted">USD</Text>}
       </View>
     </Pressable>
   )
