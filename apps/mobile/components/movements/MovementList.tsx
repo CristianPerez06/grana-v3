@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from 'react-native'
-import type { MovementPerspective } from '@grana/money-logic'
+import type { BalanceCurrency, MovementPerspective } from '@grana/money-logic'
 import type { FinancialMovement } from '@grana/transactions'
 import { useLocale, useT } from '../../lib/locale-context'
 import type { Locale } from '../../lib/locale'
@@ -62,6 +62,10 @@ type Props = {
   showFeedBadges?: boolean
   /** Navigate to a movement's detail on tap. Absent ⇒ rows render flat. */
   onPressMovement?: (movement: FinancialMovement) => void
+  /** Per-movement running balance (account detail, no filters); null hides it. */
+  runningBalances?: Map<string, Record<BalanceCurrency, number>> | null
+  /** Account detail currency lens: each row shows only its leg and balance in it. */
+  currencyLens?: BalanceCurrency | null
 }
 
 /**
@@ -80,6 +84,8 @@ export function MovementList({
   showAccount = false,
   showFeedBadges = false,
   onPressMovement,
+  runningBalances = null,
+  currencyLens = null,
 }: Props) {
   const t = useT()
   const locale = useLocale()
@@ -126,6 +132,8 @@ export function MovementList({
         showAccount={showAccount}
         showFeedBadges={showFeedBadges}
         onPress={onPressMovement ? () => onPressMovement(movement) : undefined}
+        runningBalanceSnapshot={runningBalances?.get(movement.id) ?? null}
+        currencyLens={currencyLens}
       />
     </View>
   )

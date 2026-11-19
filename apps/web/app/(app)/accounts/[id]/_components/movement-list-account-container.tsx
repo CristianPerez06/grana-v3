@@ -48,7 +48,7 @@ type Props = {
 /** Empty-state variant: which message + action to show when the visible list is empty. */
 function resolveEmptyVariant(filters: TransactionsFilters): 'none' | 'search' | 'filter' {
   // The currency is the account's lens (ARS | USD pills), not a filter to clear.
-  if (hasActiveContentFilters({ ...filters, currency: null })) return 'filter'
+  if (hasActiveContentFilters({ ...filters, currency: null }) || filters.customRange) return 'filter'
   if (hasActiveSearch(filters)) return 'search'
   return 'none'
 }
@@ -92,22 +92,19 @@ function applyAccountFilters(
   })
 }
 
-/**
- * Resolve the date range for the current filter state. Custom range wins;
- * otherwise the month boundaries.
- */
+/** Resolve the date range for the current filter state: the «Desde / Hasta» range, if any. */
 function resolveRange(filters: TransactionsFilters): { from?: string; to?: string } {
+  // The account detail has no month navigator: its movements read as one
+  // continuous list. Only an explicit «Desde / Hasta» narrows the dates.
   if (filters.customRange) {
     return {
       from: filters.customRange.from,
       to: filters.customRange.to,
     }
   }
-  const [yy, mm] = filters.month.split('-').map(Number)
-  const from = `${filters.month}-01`
-  const to = formatDateISO(new Date(yy, mm, 0)) // day 0 of next month = last of current
-  return { from, to }
+  return {}
 }
+
 
 /**
  * Client container for the account-scoped movement list. One server query
@@ -262,7 +259,13 @@ export function MovementListAccountContainer({ accountId }: Props) {
           onAdd: drawer ? () => drawer.openCreate(accountId) : undefined,
           onClear:
             variant === 'filter'
-              ? () => dispatch({ type: 'clearFilters' })
+              ? () => {
+                  // Clear the filters and the date range, but keep the ledger
+                  // being looked at (the ARS | USD lens is not a filter).
+                  dispatch({ type: 'clearFilters' })
+                  dispatch({ type: 'setCustomRange', range: null })
+                  if (filters.currency) dispatch({ type: 'setCurrency', currency: filters.currency })
+                }
               : variant === 'search'
                 ? () => dispatch({ type: 'clearSearch' })
                 : undefined,

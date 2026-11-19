@@ -12,6 +12,10 @@
 - Una cuenta de una sola moneda no muestra el selector.
 - Igual en las tres versiones: web en compu, web en celular (saldo debajo del monto) y app nativa.
 - Se quita el saldo doble por fila y las dos patas en una misma fila.
+- **Lista corrida, sin selector de mes**, en las tres versiones: todos los movimientos de la cuenta, del más nuevo al más viejo, con «Cargar más» al final, como el resumen de un banco. Para un tramo puntual, la hoja de filtros ofrece «Desde / Hasta». El selector de mes queda en la pestaña Movimientos, que responde «¿cuánto gasté este mes?».
+- **Los íconos de búsqueda, recurrencias y filtros suben a la fila del título** «Movimientos» (con el «+ Agregar» en la web). En el celular, ARS | USD va debajo del título.
+- **La app usa en el detalle de cuenta las mismas filas que la pestaña Movimientos** (ícono, «Ajuste», «Cambio», «Transferencia», agrupadas por día, y tocar abre el detalle). Antes tenía una fila propia que mostraba «12 nov» o «CU» como título.
+- El mes se lee «Noviembre 2026» / «Nov 2026» y los días «Viernes, 13 de noviembre», sin el «De» en mayúscula, en la web y en la app.
 
 ## Capabilities
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import {
   MovementFilters,
@@ -18,6 +18,10 @@ import { useAccountCurrencyLens } from './use-account-currency-lens'
 
 type Props = {
   accountId: string
+  /** Title + ARS | USD lens, drawn on the toolbar row (left). */
+  leading?: ReactNode
+  /** «+ Agregar», drawn after the three icons. */
+  trailing?: ReactNode
 }
 
 /**
@@ -28,7 +32,7 @@ type Props = {
  *   key the list container uses, so TanStack dedupes — zero extra fetch),
  * - renders its own month nav (this route has no overview card that owns it).
  */
-export function MovementFiltersAccountContainer({ accountId }: Props) {
+export function MovementFiltersAccountContainer({ accountId, leading, trailing }: Props) {
   const { filters, dispatch } = useTransactionsFilters()
   const currencyLens = useAccountCurrencyLens(accountId)
 
@@ -66,8 +70,11 @@ export function MovementFiltersAccountContainer({ accountId }: Props) {
       onSetAmountMax: (max) =>
         dispatch({ type: 'setAmountRange', min: filters.amountMin, max }),
       onSetMonth: (month) => dispatch({ type: 'setMonth', month }),
+      onSetCustomRange: (range) => dispatch({ type: 'setCustomRange', range }),
       onClearAll: () => {
         dispatch({ type: 'clearAll' })
+        // Here the date range is a filter like the others: «Limpiar todo» clears it.
+        dispatch({ type: 'setCustomRange', range: null })
         // «Limpiar todo» clears filters; the currency lens is not one of them.
         if (currencyLens.show && filters.currency) {
           dispatch({ type: 'setCurrency', currency: filters.currency })
@@ -86,7 +93,10 @@ export function MovementFiltersAccountContainer({ accountId }: Props) {
       showAccount={false}
       showAccountFilter={false}
       showCurrencyFilter={!currencyLens.show}
-      showMonthNav
+      showDateRange
+      showMonthNav={false}
+      leading={leading}
+      trailing={trailing}
       controller={controller}
       disabled={listLoading}
     />

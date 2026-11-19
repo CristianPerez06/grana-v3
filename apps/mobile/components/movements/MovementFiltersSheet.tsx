@@ -11,6 +11,7 @@ import {
 import { useT } from '../../lib/locale-context'
 import { Label } from '../ui/Label'
 import { MoneyAmountInput } from '../ui/MoneyAmountInput'
+import { DateField } from '../ui/DateField'
 import { AccountAvatar } from '../ui/AccountAvatar'
 import { FormSheetBody } from '../layout/FormSheetBody'
 import type { MovementFiltersState } from '../../lib/transactions/feed-filters'
@@ -42,6 +43,11 @@ type Props = {
    * sheet neither offers it nor clears it. Mirror of web's `showCurrencyFilter`.
    */
   showCurrencyFilter?: boolean
+  /**
+   * Offer «Desde / Hasta». The account detail does (it has no month navigator);
+   * the feed does not. Mirror of web's `showDateRange`.
+   */
+  showDateRange?: boolean
 }
 
 const CURRENCY_OPTIONS: MovementCurrencyFilter[] = ['ARS', 'USD']
@@ -104,6 +110,7 @@ export function MovementFiltersSheet({
   onDraftCategoryChange,
   showAccountFilter = true,
   showCurrencyFilter = true,
+  showDateRange = false,
 }: Props) {
   const t = useT()
   const insets = useSafeAreaInsets()
@@ -114,6 +121,8 @@ export function MovementFiltersSheet({
   const [currency, setCurrency] = useState<MovementCurrencyFilter | null>(filters.currency)
   const [amountMin, setAmountMin] = useState(filters.amountMin != null ? String(filters.amountMin) : '')
   const [amountMax, setAmountMax] = useState(filters.amountMax != null ? String(filters.amountMax) : '')
+  const [dateFrom, setDateFrom] = useState(filters.dateFrom ?? '')
+  const [dateTo, setDateTo] = useState(filters.dateTo ?? '')
 
   // The sheet stays mounted so the slide-out animation survives, which means the
   // draft `useState` initializers only ever run once. Re-seed them from the
@@ -129,6 +138,8 @@ export function MovementFiltersSheet({
     setCurrency(filters.currency)
     setAmountMin(filters.amountMin != null ? String(filters.amountMin) : '')
     setAmountMax(filters.amountMax != null ? String(filters.amountMax) : '')
+    setDateFrom(filters.dateFrom ?? '')
+    setDateTo(filters.dateTo ?? '')
     /* eslint-enable react-hooks/set-state-in-effect */
     onDraftCategoryChange(filters.categoryId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -167,6 +178,7 @@ export function MovementFiltersSheet({
       currency,
       amountMin: amountMin.trim() ? parseMoneyInput(amountMin, { allowNegative: true }) : null,
       amountMax: amountMax.trim() ? parseMoneyInput(amountMax, { allowNegative: true }) : null,
+      ...(showDateRange ? { dateFrom: dateFrom || null, dateTo: dateTo || null } : {}),
     })
     onClose()
   }
@@ -178,6 +190,8 @@ export function MovementFiltersSheet({
     if (showCurrencyFilter) setCurrency(null)
     setAmountMin('')
     setAmountMax('')
+    setDateFrom('')
+    setDateTo('')
   }
 
   return (
@@ -336,6 +350,28 @@ export function MovementFiltersSheet({
                 ))}
               </View>
             </View>
+            )}
+
+            {/* Date range — only where there is no month navigator */}
+            {showDateRange && (
+              <View className="flex-row gap-3">
+                <View className="flex-1 gap-1.5">
+                  <Label>{t('transactions.filters.from')}</Label>
+                  <DateField
+                    value={dateFrom}
+                    onChange={(iso) => setDateFrom(dateTo && iso > dateTo ? dateTo : iso)}
+                    placeholder={t('transactions.filters.from')}
+                  />
+                </View>
+                <View className="flex-1 gap-1.5">
+                  <Label>{t('transactions.filters.to')}</Label>
+                  <DateField
+                    value={dateTo}
+                    onChange={(iso) => setDateTo(dateFrom && iso < dateFrom ? dateFrom : iso)}
+                    placeholder={t('transactions.filters.to')}
+                  />
+                </View>
+              </View>
             )}
 
             {/* Amount range */}

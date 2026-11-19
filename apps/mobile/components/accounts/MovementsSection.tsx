@@ -2,20 +2,24 @@ import { useMemo, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Repeat, Search, SlidersHorizontal, X } from 'lucide-react-native'
+import { Repeat, Search, SlidersHorizontal, X } from 'lucide-react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
   computeRunningBalances,
+  formatDateISO,
+  getTodayAR,
   runningBalanceCurrencies,
   type BalanceCurrency,
   type RunningBalanceRow,
 } from '@grana/money-logic'
 import {
+  DEFAULT_MOVEMENTS_LIMIT,
+  MOVEMENTS_LIMIT_STEP,
   toFinancialMovement,
   type FinancialMovement,
   type TransactionWithDetails,
 } from '@grana/transactions'
-import { useLocale, useT } from '../../lib/locale-context'
+import { useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { colors } from '../../lib/colors'
 import {
@@ -23,12 +27,10 @@ import {
   activeFilterCount,
   currentMonth,
   emptyFilters,
-  monthLabelShort,
-  shiftMonth,
   type AccountMovementFilters,
 } from '../../lib/accounts/movement-filters'
 import { getMovementFilterOptions } from '../../lib/transactions/queries'
-import { MovementRow } from './MovementRow'
+import { MovementList } from '../movements/MovementList'
 import { MovementRowsSkeleton } from './MovementRowsSkeleton'
 import { MovementFiltersSheet } from '../movements/MovementFiltersSheet'
 import { ToolbarIconButton } from '../movements/ToolbarIconButton'
@@ -46,14 +48,13 @@ type Props = {
   loading: boolean
 }
 
-// Movements list with the full toolbar: month navigation, free-text search, a
-// link to recurrences, and a filters sheet (type / category / subcategory /
-// currency / amount) with removable active-filter chips. Parity with the web
-// account-detail movements toolbar; filtering reuses the shared month range and
-// a native filter pass over `TransactionWithDetails`.
+// The account's movements as one continuous list (like a bank statement), with
+// the toolbar on the title row: free-text search, a link to recurrences, and a
+// filters sheet (type / category / subcategory / «Desde / Hasta» / amount) with
+// removable active-filter chips. Parity with the web account detail; rows are the
+// shared `MovementList` the Movimientos tab uses.
 export function MovementsSection({ movements, accountId, currencies, loading }: Props) {
   const t = useT()
-  const locale = useLocale()
   const router = useRouter()
   const showCents = useShowCents()
 
@@ -119,14 +120,34 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
       applyAccountFilters(movements, filters, movementById, accountId, lens).slice().reverse(),
     [movements, filters, movementById, accountId, lens],
   )
+  // Continuous list, paged like web («Ver más»). Any filter change starts over.
+  const [limit, setLimit] = useState(DEFAULT_MOVEMENTS_LIMIT)
+  const [prevFilters, setPrevFilters] = useState(filters)
+  if (prevFilters !== filters) {
+    setPrevFilters(filters)
+    setLimit(DEFAULT_MOVEMENTS_LIMIT)
+  }
+  const visible = useMemo(
+    () =>
+      filtered
+        .slice(0, limit)
+        .map((tx) => movementById.get(tx.id))
+        .filter((m): m is FinancialMovement => m != null),
+    [filtered, limit, movementById],
+  )
+  const hasMore = filtered.length > limit
+  const todayISO = formatDateISO(getTodayAR())
   // With the lens shown, the currency is not a filter: no badge count, no chip,
   // no block in the sheet (the sheet's «Limpiar» does not touch it either).
   const activeCount = activeFilterCount(showCurrencyLens ? { ...filters, currency: null } : filters)
   // Filters and a text search skip rows: a running balance over what is left
   // would be wrong, so it hides (same rule as the web account detail). The
   // currency is the exception — it is the lens and skips no row of its ledger.
+  // The date range is navigation, not a content filter: each row's balance is
+  // still the account's balance after it, so it stays (same as web).
   const showRunningBalance =
-    activeFilterCount({ ...filters, currency: null }) === 0 && filters.query.trim().length === 0
+    activeFilterCount({ ...filters, currency: null, dateFrom: null, dateTo: null }) === 0 &&
+    filters.query.trim().length === 0
 
   const categoryLabelFor = (id: string) => {
     const category = options?.categories.find((c) => c.id === id)
@@ -172,6 +193,22 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
       onRemove: () => setFilters((f) => ({ ...f, currency: null })),
     })
   }
+  if (filters.dateFrom || filters.dateTo) {
+    const fmt = (iso: string) => {
+      const [y, m, d] = iso.split('-')
+      return `${d}/${m}/${y.slice(2)}`
+    }
+    chips.push({
+      key: 'dateRange',
+      label:
+        filters.dateFrom && filters.dateTo
+          ? `${fmt(filters.dateFrom)} – ${fmt(filters.dateTo)}`
+          : filters.dateFrom
+            ? `${t('transactions.filters.from')} ${fmt(filters.dateFrom)}`
+            : `${t('transactions.filters.to')} ${fmt(filters.dateTo!)}`,
+      onRemove: () => setFilters((f) => ({ ...f, dateFrom: null, dateTo: null })),
+    })
+  }
   if (filters.amountMin != null) {
     chips.push({
       key: 'amountMin',
@@ -197,45 +234,12 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
 
   return (
     <View className="gap-3 rounded-[18px] border border-border bg-card p-5">
-      {/* Title + ARS | USD lens: «Movimientos en pesos / en dólares» — a way of
-          looking at the account, not a filter. Same place as on web. */}
-      <View className="flex-row items-center gap-3">
-        <Text className="text-[15px] font-bold text-text">{t('accounts.headers.movements')}</Text>
-        {showCurrencyLens && lens && (
-          <CurrencyLensPills
-            value={lens}
-            onChange={(currency) => setFilters((f) => ({ ...f, currency }))}
-          />
-        )}
-      </View>
-
-      {/* Toolbar: month nav + Buscar / Recurrencias / Filtros icons in ONE row —
-          the same row the web draws at phone width («‹ Nov 2026 ›» + 3 icons). */}
+      {/* Title row: «Movimientos» + Buscar / Recurrencias / Filtros — same row
+          as on web. No month navigator: the account reads as one continuous
+          list, like a bank statement; «Desde / Hasta» in the filters finds a
+          stretch. */}
       <View className="flex-row items-center justify-between gap-2">
-        <View className="flex-row items-center gap-0.5 rounded-lg border border-border px-1">
-          <Pressable
-            onPress={() => setFilters((f) => ({ ...f, month: shiftMonth(f.month, -1) }))}
-            accessibilityRole="button"
-            accessibilityLabel={t('transactions.filters.prev_month')}
-            hitSlop={6}
-            className="p-1.5"
-          >
-            <ChevronLeft size={16} color={colors.textMuted} />
-          </Pressable>
-          <Text className="px-0.5 text-center text-[13px] font-semibold text-text">
-            {monthLabelShort(filters.month, locale)}
-          </Text>
-          <Pressable
-            onPress={() => setFilters((f) => ({ ...f, month: shiftMonth(f.month, 1) }))}
-            accessibilityRole="button"
-            accessibilityLabel={t('transactions.filters.next_month')}
-            hitSlop={6}
-            className="p-1.5"
-          >
-            <ChevronRight size={16} color={colors.textMuted} />
-          </Pressable>
-        </View>
-
+        <Text className="text-[15px] font-bold text-text">{t('accounts.headers.movements')}</Text>
         <View className="flex-row items-center gap-1.5">
           <ToolbarIconButton
             icon={<Search size={16} color={searchMode ? colors.emeraldDeep : colors.textMuted} />}
@@ -257,6 +261,15 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
           />
         </View>
       </View>
+
+      {/* ARS | USD lens under the title — a way of looking at the account, not a
+          filter. A phone has no room for it on the title row (web does the same). */}
+      {showCurrencyLens && lens && (
+        <CurrencyLensPills
+          value={lens}
+          onChange={(currency) => setFilters((f) => ({ ...f, currency }))}
+        />
+      )}
 
       {/* Inline search */}
       {searchMode && (
@@ -295,26 +308,35 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
       <ActiveFilterChips chips={chips} />
 
 
-      {/* List */}
+      {/* List — the same rows as the Movimientos tab (and as web), plus the
+          running balance and the currency lens. Tapping opens the detail. */}
       {loading ? (
         <MovementRowsSkeleton />
-      ) : filtered.length === 0 ? (
+      ) : visible.length === 0 ? (
         <Text className="py-6 text-center text-sm text-text-muted">
           {t('accounts.movements_empty')}
         </Text>
       ) : (
         <View className="-mx-5">
-          {filtered.map((tx, index) => (
-            <View key={tx.id} className={index === 0 ? '' : 'border-t border-border-soft'}>
-              <MovementRow
-                tx={tx}
-                accountId={accountId}
-                runningBalance={showRunningBalance ? running.snapshots.get(tx.id) ?? null : null}
-                currencyLens={lens}
-              />
-            </View>
-          ))}
+          <MovementList
+            movements={visible}
+            perspective={{ kind: 'account', accountId }}
+            todayISO={todayISO}
+            runningBalances={showRunningBalance ? running.snapshots : null}
+            currencyLens={lens}
+            onPressMovement={(m) => router.push(`/transactions/${m.id}`)}
+          />
         </View>
+      )}
+
+      {hasMore && (
+        <Pressable
+          onPress={() => setLimit((n) => n + MOVEMENTS_LIMIT_STEP)}
+          accessibilityRole="button"
+          className="items-center self-center rounded-xl border border-border px-4 py-2.5"
+        >
+          <Text className="text-sm font-semibold text-text">{t('common.load_more')}</Text>
+        </Pressable>
       )}
 
       <MovementFiltersSheet
@@ -326,6 +348,7 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
         onDraftCategoryChange={setOptionsCategoryId}
         showAccountFilter={false}
         showCurrencyFilter={!showCurrencyLens}
+        showDateRange
       />
     </View>
   )

@@ -69,36 +69,39 @@ export function AccountDetailContent({ accountId }: Props) {
       )}
 
       <section className="overflow-hidden rounded-3xl border border-border bg-card">
-        <header className="flex items-center justify-between gap-3 border-b border-border-soft px-5 py-3 md:py-4">
-          {/* The ARS | USD lens sits on the title: «Movimientos en pesos / en
-              dólares» — a way of looking at the account, not a filter. */}
-          {/* On a very narrow phone the pills wrap under the title instead of
-              sliding under «Agregar». */}
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 md:gap-x-3">
-            <h2 className="text-[15px] font-extrabold leading-tight">
-              {t('headers.movements')}
-            </h2>
-            {currencyLens.show && currencyLens.lens && (
-              <CurrencyLensPills value={currencyLens.lens} onChange={currencyLens.setLens} />
-            )}
-          </div>
-          {/* Phone width: just the «+», drawn at 36px like the toolbar icons below
-              so the header band is not taller than it needs; the `::after`
-              gives back the 44px touch target. */}
-          <Button
-            size="sm"
-            className="w-auto shrink-0 max-md:relative max-md:h-9 max-md:w-9 max-md:px-0 max-md:after:absolute max-md:after:-inset-1 max-md:after:content-['']"
-            disabled={!drawer}
-            onClick={() => drawer?.openCreate(accountId)}
-            aria-label={t('actions.add_transaction')}
-          >
-            <Plus size={16} strokeWidth={2} aria-hidden />
-            <span className="max-md:sr-only">{t('actions.add_transaction')}</span>
-          </Button>
-        </header>
-
+        {/* One toolbar row: «Movimientos» + ARS | USD on the left, search /
+            recurrences / filters + «Agregar» on the right. No month navigator:
+            the account reads as one continuous list, like a bank statement;
+            a specific stretch is found with «Desde / Hasta» in the filters. On a
+            phone the lens drops under the title (not enough width for both). */}
         <div className="flex flex-col gap-3 px-5 py-4">
-          <MovementFiltersAccountContainer accountId={accountId} />
+          <MovementFiltersAccountContainer
+            accountId={accountId}
+            leading={
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 md:gap-x-3">
+                <h2 className="text-[15px] font-extrabold leading-tight">
+                  {t('headers.movements')}
+                </h2>
+                {currencyLens.show && currencyLens.lens && (
+                  <CurrencyLensPills value={currencyLens.lens} onChange={currencyLens.setLens} />
+                )}
+              </div>
+            }
+            trailing={
+              // Phone width: just the «+», drawn at 36px like the icons beside it;
+              // the `::after` gives back the 44px touch target.
+              <Button
+                size="sm"
+                className="w-auto shrink-0 max-md:relative max-md:h-9 max-md:w-9 max-md:px-0 max-md:after:absolute max-md:after:-inset-1 max-md:after:content-['']"
+                disabled={!drawer}
+                onClick={() => drawer?.openCreate(accountId)}
+                aria-label={t('actions.add_transaction')}
+              >
+                <Plus size={16} strokeWidth={2} aria-hidden />
+                <span className="max-md:sr-only">{t('actions.add_transaction')}</span>
+              </Button>
+            }
+          />
           <MovementListAccountContainer accountId={accountId} />
         </div>
       </section>

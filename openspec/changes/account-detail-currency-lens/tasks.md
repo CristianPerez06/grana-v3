@@ -20,7 +20,14 @@
 - [x] 4.6 Pestaña Movimientos de la app: «Buscar / Filtros» pasan a los mismos botones de ícono que la web (`ToolbarIconButton`, compartido con el detalle de cuenta)
 - [x] 4.3 Quitar la etiqueta «USD» debajo de los montos en dólares en las filas de movimiento (web y feed nativo)
 
-## 5. Cierre
+## 5. Lista corrida
 
-- [ ] 5.1 El usuario lo prueba en la web y en la app nativa y decide si se queda
-- [ ] 5.2 `pnpm verify` en verde (salvo el paso de archivo, que corre al archivar)
+- [x] 5.1 Web: sin navegador de mes en el detalle de cuenta, «Desde / Hasta» en la hoja (chip y conteo), título + íconos + «+» en una fila (`leading` / `trailing` de `MovementFilters`). Verificado a 372 y 1280px
+- [x] 5.2 App: lista corrida con «Cargar más», «Desde / Hasta» en la hoja compartida (`showDateRange`), íconos en la fila del título y ARS | USD debajo
+- [x] 5.3 App: el detalle de cuenta usa `MovementList` / `MovementRow` de la pestaña Movimientos (con saldo y lente); se borran la fila propia y `movement-view.ts`
+- [x] 5.4 Mes «Noviembre 2026» y días «Viernes, 13 de noviembre» en web y app
+
+## 6. Cierre
+
+- [ ] 6.1 El usuario lo prueba en la web y en la app nativa y decide si se queda
+- [ ] 6.2 `pnpm verify` en verde (salvo el paso de archivo, que corre al archivar)

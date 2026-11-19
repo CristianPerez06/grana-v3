@@ -1,15 +1,16 @@
-import { resolveMonthRange } from '@grana/dashboard'
-import { getTodayAR, legInCurrency, type BalanceCurrency } from '@grana/money-logic'
-import { movementMatchesText, type FinancialMovement, type TransactionWithDetails } from '@grana/transactions'
-import type { Locale } from '../locale'
+import { getTodayAR, legInCurrency, resolveMovementView, type BalanceCurrency } from '@grana/money-logic'
+import {
+  movementMatchesText,
+  toMovementViewInput,
+  type FinancialMovement,
+  type TransactionWithDetails,
+} from '@grana/transactions'
 import type { MovementFiltersState } from '../transactions/feed-filters'
-import { accountMovementView } from './movement-view'
 
 // The filters SHAPE now lives with the feed (`lib/transactions/feed-filters.ts`)
 // so the account detail and the global Movimientos tab share one sheet and one
 // state type. What stays here is what belongs to THIS surface: the in-memory
-// application of those filters over the account's fully-loaded history, and the
-// month labels the inline navigator renders.
+// application of those filters over the account's fully-loaded history.
 //
 // The account detail filters in memory and the feed filters in the database —
 // see `applyAccountFilters` below for why that is correct and why it is not a
@@ -30,34 +31,6 @@ export function currentMonth(): string {
   return monthOf(getTodayAR())
 }
 
-export function shiftMonth(month: string, delta: number): string {
-  const [y, m] = month.split('-').map(Number)
-  return monthOf(new Date(y, m - 1 + delta, 1))
-}
-
-const FULL_MONTHS: Record<Locale, readonly string[]> = {
-  es: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
-  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-}
-
-const SHORT_MONTHS: Record<Locale, readonly string[]> = {
-  es: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-}
-
-/** «Nov 2026» — the account detail toolbar shares one row with three icons. */
-export function monthLabelShort(month: string, locale: Locale): string {
-  const [y, m] = month.split('-').map(Number)
-  if (!y || !m) return month
-  return `${SHORT_MONTHS[locale][m - 1]} ${y}`
-}
-
-export function monthLabel(month: string, locale: Locale): string {
-  const [y, m] = month.split('-').map(Number)
-  if (!y || !m) return month
-  return `${FULL_MONTHS[locale][m - 1]} ${y}`
-}
-
 // The state factory and the badge counter live with the shared shape. Re-exported
 // here so this surface keeps importing its filter vocabulary from one module.
 export {
@@ -70,7 +43,9 @@ export {
 
 // ── Application ──────────────────────────────────────────────────────────────
 
-// Apply the month range + content filters + search to the account's movements.
+// Apply the «Desde / Hasta» range + content filters + search to the account's
+// movements. No month range: the account detail reads as one continuous list,
+// like a bank statement (same as web).
 // Pure; mirror of web's `applyAccountFilters` over the native row model.
 //
 // `movementById` carries the DERIVED `FinancialMovement` per row, which this
@@ -101,11 +76,16 @@ export function applyAccountFilters(
   accountId: string,
   lens: BalanceCurrency | null,
 ): TransactionWithDetails[] {
-  const { from, to } = resolveMonthRange(filters.month)
   return movements.filter((tx) => {
-    if (tx.date < from || tx.date > to) return false
+    if (filters.dateFrom && tx.date < filters.dateFrom) return false
+    if (filters.dateTo && tx.date > filters.dateTo) return false
     if (filters.type && movementById.get(tx.id)?.kind !== filters.type) return false
-    if (lens && !legInCurrency(accountMovementView(tx, accountId), lens)) return false
+    if (lens) {
+      const movement = movementById.get(tx.id)
+      if (!movement) return false
+      const view = resolveMovementView(toMovementViewInput(movement), { kind: 'account', accountId })
+      if (!legInCurrency(view, lens)) return false
+    }
     if (filters.accountId && tx.account_id !== filters.accountId) return false
     if (filters.categoryId && tx.category_id !== filters.categoryId) return false
     if (filters.subcategoryId && tx.subcategory_id !== filters.subcategoryId) return false

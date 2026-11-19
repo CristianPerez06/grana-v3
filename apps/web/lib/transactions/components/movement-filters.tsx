@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Repeat, Search, SlidersHorizontal, Users, X } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
@@ -8,6 +8,7 @@ import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { AccountAvatar } from '@/components/ui/account-avatar'
 import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
 import { FilterSelect } from './filter-select'
 import { getTodayAR } from '@/lib/date'
 import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
@@ -36,6 +37,8 @@ export type MovementFiltersController = {
   onSetAmountMin: (min: number | null) => void
   onSetAmountMax: (max: number | null) => void
   onSetMonth: (month: string) => void
+  /** Desde / Hasta. Only hosts that pass `showDateRange` need it. */
+  onSetCustomRange?: (range: { from?: string; to?: string } | null) => void
   onClearAll: () => void
 }
 
@@ -79,6 +82,21 @@ type MovementFiltersProps = {
    * a removable filter repeated the choice and let «Limpiar todo» undo it.
    */
   showCurrencyFilter?: boolean
+  /**
+   * Offer «Desde / Hasta» in the sheet (with its own chip and badge count). The
+   * account detail does: it has no month navigator — the account's movements
+   * read as one continuous list, like a bank statement — so a date range is
+   * how a specific stretch is found. Requires `controller.onSetCustomRange`.
+   */
+  showDateRange?: boolean
+  /**
+   * Replaces the left side of the toolbar row (where the month nav would go).
+   * The account detail puts its «Movimientos» title and ARS | USD lens here, so
+   * title and tools share one row.
+   */
+  leading?: ReactNode
+  /** Rendered after the three icons (the account detail's «+ Agregar»). */
+  trailing?: ReactNode
   /** Hide the month navigator when another control (the spending overview) owns it. */
   showMonthNav?: boolean
   /** Required controller — every filter mutation dispatches through it. */
@@ -125,6 +143,9 @@ export const MovementFilters = ({
   showAccount,
   showAccountFilter = true,
   showCurrencyFilter = true,
+  showDateRange = false,
+  leading,
+  trailing,
   showMonthNav = true,
   controller,
   sharedToggle,
@@ -260,7 +281,10 @@ export const MovementFilters = ({
   const goToMonth = (next: string) =>
     setParams({ month: next, from: null, to: null })
 
-  const count = activeContentCount(showCurrencyFilter ? filters : { ...filters, currency: undefined })
+  const hasDateRange = showDateRange && (filters.from != null || filters.to != null)
+  const count =
+    activeContentCount(showCurrencyFilter ? filters : { ...filters, currency: undefined }) +
+    (hasDateRange ? 1 : 0)
 
   // Active-filter chips derived from the URL state.
   const chips: Array<{ key: string; label: string; clear: () => void }> = []
@@ -317,6 +341,23 @@ export const MovementFilters = ({
       label: filters.currency,
       clear: () => setParams({ currency: null }),
     })
+  if (hasDateRange) {
+    const fmt = (iso: string) => {
+      const [y, m, d] = iso.split('-')
+      return `${d}/${m}/${y.slice(2)}`
+    }
+    const label =
+      filters.from && filters.to
+        ? `${fmt(filters.from)} – ${fmt(filters.to)}`
+        : filters.from
+          ? `${t('filters.from')} ${fmt(filters.from)}`
+          : `${t('filters.to')} ${fmt(filters.to!)}`
+    chips.push({
+      key: 'date_range',
+      label,
+      clear: () => controller.onSetCustomRange?.(null),
+    })
+  }
   if (filters.amountMin != null)
     chips.push({
       key: 'amount_min',
@@ -397,8 +438,11 @@ export const MovementFilters = ({
         </div>
       ) : (
         <div className="flex items-center justify-between gap-2">
-          {/* Optional month nav on the left (used when there is no breakdown card) */}
-          {showMonthNav ? (
+          {/* Left side: the host's own content (account detail title + lens),
+              else the optional month nav (when there is no breakdown card). */}
+          {leading ? (
+            <div className="min-w-0 flex-1">{leading}</div>
+          ) : showMonthNav ? (
             <div className="flex items-center gap-1 rounded-md border border-border px-1">
               <button
                 type="button"
@@ -489,6 +533,7 @@ export const MovementFilters = ({
                 </span>
               )}
             </button>
+            {trailing}
           </div>
         </div>
       )}
@@ -657,6 +702,43 @@ export const MovementFilters = ({
                   })}
                 </div>
               </div>
+              )}
+
+              {showDateRange && (
+                <div className="grid grid-cols-2 gap-3">
+                  <DatePicker
+                    id="f-date-from"
+                    label={t('filters.from')}
+                    value={filters.from ?? ''}
+                    max={filters.to ?? undefined}
+                    compact
+                    onChange={(from) =>
+                      controller.onSetCustomRange?.({ from, to: filters.to ?? undefined })
+                    }
+                    onClear={() =>
+                      controller.onSetCustomRange?.(
+                        filters.to ? { to: filters.to } : null,
+                      )
+                    }
+                    clearLabel={t('filters.clear')}
+                  />
+                  <DatePicker
+                    id="f-date-to"
+                    label={t('filters.to')}
+                    value={filters.to ?? ''}
+                    min={filters.from ?? undefined}
+                    compact
+                    onChange={(to) =>
+                      controller.onSetCustomRange?.({ from: filters.from ?? undefined, to })
+                    }
+                    onClear={() =>
+                      controller.onSetCustomRange?.(
+                        filters.from ? { from: filters.from } : null,
+                      )
+                    }
+                    clearLabel={t('filters.clear')}
+                  />
+                </div>
               )}
 
               <div className="grid grid-cols-2 gap-3">

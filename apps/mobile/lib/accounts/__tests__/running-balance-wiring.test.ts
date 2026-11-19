@@ -3,53 +3,61 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 /**
- * EL SALDO POR FILA DE LA APP SALE DE LAS MISMAS FUNCIONES QUE LA WEB.
+ * EL DETALLE DE CUENTA NATIVO SE ARMA CON LAS MISMAS PIEZAS QUE LA WEB.
  *
  * Las pantallas de React Native no se pueden montar en Node, así que se mira el
- * código: el detalle de cuenta tiene que calcular el saldo corriente con
- * `computeRunningBalances`, decidir cuántas monedas muestra con
- * `runningBalanceCurrencies` (una vez por cuenta, no por fila) y ocultarlo
- * cuando hay filtros o búsqueda. Si alguien lo recalcula a mano o deja de
- * ocultarlo, este test se cae.
+ * código: el saldo corriente sale de `computeRunningBalances`, cuántas monedas
+ * usa la cuenta de `runningBalanceCurrencies`, la parte de un movimiento en una
+ * moneda de `legInCurrency`, y las filas son la `MovementList` compartida con la
+ * pestaña Movimientos —no una fila propia, que ya divergió una vez y mostraba
+ * «12 nov» o «CU» como título—. Si alguien lo recalcula a mano o vuelve a una
+ * fila propia, este test se cae.
  */
 
 const ROOT = path.resolve(__dirname, '../../..')
 const read = (rel: string) => readFileSync(path.join(ROOT, rel), 'utf8')
 
-describe('saldo corriente en el detalle de cuenta nativo', () => {
+describe('detalle de cuenta nativo', () => {
   const section = read('components/accounts/MovementsSection.tsx')
-  const row = read('components/accounts/MovementRow.tsx')
+  const row = read('components/movements/MovementRow.tsx')
+  const filters = read('lib/accounts/movement-filters.ts')
   const screen = read('app/(app)/accounts/[id]/index.tsx')
 
-  it('lo calcula con las funciones compartidas de @grana/money-logic', () => {
+  it('calcula el saldo con las funciones compartidas de @grana/money-logic', () => {
     expect(section).toMatch(/computeRunningBalances\(/)
     expect(section).toMatch(/runningBalanceCurrencies\(/)
-    expect(section).toMatch(/from '@grana\/money-logic'/)
-  })
-
-  it('arranca del saldo inicial de la cuenta, que la pantalla le pasa', () => {
     expect(screen).toMatch(/currencies=\{account\.currencies\}/)
-    expect(section).toMatch(/initial_balance/)
   })
 
-  it('lo oculta con filtros o búsqueda, pero no por la moneda, que es la lente', () => {
-    expect(section).toMatch(/activeFilterCount\(\{ \.\.\.filters, currency: null \}\) === 0 && filters\.query\.trim\(\)\.length === 0/)
-    expect(section).toMatch(/runningBalance=\{showRunningBalance \?/)
-  })
-
-  it('muestra una moneda por vez: la lente ARS | USD, solo si la cuenta usa las dos', () => {
-    expect(section).toMatch(/showCurrencyLens = running\.currencies\.length > 1/)
-    expect(section).toMatch(/applyAccountFilters\(movements, filters, movementById, accountId, lens\)/)
+  it('usa la lista y la fila compartidas con la pestaña Movimientos', () => {
+    expect(section).toMatch(/import \{ MovementList \} from '\.\.\/movements\/MovementList'/)
+    expect(section).not.toMatch(/from '\.\/MovementRow'/)
     expect(row).toMatch(/legInCurrency\(fullView, currencyLens\)/)
+    expect(row).toMatch(/runningBalanceSnapshot/)
+  })
+
+  it('es una lista corrida: sin selector de mes, con «Desde / Hasta» y «Cargar más»', () => {
+    expect(section).not.toMatch(/shiftMonth|ChevronLeft/)
+    expect(section).toMatch(/showDateRange/)
+    expect(section).toMatch(/MOVEMENTS_LIMIT_STEP/)
+    expect(filters).not.toMatch(/resolveMonthRange/)
+    expect(filters).toMatch(/filters\.dateFrom && tx\.date < filters\.dateFrom/)
+  })
+
+  it('oculta el saldo con filtros o búsqueda, pero no por la moneda ni por las fechas', () => {
+    expect(section).toMatch(
+      /activeFilterCount\(\{ \.\.\.filters, currency: null, dateFrom: null, dateTo: null \}\) === 0 &&\s*filters\.query\.trim\(\)\.length === 0/,
+    )
   })
 
   it('con la lente visible la moneda no es un filtro: ni hoja, ni chip, ni cuenta', () => {
+    expect(section).toMatch(/showCurrencyLens = running\.currencies\.length > 1/)
     expect(section).toMatch(/showCurrencyFilter=\{!showCurrencyLens\}/)
     expect(section).toMatch(/filters\.currency && !showCurrencyLens/)
     expect(section).toMatch(/activeFilterCount\(showCurrencyLens \? \{ \.\.\.filters, currency: null \} : filters\)/)
   })
 
-  it('el tono sale de resolveTone, como en la web y el feed, y el signo va pegado', () => {
+  it('el tono sale de resolveTone, como en la web, y el signo va pegado', () => {
     expect(row).toMatch(/resolveTone\(movement\.kind, view\.sign/)
     expect(row).not.toMatch(/'- '|'\+ '/)
   })
