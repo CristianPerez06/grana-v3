@@ -14,6 +14,7 @@ import { AccountDetailHeader } from './account-detail-header'
 import { PendingReimbursementsAccountContainer } from './pending-reimbursements-account-container'
 import { MovementFiltersAccountContainer } from './movement-filters-account-container'
 import { MovementListAccountContainer } from './movement-list-account-container'
+import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
 import { CurrencyLensPills } from './currency-lens-pills'
 import { useAccountCurrencyLens } from './use-account-currency-lens'
 
@@ -88,23 +89,27 @@ export function AccountDetailContent({ accountId }: Props) {
               </div>
             }
             trailing={
-              // Phone width: just the «+», drawn at 36px like the icons beside it;
-              // the `::after` gives back the 44px touch target.
+              // Desktop only. On a phone, adding is the floating «+» at the
+              // bottom right — the same rule as Inicio and Movimientos.
               <Button
                 size="sm"
-                className="w-auto shrink-0 max-md:relative max-md:h-9 max-md:w-9 max-md:px-0 max-md:after:absolute max-md:after:-inset-1 max-md:after:content-['']"
+                className="w-auto shrink-0 max-md:hidden"
                 disabled={!drawer}
                 onClick={() => drawer?.openCreate(accountId)}
-                aria-label={t('actions.add_transaction')}
               >
                 <Plus size={16} strokeWidth={2} aria-hidden />
-                <span className="max-md:sr-only">{t('actions.add_transaction')}</span>
+                {t('actions.add_transaction')}
               </Button>
             }
           />
           <MovementListAccountContainer accountId={accountId} />
         </div>
       </section>
+
+      {/* Phone: floating «+», the account preselected. The spacer keeps the last
+          row's amount and balance clear of it at the end of the list. */}
+      <QuickAddFab accountId={accountId} />
+      <div aria-hidden className="h-24 md:hidden" />
     </>
   )
 }

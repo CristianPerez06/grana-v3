@@ -26,6 +26,7 @@
 - [x] 5.2 App: lista corrida con «Cargar más», «Desde / Hasta» en la hoja compartida (`showDateRange`), íconos en la fila del título y ARS | USD debajo
 - [x] 5.3 App: el detalle de cuenta usa `MovementList` / `MovementRow` de la pestaña Movimientos (con saldo y lente); se borran la fila propia y `movement-view.ts`
 - [x] 5.5 Sin acceso a recurrencias en el detalle de cuenta (web y app); título, ARS | USD, búsqueda, filtros y «+» en una fila. Verificado (web) a 358px de tarjeta: una fila; a 343 y 328px el selector baja prolijo
+- [x] 5.6 «+» flotante en el celular (web y app) con la cuenta preseleccionada; en desktop, «+ Agregar» en la fila. Una sola fila verificada a 360px (web)
 - [x] 5.4 Mes «Noviembre 2026» y días «Viernes, 13 de noviembre» en web y app
 
 ## 6. Cierre

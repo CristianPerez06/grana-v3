@@ -13,7 +13,7 @@
 - Igual en las tres versiones: web en compu, web en celular (saldo debajo del monto) y app nativa.
 - Se quita el saldo doble por fila y las dos patas en una misma fila.
 - **Lista corrida, sin selector de mes**, en las tres versiones: todos los movimientos de la cuenta, del más nuevo al más viejo, con «Cargar más» al final, como el resumen de un banco. Para un tramo puntual, la hoja de filtros ofrece «Desde / Hasta». El selector de mes queda en la pestaña Movimientos, que responde «¿cuánto gasté este mes?».
-- **Todo en una fila:** «Movimientos [ARS | USD]» con la lupa y los filtros (y el «+ Agregar» en la web). En un teléfono angosto, ARS | USD baja debajo del título. **Se quita el acceso a recurrencias** del detalle de cuenta: lleva al listado general, que no tiene que ver con la cuenta, y sigue en la pestaña Movimientos.
+- **Todo en una fila:** «Movimientos [ARS | USD]» con la lupa y los filtros, en las tres versiones. En el celular (web y app) agregar pasa a ser el **«+» flotante** abajo a la derecha, como en Inicio y Movimientos, con la cuenta ya elegida; en la compu sigue «+ Agregar» al final de la fila. La app gana así una forma de agregar desde la cuenta, que antes no tenía. **Se quita el acceso a recurrencias** del detalle de cuenta: lleva al listado general, que no tiene que ver con la cuenta, y sigue en la pestaña Movimientos.
 - **La app usa en el detalle de cuenta las mismas filas que la pestaña Movimientos** (ícono, «Ajuste», «Cambio», «Transferencia», agrupadas por día, y tocar abre el detalle). Antes tenía una fila propia que mostraba «12 nov» o «CU» como título.
 - El mes se lee «Noviembre 2026» / «Nov 2026» y los días «Viernes, 13 de noviembre», sin el «De» en mayúscula, en la web y en la app.
 

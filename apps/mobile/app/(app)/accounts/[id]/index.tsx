@@ -11,6 +11,7 @@ import { AccountDetailHero } from '../../../../components/accounts/AccountDetail
 import { AccountDetailSkeleton } from '../../../../components/accounts/AccountDetailSkeleton'
 import { PendingReimbursementsCard } from '../../../../components/accounts/PendingReimbursementsCard'
 import { MovementsSection } from '../../../../components/accounts/MovementsSection'
+import { QuickAddFab } from '../../../../components/transactions/QuickAddFab'
 import {
   useAccountDetail,
   useAccountMovements,
@@ -76,7 +77,7 @@ export default function AccountDetailScreen() {
       <KeyboardAwareScrollView
         bottomOffset={KEYBOARD_BOTTOM_OFFSET}
         keyboardShouldPersistTaps="handled"
-        contentContainerClassName="gap-5 px-6 py-6"
+        contentContainerClassName="gap-5 px-6 pt-6 pb-32"
         refreshControl={
           <RefreshControl
             refreshing={accountQ.isRefetching || movementsQ.isRefetching}
@@ -119,6 +120,10 @@ export default function AccountDetailScreen() {
           </>
         )}
       </KeyboardAwareScrollView>
+
+      {/* Floating «+», the account preselected — same button as Inicio and
+          Movimientos. The scroll's bottom padding keeps the last row clear. */}
+      {account && <QuickAddFab presetAccount={account.id} />}
     </View>
   )
 }

@@ -4,13 +4,23 @@ import { Plus } from 'lucide-react-native'
 import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 
-export const QuickAddFab = () => {
+/**
+ * Floating «+» to register a movement. `presetAccount` preselects the account
+ * in the form — the account detail passes the account on screen.
+ */
+export const QuickAddFab = ({ presetAccount }: { presetAccount?: string } = {}) => {
   const t = useT()
   const router = useRouter()
 
   return (
     <Pressable
-      onPress={() => router.push('/transactions/new')}
+      onPress={() =>
+        router.push(
+          presetAccount
+            ? { pathname: '/transactions/new', params: { presetAccount } }
+            : '/transactions/new',
+        )
+      }
       accessibilityRole="button"
       accessibilityLabel={t('transactions.actions.register_movement')}
       className="absolute bottom-10 right-10 h-20 w-20 items-center justify-center rounded-2xl bg-emerald shadow-lg"
