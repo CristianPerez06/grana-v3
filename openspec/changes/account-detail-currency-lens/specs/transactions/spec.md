@@ -1,11 +1,255 @@
 ## REMOVED Requirements
 
+### Requirement: El estado de filtros y navegación de /accounts/[id] vive en React state, no en URL
+
+**Reason**: Incluía la navegación por mes, que el detalle de cuenta ya no tiene: su lista es corrida y se acota con «Desde / Hasta». Se reemplaza por "El estado de filtros y del rango de fechas de /accounts/[id] vive en React state, no en URL", igual salvo por eso.
+**Migration**: Ninguna de datos.
+
 ### Requirement: El listado de una cuenta muestra el saldo corriente por fila
 
 **Reason**: Mostraba los saldos de las dos monedas uno abajo del otro en cada fila y las dos patas de un cambio en la misma fila; probado con datos reales, la lista se leía peor. Se reemplaza por "El listado de una cuenta muestra el saldo corriente por fila, de a una moneda", que muestra un libro por vez con un selector ARS | USD.
 **Migration**: Ninguna de datos. Las cuentas con pesos y dólares muestran el selector ARS | USD; las de una sola moneda se ven igual que antes.
 
 ## MODIFIED Requirements
+
+### Requirement: El usuario puede ver la lista de transacciones de una cuenta
+
+El sistema SHALL mostrar la lista de transacciones de una cuenta ordenada por fecha descendente (más reciente primero), luego por `created_at` descendente. La lista es parte de la pantalla de detalle de la cuenta y es **corrida**: no se navega por mes; muestra todos los movimientos de la cuenta, del más reciente al más viejo, y se acota por fechas con «Desde / Hasta» (ver "El listado de una cuenta muestra el saldo corriente por fila, de a una moneda"). La lista incluye las transacciones donde `account_id = currentAccount` así como las transferencias entrantes donde `transfer_destination_account_id = currentAccount`.
+
+#### Scenario: Lista muestra ingresos, gastos, transferencias y ajustes
+
+- **WHEN** el usuario abre el detalle de una cuenta con transacciones de los cuatro tipos
+- **THEN** el sistema muestra todas las transacciones con fecha, descripción, monto y tipo diferenciado visualmente (ingreso, gasto, transferencia con flecha, ajuste con ícono propio)
+
+#### Scenario: Estado vacío
+
+- **WHEN** la cuenta no tiene transacciones
+- **THEN** el sistema muestra el mensaje vacío con CTA para agregar la primera transacción
+
+#### Scenario: La lista está paginada
+
+- **WHEN** la cuenta tiene más de 50 transacciones (`DEFAULT_MOVEMENTS_LIMIT`)
+- **THEN** el sistema muestra las 50 más recientes con la acción «Cargar más», que suma otras 50 (`MOVEMENTS_LIMIT_STEP`), en web y en mobile
+
+#### Scenario: La lista incluye transferencias entrantes
+
+- **WHEN** la cuenta B es destino de una transferencia desde A
+- **THEN** la lista de movimientos de B incluye esa transferencia con signo positivo y la etiqueta "← A"
+
+### Requirement: El usuario tiene un acceso rápido flotante para registrar un movimiento
+
+En **web**, el sistema SHALL ofrecer un **acceso rápido flotante** (FAB) para registrar un movimiento, **visible solo en viewport `<sm` (mobile-web)** en el listado global de Movimientos, en el dashboard y en el **detalle de una cuenta**, de modo que el usuario pueda iniciar un alta sin scrollear de vuelta al header. El FAB SHALL **abrir el drawer de creación de movimiento** (mismo provider que el resto de entry points), sin navegación. En mobile-web el FAB **reemplaza** al botón "Nuevo movimiento" del header del dashboard (el botón no se renderiza en ese viewport, ver spec de `dashboard`); el FAB es el único acceso primario para registrar desde esas pantallas. En el detalle de una cuenta el FAB SHALL abrir el drawer con **esa cuenta preseleccionada**, y reemplaza en mobile-web al CTA «+ Agregar» de la fila del título, que en ese viewport no se renderiza; la app nativa SHALL ofrecer el mismo FAB en su detalle de cuenta, que abre el formulario con la cuenta preseleccionada (`presetAccount`). En desktop-web (viewport `≥sm`) el FAB NO SHALL renderizarse: el acceso primario lo cumple el botón "Nuevo movimiento" del header del dashboard y los accesos propios de la pantalla `/transactions`.
+
+El FAB web SHALL ser un cuadrado de 64×64 px con esquinas ligeramente redondeadas (`rounded-2xl`, ≈16 px), fondo verde semántico (`bg-success` / `text-success-foreground`, mapeado al token `--success` = emerald), anclado en `bottom-10 right-10` (40 px de cada borde) con `z-index` por encima del contenido scrolleable. El label accesible SHALL leerse del catálogo i18n (`transactions.actions.register_movement`), nunca hardcodeado.
+
+Las pantallas que renderizan el FAB en mobile-web SHALL reservar padding inferior suficiente para que el FAB no tape la última fila de contenido al scrollear hasta el final (`pb-24 sm:pb-0` o equivalente).
+
+Mientras el `MovementDrawerProvider` no esté disponible (las queries `accounts/categories/household` aún cargando o falladas), el FAB SHALL renderizarse en estado **disabled** (sin handler de click) usando el estado disabled estándar del componente `@/components/ui/button`, no SHALL navegar a ninguna ruta de fallback, y SHALL pasar a habilitado cuando el provider resuelve. El visual del estado disabled lo define el design system del `Button` (no se especifica una opacity literal a nivel spec).
+
+#### Scenario: FAB visible en Movimientos y dashboard (mobile-web)
+
+- **WHEN** el usuario autenticado abre `/transactions` o `/dashboard` en viewport `<sm`
+- **THEN** ve un FAB cuadrado verde anclado en la esquina inferior derecha, visible aunque haya scrolleado la pantalla
+- **AND** al activarlo se abre el drawer de creación de movimiento sobre la pantalla actual, sin navegación
+
+#### Scenario: FAB no visible en desktop-web
+
+- **WHEN** el usuario abre `/transactions` o `/dashboard` en viewport `≥sm`
+- **THEN** el FAB NO se renderiza
+- **AND** el acceso primario para registrar lo cumple el botón "Nuevo movimiento" del header del dashboard (en `/dashboard`) y los accesos propios de la pantalla en `/transactions`
+
+#### Scenario: El FAB no aparece en otras pantallas web
+
+- **WHEN** el usuario está en una pantalla web que no es Movimientos, el dashboard ni el detalle de una cuenta (cualquier viewport)
+- **THEN** el FAB no se muestra (los accesos de esa pantalla son los suyos propios)
+
+#### Scenario: El contenido scrolleable reserva padding inferior para el FAB en mobile-web
+
+- **WHEN** el usuario en viewport `<sm` scrollea hasta el final del contenido de `/dashboard` o `/transactions`
+- **THEN** la última fila de contenido NO queda tapada por el FAB
+- **AND** el padding inferior solo se aplica en mobile-web (en desktop el FAB no existe y el padding NO SHALL inflar la página innecesariamente)
+
+#### Scenario: El FAB está disabled mientras el provider del drawer no está listo
+
+- **WHEN** el usuario abre `/transactions` o `/dashboard` en viewport `<sm` durante el primer paint y `useMovementDrawer()` aún devuelve `null` porque las queries `accounts/categories/household` no resolvieron
+- **THEN** el FAB se renderiza con el estado disabled estándar del componente `Button` (sin handler activo, visual atenuado por el design system)
+- **AND** un tap sobre el FAB NO produce navegación ni abre el drawer
+- **AND** cuando las queries resuelven y `useMovementDrawer()` retorna el opener, el FAB pasa a su rendering normal
+
+#### Scenario: El FAB del detalle de cuenta preselecciona la cuenta
+
+- **WHEN** el usuario, en el celular (web o app), toca el «+» flotante en el detalle de la cuenta Santander
+- **THEN** se abre el formulario de alta con Santander ya elegida como cuenta
+- **AND** en desktop-web el mismo alta se ofrece con el botón «+ Agregar» al final de la fila del título, y el FAB no se renderiza
+
+### Requirement: Las acciones del listado viven en una micro-toolbar de íconos circulares
+
+El sistema SHALL renderizar las acciones de operación del listado (buscar, ver recurrencias, abrir filtros) como una **micro-toolbar de íconos circulares** alineada a la derecha, ubicada arriba del listado y debajo del card del breakdown. Inspirada en el patrón v2 (`MovimientosTopBar`), pero desacoplada del bloque del header. En el **detalle de una cuenta** la misma toolbar SHALL ocupar la fila del título «Movimientos» y NO SHALL incluir el ícono de Recurrencias —lleva al listado general de recurrencias, que no tiene que ver con la cuenta en pantalla—, así que ahí muestra dos íconos: Search y Filtros. La app nativa SHALL usar el mismo botón de ícono (`ToolbarIconButton`) en la tab Movimientos y en el detalle de cuenta.
+
+Cada botón SHALL ser un cuadrado redondeado de 36×36px con border sutil (`border-border`, `bg-card`), texto/ícono `text-text-muted` con hover `text-text`. Sin label visible — solo el ícono Lucide y un `aria-label` para accesibilidad. Los tres botones, en orden de izquierda a derecha:
+
+1. **Search** (ícono `Search`): click activa el modo de búsqueda — el botón se transforma en un **input expansible** que ocupa todo el ancho, con un botón "Cancelar" al lado. El input dispara la búsqueda con debounce de 300ms, idéntico al patrón v2. Pulsar Cancelar (o limpiar el texto) vuelve al estado de tres íconos.
+2. **Recurrencias** (ícono `Repeat`): link directo a `/transactions/recurring`.
+3. **Filtros** (ícono `SlidersHorizontal`): abre el panel de filtros como **sheet desde la derecha** (overlay + panel ~440px). Cuando hay filtros de contenido activos, SHALL mostrar un badge navy circular con el conteo, posicionado absoluto en la esquina superior derecha del ícono.
+
+#### Scenario: La toolbar muestra tres íconos circulares cuando no hay búsqueda activa
+
+- **WHEN** el usuario abre `/transactions` sin término de búsqueda en la URL
+- **THEN** la toolbar muestra tres íconos: Search, Repeat (Recurrencias), SlidersHorizontal (Filtros)
+- **AND** cada uno es un cuadrado redondeado de 36px con border sutil y solo ícono
+
+#### Scenario: El ícono Search expande a un input full-width
+
+- **WHEN** el usuario hace click en el ícono Search
+- **THEN** la toolbar se transforma: el input de búsqueda toma el ancho completo y un botón "Cancelar" aparece al lado
+- **AND** el input recibe el foco automáticamente
+- **AND** la búsqueda se aplica con debounce de 300ms a la URL
+
+#### Scenario: Cancelar la búsqueda vuelve al estado de tres íconos
+
+- **WHEN** el usuario presiona "Cancelar" en el modo búsqueda
+- **THEN** la toolbar vuelve a mostrar los tres íconos
+- **AND** el término de búsqueda se borra de la URL si había alguno
+
+#### Scenario: El ícono Recurrencias linkea a la página de gestión
+
+- **WHEN** el usuario hace click en el ícono Repeat
+- **THEN** navega a `/transactions/recurring`
+
+#### Scenario: El ícono Filtros abre el sheet desde la derecha
+
+- **WHEN** el usuario hace click en el ícono SlidersHorizontal
+- **THEN** se abre un overlay con un panel sheet pegado al borde derecho de la pantalla
+- **AND** el panel contiene selectores para tipo, categoría, cuenta (si aplica), moneda y rango de monto
+- **AND** un footer con botones "Limpiar todo" y "Aplicar"
+
+#### Scenario: El badge en el ícono Filtros refleja el conteo de filtros activos
+
+- **WHEN** el usuario tiene filtros de contenido activos (tipo, categoría, cuenta, moneda, monto)
+- **THEN** sobre el ícono SlidersHorizontal aparece un badge circular navy con el número de filtros activos
+- **AND** el badge desaparece cuando no hay filtros activos
+
+#### Scenario: En el detalle de cuenta la toolbar no ofrece Recurrencias
+
+- **WHEN** el usuario abre el detalle de una cuenta, en web o en la app
+- **THEN** la fila del título muestra los íconos Search y Filtros, sin el de Recurrencias
+
+### Requirement: La tab Movimientos de mobile muestra el feed global navegable por mes
+
+La pestaña primaria **Movimientos** de la app mobile SHALL renderizar el feed global de movimientos del usuario, navegable por mes y **acotable por filtros**, como thin consumer del read compartido `getGlobalMovementsPage` de `@grana/transactions`.
+
+La pantalla SHALL mostrar, desde el primer frame, el chrome siempre visible: el `PageHeader` nativo (navy) con el título de la sección y el acceso a recurrencias, y un **selector de mes** (el `MonthNavigator` compartido, con controles prev / ‹mes› / next). El mes inicial SHALL ser el mes actual (`monthOf(getTodayAR())`). Cambiar de mes SHALL recargar el feed de ese mes y resetear la paginación.
+
+La lista SHALL reusar los primitivos nativos `MovementList` / `MovementRow` (`apps/mobile/components/movements/`), renderizando las filas del feed agrupadas por fecha. El estado de mes del feed SHALL ser **independiente** del mes del dashboard (navegar uno no mueve el otro).
+
+**Barra de filtros.** La pantalla SHALL ofrecer, bajo el selector de mes: una **búsqueda de texto libre** (input inline que se despliega desde un botón de ícono), una **hoja de filtros** (`MovementFiltersSheet`) con tipo, cuenta, categoría, subcategoría, moneda y rango de monto, y los **chips de filtro activos removibles**. Los accesos a la búsqueda y a la hoja SHALL ser botones de ícono de 36px alineados a la derecha (`ToolbarIconButton`), los mismos que la web dibuja sobre su listado. El botón que abre la hoja SHALL mostrar el conteo de filtros de contenido activos; ese conteo SHALL **excluir el mes y la búsqueda**, que tienen sus propios controles. El **filtro de cuenta** SHALL ofrecerse sólo cuando hay dos o más cuentas que desambiguar.
+
+**Los filtros SHALL resolverse en la base, no en memoria.** El estado de filtros SHALL proyectarse al contrato `MovementFilters` y viajar a la RPC `get_movements_page`; la pantalla NO SHALL filtrar las filas ya recibidas. La razón es de corrección, no de performance: el feed pagina, de modo que un filtro aplicado sobre la página cargada devolvería las coincidencias **de esa página** en vez de las del mes, y `hasMore` dejaría de describir el conjunto que el usuario está viendo. Esta es la diferencia de diseño con el toolbar del detalle de cuenta, que sí filtra en memoria porque tiene el historial completo de la cuenta cargado (ver la spec de `accounts`); las dos superficies comparten la hoja de filtros, no la forma de aplicarlos.
+
+**El eje de tipo SHALL ser el `kind` derivado** (`MovementTypeFilter` = `FinancialMovement['kind']`), no la columna `transaction_type`. Es lo que el contrato `MovementFilters` ya declara y lo que la RPC ya compara, e incluye las distinciones que el usuario ve dibujadas en los badges de la fila (compra en cuotas, pago de resumen, reintegro).
+
+**Las opciones de la hoja SHALL derivarse del catálogo** (cuentas activas, categorías activas y subcategorías de la categoría seleccionada), vía el read compartido `getMovementFilterOptions` de `@grana/transactions`. NO SHALL derivarse de las filas cargadas: sobre una lista paginada, eso produce un menú de filtros que crece al pedir más filas. Como consecuencia aceptada, el menú PUEDE ofrecer una opción que devuelva cero resultados; el empty-state de sin-resultados es lo que lo explica.
+
+**La búsqueda del feed SHALL matchear el set canónico** definido en el requirement "Los campos buscables de la búsqueda de movimientos son un set único", resuelto por la RPC `get_movements_page`. El resultado SHALL coincidir con el del detalle de cuenta para la misma query: las dos superficies difieren en **dónde** corre el filtro (base vs. memoria), no en **qué** campos matchea.
+
+La paginación SHALL seguir el patrón limit+1 lookahead que el read expone (`{ movements, hasMore, nextLimit }`): mientras `hasMore`, la pantalla SHALL ofrecer una acción "cargar más" que sube el límite hasta `MAX_MOVEMENTS_LIMIT`, respetando los filtros activos. **Cualquier** cambio de filtro —mes, búsqueda, tipo, cuenta, categoría, subcategoría, moneda, rango de monto, o limpiar— SHALL resetear el límite a `DEFAULT_MOVEMENTS_LIMIT`, no sólo el cambio de mes. El reset y el cambio de filtro SHALL ocurrir en una sola actualización de estado, para que no se dispare un fetch intermedio con el filtro nuevo y el límite viejo.
+
+Cuando la lista queda vacía, la pantalla SHALL mostrar un empty-state con **tres** variantes:
+
+1. **Sin resultados** — hay filtros de contenido o búsqueda activos. SHALL ofrecer una acción para limpiarlos.
+2. **Bienvenida** — no hay filtros activos y el usuario no tiene ningún movimiento (`hasAnyTransaction === false`).
+3. **Mes vacío** — no hay filtros activos, el usuario tiene historial en otros meses y este mes está vacío.
+
+El discriminador SHALL resolverse sin I/O adicional: la presencia de filtros activos se evalúa primero, y sólo si no los hay se consulta `hasAnyTransaction`. Los copies SHALL leerse del catálogo compartido `@grana/i18n-messages`, sin agregar keys nuevas.
+
+Las **filas del feed SHALL ser navegables**: tocar una fila SHALL abrir el detalle del movimiento (`/transactions/[txId]`, ver el requirement del detalle nativo), pasando el contexto de origen (`?from=…`) para resolver el back. El `QuickAddFab` está **habilitado** (alta de movimiento, ver su requirement). El **breakdown por categoría** del feed web sigue explícitamente fuera de alcance: es otra superficie, normada por la spec `spending-by-category`. Los **bloques de pendientes** (recurrencias y reintegros) SÍ se renderizan sobre la lista, cada uno especificado en su propio requirement.
+
+El read SHALL usar el mismo RPC `get_movements_page` y el mismo anon-key/RLS path que web (sin cambios de datos, API ni RLS).
+
+#### Scenario: La tab Movimientos renderiza el feed del mes actual
+
+- **WHEN** el usuario abre la pestaña Movimientos
+- **THEN** ve el `PageHeader` + el selector de mes posicionado en el mes actual desde el primer frame
+- **AND** ve la lista de movimientos de ese mes agrupada por fecha usando `MovementList`/`MovementRow` nativos
+- **AND** el read se resuelve vía `getGlobalMovementsPage(supabase, { filters: { month } })` de `@grana/transactions`
+
+#### Scenario: Navegar entre meses recarga el feed
+
+- **WHEN** el usuario toca prev/next en el selector de mes
+- **THEN** el feed se recarga con los movimientos del nuevo mes (`shiftMonth`)
+- **AND** el límite de paginación se resetea a `DEFAULT_MOVEMENTS_LIMIT`
+- **AND** el mes del dashboard no se ve afectado
+
+#### Scenario: Los filtros del feed viajan a la base
+
+- **WHEN** el usuario aplica un filtro de contenido (tipo, cuenta, categoría, subcategoría, moneda o rango de monto) o escribe en la búsqueda
+- **THEN** el estado se proyecta a `MovementFilters` y se pasa a `getGlobalMovementsPage`, que lo traduce a la RPC `get_movements_page`
+- **AND** la pantalla NO filtra en memoria las filas ya recibidas
+- **AND** el `queryKey` de la lista incluye los filtros proyectados, de modo que cada combinación tiene su propia entrada de cache
+
+#### Scenario: Cambiar un filtro resetea la paginación
+
+- **WHEN** el usuario tiene el límite subido por "cargar más" y cambia cualquier filtro
+- **THEN** el límite vuelve a `DEFAULT_MOVEMENTS_LIMIT` en la misma actualización de estado que el filtro
+- **AND** no se dispara ningún fetch intermedio con el filtro nuevo y el límite anterior
+
+#### Scenario: Cargar más respeta los filtros activos
+
+- **WHEN** hay filtros activos, el resultado tiene más filas que el límite actual (`hasMore === true`) y el usuario activa "cargar más"
+- **THEN** la lista sube el límite a `nextLimit` (tope `MAX_MOVEMENTS_LIMIT`) y las filas adicionales cumplen los mismos filtros
+- **AND** `hasMore` describe el conjunto filtrado, no el mes completo
+
+#### Scenario: El conteo de "Filtros" excluye mes y búsqueda
+
+- **WHEN** el usuario tiene seleccionado un mes distinto del actual y un texto de búsqueda, sin filtros de contenido
+- **THEN** el botón que abre la hoja no muestra conteo
+- **AND** al aplicar además un filtro de tipo y uno de moneda, el conteo muestra 2
+
+#### Scenario: El filtro de cuenta aparece sólo con dos o más cuentas
+
+- **WHEN** el usuario tiene una sola cuenta
+- **THEN** la hoja de filtros no ofrece el filtro de cuenta
+- **AND** con dos o más cuentas activas, sí lo ofrece
+
+#### Scenario: Las opciones de la hoja salen del catálogo
+
+- **WHEN** la pantalla abre la hoja de filtros
+- **THEN** las cuentas, categorías y subcategorías ofrecidas provienen de `getMovementFilterOptions` de `@grana/transactions`
+- **AND** la lista de opciones no cambia al pedir más filas con "cargar más"
+
+#### Scenario: Empty-state cuando los filtros vacían la lista
+
+- **WHEN** hay filtros de contenido o búsqueda activos y ningún movimiento coincide
+- **THEN** la pantalla muestra el copy de sin-resultados con una acción para limpiar los filtros
+- **AND** no consulta `hasAnyTransaction`, porque la causa de la lista vacía ya está determinada
+
+#### Scenario: Empty-state distingue usuario nuevo de mes vacío
+
+- **WHEN** el mes seleccionado no tiene movimientos y no hay filtros de contenido ni búsqueda activos
+- **THEN** si el usuario no tiene ningún movimiento en ningún mes (`hasAnyTransaction === false`), la pantalla muestra el copy de bienvenida
+- **AND** si tiene historial en otros meses, muestra el copy de mes-vacío
+- **AND** los tres copies se leen del catálogo compartido `@grana/i18n-messages`
+
+#### Scenario: La búsqueda del feed no matchea nombres de categoría
+
+- **WHEN** el usuario busca el nombre de una categoría en el feed y ningún movimiento la lleva en su descripción ni como su título derivado
+- **THEN** la lista no devuelve esos movimientos, porque la categoría no es un eje explícito del set: entra sólo cuando es el título, que es el caso de ingresos y gastos
+- **AND** una transferencia clasificada con esa categoría, cuyo título es la etiqueta fija, no aparece
+- **AND** el filtro de categoría de la hoja sí la devuelve
+
+#### Scenario: La búsqueda del feed matchea el mismo set que el detalle de cuenta
+
+- **WHEN** el usuario busca el nombre de una institución en el feed
+- **THEN** la lista devuelve los movimientos de las cuentas de esa institución, y devuelve exactamente los mismos que devolvería la misma query en el detalle de esas cuentas
+- **AND** buscar el nombre de una subcategoría NO devuelve los movimientos que sólo la llevan como subcategoría, en ninguna de las dos superficies
+- **AND** el filtro de subcategoría de la hoja sí los devuelve
+
+#### Scenario: Tocar una fila del feed abre el detalle
+
+- **WHEN** el usuario toca una fila del feed de Movimientos
+- **THEN** navega al detalle `/transactions/[txId]` de ese movimiento, pasando el contexto de origen (`?from=…`) para resolver el back
+- **AND** el feed no renderiza breakdown por categoría
+
 
 ### Requirement: Los primitivos visuales de ledger (MovementFilters, MovementList, MovementRow) comparten un lenguaje visual único en todas las rutas y anchos de pantalla
 
@@ -44,6 +288,51 @@ Los comportamientos de los primitivos (filtering, running balance, empty states 
 - **THEN** el monto se lee `US$ 2.482,60` y no hay una línea "USD" debajo
 
 ## ADDED Requirements
+
+### Requirement: El estado de filtros y del rango de fechas de /accounts/[id] vive en React state, no en URL
+
+`apps/web` SHALL mantener el estado interactivo de `/accounts/[id]` (filtros de tipo, categoría, subcategoría, currency, búsqueda, rango de monto, rango de fechas «Desde / Hasta», paginación) en React state interno de la ruta, no en query strings de la URL.
+
+La URL de `/accounts/[id]` NO SHALL aceptar ni interpretar query parameters relacionados con filtros, navegación o paginación. La URL canónica de la ruta es `/accounts/[id]` sin parámetros.
+
+Recargar la página (F5) SHALL resetear todos los filtros al valor por defecto (lista corrida sin rango de fechas, sin filtros adicionales, sin búsqueda, y la moneda inicial del selector ARS | USD). Este es el comportamiento intencional, coherente con `/transactions`.
+
+El **filtro de cuenta** (`accountId`) NO SHALL exponerse en la barra de filtros — está implícito en la ruta (`accountId === params.id`). El componente `MovementFilters` SHALL renderizarse con `showAccountFilter={false}` y la query subyacente SHALL inyectar el `accountId` desde el shell.
+
+Cualquier acción de "limpiar filtros" o "limpiar búsqueda" SHALL operar sobre este estado, no sobre la URL.
+
+#### Scenario: Elegir un rango de fechas no toca la URL
+
+- **WHEN** el usuario está en `/accounts/[id]` y elige «Desde» y «Hasta» en la hoja de filtros
+- **THEN** la lista se acota a ese tramo
+- **AND** la URL en la barra del browser sigue siendo `/accounts/[id]` (sin query params)
+- **AND** la historia del browser NO recibe una nueva entrada
+
+#### Scenario: F5 limpia todos los filtros
+
+- **WHEN** el usuario está en `/accounts/[id]` con filtros aplicados (ej. categoría X, búsqueda "café")
+- **AND** recarga la página (F5)
+- **THEN** la pantalla vuelve al estado por defecto: lista corrida, sin filtros ni búsqueda
+
+#### Scenario: La URL canónica no acepta query params
+
+- **WHEN** el usuario entra a `/accounts/[id]?month=2026-03` (ej. desde un bookmark antiguo)
+- **THEN** la ruta carga normalmente en el estado por defecto
+- **AND** los query params son ignorados
+
+#### Scenario: La barra de filtros no muestra el chip de cuenta
+
+- **WHEN** el usuario abre `/accounts/[id]`
+- **THEN** la barra de filtros no incluye el control de selección de cuenta (porque el contexto de la ruta ya implica esa cuenta)
+- **AND** el resto de los filtros (tipo, categoría, subcategoría, «Desde / Hasta», búsqueda, rango de monto) están disponibles normalmente; la moneda se elige con el selector ARS | USD cuando la cuenta usa las dos, y solo entonces no aparece en la hoja
+
+#### Scenario: Acción "Limpiar filtros" opera sobre state, no URL
+
+- **WHEN** el usuario tiene filtros activos y clickea "Limpiar filtros"
+- **THEN** los filtros vuelven a su default
+- **AND** el contenido se reconsulta con los filtros limpios
+- **AND** la URL no cambia
+
 
 ### Requirement: El listado de una cuenta muestra el saldo corriente por fila, de a una moneda
 

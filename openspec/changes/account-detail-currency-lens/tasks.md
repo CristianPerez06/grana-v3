@@ -29,7 +29,11 @@
 - [x] 5.6 «+» flotante en el celular (web y app) con la cuenta preseleccionada; en desktop, «+ Agregar» en la fila. Una sola fila verificada a 360px (web)
 - [x] 5.4 Mes «Noviembre 2026» y días «Viernes, 13 de noviembre» en web y app
 
-## 6. Cierre
+## 6. Revisión de specs vigentes
 
-- [ ] 6.1 El usuario lo prueba en la web y en la app nativa y decide si se queda
-- [ ] 6.2 `pnpm verify` en verde (salvo el paso de archivo, que corre al archivar)
+- [x] 6.1 Revisar las specs maestras contra el comportamiento nuevo y corregir lo que contradecían: lista de una cuenta (paginación de 50, lista corrida), botón flotante (ahora también en el detalle de cuenta, con la cuenta preseleccionada), micro-toolbar (sin Recurrencias en el detalle de cuenta), estado de filtros de `/accounts/[id]` (rango de fechas en lugar de mes) y tab Movimientos nativa (botones de ícono). Nota en `docs/design/accounts-detail/README.md` de que los mocks quedaron atrás. `openspec validate --strict` en verde
+
+## 7. Cierre
+
+- [ ] 7.1 El usuario lo prueba en la web y en la app nativa y decide si se queda
+- [ ] 7.2 `pnpm verify` en verde (salvo el paso de archivo, que corre al archivar)
