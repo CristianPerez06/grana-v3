@@ -31,6 +31,7 @@ import { getMovementFilterOptions } from '../../lib/transactions/queries'
 import { MovementRow } from './MovementRow'
 import { MovementRowsSkeleton } from './MovementRowsSkeleton'
 import { MovementFiltersSheet } from '../movements/MovementFiltersSheet'
+import { ToolbarIconButton } from '../movements/ToolbarIconButton'
 import {
   ActiveFilterChips,
   type ActiveFilterChip,
@@ -236,18 +237,18 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
         </View>
 
         <View className="flex-row items-center gap-1.5">
-          <IconAction
+          <ToolbarIconButton
             icon={<Search size={16} color={searchMode ? colors.emeraldDeep : colors.textMuted} />}
             label={t('transactions.filters.search')}
             active={searchMode}
             onPress={toggleSearch}
           />
-          <IconAction
+          <ToolbarIconButton
             icon={<Repeat size={16} color={colors.textMuted} />}
             label={t('transactions.header.see_recurrences')}
             onPress={() => router.push('/transactions/recurring')}
           />
-          <IconAction
+          <ToolbarIconButton
             icon={<SlidersHorizontal size={16} color={activeCount > 0 ? colors.emeraldDeep : colors.textMuted} />}
             label={t('transactions.filters.filters_button')}
             active={activeCount > 0}
@@ -327,44 +328,6 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
         showCurrencyFilter={!showCurrencyLens}
       />
     </View>
-  )
-}
-
-/**
- * 36×36 icon button of the toolbar — the native twin of web's `iconButtonCls`
- * (same size, radius, border and count badge). The label is the accessible name.
- */
-function IconAction({
-  icon,
-  label,
-  active = false,
-  badge,
-  onPress,
-}: {
-  icon: React.ReactNode
-  label: string
-  active?: boolean
-  badge?: number
-  onPress: () => void
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ selected: active }}
-      hitSlop={4}
-      className={`h-9 w-9 items-center justify-center rounded-[10px] border ${
-        active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
-      }`}
-    >
-      {icon}
-      {badge !== undefined && (
-        <View className="absolute -right-1 -top-1 h-[18px] min-w-[18px] items-center justify-center rounded-full bg-navy px-1">
-          <Text className="text-[10px] font-semibold text-white">{badge}</Text>
-        </View>
-      )}
-    </Pressable>
   )
 }
 

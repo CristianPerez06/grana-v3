@@ -69,7 +69,7 @@ export function AccountDetailContent({ accountId }: Props) {
       )}
 
       <section className="overflow-hidden rounded-3xl border border-border bg-card">
-        <header className="flex items-center justify-between gap-3 border-b border-border-soft px-5 py-4">
+        <header className="flex items-center justify-between gap-3 border-b border-border-soft px-5 py-3 md:py-4">
           {/* The ARS | USD lens sits on the title: «Movimientos en pesos / en
               dólares» — a way of looking at the account, not a filter. */}
           {/* On a very narrow phone the pills wrap under the title instead of
@@ -82,10 +82,12 @@ export function AccountDetailContent({ accountId }: Props) {
               <CurrencyLensPills value={currencyLens.lens} onChange={currencyLens.setLens} />
             )}
           </div>
-          {/* Phone width: just the «+», so title, lens and action share one row. */}
+          {/* Phone width: just the «+», drawn at 36px like the toolbar icons below
+              so the header band is not taller than it needs; the `::after`
+              gives back the 44px touch target. */}
           <Button
             size="sm"
-            className="w-auto shrink-0 max-md:px-2.5"
+            className="w-auto shrink-0 max-md:relative max-md:h-9 max-md:w-9 max-md:px-0 max-md:after:absolute max-md:after:-inset-1 max-md:after:content-['']"
             disabled={!drawer}
             onClick={() => drawer?.openCreate(accountId)}
             aria-label={t('actions.add_transaction')}
