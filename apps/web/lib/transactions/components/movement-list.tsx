@@ -139,11 +139,13 @@ export const MovementList = ({
     if (dateStr === todayISO) return t('list.today')
     if (dateStr === yesterdayISO) return t('list.yesterday')
     const [y, m, d] = dateStr.split('-').map(Number)
+    // «Viernes, 13 de noviembre»: only the first letter up. A CSS `capitalize`
+    // used to turn the «de» into «De».
     return new Date(y, m - 1, d).toLocaleDateString(localeCode, {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-    })
+    }).replace(/^./, (c) => c.toUpperCase())
   }
 
   const backParam =
@@ -199,7 +201,7 @@ export const MovementList = ({
           key={date}
           className={dayIndex === 0 ? '' : 'border-t border-border-soft pt-3 mt-3'}
         >
-          <p className="px-4 pb-2 text-[12px] font-extrabold capitalize text-muted-foreground">
+          <p className="px-4 pb-2 text-[12px] font-extrabold text-muted-foreground">
             {formatGroupDate(date)}
           </p>
           <div className="flex flex-col">{dayMovements.map(renderRow)}</div>

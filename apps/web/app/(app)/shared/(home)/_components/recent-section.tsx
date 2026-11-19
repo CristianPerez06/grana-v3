@@ -50,11 +50,13 @@ export const RecentSection = ({ initialData, todayISO, userId }: Props) => {
     if (dateStr === todayISO) return tRoot('transactions.list.today')
     if (dateStr === yesterdayISO) return tRoot('transactions.list.yesterday')
     const [y, m, d] = dateStr.split('-').map(Number)
+    // «Viernes, 13 de noviembre»: only the first letter up. A CSS `capitalize`
+    // used to turn the «de» into «De».
     return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-    })
+    }).replace(/^./, (c) => c.toUpperCase())
   }
 
   return (
@@ -87,7 +89,7 @@ export const RecentSection = ({ initialData, todayISO, userId }: Props) => {
                 key={groupDate}
                 className={groupIndex === 0 ? '' : 'border-t border-border-soft pt-3 mt-3'}
               >
-                <p className="px-4 pb-2 pt-3 text-[12px] font-extrabold capitalize text-text-muted">
+                <p className="px-4 pb-2 pt-3 text-[12px] font-extrabold text-text-muted">
                   {formatGroupDate(groupDate)}
                 </p>
                 <ul className="flex flex-col divide-y divide-border-soft">

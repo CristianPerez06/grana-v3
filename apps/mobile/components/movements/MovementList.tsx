@@ -111,7 +111,10 @@ export function MovementList({
     const dow = new Date(y, m - 1, d).getDay()
     const weekday = WEEKDAYS[locale][dow]
     const month = MONTHS[locale][m - 1]
-    return locale === 'es' ? `${weekday} ${d} de ${month}` : `${weekday}, ${month} ${d}`
+    // «Viernes, 13 de noviembre» — same words as web; only the first letter up
+    // (a CSS `capitalize` used to turn the «de» into «De»).
+    const label = locale === 'es' ? `${weekday}, ${d} de ${month}` : `${weekday}, ${month} ${d}`
+    return label.charAt(0).toUpperCase() + label.slice(1)
   }
 
   const renderRow = (movement: FinancialMovement, rowIndex: number) => (
@@ -142,7 +145,7 @@ export function MovementList({
     <View className="flex-col">
       {Array.from(grouped.entries()).map(([date, dayMovements], dayIndex) => (
         <View key={date} className={dayIndex === 0 ? undefined : 'mt-3 border-t border-border-soft pt-3'}>
-          <Text className="px-4 pb-2 text-[12px] font-extrabold capitalize text-text-muted">
+          <Text className="px-4 pb-2 text-[12px] font-extrabold text-text-muted">
             {formatGroupDate(date)}
           </Text>
           <View className="flex-col">{dayMovements.map(renderRow)}</View>
