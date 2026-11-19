@@ -95,8 +95,14 @@ type MovementFiltersProps = {
    * title and tools share one row.
    */
   leading?: ReactNode
-  /** Rendered after the three icons (the account detail's «+ Agregar»). */
+  /** Rendered after the icons (the account detail's «+ Agregar»). */
   trailing?: ReactNode
+  /**
+   * The recurrences shortcut. The account detail hides it: it opens the global
+   * recurrences hub, which has nothing to do with the account on screen, and
+   * that toolbar row is the tightest one on a phone.
+   */
+  showRecurrencesLink?: boolean
   /** Hide the month navigator when another control (the spending overview) owns it. */
   showMonthNav?: boolean
   /** Required controller — every filter mutation dispatches through it. */
@@ -146,6 +152,7 @@ export const MovementFilters = ({
   showDateRange = false,
   leading,
   trailing,
+  showRecurrencesLink = true,
   showMonthNav = true,
   controller,
   sharedToggle,
@@ -475,7 +482,7 @@ export const MovementFilters = ({
             <span />
           )}
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1 md:gap-1.5">
             <button
               type="button"
               onClick={enterSearch}
@@ -485,19 +492,20 @@ export const MovementFilters = ({
             >
               <Search size={16} />
             </button>
-            {disabled ? (
-              <span className={iconButtonDisabledCls} aria-disabled aria-label={t('header.see_recurrences')}>
-                <Repeat size={16} />
-              </span>
-            ) : (
-              <Link
-                href="/transactions/recurring"
-                className={iconButtonCls}
-                aria-label={t('header.see_recurrences')}
-              >
-                <Repeat size={16} />
-              </Link>
-            )}
+            {showRecurrencesLink &&
+              (disabled ? (
+                <span className={iconButtonDisabledCls} aria-disabled aria-label={t('header.see_recurrences')}>
+                  <Repeat size={16} />
+                </span>
+              ) : (
+                <Link
+                  href="/transactions/recurring"
+                  className={iconButtonCls}
+                  aria-label={t('header.see_recurrences')}
+                >
+                  <Repeat size={16} />
+                </Link>
+              ))}
             {sharedToggle && (
               <button
                 type="button"

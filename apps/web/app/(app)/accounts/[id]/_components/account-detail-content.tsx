@@ -78,7 +78,7 @@ export function AccountDetailContent({ accountId }: Props) {
           <MovementFiltersAccountContainer
             accountId={accountId}
             leading={
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 md:gap-x-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-2 md:gap-x-3">
                 <h2 className="text-[15px] font-extrabold leading-tight">
                   {t('headers.movements')}
                 </h2>

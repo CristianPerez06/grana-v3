@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { Repeat, Search, SlidersHorizontal, X } from 'lucide-react-native'
+import { Search, SlidersHorizontal, X } from 'lucide-react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
   computeRunningBalances,
@@ -49,8 +49,7 @@ type Props = {
 }
 
 // The account's movements as one continuous list (like a bank statement), with
-// the toolbar on the title row: free-text search, a link to recurrences, and a
-// filters sheet (type / category / subcategory / «Desde / Hasta» / amount) with
+// the toolbar on the title row: free-text search and a filters sheet (type / category / subcategory / «Desde / Hasta» / amount) with
 // removable active-filter chips. Parity with the web account detail; rows are the
 // shared `MovementList` the Movimientos tab uses.
 export function MovementsSection({ movements, accountId, currencies, loading }: Props) {
@@ -234,23 +233,28 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
 
   return (
     <View className="gap-3 rounded-[18px] border border-border bg-card p-5">
-      {/* Title row: «Movimientos» + Buscar / Recurrencias / Filtros — same row
+      {/* Title row: «Movimientos» + Buscar / Filtros — same row
           as on web. No month navigator: the account reads as one continuous
           list, like a bank statement; «Desde / Hasta» in the filters finds a
           stretch. */}
       <View className="flex-row items-center justify-between gap-2">
-        <Text className="text-[15px] font-bold text-text">{t('accounts.headers.movements')}</Text>
-        <View className="flex-row items-center gap-1.5">
+        {/* Title + ARS | USD lens on the left — «Movimientos en pesos / en
+            dólares». On a very narrow phone the lens wraps under the title. */}
+        <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-x-1.5 gap-y-2">
+          <Text className="text-[15px] font-bold text-text">{t('accounts.headers.movements')}</Text>
+          {showCurrencyLens && lens && (
+            <CurrencyLensPills
+              value={lens}
+              onChange={(currency) => setFilters((f) => ({ ...f, currency }))}
+            />
+          )}
+        </View>
+        <View className="flex-row items-center gap-1">
           <ToolbarIconButton
             icon={<Search size={16} color={searchMode ? colors.emeraldDeep : colors.textMuted} />}
             label={t('transactions.filters.search')}
             active={searchMode}
             onPress={toggleSearch}
-          />
-          <ToolbarIconButton
-            icon={<Repeat size={16} color={colors.textMuted} />}
-            label={t('transactions.header.see_recurrences')}
-            onPress={() => router.push('/transactions/recurring')}
           />
           <ToolbarIconButton
             icon={<SlidersHorizontal size={16} color={activeCount > 0 ? colors.emeraldDeep : colors.textMuted} />}
@@ -261,15 +265,6 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
           />
         </View>
       </View>
-
-      {/* ARS | USD lens under the title — a way of looking at the account, not a
-          filter. A phone has no room for it on the title row (web does the same). */}
-      {showCurrencyLens && lens && (
-        <CurrencyLensPills
-          value={lens}
-          onChange={(currency) => setFilters((f) => ({ ...f, currency }))}
-        />
-      )}
 
       {/* Inline search */}
       {searchMode && (
@@ -367,7 +362,7 @@ function CurrencyLensPills({
   onChange: (currency: BalanceCurrency) => void
 }) {
   return (
-    <View className="flex-row items-center gap-1">
+    <View className="flex-row items-center gap-0.5">
       {(['ARS', 'USD'] as const).map((code) => {
         const active = value === code
         return (
@@ -377,7 +372,7 @@ function CurrencyLensPills({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             hitSlop={8}
-            className={`rounded-full border px-2.5 py-1 ${
+            className={`rounded-full border px-2 py-1 ${
               active ? 'border-emerald bg-emerald-soft' : 'border-border-soft bg-card'
             }`}
           >

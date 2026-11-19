@@ -95,6 +95,7 @@ export function MovementFiltersAccountContainer({ accountId, leading, trailing }
       showCurrencyFilter={!currencyLens.show}
       showDateRange
       showMonthNav={false}
+      showRecurrencesLink={false}
       leading={leading}
       trailing={trailing}
       controller={controller}
