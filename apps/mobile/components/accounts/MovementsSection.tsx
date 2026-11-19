@@ -2,14 +2,24 @@ import { useMemo, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Repeat, Search, SlidersHorizontal, X } from 'lucide-react-native'
+import { Search, SlidersHorizontal, X } from 'lucide-react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
+  computeRunningBalances,
+  formatDateISO,
+  getTodayAR,
+  runningBalanceCurrencies,
+  type BalanceCurrency,
+  type RunningBalanceRow,
+} from '@grana/money-logic'
+import {
+  DEFAULT_MOVEMENTS_LIMIT,
+  MOVEMENTS_LIMIT_STEP,
   toFinancialMovement,
   type FinancialMovement,
   type TransactionWithDetails,
 } from '@grana/transactions'
-import { useLocale, useT } from '../../lib/locale-context'
+import { useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { colors } from '../../lib/colors'
 import {
@@ -17,33 +27,33 @@ import {
   activeFilterCount,
   currentMonth,
   emptyFilters,
-  monthLabel,
-  shiftMonth,
   type AccountMovementFilters,
 } from '../../lib/accounts/movement-filters'
 import { getMovementFilterOptions } from '../../lib/transactions/queries'
-import { MovementRow } from './MovementRow'
+import { MovementList } from '../movements/MovementList'
 import { MovementRowsSkeleton } from './MovementRowsSkeleton'
 import { MovementFiltersSheet } from '../movements/MovementFiltersSheet'
+import { ToolbarIconButton } from '../movements/ToolbarIconButton'
 import {
   ActiveFilterChips,
   type ActiveFilterChip,
 } from '../movements/ActiveFilterChips'
 
 type Props = {
+  /** The account's full history, ascending (calculation order). */
   movements: TransactionWithDetails[]
   accountId: string
+  /** The account's currencies with their initial balance: where the running balance starts. */
+  currencies: readonly { currency_code: BalanceCurrency; initial_balance: number | string }[]
   loading: boolean
 }
 
-// Movements list with the full toolbar: month navigation, free-text search, a
-// link to recurrences, and a filters sheet (type / category / subcategory /
-// currency / amount) with removable active-filter chips. Parity with the web
-// account-detail movements toolbar; filtering reuses the shared month range and
-// a native filter pass over `TransactionWithDetails`.
-export function MovementsSection({ movements, accountId, loading }: Props) {
+// The account's movements as one continuous list (like a bank statement), with
+// the toolbar on the title row: free-text search and a filters sheet (type / category / subcategory / «Desde / Hasta» / amount) with
+// removable active-filter chips. Parity with the web account detail; rows are the
+// shared `MovementList` the Movimientos tab uses.
+export function MovementsSection({ movements, accountId, currencies, loading }: Props) {
   const t = useT()
-  const locale = useLocale()
   const router = useRouter()
   const showCents = useShowCents()
 
@@ -77,11 +87,66 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
     return map
   }, [movements])
 
+  // Running balance (saldo corriente) per row — same shared functions as the web
+  // account detail: snapshots over the FULL ascending history, and which
+  // currencies to show decided once for the whole account.
+  const running = useMemo(() => {
+    const initial = {
+      ARS: Number(currencies.find((c) => c.currency_code === 'ARS')?.initial_balance ?? 0),
+      USD: Number(currencies.find((c) => c.currency_code === 'USD')?.initial_balance ?? 0),
+    }
+    const rows = movements as RunningBalanceRow[]
+    return {
+      snapshots: computeRunningBalances(rows, accountId, initial),
+      currencies: runningBalanceCurrencies(
+        rows,
+        accountId,
+        initial,
+        currencies.map((c) => c.currency_code),
+      ),
+    }
+  }, [movements, accountId, currencies])
+
+  // Currency lens: an account that uses both currencies shows one ledger at a
+  // time (ARS by default, the primary currency); the ARS | USD pills switch it.
+  // It is the same `filters.currency` the filters sheet sets, so both controls
+  // always agree — same rule as the web account detail.
+  const showCurrencyLens = running.currencies.length > 1
+  const lens: BalanceCurrency | null = filters.currency ?? running.currencies[0] ?? null
+
   const filtered = useMemo(
-    () => applyAccountFilters(movements, filters, movementById).slice().reverse(),
-    [movements, filters, movementById],
+    () =>
+      applyAccountFilters(movements, filters, movementById, accountId, lens).slice().reverse(),
+    [movements, filters, movementById, accountId, lens],
   )
-  const activeCount = activeFilterCount(filters)
+  // Continuous list, paged like web («Ver más»). Any filter change starts over.
+  const [limit, setLimit] = useState(DEFAULT_MOVEMENTS_LIMIT)
+  const [prevFilters, setPrevFilters] = useState(filters)
+  if (prevFilters !== filters) {
+    setPrevFilters(filters)
+    setLimit(DEFAULT_MOVEMENTS_LIMIT)
+  }
+  const visible = useMemo(
+    () =>
+      filtered
+        .slice(0, limit)
+        .map((tx) => movementById.get(tx.id))
+        .filter((m): m is FinancialMovement => m != null),
+    [filtered, limit, movementById],
+  )
+  const hasMore = filtered.length > limit
+  const todayISO = formatDateISO(getTodayAR())
+  // With the lens shown, the currency is not a filter: no badge count, no chip,
+  // no block in the sheet (the sheet's «Limpiar» does not touch it either).
+  const activeCount = activeFilterCount(showCurrencyLens ? { ...filters, currency: null } : filters)
+  // Filters and a text search skip rows: a running balance over what is left
+  // would be wrong, so it hides (same rule as the web account detail). The
+  // currency is the exception — it is the lens and skips no row of its ledger.
+  // The date range is navigation, not a content filter: each row's balance is
+  // still the account's balance after it, so it stays (same as web).
+  const showRunningBalance =
+    activeFilterCount({ ...filters, currency: null, dateFrom: null, dateTo: null }) === 0 &&
+    filters.query.trim().length === 0
 
   const categoryLabelFor = (id: string) => {
     const category = options?.categories.find((c) => c.id === id)
@@ -120,11 +185,27 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
       onRemove: () => setFilters((f) => ({ ...f, subcategoryId: null })),
     })
   }
-  if (filters.currency) {
+  if (filters.currency && !showCurrencyLens) {
     chips.push({
       key: 'currency',
       label: filters.currency,
       onRemove: () => setFilters((f) => ({ ...f, currency: null })),
+    })
+  }
+  if (filters.dateFrom || filters.dateTo) {
+    const fmt = (iso: string) => {
+      const [y, m, d] = iso.split('-')
+      return `${d}/${m}/${y.slice(2)}`
+    }
+    chips.push({
+      key: 'dateRange',
+      label:
+        filters.dateFrom && filters.dateTo
+          ? `${fmt(filters.dateFrom)} – ${fmt(filters.dateTo)}`
+          : filters.dateFrom
+            ? `${t('transactions.filters.from')} ${fmt(filters.dateFrom)}`
+            : `${t('transactions.filters.to')} ${fmt(filters.dateTo!)}`,
+      onRemove: () => setFilters((f) => ({ ...f, dateFrom: null, dateTo: null })),
     })
   }
   if (filters.amountMin != null) {
@@ -152,54 +233,37 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
 
   return (
     <View className="gap-3 rounded-[18px] border border-border bg-card p-5">
-      {/* Toolbar: title + month nav */}
+      {/* Title row: «Movimientos» + Buscar / Filtros — same row
+          as on web. No month navigator: the account reads as one continuous
+          list, like a bank statement; «Desde / Hasta» in the filters finds a
+          stretch. */}
       <View className="flex-row items-center justify-between gap-2">
-        <Text className="text-[15px] font-bold text-text">{t('accounts.headers.movements')}</Text>
-        <View className="flex-row items-center gap-0.5 rounded-lg border border-border px-1">
-          <Pressable
-            onPress={() => setFilters((f) => ({ ...f, month: shiftMonth(f.month, -1) }))}
-            accessibilityRole="button"
-            accessibilityLabel={t('transactions.filters.prev_month')}
-            hitSlop={6}
-            className="p-1.5"
-          >
-            <ChevronLeft size={16} color={colors.textMuted} />
-          </Pressable>
-          <Text className="min-w-[104px] text-center text-[13px] font-semibold capitalize text-text">
-            {monthLabel(filters.month, locale)}
-          </Text>
-          <Pressable
-            onPress={() => setFilters((f) => ({ ...f, month: shiftMonth(f.month, 1) }))}
-            accessibilityRole="button"
-            accessibilityLabel={t('transactions.filters.next_month')}
-            hitSlop={6}
-            className="p-1.5"
-          >
-            <ChevronRight size={16} color={colors.textMuted} />
-          </Pressable>
+        {/* Title + ARS | USD lens on the left — «Movimientos en pesos / en
+            dólares». On a very narrow phone the lens wraps under the title. */}
+        <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-x-1.5 gap-y-2">
+          <Text className="text-[15px] font-bold text-text">{t('accounts.headers.movements')}</Text>
+          {showCurrencyLens && lens && (
+            <CurrencyLensPills
+              value={lens}
+              onChange={(currency) => setFilters((f) => ({ ...f, currency }))}
+            />
+          )}
         </View>
-      </View>
-
-      {/* Action chips: Buscar / Recurrencias / Filtros */}
-      <View className="flex-row flex-wrap items-center gap-2">
-        <ActionChip
-          icon={<Search size={14} color={searchMode ? colors.emeraldDeep : colors.textMuted} />}
-          label={t('transactions.filters.search')}
-          active={searchMode}
-          onPress={toggleSearch}
-        />
-        <ActionChip
-          icon={<Repeat size={14} color={colors.textMuted} />}
-          label={t('transactions.header.see_recurrences')}
-          onPress={() => router.push('/transactions/recurring')}
-        />
-        <ActionChip
-          icon={<SlidersHorizontal size={14} color={activeCount > 0 ? colors.emeraldDeep : colors.textMuted} />}
-          label={t('transactions.filters.filters_button')}
-          active={activeCount > 0}
-          badge={activeCount > 0 ? activeCount : undefined}
-          onPress={() => setFiltersOpen(true)}
-        />
+        <View className="flex-row items-center gap-1">
+          <ToolbarIconButton
+            icon={<Search size={16} color={searchMode ? colors.emeraldDeep : colors.textMuted} />}
+            label={t('transactions.filters.search')}
+            active={searchMode}
+            onPress={toggleSearch}
+          />
+          <ToolbarIconButton
+            icon={<SlidersHorizontal size={16} color={activeCount > 0 ? colors.emeraldDeep : colors.textMuted} />}
+            label={t('transactions.filters.filters_button')}
+            active={activeCount > 0}
+            badge={activeCount > 0 ? activeCount : undefined}
+            onPress={() => setFiltersOpen(true)}
+          />
+        </View>
       </View>
 
       {/* Inline search */}
@@ -238,21 +302,36 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
       {/* Active filter chips */}
       <ActiveFilterChips chips={chips} />
 
-      {/* List */}
+
+      {/* List — the same rows as the Movimientos tab (and as web), plus the
+          running balance and the currency lens. Tapping opens the detail. */}
       {loading ? (
         <MovementRowsSkeleton />
-      ) : filtered.length === 0 ? (
+      ) : visible.length === 0 ? (
         <Text className="py-6 text-center text-sm text-text-muted">
           {t('accounts.movements_empty')}
         </Text>
       ) : (
         <View className="-mx-5">
-          {filtered.map((tx, index) => (
-            <View key={tx.id} className={index === 0 ? '' : 'border-t border-border-soft'}>
-              <MovementRow tx={tx} accountId={accountId} />
-            </View>
-          ))}
+          <MovementList
+            movements={visible}
+            perspective={{ kind: 'account', accountId }}
+            todayISO={todayISO}
+            runningBalances={showRunningBalance ? running.snapshots : null}
+            currencyLens={lens}
+            onPressMovement={(m) => router.push(`/transactions/${m.id}`)}
+          />
         </View>
+      )}
+
+      {hasMore && (
+        <Pressable
+          onPress={() => setLimit((n) => n + MOVEMENTS_LIMIT_STEP)}
+          accessibilityRole="button"
+          className="items-center self-center rounded-xl border border-border px-4 py-2.5"
+        >
+          <Text className="text-sm font-semibold text-text">{t('common.load_more')}</Text>
+        </Pressable>
       )}
 
       <MovementFiltersSheet
@@ -263,41 +342,46 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
         options={options}
         onDraftCategoryChange={setOptionsCategoryId}
         showAccountFilter={false}
+        showCurrencyFilter={!showCurrencyLens}
+        showDateRange
       />
     </View>
   )
 }
 
-function ActionChip({
-  icon,
-  label,
-  active = false,
-  badge,
-  onPress,
+/**
+ * ARS | USD pills — the same control and look as the currency switch of
+ * «¿En qué gasté?» (`CategorySpendingOverview`), so the two lenses read as one
+ * app. Web renders the same control above the same list.
+ */
+function CurrencyLensPills({
+  value,
+  onChange,
 }: {
-  icon: React.ReactNode
-  label: string
-  active?: boolean
-  badge?: number
-  onPress: () => void
+  value: BalanceCurrency
+  onChange: (currency: BalanceCurrency) => void
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      className={`flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 ${
-        active ? 'border-emerald bg-emerald-soft' : 'border-border-soft bg-card'
-      }`}
-    >
-      {icon}
-      <Text className={`text-[13px] ${active ? 'font-semibold text-text' : 'text-text-soft'}`}>
-        {label}
-      </Text>
-      {badge !== undefined && (
-        <View className="rounded-full bg-emerald px-1.5">
-          <Text className="text-[11px] font-bold text-white">{badge}</Text>
-        </View>
-      )}
-    </Pressable>
+    <View className="flex-row items-center gap-0.5">
+      {(['ARS', 'USD'] as const).map((code) => {
+        const active = value === code
+        return (
+          <Pressable
+            key={code}
+            onPress={() => onChange(code)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            hitSlop={8}
+            className={`rounded-full border px-2 py-1 ${
+              active ? 'border-emerald bg-emerald-soft' : 'border-border-soft bg-card'
+            }`}
+          >
+            <Text className={`text-[11px] ${active ? 'font-extrabold text-text' : 'text-text-soft'}`}>
+              {code}
+            </Text>
+          </Pressable>
+        )
+      })}
+    </View>
   )
 }

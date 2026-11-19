@@ -55,6 +55,13 @@ export type MovementView = {
   counterpartyDirection: 'in' | 'out' | null
   /** Whether the movement belongs to the "categorized" icon family. */
   isCategorized: boolean
+  /**
+   * The leg that comes back INTO this same account. Only set for an exchange
+   * seen from an account that is both its source and its destination (e.g.
+   * ARS → USD inside one bank account): `amount`/`currencyCode` above are the
+   * outgoing leg, this is the incoming one (always an inflow).
+   */
+  receivedLeg?: { amount: number; currencyCode: BalanceCurrency }
 }
 
 const TWO_LEGGED = new Set<MovementKind>(['transfer', 'exchange'])
@@ -84,7 +91,7 @@ export function resolveMovementView(
 
     if (isSource) {
       // Money leaves this account → source leg, outflow.
-      return {
+      const view: MovementView = {
         sign: '-',
         amount: input.amount,
         currencyCode: input.currencyCode,
@@ -92,6 +99,19 @@ export function resolveMovementView(
         counterpartyDirection: 'out',
         isCategorized,
       }
+      // Same-account exchange: the other leg lands back here, so show it too.
+      if (
+        input.kind === 'exchange' &&
+        input.destinationAccountId === perspective.accountId &&
+        input.destinationCurrency &&
+        input.destinationAmount != null
+      ) {
+        view.receivedLeg = {
+          amount: input.destinationAmount,
+          currencyCode: input.destinationCurrency,
+        }
+      }
+      return view
     }
 
     // This account is the destination → received leg, inflow. For an exchange
@@ -120,6 +140,27 @@ export function resolveMovementView(
     counterpartyDirection: counterpartyName ? 'out' : null,
     isCategorized,
   }
+}
+
+/**
+ * The leg of a movement, seen from an account, in ONE currency — the account
+ * detail's currency lens (ARS | USD). A same-account exchange has a leg in each
+ * currency, so it shows in both lenses: its outgoing leg in one, its incoming
+ * leg (`receivedLeg`, always `+`) in the other. Returns `null` when the movement
+ * has no leg in that currency for this account, i.e. it does not belong to that
+ * ledger and the lens hides it.
+ */
+export function legInCurrency(
+  view: MovementView,
+  currency: BalanceCurrency,
+): { sign: '+' | '-' | null; amount: number; currencyCode: BalanceCurrency } | null {
+  if (view.currencyCode === currency) {
+    return { sign: view.sign, amount: view.amount, currencyCode: currency }
+  }
+  if (view.receivedLeg?.currencyCode === currency) {
+    return { sign: '+', amount: view.receivedLeg.amount, currencyCode: currency }
+  }
+  return null
 }
 
 /** Functional movement type for editability (`type` column of `transactions`). */

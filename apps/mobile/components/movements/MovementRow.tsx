@@ -11,7 +11,9 @@ import {
 } from 'lucide-react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
+  legInCurrency,
   resolveMovementView,
+  type BalanceCurrency,
   type MovementKind,
   type MovementPerspective,
 } from '@grana/money-logic'
@@ -80,6 +82,15 @@ type Props = {
   /** Navigate to the movement detail on tap. Absent ⇒ the row renders flat
    *  (non-navigable) — the account/card panes keep their inert rows. */
   onPress?: () => void
+  /** Account balance per currency AFTER this movement (account detail, no filters). */
+  runningBalanceSnapshot?: Record<BalanceCurrency, number> | null
+  /**
+   * Account detail currency lens (ARS | USD): only this currency's leg and
+   * balance. A same-account exchange shows its outgoing leg in one lens and its
+   * incoming leg in the other. Absent ⇒ the movement's own currency and, for
+   * that exchange, both legs. Same rule as the web row.
+   */
+  currencyLens?: BalanceCurrency | null
 }
 
 /**
@@ -89,7 +100,8 @@ type Props = {
  * enrichments (`showAccount`, `showFeedBadges`) are opt-in and off by default, so
  * the card statement pane — which passes neither — renders its lean 2-kind look
  * unchanged. Navigable when the caller passes `onPress` (the global feed opens
- * the movement detail); flat otherwise (account/card panes); no running balance.
+ * the movement detail); flat otherwise. The account detail adds the running
+ * balance and its currency lens.
  */
 export function MovementRow({
   movement,
@@ -98,11 +110,16 @@ export function MovementRow({
   showAccount = false,
   showFeedBadges = false,
   onPress,
+  runningBalanceSnapshot = null,
+  currencyLens = null,
 }: Props) {
   const t = useT()
   const showCents = useShowCents()
 
-  const view = resolveMovementView(toMovementViewInput(movement), perspective)
+  const fullView = resolveMovementView(toMovementViewInput(movement), perspective)
+  const lensLeg = currencyLens ? legInCurrency(fullView, currencyLens) : null
+  const view = lensLeg ? { ...fullView, ...lensLeg, receivedLeg: undefined } : fullView
+  const runningBalance = runningBalanceSnapshot ? runningBalanceSnapshot[view.currencyCode] : null
   const typeLabel = t(typeLabelKey[movement.kind])
 
   // System categories/subcategories render localized; user-owned keep their name.
@@ -248,7 +265,18 @@ export function MovementRow({
           {view.sign}
           {formatAmount(view.amount, view.currencyCode, showCents)}
         </Text>
-        {view.currencyCode === 'USD' && <Text className="text-[11px] text-text-muted">USD</Text>}
+        {/* Same-account exchange without a lens: the leg that came back in. */}
+        {view.receivedLeg && (
+          <Text className={`text-[13px] font-extrabold tabular-nums ${toneClass}`}>
+            +{formatAmount(view.receivedLeg.amount, view.receivedLeg.currencyCode, showCents)}
+          </Text>
+        )}
+        {/* Running balance under the amount — same place as web at phone width. */}
+        {runningBalance != null && (
+          <Text className="mt-1 text-[12px] font-bold tabular-nums text-text-muted">
+            {formatAmount(runningBalance, view.currencyCode, showCents)}
+          </Text>
+        )}
       </View>
     </Pressable>
   )

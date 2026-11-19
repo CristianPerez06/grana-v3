@@ -150,6 +150,7 @@ En anchos ≥ 768px (`md` y mayores), la tab bar y el menú sheet NO SHALL rende
 - **THEN** la tab bar NO se renderiza
 - **AND** el menú sheet NO está disponible
 - **AND** el sidebar de desktop se renderiza en su lugar
+
 ### Requirement: La transición del drawer respeta `prefers-reduced-motion`
 
 La transición de entrada y salida del **menú sheet** bajo `md` SHALL respetar `prefers-reduced-motion`. Cuando el usuario declara preferencia por movimiento reducido, el sheet SHALL aparecer y desaparecer sin animación de desplazamiento.
@@ -161,6 +162,7 @@ La misma regla SHALL aplicar al scrim que lo acompaña.
 - **WHEN** el usuario tiene `prefers-reduced-motion: reduce` y abre el menú
 - **THEN** el sheet aparece sin transición de desplazamiento
 - **AND** el scrim aparece sin transición de opacidad
+
 ### Requirement: Los labels de navegación leen del catálogo i18n
 
 Los labels de la navegación —sidebar de desktop, tab bar y menú sheet— SHALL leerse del namespace `nav` de `@grana/i18n-messages`. Ningún label SHALL estar hardcodeado.
@@ -172,6 +174,7 @@ El destino compartido (`/shared`) SHALL usar la clave `nav.home` ("Hogar") en **
 - **WHEN** un usuario ve el item del destino compartido en el sidebar de desktop
 - **AND** el mismo usuario reduce el viewport y ve la tab correspondiente
 - **THEN** las dos superficies muestran el mismo label, resuelto desde `nav.home`
+
 ### Requirement: El sidebar de desktop es colapsable y la preferencia persiste
 
 El sidebar de desktop SHALL soportar dos estados: **expandido** (ancho ~240px, labels visibles junto a los íconos) y **colapsado** (ancho ~64px, solo íconos visibles, logo compacto). El estado por default SHALL ser expandido.
@@ -324,11 +327,11 @@ El listener SHALL vivir en el shell, no en cada ruta.
 
 ### Requirement: La acción de crear de una ruta vive en su header, no en un FAB
 
-El único botón flotante del producto SHALL ser el de **registrar un movimiento** (`QuickAddFab`), y SHALL aparecer únicamente en las tres raíces de tab: `/dashboard`, `/transactions` y `/shared`.
+El único botón flotante del producto SHALL ser el de **registrar un movimiento** (`QuickAddFab`), y SHALL aparecer únicamente en las tres raíces de tab —`/dashboard`, `/transactions` y `/shared`— y en el **detalle de una cuenta** (`/accounts/[id]`). El detalle de cuenta es la excepción deliberada: lista movimientos, registrar uno es justamente la acción del `QuickAddFab`, y ahí el formulario se abre con esa cuenta preseleccionada; en desktop el mismo alta vive en la fila del título de su lista («+ Agregar»), igual que el dashboard lo tiene en su header. No es la creación de la entidad de una ruta del menú —crear una cuenta, una tarjeta, una categoría o una recurrencia— que sigue la regla de abajo.
 
 La acción de crear la entidad que una ruta lista —una cuenta, una tarjeta, una categoría, una subcategoría, una recurrencia— SHALL renderizarse en el slot `actions` del `PageHeader` de esa ruta, **visible en todos los anchos**. NO SHALL alternarse entre un botón de header en desktop y un FAB en mobile.
 
-El fundamento es el mismo que sostiene el resto de esta capability: la acción primaria de una ruta es parte de su chrome, y el chrome no cambia de forma según el viewport. Espeja además lo que ya hace `apps/mobile`, donde ninguna sección alcanzada desde el menú tiene FAB.
+El fundamento es el mismo que sostiene el resto de esta capability: la acción primaria de una ruta es parte de su chrome, y el chrome no cambia de forma según el viewport. Espeja además lo que hace `apps/mobile`, donde ninguna sección alcanzada desde el menú tiene FAB, salvo el mismo detalle de cuenta.
 
 Mientras la acción no está disponible (catálogos cargando), el botón SHALL renderizarse `disabled`, no ausente — igual que el resto del chrome del header.
 
@@ -346,8 +349,8 @@ Mientras la acción no está disponible (catálogos cargando), el botón SHALL r
 
 #### Scenario: El FAB de movimientos sobrevive donde corresponde
 
-- **WHEN** un usuario abre `/dashboard`, `/transactions` o `/shared` en un viewport de 375px
-- **THEN** el `QuickAddFab` se renderiza flotante, despejado de la tab bar
+- **WHEN** un usuario abre `/dashboard`, `/transactions`, `/shared` o el detalle de una cuenta en un viewport de 375px
+- **THEN** el `QuickAddFab` se renderiza flotante, despejado de la tab bar (en el detalle de cuenta, con la cuenta preseleccionada)
 - **AND** es el único botón flotante de toda la app
 
 #### Scenario: Cargando, el botón está pero deshabilitado

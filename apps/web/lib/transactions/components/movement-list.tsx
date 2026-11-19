@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
-import type { MovementPerspective } from '@grana/money-logic'
+import type { BalanceCurrency, MovementPerspective } from '@grana/money-logic'
 import { Button } from '@/components/ui/button'
 import type { FinancialMovement } from '../movements'
 import { MovementRow } from './movement-row'
@@ -48,6 +48,8 @@ type Props = {
   recurrenceLinkedIds?: Set<string>
   /** Per-movement running balance snapshots (account view, no filters); null hides them. */
   runningBalances?: Map<string, Record<'ARS' | 'USD', number>> | null
+  /** Account detail currency lens: each row shows only its leg and balance in this currency. */
+  currencyLens?: BalanceCurrency | null
   /** Per-movement installment chip labels (e.g. "Cuota 2 de 6"), keyed by id. */
   installmentChips?: Map<string, string>
   /** Render the installment chip on a separate line below the subtitle (card statement layout). */
@@ -65,6 +67,7 @@ export const MovementList = ({
   showAccount = false,
   recurrenceLinkedIds,
   runningBalances = null,
+  currencyLens = null,
   installmentChips,
   installmentChipBelow = false,
   groupByDate = true,
@@ -136,11 +139,13 @@ export const MovementList = ({
     if (dateStr === todayISO) return t('list.today')
     if (dateStr === yesterdayISO) return t('list.yesterday')
     const [y, m, d] = dateStr.split('-').map(Number)
+    // «Viernes, 13 de noviembre»: only the first letter up. A CSS `capitalize`
+    // used to turn the «de» into «De».
     return new Date(y, m - 1, d).toLocaleDateString(localeCode, {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-    })
+    }).replace(/^./, (c) => c.toUpperCase())
   }
 
   const backParam =
@@ -154,6 +159,7 @@ export const MovementList = ({
         showAccount={showAccount}
         isRecurrent={recurrenceLinkedIds?.has(movement.id) ?? false}
         runningBalanceSnapshot={runningBalances?.get(movement.id) ?? null}
+        currencyLens={currencyLens}
         installmentChip={installmentChips?.get(movement.id) ?? null}
         installmentChipBelow={installmentChipBelow}
       />
@@ -195,7 +201,7 @@ export const MovementList = ({
           key={date}
           className={dayIndex === 0 ? '' : 'border-t border-border-soft pt-3 mt-3'}
         >
-          <p className="px-4 pb-2 text-[12px] font-extrabold capitalize text-muted-foreground">
+          <p className="px-4 pb-2 text-[12px] font-extrabold text-muted-foreground">
             {formatGroupDate(date)}
           </p>
           <div className="flex flex-col">{dayMovements.map(renderRow)}</div>

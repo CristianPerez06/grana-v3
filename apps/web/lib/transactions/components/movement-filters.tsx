@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Repeat, Search, SlidersHorizontal, Users, X } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
@@ -8,6 +8,7 @@ import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { AccountAvatar } from '@/components/ui/account-avatar'
 import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
 import { FilterSelect } from './filter-select'
 import { getTodayAR } from '@/lib/date'
 import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
@@ -36,6 +37,8 @@ export type MovementFiltersController = {
   onSetAmountMin: (min: number | null) => void
   onSetAmountMax: (max: number | null) => void
   onSetMonth: (month: string) => void
+  /** Desde / Hasta. Only hosts that pass `showDateRange` need it. */
+  onSetCustomRange?: (range: { from?: string; to?: string } | null) => void
   onClearAll: () => void
 }
 
@@ -72,6 +75,34 @@ type MovementFiltersProps = {
   showAccount: boolean
   /** Account detail view hides the account filter (already scoped to one account). */
   showAccountFilter?: boolean
+  /**
+   * Hide the currency filter (sheet control, active chip and badge count). The
+   * account detail of a two-currency account does: its ARS | USD lens next to
+   * the «Movimientos» title already owns the currency, and showing it again as
+   * a removable filter repeated the choice and let «Limpiar todo» undo it.
+   */
+  showCurrencyFilter?: boolean
+  /**
+   * Offer «Desde / Hasta» in the sheet (with its own chip and badge count). The
+   * account detail does: it has no month navigator — the account's movements
+   * read as one continuous list, like a bank statement — so a date range is
+   * how a specific stretch is found. Requires `controller.onSetCustomRange`.
+   */
+  showDateRange?: boolean
+  /**
+   * Replaces the left side of the toolbar row (where the month nav would go).
+   * The account detail puts its «Movimientos» title and ARS | USD lens here, so
+   * title and tools share one row.
+   */
+  leading?: ReactNode
+  /** Rendered after the icons (the account detail's «+ Agregar»). */
+  trailing?: ReactNode
+  /**
+   * The recurrences shortcut. The account detail hides it: it opens the global
+   * recurrences hub, which has nothing to do with the account on screen, and
+   * that toolbar row is the tightest one on a phone.
+   */
+  showRecurrencesLink?: boolean
   /** Hide the month navigator when another control (the spending overview) owns it. */
   showMonthNav?: boolean
   /** Required controller — every filter mutation dispatches through it. */
@@ -117,6 +148,11 @@ export const MovementFilters = ({
   subcategories = [],
   showAccount,
   showAccountFilter = true,
+  showCurrencyFilter = true,
+  showDateRange = false,
+  leading,
+  trailing,
+  showRecurrencesLink = true,
   showMonthNav = true,
   controller,
   sharedToggle,
@@ -236,17 +272,26 @@ export const MovementFilters = ({
   // overview card owns the canonical nav on /transactions).
   const month = filters.month ?? monthOf(getTodayAR())
   const isCustomRange = filters.month == null
-  const monthLabel = (() => {
+  // «Noviembre 2026» / «Nov 2026» — same words as the native app's month nav.
+  // Built by hand: the locale's long form is «noviembre de 2026», and a CSS
+  // `capitalize` over it turned the connector into «De».
+  const monthName = (style: 'long' | 'short') => {
     const [y, m] = month.split('-').map(Number)
-    return new Date(y, m - 1, 1).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', {
-      month: 'long',
-      year: 'numeric',
-    })
-  })()
+    const name = new Date(y, m - 1, 1)
+      .toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', { month: style })
+      .replace('.', '')
+    return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${y}`
+  }
+  const monthLabel = monthName('long')
+  // Phone width: the long form broke onto two lines next to the three icons.
+  const monthLabelShort = monthName('short')
   const goToMonth = (next: string) =>
     setParams({ month: next, from: null, to: null })
 
-  const count = activeContentCount(filters)
+  const hasDateRange = showDateRange && (filters.from != null || filters.to != null)
+  const count =
+    activeContentCount(showCurrencyFilter ? filters : { ...filters, currency: undefined }) +
+    (hasDateRange ? 1 : 0)
 
   // Active-filter chips derived from the URL state.
   const chips: Array<{ key: string; label: string; clear: () => void }> = []
@@ -297,12 +342,29 @@ export const MovementFilters = ({
       clear: () => setParams({ account: null }),
     })
   }
-  if (filters.currency)
+  if (filters.currency && showCurrencyFilter)
     chips.push({
       key: 'currency',
       label: filters.currency,
       clear: () => setParams({ currency: null }),
     })
+  if (hasDateRange) {
+    const fmt = (iso: string) => {
+      const [y, m, d] = iso.split('-')
+      return `${d}/${m}/${y.slice(2)}`
+    }
+    const label =
+      filters.from && filters.to
+        ? `${fmt(filters.from)} – ${fmt(filters.to)}`
+        : filters.from
+          ? `${t('filters.from')} ${fmt(filters.from)}`
+          : `${t('filters.to')} ${fmt(filters.to!)}`
+    chips.push({
+      key: 'date_range',
+      label,
+      clear: () => controller.onSetCustomRange?.(null),
+    })
+  }
   if (filters.amountMin != null)
     chips.push({
       key: 'amount_min',
@@ -383,8 +445,11 @@ export const MovementFilters = ({
         </div>
       ) : (
         <div className="flex items-center justify-between gap-2">
-          {/* Optional month nav on the left (used when there is no breakdown card) */}
-          {showMonthNav ? (
+          {/* Left side: the host's own content (account detail title + lens),
+              else the optional month nav (when there is no breakdown card). */}
+          {leading ? (
+            <div className="min-w-0 flex-1">{leading}</div>
+          ) : showMonthNav ? (
             <div className="flex items-center gap-1 rounded-md border border-border px-1">
               <button
                 type="button"
@@ -394,8 +459,15 @@ export const MovementFilters = ({
               >
                 ‹
               </button>
-              <span className="min-w-28 text-center text-sm font-medium capitalize">
-                {isCustomRange ? t('filters.custom_range') : monthLabel}
+              <span className="whitespace-nowrap px-0.5 text-center text-sm font-medium md:min-w-28">
+                {isCustomRange ? (
+                  t('filters.custom_range')
+                ) : (
+                  <>
+                    <span className="md:hidden">{monthLabelShort}</span>
+                    <span className="hidden md:inline">{monthLabel}</span>
+                  </>
+                )}
               </span>
               <button
                 type="button"
@@ -410,7 +482,7 @@ export const MovementFilters = ({
             <span />
           )}
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1 md:gap-1.5">
             <button
               type="button"
               onClick={enterSearch}
@@ -420,19 +492,20 @@ export const MovementFilters = ({
             >
               <Search size={16} />
             </button>
-            {disabled ? (
-              <span className={iconButtonDisabledCls} aria-disabled aria-label={t('header.see_recurrences')}>
-                <Repeat size={16} />
-              </span>
-            ) : (
-              <Link
-                href="/transactions/recurring"
-                className={iconButtonCls}
-                aria-label={t('header.see_recurrences')}
-              >
-                <Repeat size={16} />
-              </Link>
-            )}
+            {showRecurrencesLink &&
+              (disabled ? (
+                <span className={iconButtonDisabledCls} aria-disabled aria-label={t('header.see_recurrences')}>
+                  <Repeat size={16} />
+                </span>
+              ) : (
+                <Link
+                  href="/transactions/recurring"
+                  className={iconButtonCls}
+                  aria-label={t('header.see_recurrences')}
+                >
+                  <Repeat size={16} />
+                </Link>
+              ))}
             {sharedToggle && (
               <button
                 type="button"
@@ -468,6 +541,7 @@ export const MovementFilters = ({
                 </span>
               )}
             </button>
+            {trailing}
           </div>
         </div>
       )}
@@ -609,6 +683,7 @@ export const MovementFilters = ({
                 </div>
               )}
 
+              {showCurrencyFilter && (
               <div className="flex flex-col gap-2">
                 <Label>{t('filters.currency')}</Label>
                 {/* Two chips instead of a dropdown: tapping the active one again
@@ -635,6 +710,44 @@ export const MovementFilters = ({
                   })}
                 </div>
               </div>
+              )}
+
+              {showDateRange && (
+                <div className="grid grid-cols-2 gap-3">
+                  <DatePicker
+                    id="f-date-from"
+                    label={t('filters.from')}
+                    value={filters.from ?? ''}
+                    max={filters.to ?? undefined}
+                    compact
+                    onChange={(from) =>
+                      controller.onSetCustomRange?.({ from, to: filters.to ?? undefined })
+                    }
+                    onClear={() =>
+                      controller.onSetCustomRange?.(
+                        filters.to ? { to: filters.to } : null,
+                      )
+                    }
+                    clearLabel={t('filters.clear')}
+                  />
+                  <DatePicker
+                    id="f-date-to"
+                    label={t('filters.to')}
+                    value={filters.to ?? ''}
+                    min={filters.from ?? undefined}
+                    compact
+                    onChange={(to) =>
+                      controller.onSetCustomRange?.({ from: filters.from ?? undefined, to })
+                    }
+                    onClear={() =>
+                      controller.onSetCustomRange?.(
+                        filters.from ? { from: filters.from } : null,
+                      )
+                    }
+                    clearLabel={t('filters.clear')}
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-2">

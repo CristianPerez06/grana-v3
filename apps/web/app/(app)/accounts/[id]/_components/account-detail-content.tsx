@@ -14,6 +14,9 @@ import { AccountDetailHeader } from './account-detail-header'
 import { PendingReimbursementsAccountContainer } from './pending-reimbursements-account-container'
 import { MovementFiltersAccountContainer } from './movement-filters-account-container'
 import { MovementListAccountContainer } from './movement-list-account-container'
+import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
+import { CurrencyLensPills } from './currency-lens-pills'
+import { useAccountCurrencyLens } from './use-account-currency-lens'
 
 type Props = {
   accountId: string
@@ -29,6 +32,7 @@ type Props = {
 export function AccountDetailContent({ accountId }: Props) {
   const t = useTranslations('accounts')
   const drawer = useMovementDrawer()
+  const currencyLens = useAccountCurrencyLens(accountId)
 
   // Cached by the header; dedupes — used here only to decide whether to show
   // the "agregar moneda" link (depends on the account's currencies set).
@@ -66,26 +70,46 @@ export function AccountDetailContent({ accountId }: Props) {
       )}
 
       <section className="overflow-hidden rounded-3xl border border-border bg-card">
-        <header className="flex items-center justify-between gap-4 border-b border-border-soft px-5 py-4">
-          <h2 className="text-[15px] font-extrabold leading-tight">
-            {t('headers.movements')}
-          </h2>
-          <Button
-            size="sm"
-            className="w-auto"
-            disabled={!drawer}
-            onClick={() => drawer?.openCreate(accountId)}
-          >
-            <Plus size={16} strokeWidth={2} aria-hidden />
-            {t('actions.add_transaction')}
-          </Button>
-        </header>
-
+        {/* One toolbar row: «Movimientos» + ARS | USD on the left, search /
+            recurrences / filters + «Agregar» on the right. No month navigator:
+            the account reads as one continuous list, like a bank statement;
+            a specific stretch is found with «Desde / Hasta» in the filters. On a
+            phone the lens drops under the title (not enough width for both). */}
         <div className="flex flex-col gap-3 px-5 py-4">
-          <MovementFiltersAccountContainer accountId={accountId} />
+          <MovementFiltersAccountContainer
+            accountId={accountId}
+            leading={
+              <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-2 md:gap-x-3">
+                <h2 className="text-[15px] font-extrabold leading-tight">
+                  {t('headers.movements')}
+                </h2>
+                {currencyLens.show && currencyLens.lens && (
+                  <CurrencyLensPills value={currencyLens.lens} onChange={currencyLens.setLens} />
+                )}
+              </div>
+            }
+            trailing={
+              // Desktop only. On a phone, adding is the floating «+» at the
+              // bottom right — the same rule as Inicio and Movimientos.
+              <Button
+                size="sm"
+                className="w-auto shrink-0 max-md:hidden"
+                disabled={!drawer}
+                onClick={() => drawer?.openCreate(accountId)}
+              >
+                <Plus size={16} strokeWidth={2} aria-hidden />
+                {t('actions.add_transaction')}
+              </Button>
+            }
+          />
           <MovementListAccountContainer accountId={accountId} />
         </div>
       </section>
+
+      {/* Phone: floating «+», the account preselected. The spacer keeps the last
+          row's amount and balance clear of it at the end of the list. */}
+      <QuickAddFab accountId={accountId} />
+      <div aria-hidden className="h-24 md:hidden" />
     </>
   )
 }

@@ -49,6 +49,14 @@ export type MovementFiltersState = {
   currency: MovementCurrencyFilter | null
   amountMin: number | null
   amountMax: number | null
+  /**
+   * «Desde / Hasta» (`YYYY-MM-DD`). Only the account detail offers it: it has no
+   * month navigator — its movements read as one continuous list, like a bank
+   * statement — so a date range is how a stretch is found. The feed leaves them
+   * unset (it navigates by month).
+   */
+  dateFrom?: string | null
+  dateTo?: string | null
 }
 
 export function emptyFilters(month: string): MovementFiltersState {
@@ -81,6 +89,7 @@ export function activeFilterCount(filters: MovementFiltersState): number {
   if (filters.currency) n++
   if (filters.amountMin != null) n++
   if (filters.amountMax != null) n++
+  if (filters.dateFrom || filters.dateTo) n++
   return n
 }
 

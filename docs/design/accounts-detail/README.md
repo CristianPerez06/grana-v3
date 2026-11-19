@@ -1,5 +1,7 @@
 # Propuesta de UI para detalle de cuenta
 
+> **Nota (noviembre 2026).** Estos mocks son el handoff original y ya no describen algunas partes de la pantalla. Desde el cambio `account-detail-currency-lens`: la lista de movimientos es **corrida** (sin navegador de mes; se acota con «Desde / Hasta» en los filtros); el título «Movimientos», el selector **ARS | USD**, la búsqueda y los filtros van en **una sola fila**, sin acceso a recurrencias; en el celular, agregar es el **«+» flotante** con la cuenta preseleccionada; y la app nativa usa las mismas filas que la pestaña Movimientos. Lo vigente está en las specs `accounts` y `transactions`; ante una diferencia, mandan las specs.
+
 ## Contexto
 
 La ruta `/accounts/[id]` ya tiene buena base funcional: header de cuenta, balance ARS/USD, reintegros pendientes, link condicional de agregar moneda, filtros compartidos y listado con running balance. El problema principal es de jerarquia visual. La pantalla actual queda en una columna angosta (`max-w-2xl`) y mezcla bloques de naturaleza distinta al mismo nivel: identidad, acciones, reintegros, filtros y movimientos.

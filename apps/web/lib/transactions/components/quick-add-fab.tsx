@@ -9,15 +9,18 @@ import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
  * the header CTA. Opens the drawer via the app-shell-level provider; renders
  * disabled when the provider is not yet available (`useMovementDrawer()` is
  * null during the cold-load window).
+ *
+ * `accountId` preselects the account in the form — the account detail passes
+ * the account on screen, so a movement logged from there starts on it.
  */
-export const QuickAddFab = () => {
+export const QuickAddFab = ({ accountId }: { accountId?: string } = {}) => {
   const t = useTranslations('transactions')
   const drawer = useMovementDrawer()
   return (
     <Fab
       label={t('actions.register_movement')}
       disabled={!drawer}
-      onClick={drawer ? () => drawer.openCreate() : undefined}
+      onClick={drawer ? () => drawer.openCreate(accountId) : undefined}
     />
   )
 }

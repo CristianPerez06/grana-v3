@@ -66,11 +66,13 @@ const PeriodDetailPage = async ({ params, searchParams }: Props) => {
     if (dateStr === todayISO) return tTx('list.today')
     if (dateStr === yesterdayISO) return tTx('list.yesterday')
     const [y, m, d] = dateStr.split('-').map(Number)
+    // «Viernes, 13 de noviembre»: only the first letter up. A CSS `capitalize`
+    // used to turn the «de» into «De».
     return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-    })
+    }).replace(/^./, (c) => c.toUpperCase())
   }
   const txGroups = (() => {
     const groups = new Map<string, typeof period.transactions>()
@@ -211,7 +213,7 @@ const PeriodDetailPage = async ({ params, searchParams }: Props) => {
                 key={groupDate}
                 className={groupIndex === 0 ? '' : 'border-t border-border pt-3 mt-1'}
               >
-                <p className="px-4 pb-2 pt-3 text-[12px] font-extrabold capitalize text-muted-foreground">
+                <p className="px-4 pb-2 pt-3 text-[12px] font-extrabold text-muted-foreground">
                   {formatGroupDate(groupDate)}
                 </p>
                 <div className="flex flex-col divide-y divide-border">

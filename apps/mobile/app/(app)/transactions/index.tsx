@@ -19,6 +19,7 @@ import {
   type ActiveFilterChip,
 } from '../../../components/movements/ActiveFilterChips'
 import { MovementFiltersSheet } from '../../../components/movements/MovementFiltersSheet'
+import { ToolbarIconButton } from '../../../components/movements/ToolbarIconButton'
 import { QuickAddFab } from '../../../components/transactions/QuickAddFab'
 import { PendingRecurrencesBlock } from '../../../components/recurrences/PendingRecurrencesBlock'
 import { PendingReimbursementsBlock } from '../../../components/transactions/PendingReimbursementsBlock'
@@ -374,19 +375,20 @@ export default function MovimientosScreen() {
           options={options}
         />
 
-        {/* Action chips: Buscar / Filtros. Recurrencias is NOT here — it already
-            lives in this screen's PageHeader. */}
-        <View className="flex-row flex-wrap items-center gap-2">
-          <ActionChip
-            icon={<Search size={14} color={searchMode ? colors.emeraldDeep : colors.textMuted} />}
+        {/* Toolbar: Buscar / Filtros icons, right-aligned — the same buttons
+            web's Movimientos draws above its list. Recurrencias is NOT here: it
+            already lives in this screen's PageHeader. */}
+        <View className="flex-row items-center justify-end gap-1.5">
+          <ToolbarIconButton
+            icon={<Search size={16} color={searchMode ? colors.emeraldDeep : colors.textMuted} />}
             label={t('transactions.filters.search')}
             active={searchMode}
             onPress={toggleSearch}
           />
-          <ActionChip
+          <ToolbarIconButton
             icon={
               <SlidersHorizontal
-                size={14}
+                size={16}
                 color={activeCount > 0 ? colors.emeraldDeep : colors.textMuted}
               />
             }
@@ -479,39 +481,5 @@ export default function MovimientosScreen() {
       />
       <QuickAddFab />
     </View>
-  )
-}
-
-function ActionChip({
-  icon,
-  label,
-  active = false,
-  badge,
-  onPress,
-}: {
-  icon: React.ReactNode
-  label: string
-  active?: boolean
-  badge?: number
-  onPress: () => void
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      className={`flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 ${
-        active ? 'border-emerald bg-emerald-soft' : 'border-border-soft bg-card'
-      }`}
-    >
-      {icon}
-      <Text className={`text-[13px] ${active ? 'font-semibold text-text' : 'text-text-soft'}`}>
-        {label}
-      </Text>
-      {badge !== undefined && (
-        <View className="rounded-full bg-emerald px-1.5">
-          <Text className="text-[11px] font-bold text-white">{badge}</Text>
-        </View>
-      )}
-    </Pressable>
   )
 }

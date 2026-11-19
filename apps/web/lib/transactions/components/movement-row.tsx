@@ -14,7 +14,9 @@ import {
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
+  legInCurrency,
   resolveMovementView,
+  type BalanceCurrency,
   type MovementPerspective,
   type MovementKind,
 } from '@grana/money-logic'
@@ -62,6 +64,13 @@ type Props = {
   isRecurrent?: boolean
   /** Running balance after this movement, per currency (account view, no filters). */
   runningBalanceSnapshot?: Record<'ARS' | 'USD', number> | null
+  /**
+   * Account detail currency lens (ARS | USD): the row shows only its leg in this
+   * currency and the balance of this currency. A same-account exchange shows
+   * its outgoing leg in one lens and its incoming leg in the other. Absent ⇒
+   * the movement's own currency and, for that exchange, both legs.
+   */
+  currencyLens?: BalanceCurrency | null
   /** Installment chip label (e.g. "Cuota 2 de 6"); shown on card-statement rows. */
   installmentChip?: string | null
   /** Render the installment chip on its own line below the subtitle (card statement layout). */
@@ -74,6 +83,7 @@ export const MovementRow = ({
   showAccount = false,
   isRecurrent = false,
   runningBalanceSnapshot = null,
+  currencyLens = null,
   installmentChip = null,
   installmentChipBelow = false,
 }: Props) => {
@@ -81,7 +91,10 @@ export const MovementRow = ({
   const tRoot = useTranslations()
   const showCents = useShowCents()
 
-  const view = resolveMovementView(toMovementViewInput(movement), perspective)
+  const fullView = resolveMovementView(toMovementViewInput(movement), perspective)
+  // Under a lens the row speaks only that currency: its leg there, no second leg.
+  const lensLeg = currencyLens ? legInCurrency(fullView, currencyLens) : null
+  const view = lensLeg ? { ...fullView, ...lensLeg, receivedLeg: undefined } : fullView
   const typeLabel = t(typeLabelKey[movement.kind])
 
   // System categories/subcategories render localized; user-owned keep their name.
@@ -107,6 +120,7 @@ export const MovementRow = ({
       ? t('installments_count', { count: movement.installments_total })
       : null)
   const runningBalance = runningBalanceSnapshot ? runningBalanceSnapshot[view.currencyCode] : null
+  const hasRunningBalance = runningBalance != null
   const isPendingReimbursement =
     movement.kind === 'reimbursement' && movement.state !== 'received'
 
@@ -167,11 +181,12 @@ export const MovementRow = ({
   //     (running balance hidden), 3 cols ≥md.
   //   • Without running balance (/transactions, generic list): 2 cols, the
   //     amount column sized to its content.
-  const gridCls = runningBalance != null
+  const gridCls = hasRunningBalance
     ? 'grid grid-cols-[minmax(0,1fr)_112px] md:grid-cols-[minmax(0,1fr)_126px_126px] items-center gap-4 md:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
     : 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
 
   const amountCls = 'text-right'
+  const amountTone = toneToClass(resolveTone(movement.kind, view.sign, isPendingReimbursement))
 
   return (
     <div className={gridCls}>
@@ -245,13 +260,22 @@ export const MovementRow = ({
 
       <div className={amountCls}>
         <p
-          className={`text-[14px] font-extrabold tabular-nums ${toneToClass(resolveTone(movement.kind, view.sign, isPendingReimbursement))}`}
+          className={`text-[14px] font-extrabold tabular-nums ${amountTone}`}
         >
           {view.sign}
           {formatAmount(view.amount, view.currencyCode, showCents)}
         </p>
-        {view.currencyCode === 'USD' && (
-          <p className="text-[11px] font-normal text-muted-foreground">USD</p>
+        {/* Same-account exchange: the leg that came back into this account. */}
+        {view.receivedLeg && (
+          <p className={`text-[13px] font-extrabold tabular-nums ${amountTone}`}>
+            +{formatAmount(view.receivedLeg.amount, view.receivedLeg.currencyCode, showCents)}
+          </p>
+        )}
+        {/* Below md the balance has no column of its own: it sits under the amount. */}
+        {runningBalance != null && (
+          <p className="mt-1 text-[12px] font-bold tabular-nums text-muted-foreground md:hidden">
+            {formatAmount(runningBalance, view.currencyCode, showCents)}
+          </p>
         )}
       </div>
 
@@ -263,3 +287,4 @@ export const MovementRow = ({
     </div>
   )
 }
+

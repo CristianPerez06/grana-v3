@@ -6,8 +6,12 @@ import Link from 'next/link'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
   computeRunningBalances,
+  legInCurrency,
+  resolveMovementView,
+  type BalanceCurrency,
   type RunningBalanceRow,
 } from '@grana/money-logic'
+import { toMovementViewInput } from '@grana/transactions'
 import { MovementList } from '@/lib/transactions/components/movement-list'
 import { MovementListSkeleton } from '@/lib/transactions/components/movement-list-skeleton'
 import { Button } from '@/components/ui/button'
@@ -35,6 +39,7 @@ import {
   type FinancialMovement,
 } from '@/lib/transactions/movements'
 import { useTransactionsFilters } from '@/lib/transactions/filters-context'
+import { useAccountCurrencyLens } from './use-account-currency-lens'
 
 type Props = {
   accountId: string
@@ -42,7 +47,8 @@ type Props = {
 
 /** Empty-state variant: which message + action to show when the visible list is empty. */
 function resolveEmptyVariant(filters: TransactionsFilters): 'none' | 'search' | 'filter' {
-  if (hasActiveContentFilters(filters)) return 'filter'
+  // The currency is the account's lens (ARS | USD pills), not a filter to clear.
+  if (hasActiveContentFilters({ ...filters, currency: null }) || filters.customRange) return 'filter'
   if (hasActiveSearch(filters)) return 'search'
   return 'none'
 }
@@ -58,12 +64,19 @@ function applyAccountFilters(
   movements: FinancialMovement[],
   filters: TransactionsFilters,
   range: { from?: string; to?: string },
+  accountId: string,
+  lens: BalanceCurrency | null,
 ): FinancialMovement[] {
   return movements.filter((m) => {
     if (range.from && m.date < range.from) return false
     if (range.to && m.date > range.to) return false
     if (filters.type && m.kind !== filters.type) return false
-    if (filters.currency && m.currency_code !== filters.currency) return false
+    // The currency lens keeps every movement with a leg in that currency for
+    // THIS account — a same-account exchange belongs to both ledgers.
+    if (lens) {
+      const view = resolveMovementView(toMovementViewInput(m), { kind: 'account', accountId })
+      if (!legInCurrency(view, lens)) return false
+    }
     if (filters.categoryId && m.category_id !== filters.categoryId) return false
     if (filters.subcategoryId) {
       if (filters.subcategoryId === SUBCATEGORY_NONE_MARKER) {
@@ -79,22 +92,19 @@ function applyAccountFilters(
   })
 }
 
-/**
- * Resolve the date range for the current filter state. Custom range wins;
- * otherwise the month boundaries.
- */
+/** Resolve the date range for the current filter state: the «Desde / Hasta» range, if any. */
 function resolveRange(filters: TransactionsFilters): { from?: string; to?: string } {
+  // The account detail has no month navigator: its movements read as one
+  // continuous list. Only an explicit «Desde / Hasta» narrows the dates.
   if (filters.customRange) {
     return {
       from: filters.customRange.from,
       to: filters.customRange.to,
     }
   }
-  const [yy, mm] = filters.month.split('-').map(Number)
-  const from = `${filters.month}-01`
-  const to = formatDateISO(new Date(yy, mm, 0)) // day 0 of next month = last of current
-  return { from, to }
+  return {}
 }
+
 
 /**
  * Client container for the account-scoped movement list. One server query
@@ -125,7 +135,7 @@ export function MovementListAccountContainer({ accountId }: Props) {
 
   // Running balance: needs the FULL ascending history + the account's per-currency
   // initial balances. Both come from cached queries; recompute only when one changes.
-  const runningBalances = useMemo(() => {
+  const running = useMemo(() => {
     if (!ascendingQ.data || !accountQ.data) return null
     const account = accountQ.data
     const initial = {
@@ -186,9 +196,14 @@ export function MovementListAccountContainer({ accountId }: Props) {
 
   const range = useMemo(() => resolveRange(filters), [filters])
 
+  // Currency lens: an account that uses both currencies shows one ledger at a
+  // time (ARS by default); the ARS | USD pills next to the «Movimientos» title
+  // switch it. A one-currency account has no pills and its lens is that one.
+  const { lens } = useAccountCurrencyLens(accountId)
+
   const filteredMovements = useMemo(
-    () => applyAccountFilters(allDisplayMovements, filters, range),
-    [allDisplayMovements, filters, range],
+    () => applyAccountFilters(allDisplayMovements, filters, range, accountId, lens),
+    [allDisplayMovements, filters, range, accountId, lens],
   )
 
   const pagedMovements = useMemo(
@@ -221,7 +236,12 @@ export function MovementListAccountContainer({ accountId }: Props) {
 
   const variant = resolveEmptyVariant(filters)
   const recurrenceLinkedIds = linkedQ.data ? new Set(linkedQ.data) : undefined
-  const showRunningBalance = !hasActiveContentFilters(filters) ? runningBalances : null
+  // Content filters AND a text search skip rows, so a running balance over what
+  // is left would be wrong: hide it. The currency is the exception — it is the
+  // lens, and it skips no row of the ledger whose balance is shown.
+  const skipsRows =
+    hasActiveContentFilters({ ...filters, currency: null }) || hasActiveSearch(filters)
+  const showRunningBalance = !skipsRows ? running : null
 
   return (
     <div id="movement-list" className="scroll-mt-6 flex flex-col gap-6">
@@ -232,13 +252,20 @@ export function MovementListAccountContainer({ accountId }: Props) {
         showAccount={false}
         recurrenceLinkedIds={recurrenceLinkedIds}
         runningBalances={showRunningBalance}
+        currencyLens={lens}
         emptyState={{
           variant,
           query: filters.query,
           onAdd: drawer ? () => drawer.openCreate(accountId) : undefined,
           onClear:
             variant === 'filter'
-              ? () => dispatch({ type: 'clearFilters' })
+              ? () => {
+                  // Clear the filters and the date range, but keep the ledger
+                  // being looked at (the ARS | USD lens is not a filter).
+                  dispatch({ type: 'clearFilters' })
+                  dispatch({ type: 'setCustomRange', range: null })
+                  if (filters.currency) dispatch({ type: 'setCurrency', currency: filters.currency })
+                }
               : variant === 'search'
                 ? () => dispatch({ type: 'clearSearch' })
                 : undefined,
@@ -266,3 +293,4 @@ export function MovementListAccountContainer({ accountId }: Props) {
     </div>
   )
 }
+
