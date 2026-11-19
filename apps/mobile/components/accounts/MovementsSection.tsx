@@ -23,7 +23,7 @@ import {
   activeFilterCount,
   currentMonth,
   emptyFilters,
-  monthLabel,
+  monthLabelShort,
   shiftMonth,
   type AccountMovementFilters,
 } from '../../lib/accounts/movement-filters'
@@ -208,9 +208,9 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
         )}
       </View>
 
-      {/* Month nav on its own row, left-aligned — as on web's toolbar. The title
-          row no longer has room for it next to the lens. */}
-      <View className="flex-row">
+      {/* Toolbar: month nav + Buscar / Recurrencias / Filtros icons in ONE row —
+          the same row the web draws at phone width («‹ Nov 2026 ›» + 3 icons). */}
+      <View className="flex-row items-center justify-between gap-2">
         <View className="flex-row items-center gap-0.5 rounded-lg border border-border px-1">
           <Pressable
             onPress={() => setFilters((f) => ({ ...f, month: shiftMonth(f.month, -1) }))}
@@ -221,8 +221,8 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
           >
             <ChevronLeft size={16} color={colors.textMuted} />
           </Pressable>
-          <Text className="min-w-[104px] text-center text-[13px] font-semibold capitalize text-text">
-            {monthLabel(filters.month, locale)}
+          <Text className="px-0.5 text-center text-[13px] font-semibold text-text">
+            {monthLabelShort(filters.month, locale)}
           </Text>
           <Pressable
             onPress={() => setFilters((f) => ({ ...f, month: shiftMonth(f.month, 1) }))}
@@ -234,28 +234,27 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
             <ChevronRight size={16} color={colors.textMuted} />
           </Pressable>
         </View>
-      </View>
 
-      {/* Action chips: Buscar / Recurrencias / Filtros */}
-      <View className="flex-row flex-wrap items-center gap-2">
-        <ActionChip
-          icon={<Search size={14} color={searchMode ? colors.emeraldDeep : colors.textMuted} />}
-          label={t('transactions.filters.search')}
-          active={searchMode}
-          onPress={toggleSearch}
-        />
-        <ActionChip
-          icon={<Repeat size={14} color={colors.textMuted} />}
-          label={t('transactions.header.see_recurrences')}
-          onPress={() => router.push('/transactions/recurring')}
-        />
-        <ActionChip
-          icon={<SlidersHorizontal size={14} color={activeCount > 0 ? colors.emeraldDeep : colors.textMuted} />}
-          label={t('transactions.filters.filters_button')}
-          active={activeCount > 0}
-          badge={activeCount > 0 ? activeCount : undefined}
-          onPress={() => setFiltersOpen(true)}
-        />
+        <View className="flex-row items-center gap-1.5">
+          <IconAction
+            icon={<Search size={16} color={searchMode ? colors.emeraldDeep : colors.textMuted} />}
+            label={t('transactions.filters.search')}
+            active={searchMode}
+            onPress={toggleSearch}
+          />
+          <IconAction
+            icon={<Repeat size={16} color={colors.textMuted} />}
+            label={t('transactions.header.see_recurrences')}
+            onPress={() => router.push('/transactions/recurring')}
+          />
+          <IconAction
+            icon={<SlidersHorizontal size={16} color={activeCount > 0 ? colors.emeraldDeep : colors.textMuted} />}
+            label={t('transactions.filters.filters_button')}
+            active={activeCount > 0}
+            badge={activeCount > 0 ? activeCount : undefined}
+            onPress={() => setFiltersOpen(true)}
+          />
+        </View>
       </View>
 
       {/* Inline search */}
@@ -331,7 +330,11 @@ export function MovementsSection({ movements, accountId, currencies, loading }: 
   )
 }
 
-function ActionChip({
+/**
+ * 36×36 icon button of the toolbar — the native twin of web's `iconButtonCls`
+ * (same size, radius, border and count badge). The label is the accessible name.
+ */
+function IconAction({
   icon,
   label,
   active = false,
@@ -348,17 +351,17 @@ function ActionChip({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      className={`flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 ${
-        active ? 'border-emerald bg-emerald-soft' : 'border-border-soft bg-card'
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+      hitSlop={4}
+      className={`h-9 w-9 items-center justify-center rounded-[10px] border ${
+        active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
       }`}
     >
       {icon}
-      <Text className={`text-[13px] ${active ? 'font-semibold text-text' : 'text-text-soft'}`}>
-        {label}
-      </Text>
       {badge !== undefined && (
-        <View className="rounded-full bg-emerald px-1.5">
-          <Text className="text-[11px] font-bold text-white">{badge}</Text>
+        <View className="absolute -right-1 -top-1 h-[18px] min-w-[18px] items-center justify-center rounded-full bg-navy px-1">
+          <Text className="text-[10px] font-semibold text-white">{badge}</Text>
         </View>
       )}
     </Pressable>

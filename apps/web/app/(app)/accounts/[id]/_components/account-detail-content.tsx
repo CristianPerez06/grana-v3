@@ -74,7 +74,7 @@ export function AccountDetailContent({ accountId }: Props) {
               dólares» — a way of looking at the account, not a filter. */}
           {/* On a very narrow phone the pills wrap under the title instead of
               sliding under «Agregar». */}
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 md:gap-x-3">
             <h2 className="text-[15px] font-extrabold leading-tight">
               {t('headers.movements')}
             </h2>
@@ -82,14 +82,16 @@ export function AccountDetailContent({ accountId }: Props) {
               <CurrencyLensPills value={currencyLens.lens} onChange={currencyLens.setLens} />
             )}
           </div>
+          {/* Phone width: just the «+», so title, lens and action share one row. */}
           <Button
             size="sm"
-            className="w-auto shrink-0"
+            className="w-auto shrink-0 max-md:px-2.5"
             disabled={!drawer}
             onClick={() => drawer?.openCreate(accountId)}
+            aria-label={t('actions.add_transaction')}
           >
             <Plus size={16} strokeWidth={2} aria-hidden />
-            {t('actions.add_transaction')}
+            <span className="max-md:sr-only">{t('actions.add_transaction')}</span>
           </Button>
         </header>
 

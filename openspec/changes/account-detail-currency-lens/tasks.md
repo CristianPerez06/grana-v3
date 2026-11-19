@@ -15,6 +15,7 @@
 
 - [x] 4.1 Selector al lado del título «Movimientos» (web: encabezado de la tarjeta, se acomoda debajo del título en pantallas angostas; app: fila del título, el mes pasa a su propia fila). Verificado a 1280, 390 y 360px
 - [x] 4.2 La moneda deja de ser un filtro cuando hay selector: sin chip, sin contar en el botón, sin bloque en la hoja, «Limpiar todo» no la cambia (web y app)
+- [x] 4.4 Celular en dos filas: «+» sin texto y mes corto en la web; en la app, mes corto e íconos en la misma fila que el mes. Verificado a 372 y 390px (web)
 - [x] 4.3 Quitar la etiqueta «USD» debajo de los montos en dólares en las filas de movimiento (web y feed nativo)
 
 ## 5. Cierre

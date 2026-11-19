@@ -251,6 +251,15 @@ export const MovementFilters = ({
       year: 'numeric',
     })
   })()
+  // Phone width: «Nov 2026». The long «Noviembre De 2026» broke onto two lines
+  // next to the three toolbar icons.
+  const monthLabelShort = (() => {
+    const [y, m] = month.split('-').map(Number)
+    const short = new Date(y, m - 1, 1)
+      .toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', { month: 'short' })
+      .replace('.', '')
+    return `${short} ${y}`
+  })()
   const goToMonth = (next: string) =>
     setParams({ month: next, from: null, to: null })
 
@@ -402,8 +411,15 @@ export const MovementFilters = ({
               >
                 ‹
               </button>
-              <span className="min-w-28 text-center text-sm font-medium capitalize">
-                {isCustomRange ? t('filters.custom_range') : monthLabel}
+              <span className="whitespace-nowrap px-0.5 text-center text-sm font-medium capitalize md:min-w-28">
+                {isCustomRange ? (
+                  t('filters.custom_range')
+                ) : (
+                  <>
+                    <span className="md:hidden">{monthLabelShort}</span>
+                    <span className="hidden md:inline">{monthLabel}</span>
+                  </>
+                )}
               </span>
               <button
                 type="button"

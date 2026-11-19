@@ -40,6 +40,18 @@ const FULL_MONTHS: Record<Locale, readonly string[]> = {
   en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
 }
 
+const SHORT_MONTHS: Record<Locale, readonly string[]> = {
+  es: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+}
+
+/** «Nov 2026» — the account detail toolbar shares one row with three icons. */
+export function monthLabelShort(month: string, locale: Locale): string {
+  const [y, m] = month.split('-').map(Number)
+  if (!y || !m) return month
+  return `${SHORT_MONTHS[locale][m - 1]} ${y}`
+}
+
 export function monthLabel(month: string, locale: Locale): string {
   const [y, m] = month.split('-').map(Number)
   if (!y || !m) return month

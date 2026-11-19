@@ -4,7 +4,7 @@
 
 ## What Changes
 
-- En el detalle de una cuenta que usa pesos y dólares aparece un selector **ARS | USD** al lado del título «Movimientos», con el mismo aspecto que el de «¿En qué gasté?». En la app, el navegador de mes pasa a su propia fila para dejarle lugar.
+- En el detalle de una cuenta que usa pesos y dólares aparece un selector **ARS | USD** al lado del título «Movimientos», con el mismo aspecto que el de «¿En qué gasté?». En el celular (web y app) el encabezado y la barra de herramientas ocupan dos filas en lugar de cuatro: «Movimientos [ARS | USD] [+]» y «‹ Nov 2026 ›» con la lupa, recurrencias y filtros. En la app, «Buscar / Recurrencias / Filtros» pasan a íconos, como en la web.
 - Cada moneda muestra solo sus movimientos y un único saldo por fila, el de esa moneda. Arranca en ARS.
 - Un cambio de moneda dentro de la misma cuenta aparece en las dos: en ARS como salida (`−$ 3.859.133,55`) y en USD como entrada (`+US$ 2.482,00`).
 - La moneda elegida **no es un filtro**: no aparece como chip, no cuenta en el botón de filtros, la hoja no la ofrece y «Limpiar todo» no la cambia. Tampoco oculta el saldo, porque no saltea filas de ese libro; los demás filtros y la búsqueda sí lo ocultan, como antes.
