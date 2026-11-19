@@ -244,22 +244,19 @@ export const MovementFilters = ({
   // overview card owns the canonical nav on /transactions).
   const month = filters.month ?? monthOf(getTodayAR())
   const isCustomRange = filters.month == null
-  const monthLabel = (() => {
+  // «Noviembre 2026» / «Nov 2026» — same words as the native app's month nav.
+  // Built by hand: the locale's long form is «noviembre de 2026», and a CSS
+  // `capitalize` over it turned the connector into «De».
+  const monthName = (style: 'long' | 'short') => {
     const [y, m] = month.split('-').map(Number)
-    return new Date(y, m - 1, 1).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', {
-      month: 'long',
-      year: 'numeric',
-    })
-  })()
-  // Phone width: «Nov 2026». The long «Noviembre De 2026» broke onto two lines
-  // next to the three toolbar icons.
-  const monthLabelShort = (() => {
-    const [y, m] = month.split('-').map(Number)
-    const short = new Date(y, m - 1, 1)
-      .toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', { month: 'short' })
+    const name = new Date(y, m - 1, 1)
+      .toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', { month: style })
       .replace('.', '')
-    return `${short} ${y}`
-  })()
+    return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${y}`
+  }
+  const monthLabel = monthName('long')
+  // Phone width: the long form broke onto two lines next to the three icons.
+  const monthLabelShort = monthName('short')
   const goToMonth = (next: string) =>
     setParams({ month: next, from: null, to: null })
 
@@ -411,7 +408,7 @@ export const MovementFilters = ({
               >
                 ‹
               </button>
-              <span className="whitespace-nowrap px-0.5 text-center text-sm font-medium capitalize md:min-w-28">
+              <span className="whitespace-nowrap px-0.5 text-center text-sm font-medium md:min-w-28">
                 {isCustomRange ? (
                   t('filters.custom_range')
                 ) : (
