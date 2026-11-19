@@ -517,7 +517,7 @@ El sistema SHALL mostrar la pantalla de detalle de una cuenta como una composici
 1. **Hero card de identidad** (navy gradient surface): avatar, nombre, institución (si `bank`), tipo, balances ARS/USD primario/secundario, badge `Archivada` (si `is_active=false`), y el botón `Editar` (pencil icon) como única acción del slot derecho.
 2. **Tarjeta de reembolsos pendientes** (solo si la cuenta tiene reembolsos pendientes asociados): renderiza el `PendingReimbursementsBlock` con su badge de conteo y la lista de items con sus formularios in-line de confirmar/cancelar.
 3. **Link píldora `+ Agregar moneda`** (solo si la cuenta no tiene todas las monedas activas — ARS y USD): superficie ligera, no es una card; abre el flujo de edición de monedas.
-4. **Tarjeta de movimientos** (siempre): superficie blanca con border-radius alineado al card de hero, contiene en su interior el encabezado `Movimientos` + CTA `+ Agregar transacción`, la barra de filtros (`MovementFilters` con `showAccountFilter={false}`), los chips de filtros activos y la lista (`MovementList` con running balance per-row cuando no hay filtros de contenido).
+4. **Tarjeta de movimientos** (siempre): superficie blanca con border-radius alineado al card de hero. Su primera fila SHALL reunir el título `Movimientos` (con el selector ARS | USD cuando la cuenta usa las dos monedas), los íconos de búsqueda y filtros y, en desktop, la CTA `+ Agregar transacción`. En viewport de celular la CTA NO SHALL estar en esa fila: agregar es el **botón flotante «+»** abajo a la derecha —la misma regla que Inicio y Movimientos— con la cuenta en pantalla **preseleccionada** en el formulario, y la lista deja espacio al final para que el botón no tape la última fila. Así título, selector e íconos entran en una sola fila también en un teléfono de 360px. NO SHALL ofrecer el acceso a recurrencias: lleva al listado general de recurrencias, que no tiene que ver con la cuenta en pantalla, y sigue en la pestaña Movimientos; debajo, los chips de filtros activos y la lista (`MovementList` con running balance per-row cuando no hay filtros de contenido). NO SHALL haber navegador de mes: los movimientos de la cuenta se leen como **una lista corrida**, de la más reciente a la más vieja, paginada con «Cargar más», como el resumen de un banco; para ver un tramo puntual la hoja de filtros ofrece «Desde / Hasta».
 
 **Las mutaciones de baja (archivar / eliminar / reactivar) NO viven en el detalle**: su superficie canónica es el menú kebab del card en `/accounts` (ver requirement "El usuario puede ver la lista de sus cuentas agrupadas por tipo"). El hero card SHALL renderizar únicamente el botón `Editar` en su slot de acciones.
 
@@ -527,7 +527,7 @@ La pantalla de detalle en `apps/web` SHALL adoptar el patrón de **in-page chrom
 
 - **WHEN** el usuario abre el detalle de una cuenta cash
 - **THEN** el hero card muestra el nombre, tipo "Efectivo", sin institución, balances ARS/USD
-- **AND** la tarjeta de movimientos muestra el header `Movimientos` + CTA + filtros + lista
+- **AND** la tarjeta de movimientos muestra en una fila el título `Movimientos`, el selector ARS | USD si corresponde, los íconos de búsqueda y filtros y, en desktop, la CTA (en el celular, el «+» flotante), y debajo la lista corrida, sin navegador de mes
 
 #### Scenario: Detalle de cuenta bank muestra institución en el hero card
 
@@ -591,6 +591,12 @@ La pantalla de detalle en `apps/web` SHALL adoptar el patrón de **in-page chrom
 - **THEN** el badge `Archivada` aparece junto al nombre de la cuenta
 - **AND** la paleta del chip está adaptada a la superficie navy del hero card (no `bg-yellow-100` sobre claro)
 - **AND** la copy `accounts.badges.archived` no cambia
+
+#### Scenario: La lista de la cuenta es corrida y se acota con «Desde / Hasta»
+
+- **WHEN** el usuario abre el detalle de una cuenta con movimientos en varios meses
+- **THEN** ve todos sus movimientos en una sola lista, del más reciente al más viejo, con «Cargar más» al final, y sin navegador de mes
+- **AND** al elegir «Desde» y «Hasta» en la hoja de filtros la lista se acota a ese tramo, aparece un chip con las fechas y el saldo corriente se sigue mostrando
 
 ### Requirement: Solo el dueño de una cuenta puede leerla y modificarla
 
@@ -1089,89 +1095,6 @@ Las acciones por fila SHALL presentarse vía el patrón de action sheet nativo d
 - **THEN** se abre un `Popover` bottom-sheet con Editar / Archivar (o Reactivar) / Eliminar según el estado de la cuenta
 - **AND** Eliminar y Archivar piden confirmación vía `Alert.alert` antes de ejecutar
 
-### Requirement: El detalle de cuenta en mobile muestra saldos, movimientos y reintegros (mobile)
-
-La pantalla `accounts/[id]/index` SHALL mostrar un hero con la identidad de la cuenta (avatar, nombre, institución/tipo, badge Archivada si aplica) y los saldos ARS/USD totales, obtenidos de `getAccountDetail` de `@grana/accounts`. SHALL mostrar la lista de movimientos de la cuenta usando `getAccountMovementsAscending` de `@grana/transactions`. La presentación SHALL replicar la del web app en viewport de celular: cada fila muestra fecha/descripción + monto con tono y, debajo del monto, el **saldo corriente por fila** con las mismas reglas que la web (spec `transactions`, requirement "El listado de una cuenta muestra el saldo corriente por fila"): un saldo por cada moneda que la cuenta usa, ARS arriba y USD debajo; las dos patas del monto en un cambio de moneda dentro de la misma cuenta; y el saldo oculto mientras haya filtros de contenido activos (tipo, categoría, subcategoría, moneda, rango de monto o búsqueda de texto). El saldo corriente SHALL calcularse con `computeRunningBalances` de `@grana/money-logic` sobre el historial ascendente que la pantalla ya carga, partiendo del saldo inicial por moneda de la cuenta; NO SHALL pedir datos nuevos al servidor. El signo/monto por fila desde la perspectiva de la cuenta SHALL derivarse de `resolveMovementView` de `@grana/money-logic`, sin reimplementar la lógica de patas (transferencias/cambios) en mobile. El tono del monto SHALL derivarse de `resolveTone` de `@grana/transactions`, igual que la web y el feed nativo (una transferencia o un cambio entre cuentas propias se ve neutro), y el signo SHALL ir pegado al monto como en la web (`-$ 480`). SHALL mostrar la card de reintegros pendientes ("A confirmar") usando `getPendingReimbursements` de `@grana/transactions` scopeado a la cuenta. SHALL ofrecer un acceso a agregar moneda cuando haya monedas disponibles.
-
-#### Scenario: El detalle muestra saldos y movimientos (mobile)
-
-- **WHEN** el usuario abre el detalle de una cuenta con movimientos
-- **THEN** el hero muestra los saldos ARS/USD y la pantalla lista los movimientos de la cuenta
-- **AND** la card "A confirmar" lista los reintegros pendientes de esa cuenta si existen
-
-#### Scenario: La presentación de movimientos replica el web app en mobile (mobile)
-
-- **WHEN** la pantalla renderiza la lista de movimientos sin filtros de contenido
-- **THEN** cada fila muestra fecha/descripción + monto con tono y, debajo del monto, el saldo corriente con la misma cantidad de saldos que la web en viewport de celular
-- **AND** el signo/monto por fila desde la perspectiva de la cuenta se deriva de `resolveMovementView` de `@grana/money-logic`, sin reimplementar la lógica en mobile
-
-#### Scenario: Un cambio de moneda se ve con el mismo tono que en la web (mobile)
-
-- **WHEN** el detalle de cuenta muestra un cambio de moneda o una transferencia entre cuentas propias
-- **THEN** el monto se ve en tono neutro y con el signo pegado (`-$ 3.859.134`), igual que la web en viewport de celular
-
-#### Scenario: Una cuenta con pesos y dólares muestra ambos saldos (mobile)
-
-- **WHEN** el usuario abre el detalle de una cuenta que usa ARS y USD
-- **THEN** cada fila muestra el saldo ARS y, debajo, el saldo USD resultantes después de ese movimiento, iguales a los que muestra la web para esa fila
-
-#### Scenario: Un filtro oculta el saldo corriente (mobile)
-
-- **WHEN** el usuario aplica un filtro o escribe una búsqueda en el detalle de la cuenta
-- **THEN** las filas dejan de mostrar el saldo corriente
-
-### Requirement: El detalle de cuenta en mobile filtra los movimientos con un toolbar (mobile)
-
-La lista de movimientos del detalle SHALL ofrecer un toolbar con paridad funcional al del web app: navegación por mes (anterior/siguiente con label de mes), búsqueda de texto libre, un acceso a recurrencias, y una hoja de filtros (tipo, categoría, subcategoría, moneda, monto mín/máx) con chips de filtro activos removibles.
-
-**La hoja de filtros SHALL ser la misma que usa el feed global de Movimientos** — una sola implementación, parametrizada por `showAccountFilter`. En el detalle de cuenta el filtro de cuenta SHALL estar **oculto**: la pantalla ya está scopeada a una cuenta. Mismo criterio que web. La hoja vive con el resto de los componentes de movimientos, no bajo los del detalle de cuenta.
-
-**El filtrado SHALL seguir siendo en cliente**, y eso NO es una inconsistencia con el feed global, que filtra en la base. Es consecuencia de que las dos superficies leen distinto: el detalle carga el historial **completo** de la cuenta porque lo necesita para el saldo corriente, así que filtrar en memoria es correcto y gratis; el feed pagina, y filtrar una página parcial daría un resultado incorrecto (ver la spec de `transactions`). Las dos superficies comparten la hoja de filtros y el renderer de chips activos; NO comparten la forma de aplicar los filtros ni la fila de acciones, que difiere en título, ubicación del navegador de mes y acceso a recurrencias.
-
-El rango del mes SHALL calcularse con `resolveMonthRange` de `@grana/dashboard`, y la aplicación de los filtros SHALL ser un paso nativo puro sobre `TransactionWithDetails`. El **match de búsqueda**, en cambio, SHALL delegarse a `movementMatchesText` de `@grana/transactions` sobre el `FinancialMovement` de cada fila — el mismo que usa el detalle de cuenta web—, y NO SHALL reimplementarse en `apps/mobile`. Es lo que garantiza el set único de campos buscables que la spec de `transactions` define; un matcher nativo paralelo sería el patrón "mirror … keep in sync" que las convenciones del repo prohíben. La pantalla ya deriva el `FinancialMovement` de cada fila una vez por carga para el eje de tipo (ver el párrafo siguiente), de modo que el matcher compartido no agrega una segunda derivación.
-
-**El eje de tipo SHALL ser el `kind` derivado** (`MovementTypeFilter`), no la columna `transaction_type`, para que la hoja compartida hable un solo lenguaje con el feed y con el contrato `MovementFilters`. Como el detalle filtra sobre `TransactionWithDetails`, que no lleva `kind`, la pantalla SHALL derivar el `FinancialMovement` de cada fila con `toFinancialMovement` de `@grana/transactions` —la única derivación de `kind` que existe— **una vez por carga de las filas**, no por interacción de filtrado, y SHALL conservarlo indexado por id para que tanto el eje de tipo como el match de búsqueda lo consuman. NO SHALL reimplementarse la derivación en `apps/mobile`.
-
-**Las opciones de categoría/subcategoría SHALL derivarse del catálogo** (`getMovementFilterOptions` de `@grana/transactions`), no de los movimientos de la cuenta. Es lo que ya hace el detalle de cuenta web, y es lo que permite que la hoja compartida tenga una sola fuente de opciones en vez de dos con semánticas distintas. Se acepta la consecuencia: el menú PUEDE ofrecer una categoría que en esta cuenta no tenga movimientos.
-
-El acceso a recurrencias SHALL navegar a la ruta nativa de recurrencias.
-
-#### Scenario: Navegar meses y filtrar movimientos (mobile)
-
-- **WHEN** el usuario cambia el mes o aplica filtros (tipo/categoría/moneda/monto) o escribe en la búsqueda
-- **THEN** la lista de movimientos se filtra en cliente sobre el historial de la cuenta usando el rango del mes (`resolveMonthRange`) y el resto de los filtros
-- **AND** los filtros activos aparecen como chips removibles y el botón de filtros muestra el conteo activo
-
-#### Scenario: La hoja de filtros es la misma que la del feed (mobile)
-
-- **WHEN** el usuario abre la hoja de filtros desde el detalle de cuenta y desde la tab Movimientos
-- **THEN** las dos abren el mismo componente, con los mismos controles y el mismo formato de estado
-- **AND** en el detalle de cuenta el filtro de cuenta no se ofrece, porque la pantalla ya está scopeada a una
-
-#### Scenario: El tipo se filtra por `kind` derivado (mobile)
-
-- **WHEN** el usuario filtra por tipo en el detalle de cuenta
-- **THEN** las opciones son las del `kind` derivado, incluidas compra en cuotas, pago de resumen y reintegro
-- **AND** el `FinancialMovement` de cada fila se deriva con `toFinancialMovement` una sola vez por carga de las filas, no en cada cambio de filtro
-
-#### Scenario: La búsqueda usa el matcher compartido (mobile)
-
-- **WHEN** el usuario escribe un término en la búsqueda del detalle de cuenta nativo
-- **THEN** el match lo resuelve `movementMatchesText` de `@grana/transactions`, el mismo que usa el detalle de cuenta web
-- **AND** el resultado coincide con el de la misma query en web, incluidos los nombres de institución y la cuenta destino de un `exchange`
-- **AND** no existe una implementación del match en `apps/mobile`
-
-#### Scenario: Las opciones de la hoja salen del catálogo (mobile)
-
-- **WHEN** la pantalla puebla la hoja de filtros
-- **THEN** las categorías y subcategorías ofrecidas provienen de `getMovementFilterOptions`, igual que en el detalle de cuenta web
-- **AND** el usuario puede elegir una categoría que en esta cuenta no tenga movimientos, y la lista queda vacía con su empty-state
-
-#### Scenario: El acceso a recurrencias navega al hub nativo (mobile)
-
-- **WHEN** el usuario toca "Ver recurrencias" en el toolbar de movimientos
-- **THEN** la app navega a la ruta nativa de recurrencias
-
 ### Requirement: Crear, editar y gestionar monedas de una cuenta en mobile (mobile)
 
 La app nativa SHALL permitir crear una cuenta (`accounts/new`), editar nombre e institución (`accounts/[id]/edit`, con saldos iniciales en modo locked) y agregar/desactivar monedas (`accounts/[id]/currency`), cada uno como pantalla pusheada en el stack con `PageHeader` + back-link (el equivalente nativo de los drawers web). El selector de institución SHALL permitir buscar instituciones y crear una institución custom inline (nombre + color). Los montos SHALL capturarse con el primitivo `MoneyAmountInput`. Las operaciones SHALL ejecutarse vía un mutator mobile (`lib/accounts/mutations.ts`) que llama directamente a las mutations de `@grana/accounts` — sin server actions en mobile.
@@ -1207,3 +1130,86 @@ Las mutations de cuentas en mobile SHALL ejecutarse por un mutator (`apps/mobile
 - **WHEN** el usuario crea, edita, archiva, reactiva o elimina una cuenta, o agrega/desactiva una moneda
 - **THEN** el mutator invalida los query keys de cuentas afectados (lista, detalle, instituciones)
 - **AND** las pantallas montadas refetchean la data actualizada
+
+### Requirement: El detalle de cuenta en mobile filtra una lista corrida con un toolbar en la fila del título (mobile)
+
+La lista de movimientos del detalle SHALL ser **corrida** —todos los movimientos de la cuenta, del más reciente al más viejo, paginados con «Cargar más»— y NO SHALL tener navegador de mes, igual que la web. SHALL ofrecer un toolbar con paridad funcional y visual al del web app, **en la fila del título** `Movimientos` (junto al selector ARS | USD): búsqueda de texto libre y una hoja de filtros (tipo, categoría, subcategoría, «Desde / Hasta», moneda cuando no hay selector ARS | USD, monto mín/máx) con chips de filtro activos removibles. NO SHALL ofrecer acceso a recurrencias: lleva al listado general, que no tiene que ver con la cuenta, y está en la tab Movimientos. Los dos son botones de ícono de 36px (`ToolbarIconButton`), los mismos que usa la tab Movimientos. Para agregar, la pantalla SHALL mostrar el botón flotante «+» (`QuickAddFab`, el mismo de Inicio y Movimientos) con la cuenta preseleccionada (`presetAccount`), y el scroll SHALL dejar espacio al final para que no tape la última fila. Las filas SHALL ser las de `MovementList` / `MovementRow` compartidas con la tab Movimientos —no una fila propia del detalle—, y tocar una fila SHALL abrir el detalle del movimiento.
+
+**La hoja de filtros SHALL ser la misma que usa el feed global de Movimientos** — una sola implementación, parametrizada por `showAccountFilter`. En el detalle de cuenta el filtro de cuenta SHALL estar **oculto**: la pantalla ya está scopeada a una cuenta. Mismo criterio que web. La hoja vive con el resto de los componentes de movimientos, no bajo los del detalle de cuenta.
+
+**El filtrado SHALL seguir siendo en cliente**, y eso NO es una inconsistencia con el feed global, que filtra en la base. Es consecuencia de que las dos superficies leen distinto: el detalle carga el historial **completo** de la cuenta porque lo necesita para el saldo corriente, así que filtrar en memoria es correcto y gratis; el feed pagina, y filtrar una página parcial daría un resultado incorrecto (ver la spec de `transactions`). Las dos superficies comparten la hoja de filtros y el renderer de chips activos; NO comparten la forma de aplicar los filtros ni la fila de acciones: el detalle lleva el título y el selector de moneda en ella; la tab Movimientos tiene su propio navegador de mes y las recurrencias en su `PageHeader`.
+
+El rango «Desde / Hasta» SHALL aplicarse sobre la fecha contable del movimiento, y la aplicación de los filtros SHALL ser un paso nativo puro sobre `TransactionWithDetails`. El **match de búsqueda**, en cambio, SHALL delegarse a `movementMatchesText` de `@grana/transactions` sobre el `FinancialMovement` de cada fila — el mismo que usa el detalle de cuenta web—, y NO SHALL reimplementarse en `apps/mobile`. Es lo que garantiza el set único de campos buscables que la spec de `transactions` define; un matcher nativo paralelo sería el patrón "mirror … keep in sync" que las convenciones del repo prohíben. La pantalla ya deriva el `FinancialMovement` de cada fila una vez por carga para el eje de tipo (ver el párrafo siguiente), de modo que el matcher compartido no agrega una segunda derivación.
+
+**El eje de tipo SHALL ser el `kind` derivado** (`MovementTypeFilter`), no la columna `transaction_type`, para que la hoja compartida hable un solo lenguaje con el feed y con el contrato `MovementFilters`. Como el detalle filtra sobre `TransactionWithDetails`, que no lleva `kind`, la pantalla SHALL derivar el `FinancialMovement` de cada fila con `toFinancialMovement` de `@grana/transactions` —la única derivación de `kind` que existe— **una vez por carga de las filas**, no por interacción de filtrado, y SHALL conservarlo indexado por id para que tanto el eje de tipo como el match de búsqueda lo consuman. NO SHALL reimplementarse la derivación en `apps/mobile`.
+
+**Las opciones de categoría/subcategoría SHALL derivarse del catálogo** (`getMovementFilterOptions` de `@grana/transactions`), no de los movimientos de la cuenta. Es lo que ya hace el detalle de cuenta web, y es lo que permite que la hoja compartida tenga una sola fuente de opciones en vez de dos con semánticas distintas. Se acepta la consecuencia: el menú PUEDE ofrecer una categoría que en esta cuenta no tenga movimientos.
+
+#### Scenario: Acotar por fechas y filtrar movimientos (mobile)
+
+- **WHEN** el usuario elige «Desde / Hasta», aplica filtros (tipo/categoría/monto) o escribe en la búsqueda
+- **THEN** la lista de movimientos se filtra en cliente sobre el historial de la cuenta usando ese rango y el resto de los filtros
+- **AND** los filtros activos aparecen como chips removibles y el botón de filtros muestra el conteo activo
+
+#### Scenario: La hoja de filtros es la misma que la del feed (mobile)
+
+- **WHEN** el usuario abre la hoja de filtros desde el detalle de cuenta y desde la tab Movimientos
+- **THEN** las dos abren el mismo componente, con los mismos controles y el mismo formato de estado
+- **AND** en el detalle de cuenta el filtro de cuenta no se ofrece, porque la pantalla ya está scopeada a una
+
+#### Scenario: El tipo se filtra por `kind` derivado (mobile)
+
+- **WHEN** el usuario filtra por tipo en el detalle de cuenta
+- **THEN** las opciones son las del `kind` derivado, incluidas compra en cuotas, pago de resumen y reintegro
+- **AND** el `FinancialMovement` de cada fila se deriva con `toFinancialMovement` una sola vez por carga de las filas, no en cada cambio de filtro
+
+#### Scenario: La búsqueda usa el matcher compartido (mobile)
+
+- **WHEN** el usuario escribe un término en la búsqueda del detalle de cuenta nativo
+- **THEN** el match lo resuelve `movementMatchesText` de `@grana/transactions`, el mismo que usa el detalle de cuenta web
+- **AND** el resultado coincide con el de la misma query en web, incluidos los nombres de institución y la cuenta destino de un `exchange`
+- **AND** no existe una implementación del match en `apps/mobile`
+
+#### Scenario: Las opciones de la hoja salen del catálogo (mobile)
+
+- **WHEN** la pantalla puebla la hoja de filtros
+- **THEN** las categorías y subcategorías ofrecidas provienen de `getMovementFilterOptions`, igual que en el detalle de cuenta web
+- **AND** el usuario puede elegir una categoría que en esta cuenta no tenga movimientos, y la lista queda vacía con su empty-state
+
+#### Scenario: Las filas son las de la tab Movimientos (mobile)
+
+- **WHEN** el detalle de cuenta muestra un ajuste, un cambio de moneda o una transferencia
+- **THEN** cada fila se ve igual que en la tab Movimientos y que en la web: ícono, título («Ajuste», «Cambio», «Transferencia»), la cuenta de la otra punta debajo, monto con tono y saldo debajo del monto
+- **AND** las filas se agrupan por día con encabezados «Hoy», «Ayer» o «Viernes, 13 de noviembre»
+
+### Requirement: El detalle de cuenta en mobile muestra saldos, movimientos y reintegros, de a una moneda (mobile)
+
+La pantalla `accounts/[id]/index` SHALL mostrar un hero con la identidad de la cuenta (avatar, nombre, institución/tipo, badge Archivada si aplica) y los saldos ARS/USD totales, obtenidos de `getAccountDetail` de `@grana/accounts`. SHALL mostrar la lista de movimientos de la cuenta usando `getAccountMovementsAscending` de `@grana/transactions`. La presentación SHALL replicar la del web app en viewport de celular, con las mismas reglas (spec `transactions`, requirement "El listado de una cuenta muestra el saldo corriente por fila, de a una moneda"): cada fila muestra fecha/descripción + monto con tono y, debajo del monto, el **saldo corriente** de la moneda que se está viendo; una cuenta que usa las dos monedas muestra el selector **ARS | USD** al lado del título «Movimientos», con el mismo aspecto que el selector de moneda de «¿En qué gasté?» nativo, y arranca en ARS (en la misma fila que los íconos de búsqueda y filtros, igual que la web); un cambio de moneda dentro de la misma cuenta aparece en las dos monedas; con el selector visible la moneda no es un filtro: la hoja no la ofrece, no hay chip ni cuenta en el botón de filtros, y limpiar los filtros no la cambia; y el saldo se oculta mientras haya filtros de contenido (tipo, categoría, subcategoría, rango de monto) o una búsqueda, pero no por la moneda elegida. El saldo corriente SHALL calcularse con `computeRunningBalances` de `@grana/money-logic` sobre el historial ascendente que la pantalla ya carga, partiendo del saldo inicial por moneda de la cuenta; NO SHALL pedir datos nuevos al servidor. El signo/monto por fila desde la perspectiva de la cuenta SHALL derivarse de `resolveMovementView` y `legInCurrency` de `@grana/money-logic`, sin reimplementar la lógica de patas (transferencias/cambios) en mobile. El tono del monto SHALL derivarse de `resolveTone` de `@grana/transactions`, igual que la web y el feed nativo (una transferencia o un cambio entre cuentas propias se ve neutro), y el signo SHALL ir pegado al monto como en la web (`-$ 480`). SHALL mostrar la card de reintegros pendientes ("A confirmar") usando `getPendingReimbursements` de `@grana/transactions` scopeado a la cuenta. SHALL ofrecer un acceso a agregar moneda cuando haya monedas disponibles.
+
+#### Scenario: El detalle muestra saldos y movimientos (mobile)
+
+- **WHEN** el usuario abre el detalle de una cuenta con movimientos
+- **THEN** el hero muestra los saldos ARS/USD y la pantalla lista los movimientos de la cuenta
+- **AND** la card "A confirmar" lista los reintegros pendientes de esa cuenta si existen
+
+#### Scenario: La presentación de movimientos replica el web app en mobile (mobile)
+
+- **WHEN** la pantalla renderiza la lista de movimientos sin filtros de contenido
+- **THEN** cada fila muestra fecha/descripción + monto con tono y, debajo del monto, el saldo corriente de la moneda que se está viendo, igual que la web en viewport de celular
+- **AND** el signo/monto por fila desde la perspectiva de la cuenta se deriva de `resolveMovementView` de `@grana/money-logic`, sin reimplementar la lógica en mobile
+
+#### Scenario: Un cambio de moneda se ve con el mismo tono que en la web (mobile)
+
+- **WHEN** el detalle de cuenta muestra un cambio de moneda o una transferencia entre cuentas propias
+- **THEN** el monto se ve en tono neutro y con el signo pegado (`-$ 3.859.134`), igual que la web en viewport de celular
+
+#### Scenario: Una cuenta con pesos y dólares se ve de a una moneda (mobile)
+
+- **WHEN** el usuario abre el detalle de una cuenta que usa ARS y USD y elige USD en el selector
+- **THEN** la lista muestra solo el libro en dólares, con el saldo USD de cada fila igual al que muestra la web
+
+#### Scenario: Un filtro oculta el saldo corriente, la moneda no (mobile)
+
+- **WHEN** el usuario aplica un filtro de tipo, categoría o monto, o escribe una búsqueda
+- **THEN** las filas dejan de mostrar el saldo corriente
+- **AND** elegir solo la moneda no lo oculta

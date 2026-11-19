@@ -38,23 +38,23 @@ El sistema SHALL mostrar la lista de transacciones de una cuenta ordenada por fe
 
 ### Requirement: El usuario tiene un acceso rápido flotante para registrar un movimiento
 
-En **web**, el sistema SHALL ofrecer un **acceso rápido flotante** (FAB) para registrar un movimiento, **visible solo en viewport `<sm` (mobile-web)** en el listado global de Movimientos, en el dashboard y en el **detalle de una cuenta**, de modo que el usuario pueda iniciar un alta sin scrollear de vuelta al header. El FAB SHALL **abrir el drawer de creación de movimiento** (mismo provider que el resto de entry points), sin navegación. En mobile-web el FAB **reemplaza** al botón "Nuevo movimiento" del header del dashboard (el botón no se renderiza en ese viewport, ver spec de `dashboard`); el FAB es el único acceso primario para registrar desde esas pantallas. En el detalle de una cuenta el FAB SHALL abrir el drawer con **esa cuenta preseleccionada**, y reemplaza en mobile-web al CTA «+ Agregar» de la fila del título, que en ese viewport no se renderiza; la app nativa SHALL ofrecer el mismo FAB en su detalle de cuenta, que abre el formulario con la cuenta preseleccionada (`presetAccount`). En desktop-web (viewport `≥sm`) el FAB NO SHALL renderizarse: el acceso primario lo cumple el botón "Nuevo movimiento" del header del dashboard y los accesos propios de la pantalla `/transactions`.
+En **web**, el sistema SHALL ofrecer un **acceso rápido flotante** (FAB) para registrar un movimiento, **visible solo en viewport `<md` (mobile-web, el mismo corte en el que el shell web pasa a la barra de pestañas y el dashboard esconde su botón "Nuevo movimiento")** en el listado global de Movimientos, en el dashboard y en el **detalle de una cuenta**, de modo que el usuario pueda iniciar un alta sin scrollear de vuelta al header. El FAB SHALL **abrir el drawer de creación de movimiento** (mismo provider que el resto de entry points), sin navegación. En mobile-web el FAB **reemplaza** al botón "Nuevo movimiento" del header del dashboard (el botón no se renderiza en ese viewport, ver spec de `dashboard`); el FAB es el único acceso primario para registrar desde esas pantallas. En el detalle de una cuenta el FAB SHALL abrir el drawer con **esa cuenta preseleccionada**, y reemplaza en mobile-web al CTA «+ Agregar» de la fila del título, que en ese viewport no se renderiza; la app nativa SHALL ofrecer el mismo FAB en su detalle de cuenta, que abre el formulario con la cuenta preseleccionada (`presetAccount`). En desktop-web (viewport `≥md`) el FAB NO SHALL renderizarse: el acceso primario lo cumple el botón "Nuevo movimiento" del header del dashboard y los accesos propios de la pantalla `/transactions`.
 
 El FAB web SHALL ser un cuadrado de 64×64 px con esquinas ligeramente redondeadas (`rounded-2xl`, ≈16 px), fondo verde semántico (`bg-success` / `text-success-foreground`, mapeado al token `--success` = emerald), anclado en `bottom-10 right-10` (40 px de cada borde) con `z-index` por encima del contenido scrolleable. El label accesible SHALL leerse del catálogo i18n (`transactions.actions.register_movement`), nunca hardcodeado.
 
-Las pantallas que renderizan el FAB en mobile-web SHALL reservar padding inferior suficiente para que el FAB no tape la última fila de contenido al scrollear hasta el final (`pb-24 sm:pb-0` o equivalente).
+Las pantallas que renderizan el FAB en mobile-web SHALL reservar padding inferior suficiente para que el FAB no tape la última fila de contenido al scrollear hasta el final (`pb-24 md:pb-0` o equivalente).
 
 Mientras el `MovementDrawerProvider` no esté disponible (las queries `accounts/categories/household` aún cargando o falladas), el FAB SHALL renderizarse en estado **disabled** (sin handler de click) usando el estado disabled estándar del componente `@/components/ui/button`, no SHALL navegar a ninguna ruta de fallback, y SHALL pasar a habilitado cuando el provider resuelve. El visual del estado disabled lo define el design system del `Button` (no se especifica una opacity literal a nivel spec).
 
 #### Scenario: FAB visible en Movimientos y dashboard (mobile-web)
 
-- **WHEN** el usuario autenticado abre `/transactions` o `/dashboard` en viewport `<sm`
+- **WHEN** el usuario autenticado abre `/transactions` o `/dashboard` en viewport `<md`
 - **THEN** ve un FAB cuadrado verde anclado en la esquina inferior derecha, visible aunque haya scrolleado la pantalla
 - **AND** al activarlo se abre el drawer de creación de movimiento sobre la pantalla actual, sin navegación
 
 #### Scenario: FAB no visible en desktop-web
 
-- **WHEN** el usuario abre `/transactions` o `/dashboard` en viewport `≥sm`
+- **WHEN** el usuario abre `/transactions` o `/dashboard` en viewport `≥md`
 - **THEN** el FAB NO se renderiza
 - **AND** el acceso primario para registrar lo cumple el botón "Nuevo movimiento" del header del dashboard (en `/dashboard`) y los accesos propios de la pantalla en `/transactions`
 
@@ -65,13 +65,13 @@ Mientras el `MovementDrawerProvider` no esté disponible (las queries `accounts/
 
 #### Scenario: El contenido scrolleable reserva padding inferior para el FAB en mobile-web
 
-- **WHEN** el usuario en viewport `<sm` scrollea hasta el final del contenido de `/dashboard` o `/transactions`
+- **WHEN** el usuario en viewport `<md` scrollea hasta el final del contenido de `/dashboard` o `/transactions`
 - **THEN** la última fila de contenido NO queda tapada por el FAB
 - **AND** el padding inferior solo se aplica en mobile-web (en desktop el FAB no existe y el padding NO SHALL inflar la página innecesariamente)
 
 #### Scenario: El FAB está disabled mientras el provider del drawer no está listo
 
-- **WHEN** el usuario abre `/transactions` o `/dashboard` en viewport `<sm` durante el primer paint y `useMovementDrawer()` aún devuelve `null` porque las queries `accounts/categories/household` no resolvieron
+- **WHEN** el usuario abre `/transactions` o `/dashboard` en viewport `<md` durante el primer paint y `useMovementDrawer()` aún devuelve `null` porque las queries `accounts/categories/household` no resolvieron
 - **THEN** el FAB se renderiza con el estado disabled estándar del componente `Button` (sin handler activo, visual atenuado por el design system)
 - **AND** un tap sobre el FAB NO produce navegación ni abre el drawer
 - **AND** cuando las queries resuelven y `useMovementDrawer()` retorna el opener, el FAB pasa a su rendering normal

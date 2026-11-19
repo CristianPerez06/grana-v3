@@ -3,7 +3,9 @@
 ## Purpose
 
 Cubre las tarjetas de crédito como módulo de primera clase del producto. Modela cada resumen como un período con cuatro fechas (apertura, cierre, vencimiento, próximo cierre) cuyo estado se deriva sin persistir, soporta el alta de tarjeta cargando solo el cierre y vencimiento del resumen actual (el ciclo siguiente nace estimado y se confirma al pagar — cada fecha se pide en el único momento en que el banco ya la anunció), el registro de consumos en una o varias cuotas (ARS only por invariante `I-CRED-9`), el pago del resumen como uno o dos `expense` —uno por moneda debitada, porque la deuda en dólares se puede cancelar con dólares desde una cuenta en dólares o pesificarse a la cotización del día— sobre cuentas cash o bank (las únicas transacciones que reducen `disponible`, por la regla off-ledger), y las vistas de listado (wallet en grilla con hero de pago mensual) y de detalle (organizado por el ciclo de vida del resumen: a pagar / en curso / próximo, con movimientos y cuotas en curso).
+
 ## Requirements
+
 ### Requirement: El sistema modela cada resumen de tarjeta como un período con cuatro fechas
 
 El sistema SHALL representar cada resumen de tarjeta de crédito como una fila en `card_periods` con los campos `start_date`, `end_date`, `due_date` y `is_estimated`. El constraint `chk_period_dates` SHALL exigir `start_date < end_date < due_date`. El par `(account_id, start_date)` SHALL ser único. No existe columna `status` — el estado del período se deriva en cada lectura a partir de `(end_date, due_date, today, exists period_payment)`.
@@ -528,7 +530,7 @@ El sistema SHALL ofrecer en el detalle de tarjeta (`/cards/[id]`) dos pestañas:
 
 **Selección de período.** El click en un paso del timeline, en la card "a pagar", en la card "en curso" o en la mini fila "próximo" SHALL cambiar el período mostrado en "Movimientos del período" y volver a esa pestaña. El elemento activo recibe un ring con el acento de la tarjeta. La transición NO usa `scrollIntoView` ni animación de entrada del pane.
 
-**Pane "Movimientos del período".** SHALL listar los movimientos imputados al período seleccionado, agrupados por fecha, reutilizando el componente de fila de movimiento del módulo de transacciones. Cada fila muestra ícono de categoría con tint, comercio/descripción, caption "Categoría › Subcategoría", chips ("Cuota X de Y" y/o "Recurrente"), y el monto (ARS gasto en terracota; USD con etiqueta "USD" subordinada, nunca convertido). Cuando el período no tiene consumos, SHALL mostrar el estado vacío "Sin movimientos".
+**Pane "Movimientos del período".** SHALL listar los movimientos imputados al período seleccionado, agrupados por fecha, reutilizando el componente de fila de movimiento del módulo de transacciones. Cada fila muestra ícono de categoría con tint, comercio/descripción, caption "Categoría › Subcategoría", chips ("Cuota X de Y" y/o "Recurrente"), y el monto (ARS gasto en terracota; USD con su símbolo `US$` delante del número, nunca convertido, sin una etiqueta "USD" extra debajo, que repetía lo que el símbolo ya dice). Cuando el período no tiene consumos, SHALL mostrar el estado vacío "Sin movimientos".
 
 **Pane "Cuotas en curso".** SHALL mostrar una card intro con la cantidad de compras en cuotas y el total restante, y luego una card por compra con: ícono, nombre, sub ("Comprado el X · Categoría"), "cuota actual / total", una fila de dots de progreso (pagadas en acento, próxima en acento atenuado, futuras en gris), y un footer (Por cuota / Restante / Próxima cae). Cuando no hay compras en cuotas activas, SHALL mostrar el estado vacío "Sin compras en cuotas". Las cuotas son ARS-only (`I-CRED-9`).
 
@@ -565,8 +567,6 @@ El sistema SHALL ofrecer en el detalle de tarjeta (`/cards/[id]`) dos pestañas:
 
 - **WHEN** la tarjeta no tiene compras en cuotas activas
 - **THEN** la pestaña se titula "Cuotas en curso · 0" y el pane muestra "Sin compras en cuotas"
-
----
 
 ### Requirement: El sistema muestra una pantalla con todos los resúmenes de una tarjeta
 

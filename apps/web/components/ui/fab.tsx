@@ -20,7 +20,8 @@ type FabProps = {
  * sections that render no bar.
  *
  * **The only FAB in the product is `QuickAddFab`** — registering a movement,
- * on the three tab roots. That is the rule native follows and web now matches:
+ * on the three tab roots and on the account detail (which lists movements and
+ * opens the form with its account preselected). That is the rule native follows and web now matches:
  * a create action for the entity a route lists (an account, a card, a
  * category, a recurrence) goes in the `PageHeader`'s `actions` slot, visible at
  * every width, never behind a floating button. A route's own primary create

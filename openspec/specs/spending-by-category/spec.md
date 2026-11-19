@@ -3,7 +3,9 @@
 ## Purpose
 
 "En qué se fue": el desglose de los gastos del mes agrupados por categoría, pesado por **neto** (gastos − reintegros recibidos) y **por moneda**. Es la carta de presentación del módulo Movimientos —un donut + ranking, con navegación por mes y drill-down al listado filtrado— y esa es su **superficie única**: el rediseño del dashboard (`redesign-dashboard-home-v2`) retiró de ahí la dona y su teaser, para no sostener la misma lectura en dos lugares. El dashboard sigue consumiendo `getMonthCategoryBreakdown`, que es la fuente del devengado con que arma "Gastaste", pero no vuelve a presentar el desglose. Responde una de las tres preguntas centrales del usuario, complementando "cuánto tengo" y "qué viene".
+
 ## Requirements
+
 ### Requirement: El módulo Movimientos abre con un desglose de gastos por categoría del mes
 
 El módulo de movimientos SHALL presentar, en **ambas plataformas** (web `/transactions` y la pantalla nativa Movimientos), como carta de presentación arriba del listado, un **desglose de los gastos del mes agrupados por categoría**, que responde "¿en qué se fue?". El listado de movimientos SHALL seguir accesible (el desglose lo antecede, no lo reemplaza).
@@ -24,7 +26,7 @@ Lo que SHALL sostenerse en las dos es la invariante: **un solo** control de mes 
 #### Scenario: El overview por categoría encabeza Movimientos en nativo
 
 - **WHEN** el usuario abre la pantalla Movimientos en la app nativa
-- **THEN** ve la card "En qué se fue" entre el selector de mes y los chips de acción (Buscar / Filtros)
+- **THEN** ve la card "En qué se fue" entre el selector de mes y los botones de ícono de búsqueda y filtros, los mismos que la web dibuja sobre su lista
 - **AND** el feed de movimientos sigue disponible debajo
 
 #### Scenario: Un único selector de mes
@@ -315,4 +317,3 @@ El desglose de **ingresos** NO SHALL verse afectado: el ingreso no se comparte (
 
 - **WHEN** tengo un gasto propio no compartido de $30.000
 - **THEN** el desglose lo cuenta completo ($30.000)
-

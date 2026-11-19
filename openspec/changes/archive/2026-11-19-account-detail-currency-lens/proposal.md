@@ -28,6 +28,7 @@ _Ninguna._
 - `transactions`: el saldo corriente del listado de una cuenta pasa a mostrarse de a una moneda, con el selector ARS | USD.
 - `accounts`: el detalle de cuenta nativo sigue la misma regla.
 - `cards`: los montos en dólares de la lista de movimientos del período dejan la etiqueta «USD» extra.
+- `web-app-shell`: el «+» flotante de registrar movimiento se suma al detalle de cuenta.
 - `spending-by-category`: en la pestaña Movimientos de la app, los botones de búsqueda y filtros pasan a ícono.
 
 ## Impact

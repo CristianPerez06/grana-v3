@@ -33,7 +33,9 @@
 
 - [x] 6.1 Revisar las specs maestras contra el comportamiento nuevo y corregir lo que contradecían: lista de una cuenta (paginación de 50, lista corrida), botón flotante (ahora también en el detalle de cuenta, con la cuenta preseleccionada), micro-toolbar (sin Recurrencias en el detalle de cuenta), estado de filtros de `/accounts/[id]` (rango de fechas en lugar de mes) y tab Movimientos nativa (botones de ícono). Nota en `docs/design/accounts-detail/README.md` de que los mocks quedaron atrás. `openspec validate --strict` en verde
 
+- [x] 6.2 Corte del FAB web en la spec: `<sm` → `<md`, como el código y el shell. Regla de `web-app-shell` («el único FAB va en las tres raíces de tab») ampliada al detalle de cuenta, decisión del usuario
+
 ## 7. Cierre
 
-- [ ] 7.1 El usuario lo prueba en la web y en la app nativa y decide si se queda
+- [x] 7.1 El usuario lo prueba en la web y en la app nativa y decide si se queda
 - [ ] 7.2 `pnpm verify` en verde (salvo el paso de archivo, que corre al archivar)
